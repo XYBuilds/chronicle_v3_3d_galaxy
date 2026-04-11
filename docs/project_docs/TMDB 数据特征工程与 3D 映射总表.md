@@ -11,7 +11,7 @@
 * **阶段 A（轻量化 / subsample 验证）**：`paraphrase-multilingual-MiniLM-L12-v2`，**384 维**；`sentence-transformers` \+ GPU 批编码。  
 * **阶段 B（全量 / 周期重构质量版）**：`paraphrase-multilingual-mpnet-base-v2`，**768 维**。  
 * **拼接与截断**：`Tagline:` / `Overview:` 前缀两行式拼接；无 tagline 则仅 `Overview:`；整段**从尾部截断**至默认 **3000 字符**；**L2 归一化**后进入后续特征融合与 UMAP。  
-* **完整条款**（批大小建议、`requirements` 锁定、版本语义）：见《TMDB 电影宇宙 Tech Spec》**§2.1.1**。
+* **完整条款**（批大小建议、**PyTorch CUDA / CPU 轮子安装**、`requirements` 锁定、版本语义）：见《TMDB 电影宇宙 Tech Spec》**§2.1.1**。
 
 ### **核心映射矩阵规则表**
 

@@ -101,12 +101,15 @@ Output
   * **阶段 A — 轻量化验证（subsample、管线联调、算力/耗时优先）**：`sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`。输出稠密向量维度 **384**。允许牺牲部分语义质量以换取速度与低显存占用。  
   * **阶段 B — 质量版（全量或周期性宇宙重构）**：`sentence-transformers/paraphrase-multilingual-mpnet-base-v2`。输出稠密向量维度 **768**。在流程跑通后，用同套清洗与特征拼接规则替换本模型，再执行 `fit_transform` 或全量重算。  
 * **实现栈**：Python 侧统一使用 **`sentence-transformers`** 加载上述 Hugging Face 模型 ID；编码时**优先使用 GPU**（如 NVIDIA RTX 3070 级别）。`encode` 的 `batch_size` 建议从 **64** 起试，显存充足可逐步提高至 **128～256**；出现 OOM 则下调 batch，而非静默丢样本。  
+* **PyTorch 与 CUDA（GPU 环境）**：`sentence-transformers` 依赖 PyTorch。若只执行 **`pip install -r requirements.txt`** 且未额外指定 PyTorch 官方 CUDA 索引，pip 通常会从 PyPI 解析到 **CPU 构建**（`torch.__version__` 带 **`+cpu`** 后缀，`torch.version.cuda` 为 **`None`**，`torch.cuda.is_available()` 为 **`False`**），无法满足上条「优先 GPU」的约定。  
+  * **本机有 NVIDIA GPU、需要 GPU 跑 embedding 时**：须按 [PyTorch Get Started](https://pytorch.org/get-started/locally/) 选择 **Windows / Pip / 合适 CUDA 版本**，使用其给出的 **`--index-url https://download.pytorch.org/whl/cu…`** 安装 **`torch`（及官方建议捆绑的 `torchvision` / `torchaudio`）**。仓库当前开发机基准为 **CUDA 12.8 线**，示例（在项目 venv 内）：`pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128`。成功后 **`torch.__version__` 应含 `+cu128`（或所选 cu 标签）**，且 **`torch.cuda.is_available()` 为 `True`**。驱动版本须满足所选 CUDA 簇的最低要求；若驱动偏旧，在官网改选较低 CUDA 对应的索引（如 `cu126`、`cu118`）。  
+  * **无 GPU 或仅需 CPU 验证**：可继续使用 PyPI 上的 CPU 构建；须在运行配置或产物元数据中注明 **CPU**，避免与 GPU 产出的宇宙数据在无说明的情况下混比。  
 * **输入拼接（单条影片一条文本）**：  
   * 若 `tagline` 非空：拼接为两行结构 —— 第一行固定前缀 `Tagline:` \+ tagline 原文；第二行固定前缀 `Overview:` \+ overview 原文。  
   * 若 `tagline` 为空或仅空白：仅使用 `Overview:` \+ overview 原文。  
   * **截断**：在送入模型前对**拼接后的整段字符串**做单次截断，**保留开头、截掉超出部分**（即从尾部截断）。默认最大长度 **3000 字符**（UTF-8 下按字符计数，与 Python 字符串长度一致）；若 subsample 试验需进一步提速，可临时改为 **2000**，但须在产物元数据中注明该参数。  
 * **向量归一化**：对模型输出的每条 embedding 做 **L2 归一化**（`sentence-transformers` 中 `normalize_embeddings=True` 或与等价实现），并在全项目保持一致，便于跨阶段对比与增量追加时的数值尺度稳定。  
-* **可复现与版本锁定**：在 `requirements.txt`（或等价锁文件）中固定 **`torch`、`sentence-transformers`** 的主次版本；流水线配置中记录所用**模型 Hugging Face ID**；若需严格 bitwise 可复现，可额外记录模型仓库的 **Git revision**。更换 `torch` / `sentence-transformers` / 模型任一项时，在变更日志中标注**宇宙数据版本号**。
+* **可复现与版本锁定**：在 `requirements.txt`（或等价锁文件）中固定 **`torch`、`sentence-transformers`** 的主次版本；流水线配置中记录所用**模型 Hugging Face ID**；若需严格 bitwise 可复现，可额外记录模型仓库的 **Git revision**。记录 `torch` 时建议写入 **完整构建标签**（例如 **`2.11.0+cu128`** 与 **`2.11.0+cpu`** 主次版本相同但二进制不同），与上条安装来源一致。更换 `torch` / `sentence-transformers` / 模型任一项时，在变更日志中标注**宇宙数据版本号**。
 
 ### **2.1.2 流派顺位权重（等比衰减 · 默认黄金比例）**
 

@@ -35,4 +35,5 @@ alwaysApply: false
 ## Dependencies
 
 - Pin major.minor versions in `requirements.txt`
+- PyTorch: for GPU embeddings, install CUDA wheels from PyTorch’s wheel index (`https://download.pytorch.org/whl/cu128` or the variant listed on pytorch.org for your OS/driver); PyPI-default `torch` is CPU (`+cpu`). See Tech Spec §2.1.1.
 - GPU-first for sentence-transformers encode; lower batch_size on OOM, never drop samples

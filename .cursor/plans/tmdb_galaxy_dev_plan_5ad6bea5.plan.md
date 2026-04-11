@@ -10,7 +10,7 @@ todos:
     status: completed
   - id: p1-pipeline-orchestrator
     content: "Phase 1.1-1.4: Create unified pipeline orchestrator + data cleaning (dedup, must-drop filters, dynamic threshold)"
-    status: pending
+    status: completed
   - id: p2-text-embedding
     content: "Phase 2.1: Text embedding script (Phase A MiniLM 384d, GPU, L2 norm)"
     status: pending

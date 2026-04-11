@@ -7,7 +7,7 @@ todos:
     status: completed
   - id: p1-archive-old
     content: "Phase 1.0: Archive existing 6 filter scripts to scripts/_archive/"
-    status: pending
+    status: completed
   - id: p1-pipeline-orchestrator
     content: "Phase 1.1-1.4: Create unified pipeline orchestrator + data cleaning (dedup, must-drop filters, dynamic threshold)"
     status: pending

@@ -22,7 +22,7 @@
   * **最终兜底**：若 `title` 也为 null（数据报告显示仅 1 条），则剔除该行。  
 * **动态阈值过滤 (Dynamic Threshold)**：  
   * **逻辑**：采用基于年度 95 分位数的分数级、平滑移动平均（Fractional, Smoothed Moving Average of the Annual 95th Percentile）来计算动态底线。  
-  * **参数（以仓库脚本为准）**：实现与默认数值见 `scripts/dataset_processing/filter_dynamic_baseline_vote_count.py` —— **年度分位数 `quantile=0.95`**、**折算系数 `alpha=0.15`**、**滑动平均窗口年数 `rolling_window=6`**、**全年代绝对底线 `abs_min=1`**（均可通过 CLI 覆盖）。文档中的公式截图仅作示意，**可执行参数以脚本默认值与命令行为准**。  
+  * **参数（以仓库脚本为准）**：实现与默认数值见 `scripts/_archive/filter_dynamic_baseline_vote_count.py` —— **年度分位数 `quantile=0.95`**、**折算系数 `alpha=0.15`**、**滑动平均窗口年数 `rolling_window=6`**、**全年代绝对底线 `abs_min=1`**（均可通过 CLI 覆盖）。文档中的公式截图仅作示意，**可执行参数以脚本默认值与命令行为准**。  
   * **目的**：随着时代发展，电影的平均热度/评价人数标准在不断膨胀。使用该动态阈值能自适应地剔除每个时代“绝对意义上的长尾垃圾数据”，保证留下的都是相对该时代有足够代表性的作品。
 
 ## **3\. 潜在剔除规则 / 备选方案 (Potential Drop-outs / Alternative)**

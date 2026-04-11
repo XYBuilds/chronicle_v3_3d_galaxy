@@ -9,7 +9,7 @@ alwaysApply: false
 ## General
 
 - Use type hints on all function signatures
-- Scripts live under `scripts/dataset_processing/`, `scripts/feature_engineering/`, `scripts/export/`
+- Active pipeline code: `scripts/feature_engineering/`, `scripts/export/`; legacy standalone filters live in `scripts/_archive/` (Phase 1.0)
 - Each script should be runnable standalone with `argparse` (CLI-friendly defaults)
 - Use `pathlib.Path` for file paths, not string concatenation
 
@@ -17,7 +17,7 @@ alwaysApply: false
 
 - Primary key: `id` (TMDB ID); secondary dedup key: `imdb_id`
 - Must-drop rows: null genres, zero/null vote_count, zero/null vote_average, null release_date, null overview (with title fallback — see Tech Spec §2)
-- Dynamic vote_count threshold: see `scripts/dataset_processing/filter_dynamic_baseline_vote_count.py`
+- Dynamic vote_count threshold: see `scripts/_archive/filter_dynamic_baseline_vote_count.py`
 - Temporal jitter for YYYY-01-01 placeholders: deterministic seed = TMDB `id`
 
 ## Embedding

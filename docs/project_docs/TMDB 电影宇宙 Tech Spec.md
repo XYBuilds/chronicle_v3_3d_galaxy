@@ -310,7 +310,7 @@ chronicle_v3_3d_galaxy/
 │   └── reports/                    #   数据集质量报告等
 │
 ├── scripts/                        # Python 数据管线
-│   ├── dataset_processing/         #   清洗 / 过滤脚本（已有）
+│   ├── _archive/                   #   Phase 1.0：旧版独立过滤脚本归档（仅参考）
 │   ├── feature_engineering/        #   embedding / genre 编码 / UMAP
 │   └── export/                     #   导出 galaxy_data.json
 │

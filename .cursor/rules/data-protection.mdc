@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Raw Data Protection
 
-The raw dataset `data/raw/tmdb2025.csv` is ~59 MB / 59K rows. **Never read it directly in conversation** — it consumes excessive tokens.
+The raw dataset `data/raw/TMDB_all_movies.csv` is very large (~1M+ rows). **Never read it directly in conversation** — it consumes excessive tokens.
 
 ## Instead
 
@@ -15,4 +15,4 @@ The raw dataset `data/raw/tmdb2025.csv` is ~59 MB / 59K rows. **Never read it di
 
 ## Subsample Location
 
-- `data/subsample/tmdb2025_random20.csv` — 20 random rows, same columns as full dataset
+- `data/subsample/TMDB_all_movies_random20.csv` — 20 random rows, same columns as full dataset

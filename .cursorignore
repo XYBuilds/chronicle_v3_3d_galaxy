@@ -1,0 +1,18 @@
+# Large raw datasets - never index or read into context
+data/raw/
+
+# Pipeline intermediate outputs
+data/output/
+scripts/output/
+
+# Serialized models
+*.pkl
+*.joblib
+
+# Frontend build artifacts
+frontend/node_modules/
+frontend/dist/
+frontend/storybook-static/
+
+# Git internals
+.git/

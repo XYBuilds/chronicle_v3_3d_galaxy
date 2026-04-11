@@ -1,0 +1,40 @@
+---
+description: Frontend conventions — Three.js, React, TypeScript
+globs: frontend/**/*.{ts,tsx,glsl}
+alwaysApply: false
+---
+
+# Frontend Conventions
+
+## Stack
+
+- **Build**: Vite + `vite-plugin-glsl` for GLSL imports
+- **3D**: Raw Three.js (no R3F / TresJS) — direct control of render loop, ShaderMaterial, BufferAttribute
+- **UI**: React DOM overlay (HUD layer) — Tooltip, Drawer, Loading, Timeline
+- **State bridge**: Zustand — Three.js writes selection/hover state, React reads; React writes navigation commands, Three.js executes
+- **Component dev**: Storybook (`@storybook/react-vite`) for HUD components only (no 3D in stories)
+
+## TypeScript
+
+- Strict mode enabled
+- JSON schema types from Tech Spec §4 defined in `frontend/src/types/`
+
+## Rendering Architecture
+
+- **Macro layer**: `THREE.Points` + custom ShaderMaterial (1 draw call for ~60K particles)
+  - Vertex: position, size (log vote_count), color (genres[0] palette), emissive (vote_average)
+  - Fragment: circle + radial glow, discard corners; HDR emissive for Bloom
+- **Selected layer**: IcoSphere + Perlin Noise ShaderMaterial (on-demand per click)
+- **Post-processing**: UnrealBloomPass (threshold ~0.85, strength 0.8–1.2, radius 0.4–0.6)
+
+## Camera
+
+- Axis always parallel to Z (no rotation/tilt)
+- Scroll: Z-axis travel (time depth)
+- Drag: truck (horizontal) + pedestal (vertical) only
+- Click-select: smooth fly-to (600–800ms easeOutCubic), axis stays parallel
+
+## Data Loading
+
+- Single `galaxy_data.json` fetched at startup; full-screen spinner until parsed
+- Split into GPU BufferAttributes + DOM HUD data after parse

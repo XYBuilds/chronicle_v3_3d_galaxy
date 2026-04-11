@@ -1,0 +1,38 @@
+---
+description: Conventions for Python data pipeline scripts
+globs: scripts/**/*.py
+alwaysApply: false
+---
+
+# Python Pipeline Conventions
+
+## General
+
+- Use type hints on all function signatures
+- Scripts live under `scripts/dataset_processing/`, `scripts/feature_engineering/`, `scripts/export/`
+- Each script should be runnable standalone with `argparse` (CLI-friendly defaults)
+- Use `pathlib.Path` for file paths, not string concatenation
+
+## Data Rules
+
+- Primary key: `id` (TMDB ID); secondary dedup key: `imdb_id`
+- Must-drop rows: null genres, zero/null vote_count, zero/null vote_average, null release_date, null overview (with title fallback — see Tech Spec §2)
+- Dynamic vote_count threshold: see `scripts/dataset_processing/filter_dynamic_baseline_vote_count.py`
+- Temporal jitter for YYYY-01-01 placeholders: deterministic seed = TMDB `id`
+
+## Embedding
+
+- Model A (subsample/debug): `paraphrase-multilingual-MiniLM-L12-v2` (384d)
+- Model B (full/quality): `paraphrase-multilingual-mpnet-base-v2` (768d)
+- Input: `"Tagline: {tagline}\nOverview: {overview}"` (omit tagline line if empty)
+- Truncate to 3000 chars from tail; L2-normalize output
+
+## Feature Fusion (before UMAP)
+
+- Each group (text, genre, lang) independently L2-normalized, then scaled by `1/√d`
+- Configurable weights: `w_text`, `w_genre`, `w_lang` (default 1.0 each)
+
+## Dependencies
+
+- Pin major.minor versions in `requirements.txt`
+- GPU-first for sentence-transformers encode; lower batch_size on OOM, never drop samples

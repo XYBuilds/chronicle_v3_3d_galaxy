@@ -1,0 +1,32 @@
+---
+description: Project overview and architecture for TMDB Movie Universe (Chronicle v3)
+alwaysApply: true
+---
+
+# TMDB 电影宇宙 — Project Overview
+
+A 2.5D immersive movie-history archive: ~60K TMDB films rendered as a particle galaxy.
+- **X/Y**: UMAP coordinates from text embeddings + genre weights + language one-hot
+- **Z**: release_date as decimal year (not fed to UMAP)
+- **Visual**: vote_count → particle size (log), vote_average → bloom/emissive, genres[0] → color
+
+## Architecture
+
+- **Python pipeline** (`scripts/`): CSV cleaning → NLP embedding → UMAP → export `galaxy_data.json`
+- **Frontend** (`frontend/`): Vite + TypeScript + React (HUD/DOM) + raw Three.js (3D canvas) + Zustand (bridge)
+- **Deployment**: static hosting (Vercel); no backend server in current phase
+
+## Key Docs (read before major changes)
+
+- `docs/project_docs/TMDB 电影宇宙 Tech Spec.md` — authoritative implementation spec
+- `docs/project_docs/TMDB 电影宇宙 Design Spec.md` — visual & interaction rules
+- `docs/project_docs/TMDB 数据处理规则.md` — data filtering rules
+- `docs/project_docs/TMDB 数据特征工程与 3D 映射总表.md` — feature → rendering mapping
+- `docs/project_docs/TMDB 电影宇宙 PRD.md` — product requirements
+
+## Critical Constraints
+
+- UMAP `random_state=42` — always fixed
+- Genre weight ratio default `1/φ ≈ 0.618` — configurable but version-bumped on change
+- Multilingual sentence-transformers only (never English-only models)
+- Z axis keeps raw decimal-year scale (~1874–2026); no normalization

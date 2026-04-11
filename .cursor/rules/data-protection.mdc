@@ -1,0 +1,18 @@
+---
+description: Prevent reading raw CSV data directly — use subsample or scripts instead
+alwaysApply: true
+---
+
+# Raw Data Protection
+
+The raw dataset `data/raw/tmdb2025.csv` is ~59 MB / 59K rows. **Never read it directly in conversation** — it consumes excessive tokens.
+
+## Instead
+
+- Reference `data/subsample/` files for schema, column names, and sample values
+- Write Python scripts to analyze or process `data/raw/` programmatically
+- Consult `docs/reports/TMDB 2025 Dataset Report.md` for pre-computed statistics
+
+## Subsample Location
+
+- `data/subsample/tmdb2025_random20.csv` — 20 random rows, same columns as full dataset

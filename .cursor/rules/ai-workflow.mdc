@@ -1,0 +1,13 @@
+---
+alwaysApply: true
+---
+
+# 核心开发准则：防御性与可验证生成 (Verifiable Generation)
+
+在执行任何代码生成任务时，必须遵循以下“验证与快速失败”原则：
+
+1. **状态可见性 (State Visibility)：** - 对于 Python 数据处理：在 DataFrame 或矩阵发生合并、过滤或特征维度变换后，必须在代码中主动添加 `print()` 语句输出当前的 `.shape` 和极值（min/max）。
+   - 对于前端与状态管理：在接收外部数据或更新核心 Store 时，必须 `console.log` 关键数据的长度或样本。
+2. **显式断言 (Explicit Assertions)：** - 关键路径（如矩阵拼接、Z轴年份解析）必须包含 `assert` 语句。如果维度不符合预期，让程序立刻崩溃，拒绝静默失败 (Silent Failure)。
+3. **视觉降级验证 (Visual Fallback Validation)：**
+   - 在编写复杂的 WebGL/Three.js Shader 之前，必须先提供一个能直观验证坐标和数据传递的基础材质（如纯色 `PointsMaterial`），确认画面无误后，再推进复杂 Shader。

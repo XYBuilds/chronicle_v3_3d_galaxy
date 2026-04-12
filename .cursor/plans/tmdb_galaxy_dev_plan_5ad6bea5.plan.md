@@ -29,6 +29,9 @@ todos:
   - id: p2-subsample-smoke
     content: "Phase 2.6: Subsample smoke test — run full pipeline on 20 rows, validate output"
     status: completed
+  - id: p3-verify-3d
+    content: "Phase 3.0: Minimal HTML+Three.js scaffold to visually verify subsample JSON point cloud (disposable)"
+    status: pending
   - id: p3-frontend-scaffold
     content: "Phase 3.1-3.2: Frontend scaffolding (Vite + React + TS + Tailwind + shadcn/ui + types)"
     status: pending
@@ -243,6 +246,25 @@ flowchart LR
 ## Phase 3 — 前端脚手架 + 3D 核心渲染
 
 **目标:** Vite + React + Three.js 项目跑起来，能加载 JSON 并渲染 60K 粒子星系。
+
+### 3.0 最小 3D 脚手架 — 快速验证 Phase 2 产物
+
+在搭建完整前端之前，用一个**极简单文件 HTML + Three.js CDN** 页面秒验 subsample JSON 的坐标是否合理。不依赖 Vite/React/npm，纯验证目的，用完可丢弃。
+
+- 创建 `scripts/verify_galaxy_3d.html`（或 `data/output/` 下），内嵌：
+  - `<script type="importmap">` 引入 Three.js ESM CDN
+  - `fetch('./galaxy_data_subsample.json')` 加载 Phase 2.6 的 subsample 产物
+  - 用 `THREE.BufferGeometry` + `THREE.Points` + **`THREE.PointsMaterial({ size: 5, vertexColors: true })`** 渲染
+  - 将每条 movie 的 `x, y, z` 写入 position attribute，`genre_color` 写入 color attribute
+  - 添加 `OrbitControls`（临时允许自由旋转，方便从各角度检视点云分布）
+- 用 Python 起一个临时 HTTP 服务器：`python -m http.server 8080 --directory data/output/`
+
+**(Checkpoint: 浏览器打开 `localhost:8080/verify_galaxy_3d.html` →**
+- **看到彩色点云散布在 3D 空间（不是所有点重叠在原点、不是一条线、不是 NaN 黑屏）**
+- **旋转视角 → X/Y 平面上点有分散（UMAP 语义聚类），Z 轴方向有纵深（时间跨度）**
+- **Console 打印 `Loaded {n} points | X:[{xmin},{xmax}] Y:[{ymin},{ymax}] Z:[{zmin},{zmax}]`**
+- **点的颜色对应 genre（相同 genre 的点颜色一致）**
+- **确认无误后，此文件可归档或删除，不进入正式前端项目。)**
 
 ### 3.1 项目初始化
 

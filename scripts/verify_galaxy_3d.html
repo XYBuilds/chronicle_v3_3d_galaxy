@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TMDB Galaxy — Phase 3.0 JSON point cloud (disposable)</title>
+  <style>
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #0a0a12; font-family: system-ui, sans-serif; }
+    #hint {
+      position: fixed; left: 12px; bottom: 12px; max-width: min(520px, 92vw);
+      color: #9ca3af; font-size: 12px; line-height: 1.45; z-index: 2; pointer-events: none;
+    }
+    #err {
+      position: fixed; inset: 0; display: none; place-items: center; padding: 24px;
+      background: #120808; color: #fecaca; z-index: 3; text-align: center; white-space: pre-wrap;
+    }
+  </style>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="hint">
+    Phase 3.0 smoke: drag to orbit, scroll to zoom. Serve repo root (<code>python -m http.server 8080</code>) and open
+    <code>/scripts/verify_galaxy_3d.html</code>, or copy this file + JSON into <code>data/output/</code> as
+    <code>galaxy_data_subsample.json</code> and use <code>--directory data/output/</code>.
+  </div>
+  <div id="err"></div>
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    function showError(msg) {
+      const el = document.getElementById('err');
+      el.style.display = 'grid';
+      el.textContent = msg;
+      console.error(msg);
+    }
+
+    async function fetchGalaxyJson() {
+      const here = new URL('.', window.location.href);
+      const candidates = [
+        new URL('./galaxy_data_subsample.json', here).href,
+        new URL('./galaxy_data.json', here).href,
+        new URL('../frontend/public/data/galaxy_data.json', here).href,
+      ];
+      let lastStatus = '';
+      for (const url of candidates) {
+        try {
+          const res = await fetch(url);
+          lastStatus = `${url} → ${res.status}`;
+          if (res.ok) {
+            const data = await res.json();
+            console.info('[Galaxy3D] Loaded JSON from', url);
+            return data;
+          }
+        } catch (e) {
+          lastStatus = `${url} → ${e}`;
+        }
+      }
+      throw new Error(
+        'Could not load galaxy JSON. Tried:\n' +
+          candidates.map((u) => '  ' + u).join('\n') +
+          '\nLast: ' + lastStatus +
+          '\n\nRun subsample pipeline first, then either:\n' +
+          '  • From repo root: python -m http.server 8080  →  http://localhost:8080/scripts/verify_galaxy_3d.html\n' +
+          '  • Or copy galaxy_data.json to data/output/galaxy_data_subsample.json and this HTML beside it; ' +
+          'python -m http.server 8080 --directory data/output/'
+      );
+    }
+
+    function main(data) {
+      const movies = data?.movies;
+      if (!Array.isArray(movies) || movies.length === 0) {
+        throw new Error('JSON missing non-empty movies[]');
+      }
+
+      const n = movies.length;
+      const pos = new Float32Array(n * 3);
+      const col = new Float32Array(n * 3);
+
+      let xmin = Infinity, xmax = -Infinity;
+      let ymin = Infinity, ymax = -Infinity;
+      let zmin = Infinity, zmax = -Infinity;
+
+      for (let i = 0; i < n; i++) {
+        const m = movies[i];
+        const x = Number(m.x), y = Number(m.y), z = Number(m.z);
+        const gc = m.genre_color;
+        if (!Array.isArray(gc) || gc.length < 3) {
+          throw new Error(`movies[${i}] missing genre_color [r,g,b]`);
+        }
+        if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) {
+          throw new Error(`movies[${i}] has non-finite x/y/z`);
+        }
+        pos[i * 3] = x;
+        pos[i * 3 + 1] = y;
+        pos[i * 3 + 2] = z;
+        col[i * 3] = Number(gc[0]);
+        col[i * 3 + 1] = Number(gc[1]);
+        col[i * 3 + 2] = Number(gc[2]);
+        xmin = Math.min(xmin, x); xmax = Math.max(xmax, x);
+        ymin = Math.min(ymin, y); ymax = Math.max(ymax, y);
+        zmin = Math.min(zmin, z); zmax = Math.max(zmax, z);
+      }
+
+      console.log(
+        `Loaded ${n} points | X:[${xmin.toFixed(3)},${xmax.toFixed(3)}] ` +
+          `Y:[${ymin.toFixed(3)},${ymax.toFixed(3)}] Z:[${zmin.toFixed(3)},${zmax.toFixed(3)}]`
+      );
+
+      const geom = new THREE.BufferGeometry();
+      geom.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      geom.setAttribute('color', new THREE.BufferAttribute(col, 3));
+
+      const mat = new THREE.PointsMaterial({
+        size: 5,
+        vertexColors: true,
+        sizeAttenuation: true,
+        depthWrite: false,
+        transparent: true,
+        opacity: 0.95,
+      });
+
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x0a0a12);
+
+      const points = new THREE.Points(geom, mat);
+      scene.add(points);
+
+      const bbox = new THREE.Box3().setFromBufferAttribute(geom.getAttribute('position'));
+      const center = new THREE.Vector3();
+      const sphere = new THREE.Sphere();
+      bbox.getCenter(center);
+      bbox.getBoundingSphere(sphere);
+      const radius = Math.max(sphere.radius, 1e-3);
+      const dist = radius * 2.8;
+
+      const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 1e-4, 1e7);
+      camera.position.set(center.x + dist * 0.55, center.y + dist * 0.45, center.z + dist * 0.55);
+      camera.lookAt(center);
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(renderer.domElement);
+
+      const controls = new OrbitControls(camera, renderer.domElement);
+      controls.target.copy(center);
+      controls.enableDamping = true;
+      controls.update();
+
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+
+      function tick() {
+        requestAnimationFrame(tick);
+        controls.update();
+        renderer.render(scene, camera);
+      }
+      tick();
+    }
+
+    fetchGalaxyJson()
+      .then(main)
+      .catch((e) => showError(String(e?.message || e)));
+  </script>
+</body>
+</html>

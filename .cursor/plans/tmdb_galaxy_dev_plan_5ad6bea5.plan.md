@@ -31,7 +31,7 @@ todos:
     status: completed
   - id: p3-verify-3d
     content: "Phase 3.0: Minimal HTML+Three.js scaffold to visually verify subsample JSON point cloud (disposable)"
-    status: pending
+    status: completed
   - id: p3-frontend-scaffold
     content: "Phase 3.1-3.2: Frontend scaffolding (Vite + React + TS + Tailwind + shadcn/ui + types)"
     status: pending

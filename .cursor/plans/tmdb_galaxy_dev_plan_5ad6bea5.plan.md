@@ -22,7 +22,7 @@ todos:
     status: completed
   - id: p2-umap
     content: "Phase 2.4: Multi-modal fusion + UMAP projection script (1/sqrt(d) scaling, random_state=42)"
-    status: pending
+    status: completed
   - id: p2-export
     content: "Phase 2.5: Z-axis generation + derived fields + galaxy_data.json export (OKLCH palette, jitter, size/emissive mapping)"
     status: pending

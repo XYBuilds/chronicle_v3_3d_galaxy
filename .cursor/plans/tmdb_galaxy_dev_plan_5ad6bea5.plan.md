@@ -28,7 +28,7 @@ todos:
     status: completed
   - id: p2-subsample-smoke
     content: "Phase 2.6: Subsample smoke test — run full pipeline on 20 rows, validate output"
-    status: pending
+    status: completed
   - id: p3-frontend-scaffold
     content: "Phase 3.1-3.2: Frontend scaffolding (Vite + React + TS + Tailwind + shadcn/ui + types)"
     status: pending

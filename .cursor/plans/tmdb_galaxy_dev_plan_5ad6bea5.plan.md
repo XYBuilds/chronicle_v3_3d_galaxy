@@ -13,7 +13,7 @@ todos:
     status: completed
   - id: p2-text-embedding
     content: "Phase 2.1: Text embedding script (Phase A MiniLM 384d, GPU, L2 norm)"
-    status: pending
+    status: completed
   - id: p2-genre-encoding
     content: "Phase 2.2: Genre rank-weighted encoding script (golden ratio decay, L2 norm)"
     status: pending

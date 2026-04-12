@@ -16,7 +16,7 @@ todos:
     status: completed
   - id: p2-genre-encoding
     content: "Phase 2.2: Genre rank-weighted encoding script (golden ratio decay, L2 norm)"
-    status: pending
+    status: completed
   - id: p2-lang-encoding
     content: "Phase 2.3: Language one-hot encoding script (dynamic N_lang, L2 norm)"
     status: pending

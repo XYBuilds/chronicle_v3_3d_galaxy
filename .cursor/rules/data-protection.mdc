@@ -11,7 +11,7 @@ The raw dataset `data/raw/TMDB_all_movies.csv` is very large (~1M+ rows). **Neve
 
 - Reference `data/subsample/` files for schema, column names, and sample values
 - Write Python scripts to analyze or process `data/raw/` programmatically
-- Consult `docs/reports/TMDB 2025 Dataset Report.md` for pre-computed statistics
+- Consult `docs/reports/TMDB All Movies Dataset Report.md` for pre-computed statistics
 
 ## Subsample Location
 

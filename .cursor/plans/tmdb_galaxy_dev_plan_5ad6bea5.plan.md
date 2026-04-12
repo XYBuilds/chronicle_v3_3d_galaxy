@@ -25,7 +25,7 @@ todos:
     status: completed
   - id: p2-export
     content: "Phase 2.5: Z-axis generation + derived fields + galaxy_data.json export (OKLCH palette, jitter, size/emissive mapping)"
-    status: pending
+    status: completed
   - id: p2-subsample-smoke
     content: "Phase 2.6: Subsample smoke test — run full pipeline on 20 rows, validate output"
     status: pending

@@ -19,7 +19,7 @@ todos:
     status: completed
   - id: p2-lang-encoding
     content: "Phase 2.3: Language one-hot encoding script (dynamic N_lang, L2 norm)"
-    status: pending
+    status: completed
   - id: p2-umap
     content: "Phase 2.4: Multi-modal fusion + UMAP projection script (1/sqrt(d) scaling, random_state=42)"
     status: pending

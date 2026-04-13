@@ -46,7 +46,7 @@ todos:
     status: completed
   - id: p3-galaxy-points
     content: "Phase 3.5: Points particle system + custom shaders (circle + glow + HDR)"
-    status: pending
+    status: completed
   - id: p3-bloom
     content: "Phase 3.6: Post-processing Bloom pass"
     status: pending

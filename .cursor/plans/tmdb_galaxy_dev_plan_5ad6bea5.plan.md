@@ -49,7 +49,7 @@ todos:
     status: completed
   - id: p3-bloom
     content: "Phase 3.6: Post-processing Bloom pass"
-    status: pending
+    status: completed
   - id: p4-raycaster
     content: "Phase 4.1: Raycaster interaction (hover + click detection)"
     status: pending

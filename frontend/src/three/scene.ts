@@ -1,9 +1,25 @@
 import * as THREE from 'three'
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js'
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js'
 
 import type { Meta, Movie } from '@/types/galaxy'
 
 import { attachGalaxyCameraControls, GALAXY_CAMERA_EULER } from './camera'
 import { createGalaxyPoints } from './galaxy'
+
+interface BloomDebugControls {
+  strength: number
+  radius: number
+  threshold: number
+  log: () => void
+}
+
+declare global {
+  interface Window {
+    __bloom?: BloomDebugControls
+  }
+}
 
 export interface GalaxySceneMount {
   renderer: THREE.WebGLRenderer
@@ -58,6 +74,42 @@ export function mountGalaxyScene(
   const galaxy = createGalaxyPoints(movies, pr)
   scene.add(galaxy.points)
 
+  const composer = new EffectComposer(renderer)
+  const renderPass = new RenderPass(scene, camera)
+  const bloomPass = new UnrealBloomPass(new THREE.Vector2(1, 1), 1.0, 0.5, 0.85)
+  composer.addPass(renderPass)
+  composer.addPass(bloomPass)
+
+  const bloomDebug: BloomDebugControls = {
+    get strength() {
+      return bloomPass.strength
+    },
+    set strength(value: number) {
+      bloomPass.strength = value
+    },
+    get radius() {
+      return bloomPass.radius
+    },
+    set radius(value: number) {
+      bloomPass.radius = value
+    },
+    get threshold() {
+      return bloomPass.threshold
+    },
+    set threshold(value: number) {
+      bloomPass.threshold = value
+    },
+    log() {
+      console.log(
+        `[PostFX] Bloom enabled | threshold=${bloomPass.threshold.toFixed(2)} strength=${bloomPass.strength.toFixed(
+          2,
+        )} radius=${bloomPass.radius.toFixed(2)}`,
+      )
+    },
+  }
+  window.__bloom = bloomDebug
+  bloomDebug.log()
+
   const resize = () => {
     const w = Math.max(1, container.clientWidth)
     const h = Math.max(1, container.clientHeight)
@@ -65,6 +117,8 @@ export function mountGalaxyScene(
     camera.updateProjectionMatrix()
     renderer.setSize(w, h, false)
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+    composer.setSize(w, h)
+    bloomPass.setSize(w, h)
     galaxy.material.uniforms.uPixelRatio.value = Math.min(window.devicePixelRatio, 2)
   }
 
@@ -90,7 +144,7 @@ export function mountGalaxyScene(
   let raf = 0
   const tick = () => {
     raf = requestAnimationFrame(tick)
-    renderer.render(scene, camera)
+    composer.render()
   }
   tick()
 
@@ -101,6 +155,10 @@ export function mountGalaxyScene(
     detachControls()
     galaxy.points.removeFromParent()
     galaxy.dispose()
+    if (window.__bloom === bloomDebug) {
+      delete window.__bloom
+    }
+    composer.dispose()
     renderer.dispose()
     if (renderer.domElement.parentElement === container) {
       container.removeChild(renderer.domElement)

@@ -33,6 +33,25 @@ function validateMeta(meta: unknown): asserts meta is Meta {
       throw new Error(`[GalaxyData] meta.z_range[${i}] must be finite`)
     }
   }
+  const xyRaw = meta.xy_range
+  if (!isRecord(xyRaw)) {
+    throw new Error('[GalaxyData] meta.xy_range must be an object with x, y arrays')
+  }
+  const xArr = xyRaw.x
+  const yArr = xyRaw.y
+  if (!Array.isArray(xArr) || xArr.length !== 2 || !Array.isArray(yArr) || yArr.length !== 2) {
+    throw new Error('[GalaxyData] meta.xy_range.x / .y must each be [min, max]')
+  }
+  for (let i = 0; i < 2; i++) {
+    const vx = xArr[i]
+    const vy = yArr[i]
+    if (typeof vx !== 'number' || !Number.isFinite(vx)) {
+      throw new Error(`[GalaxyData] meta.xy_range.x[${i}] must be finite`)
+    }
+    if (typeof vy !== 'number' || !Number.isFinite(vy)) {
+      throw new Error(`[GalaxyData] meta.xy_range.y[${i}] must be finite`)
+    }
+  }
 }
 
 function validateMovie(m: unknown, index: number): asserts m is Movie {

@@ -21,7 +21,7 @@ function App() {
     if (status !== 'ready' || !data) return
     const el = canvasHostRef.current
     if (!el) return
-    const mount = mountGalaxyScene(el, data.meta)
+    const mount = mountGalaxyScene(el, data.meta, data.movies)
     return () => mount.dispose()
   }, [status, data])
 

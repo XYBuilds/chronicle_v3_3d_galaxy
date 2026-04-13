@@ -1,8 +1,9 @@
 import * as THREE from 'three'
 
-import type { Meta } from '@/types/galaxy'
+import type { Meta, Movie } from '@/types/galaxy'
 
 import { attachGalaxyCameraControls, GALAXY_CAMERA_EULER } from './camera'
+import { createGalaxyPoints } from './galaxy'
 
 export interface GalaxySceneMount {
   renderer: THREE.WebGLRenderer
@@ -26,6 +27,7 @@ function xyCenter(meta: Pick<Meta, 'xy_range'>): { cx: number; cy: number } {
 export function mountGalaxyScene(
   container: HTMLElement,
   meta: Pick<Meta, 'z_range' | 'xy_range'>,
+  movies: Movie[],
 ): GalaxySceneMount {
   const zRange = meta.z_range
   if (zRange.length !== 2) {
@@ -52,12 +54,18 @@ export function mountGalaxyScene(
   const gl = renderer.getContext()
   const webglLabel = gl instanceof WebGL2RenderingContext ? 'WebGL2' : 'WebGL1'
 
+  const pr = Math.min(window.devicePixelRatio, 2)
+  const galaxy = createGalaxyPoints(movies, pr)
+  scene.add(galaxy.points)
+
   const resize = () => {
     const w = Math.max(1, container.clientWidth)
     const h = Math.max(1, container.clientHeight)
     camera.aspect = w / h
     camera.updateProjectionMatrix()
     renderer.setSize(w, h, false)
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+    galaxy.material.uniforms.uPixelRatio.value = Math.min(window.devicePixelRatio, 2)
   }
 
   resize()
@@ -91,7 +99,8 @@ export function mountGalaxyScene(
     ro?.disconnect()
     window.removeEventListener('resize', resize)
     detachControls()
-    scene.clear()
+    galaxy.points.removeFromParent()
+    galaxy.dispose()
     renderer.dispose()
     if (renderer.domElement.parentElement === container) {
       container.removeChild(renderer.domElement)

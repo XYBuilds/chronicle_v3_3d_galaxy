@@ -40,7 +40,7 @@ todos:
     status: completed
   - id: p3-data-loading
     content: "Phase 3.3: Data loader + Loading page (shadcn Spinner) + Zustand store"
-    status: pending
+    status: completed
   - id: p3-threejs-scene
     content: "Phase 3.4: Three.js scene + custom camera controller"
     status: pending

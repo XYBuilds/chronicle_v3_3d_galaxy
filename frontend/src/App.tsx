@@ -1,7 +1,8 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 
 import { Loading } from '@/components/Loading'
 import { useGalaxyDataStore } from '@/store/galaxyDataStore'
+import { mountGalaxyScene } from '@/three/scene'
 
 import './App.css'
 
@@ -10,10 +11,19 @@ function App() {
   const data = useGalaxyDataStore((s) => s.data)
   const errorMessage = useGalaxyDataStore((s) => s.errorMessage)
   const fetchGalaxyData = useGalaxyDataStore((s) => s.fetchGalaxyData)
+  const canvasHostRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     void fetchGalaxyData()
   }, [fetchGalaxyData])
+
+  useEffect(() => {
+    if (status !== 'ready' || !data) return
+    const el = canvasHostRef.current
+    if (!el) return
+    const mount = mountGalaxyScene(el, data.meta)
+    return () => mount.dispose()
+  }, [status, data])
 
   if (status === 'loading' || status === 'idle') {
     return <Loading />
@@ -33,14 +43,12 @@ function App() {
   }
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
-      <div className="mx-auto max-w-xl px-6 py-16">
-        <h1 className="text-xl font-semibold tracking-tight">TMDB Galaxy</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Loaded {data?.movies.length ?? 0} movies (version {data?.meta.version ?? '—'}). Three.js scene
-          arrives in Phase 3.4.
-        </p>
-      </div>
+    <main className="relative min-h-screen w-full overflow-hidden bg-black text-foreground">
+      <div
+        ref={canvasHostRef}
+        className="fixed inset-0 h-dvh w-full bg-black"
+        aria-label="Galaxy WebGL canvas host"
+      />
     </main>
   )
 }

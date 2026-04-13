@@ -32,9 +32,12 @@ todos:
   - id: p3-verify-3d
     content: "Phase 3.0: Minimal HTML+Three.js scaffold to visually verify subsample JSON point cloud (disposable)"
     status: completed
-  - id: p3-frontend-scaffold
-    content: "Phase 3.1-3.2: Frontend scaffolding (Vite + React + TS + Tailwind + shadcn/ui + types)"
-    status: pending
+  - id: p3-vite-scaffold
+    content: "Phase 3.1: Frontend scaffolding (Vite + React + TS + Tailwind + shadcn/ui + Storybook + vite-plugin-glsl)"
+    status: completed
+  - id: p3-galaxy-types
+    content: "Phase 3.2: TypeScript types (galaxy.ts GalaxyData/Meta/Movie + JSON satisfies check)"
+    status: completed
   - id: p3-data-loading
     content: "Phase 3.3: Data loader + Loading page (shadcn Spinner) + Zustand store"
     status: pending

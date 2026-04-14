@@ -12,6 +12,8 @@ export interface GalaxyCameraControlOptions {
   truckPedestalSpeed?: number
   /** World Z units per wheel notch (scaled by delta magnitude). */
   zScrollSpeed?: number
+  /** Phase 4.5 — block truck / wheel while camera fly-to runs. */
+  getInputLocked?: () => boolean
 }
 
 function applyFixedOrientation(camera: THREE.PerspectiveCamera): void {
@@ -44,6 +46,7 @@ export function attachGalaxyCameraControls(
   let lastY = 0
 
   const onPointerDown = (e: PointerEvent) => {
+    if (options.getInputLocked?.()) return
     if (e.button !== 0) return
     dragging = true
     lastX = e.clientX
@@ -61,6 +64,7 @@ export function attachGalaxyCameraControls(
   }
 
   const onPointerMove = (e: PointerEvent) => {
+    if (options.getInputLocked?.()) return
     if (!dragging) return
     const dx = e.clientX - lastX
     const dy = e.clientY - lastY
@@ -75,6 +79,7 @@ export function attachGalaxyCameraControls(
   }
 
   const onWheel = (e: WheelEvent) => {
+    if (options.getInputLocked?.()) return
     e.preventDefault()
     const dz = Math.sign(e.deltaY) * zScrollSpeed * Math.min(Math.abs(e.deltaY) / 100, 3)
     camera.position.z += dz

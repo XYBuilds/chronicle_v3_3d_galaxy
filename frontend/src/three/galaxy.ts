@@ -62,14 +62,13 @@ export function createGalaxyPoints(
     uniforms: {
       uPixelRatio: { value: pixelRatio },
       uSizeScale: { value: sizeScale },
+      uPointsOpacity: { value: 1 },
     },
     vertexShader: pointVertexShader,
     fragmentShader: pointFragmentShader,
-    // Opaque hard discs + stroke (fragment alpha always 1).
-    transparent: false,
+    transparent: true,
     depthTest: true,
-    // Must write depth so farther points fail the depth test; depthWrite:false lets later
-    // fragments (often farther in buffer order) composite on top of nearer ones incorrectly.
+    // Phase 4.5: brief global fade needs blending; accept minor depth ordering quirks while uPointsOpacity<1.
     depthWrite: true,
     blending: THREE.NormalBlending,
   })

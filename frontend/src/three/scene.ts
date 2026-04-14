@@ -4,11 +4,13 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js'
 
 import { setGalaxyCameraZ } from '@/lib/galaxyCameraZBridge'
+import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
 import type { Meta, Movie } from '@/types/galaxy'
 
 import { attachGalaxyCameraControls, GALAXY_CAMERA_EULER } from './camera'
 import { createGalaxyPoints } from './galaxy'
 import { attachGalaxyPointsInteraction } from './interaction'
+import { createSelectionPlanet } from './planet'
 
 interface BloomDebugControls {
   strength: number
@@ -49,9 +51,24 @@ function xyCenter(meta: Pick<Meta, 'xy_range'>): { cx: number; cy: number } {
  * Black fullscreen scene: WebGL2 renderer, perspective camera at XY center and
  * Z = z_range[0] - 2, facing +Z (axis-parallel, no rotation in controls).
  */
+const SELECT_MS = 700
+const DESELECT_MS = 450
+
+function easeOutCubic(t: number): number {
+  const x = THREE.MathUtils.clamp(t, 0, 1)
+  return 1 - Math.pow(1 - x, 3)
+}
+
+function worldSpan(meta: Pick<Meta, 'xy_range' | 'z_range'>): number {
+  const xr = meta.xy_range.x
+  const yr = meta.xy_range.y
+  const zr = meta.z_range
+  return Math.max(xr[1] - xr[0], yr[1] - yr[0], zr[1] - zr[0])
+}
+
 export function mountGalaxyScene(
   container: HTMLElement,
-  meta: Pick<Meta, 'z_range' | 'xy_range' | 'count'>,
+  meta: Pick<Meta, 'z_range' | 'xy_range' | 'count' | 'genre_palette'>,
   movies: Movie[],
 ): GalaxySceneMount {
   const zRange = meta.z_range
@@ -83,6 +100,125 @@ export function mountGalaxyScene(
   const pr = Math.min(window.devicePixelRatio, 2)
   const galaxy = createGalaxyPoints(movies, pr)
   scene.add(galaxy.points)
+
+  const planet = createSelectionPlanet()
+  scene.add(planet.mesh)
+
+  type SelectionPhase = 'idle' | 'selecting' | 'selected' | 'deselecting'
+  let selectionPhase: SelectionPhase = 'idle'
+  let animStartMs = 0
+  const restCam = new THREE.Vector3()
+  const fromCam = new THREE.Vector3()
+  const toCam = new THREE.Vector3()
+  let inputLocked = false
+
+  const uPointsOpacity = galaxy.material.uniforms.uPointsOpacity as THREE.Uniform<number>
+  console.assert(uPointsOpacity.value === 1, '[Scene] initial uPointsOpacity must be 1')
+
+  const applySelectionFrame = (nowMs: number) => {
+    planet.material.uniforms.uTime.value = nowMs * 0.001
+
+    if (selectionPhase === 'idle') {
+      uPointsOpacity.value = 1
+      planet.setOpacity(0)
+      inputLocked = false
+      return
+    }
+
+    if (selectionPhase === 'selecting') {
+      inputLocked = true
+      const t = Math.min(1, (nowMs - animStartMs) / SELECT_MS)
+      const e = easeOutCubic(t)
+      camera.position.lerpVectors(fromCam, toCam, e)
+      camera.rotation.copy(GALAXY_CAMERA_EULER)
+      uPointsOpacity.value = 1 - easeOutCubic(Math.min(1, t / 0.58))
+      planet.setOpacity(easeOutCubic(THREE.MathUtils.clamp((t - 0.12) / 0.88, 0, 1)))
+      if (t >= 1) {
+        selectionPhase = 'selected'
+        uPointsOpacity.value = 0
+        planet.setOpacity(1)
+        camera.position.copy(toCam)
+        console.log('[Selection] phase=selected | points hidden | planet visible')
+      }
+      return
+    }
+
+    if (selectionPhase === 'deselecting') {
+      inputLocked = true
+      const t = Math.min(1, (nowMs - animStartMs) / DESELECT_MS)
+      const e = easeOutCubic(t)
+      camera.position.lerpVectors(fromCam, toCam, e)
+      camera.rotation.copy(GALAXY_CAMERA_EULER)
+      planet.setOpacity(1 - e)
+      uPointsOpacity.value = easeOutCubic(THREE.MathUtils.clamp((t - 0.28) / 0.72, 0, 1))
+      if (t >= 1) {
+        selectionPhase = 'idle'
+        uPointsOpacity.value = 1
+        planet.setOpacity(0)
+        console.log('[Selection] phase=idle | camera restored | points visible')
+      }
+      return
+    }
+
+    // selected — user may truck/pedestal; only keep points dimmed + planet lit
+    inputLocked = false
+    uPointsOpacity.value = 0
+    planet.setOpacity(1)
+  }
+
+  const beginSelect = (movie: Movie) => {
+    const span = worldSpan(meta)
+    const r = THREE.MathUtils.clamp(span * 0.014, 0.07, span * 0.05)
+    const standoff = Math.max(r * 4.2, span * 0.018)
+    toCam.set(movie.x, movie.y, movie.z - standoff)
+    planet.setFromMovie(movie, meta.genre_palette, r)
+    fromCam.copy(camera.position)
+    animStartMs = performance.now()
+    selectionPhase = 'selecting'
+    console.log(
+      `[Selection] phase=selecting | duration=${SELECT_MS}ms | standoff=${standoff.toFixed(4)} | planetR=${r.toFixed(4)}`,
+    )
+  }
+
+  const beginDeselect = () => {
+    fromCam.copy(camera.position)
+    toCam.copy(restCam)
+    animStartMs = performance.now()
+    selectionPhase = 'deselecting'
+    console.log(`[Selection] phase=deselecting | duration=${DESELECT_MS}ms`)
+  }
+
+  const onSelectionStore = (
+    state: { selectedMovieId: number | null },
+    prev: { selectedMovieId: number | null },
+  ) => {
+    const id = state.selectedMovieId
+    if (id === prev.selectedMovieId) return
+
+    if (id === null) {
+      if (selectionPhase === 'selected' || selectionPhase === 'selecting') {
+        beginDeselect()
+      }
+      return
+    }
+
+    const movie = movies.find((m) => m.id === id)
+    if (!movie) {
+      console.warn(`[Selection] unknown movie id=${id}`)
+      return
+    }
+
+    if (selectionPhase === 'idle') {
+      restCam.copy(camera.position)
+    }
+    beginSelect(movie)
+  }
+
+  const unsubSelection = useGalaxyInteractionStore.subscribe(onSelectionStore)
+  onSelectionStore(
+    useGalaxyInteractionStore.getState(),
+    { selectedMovieId: null },
+  )
 
   const composer = new EffectComposer(renderer)
   const renderPass = new RenderPass(scene, camera)
@@ -161,6 +297,7 @@ export function mountGalaxyScene(
   const detachControls = attachGalaxyCameraControls(camera, canvas, {
     zRange: meta.z_range,
     xyRange: meta.xy_range,
+    getInputLocked: () => inputLocked,
   })
 
   const detachInteraction = attachGalaxyPointsInteraction({
@@ -180,6 +317,7 @@ export function mountGalaxyScene(
   let raf = 0
   const tick = () => {
     raf = requestAnimationFrame(tick)
+    applySelectionFrame(performance.now())
     setGalaxyCameraZ(camera.position.z)
     composer.render()
   }
@@ -189,8 +327,11 @@ export function mountGalaxyScene(
     cancelAnimationFrame(raf)
     ro?.disconnect()
     window.removeEventListener('resize', resize)
+    unsubSelection()
     detachControls()
     detachInteraction()
+    planet.mesh.removeFromParent()
+    planet.dispose()
     galaxy.points.removeFromParent()
     galaxy.dispose()
     if (window.__bloom === bloomDebug) {

@@ -32,7 +32,6 @@ isProject: false
 
 **已确认决策（2026-04-14）**
 
-- **Todo 快照**：`full-pipeline-validate` → **已完成**（59,014 行、`galaxy_data.json` / `.gz` 已入库，校验与 Windows 编码修复见 `docs/reports/全量管线与粒子渲染调参会话实施报告.md`）。`frontend-scale-bloom` → **本阶段结案（completed）**：全量数据 + `npm run build` 已验证；**后续开发中 Bloom 保持 `scene.ts` 当前写入值**，不在本阶段锁定生产向 `threshold` / `strength` / `radius`；未来再做专门调参与（若需要）写回默认值。本地试验仍可用 `window.__bloom`。`npm-workspaces` → **已完成**（根 `workspaces: ["frontend"]`、根 `package-lock.json`、脚本 `-w frontend`；实施报告见 `docs/reports/代码审查后续 npm workspaces 根目录 monorepo DX 实施报告.md`）。**仍为 pending**：`camera-clamp`、`eslint-cleanup`、`backlog-genre-palette`。
 - **大 JSON 与 Git**：继续将全量生成的 [frontend/public/data/galaxy_data.json](frontend/public/data/galaxy_data.json) **纳入版本跟踪**；若远程托管有单文件大小上限，再考虑 Git LFS 或拆仓，不在本计划内默认 gitignore。
 - **根目录包管理**：采用 **npm workspaces**（根 `package.json` 声明 `workspaces: ["frontend"]`），替代仅 `--prefix` 代理。
 

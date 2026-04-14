@@ -61,7 +61,7 @@ todos:
     status: completed
   - id: p4-drawer
     content: "Phase 4.3: Detail drawer component (shadcn Sheet) + Storybook story"
-    status: pending
+    status: completed
   - id: p4-timeline
     content: "Phase 4.4: Timeline indicator component"
     status: pending

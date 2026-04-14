@@ -50,7 +50,7 @@ function xyCenter(meta: Pick<Meta, 'xy_range'>): { cx: number; cy: number } {
  */
 export function mountGalaxyScene(
   container: HTMLElement,
-  meta: Pick<Meta, 'z_range' | 'xy_range'>,
+  meta: Pick<Meta, 'z_range' | 'xy_range' | 'count'>,
   movies: Movie[],
 ): GalaxySceneMount {
   const zRange = meta.z_range

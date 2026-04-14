@@ -1,18 +1,14 @@
 varying vec3 vColor;
-varying float vEmissive;
+varying float vEmissive; // kept for shader link; not used in this style pass.
 
+// Normalized radius: 0 at center, 1 at circle edge (gl_PointCoord space).
 void main() {
   vec2 c = gl_PointCoord - vec2(0.5);
   float r = length(c) * 2.0;
   if (r > 1.0) discard;
 
-  float core = 1.0 - smoothstep(0.35, 1.0, r);
-  float glow = exp(-r * r * 5.0) * 0.65;
-  float mixAmt = core + glow;
-
-  // HDR-friendly: emissive from JSON is ~0.1–1.5; boost halo for later Bloom (Phase 3.6).
-  vec3 rgb = vColor * vEmissive * (0.4 + 0.9 * core + 1.4 * glow);
-  float alpha = clamp(mixAmt, 0.0, 1.0);
-
-  gl_FragColor = vec4(rgb, alpha);
+  // Hard-edged disc: genre fill inside, white stroke ring to outer edge.
+  const float inner = 0.88;
+  vec3 rgb = mix(vec3(1.0), vColor, step(r, inner));
+  gl_FragColor = vec4(rgb, 1.0);
 }

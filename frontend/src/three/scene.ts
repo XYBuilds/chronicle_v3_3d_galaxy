@@ -15,9 +15,16 @@ interface BloomDebugControls {
   log: () => void
 }
 
+interface GalaxyPointScaleDebug {
+  /** Multiplier on screen point diameter (JSON `size` × perspective × this). */
+  scale: number
+  log: () => void
+}
+
 declare global {
   interface Window {
     __bloom?: BloomDebugControls
+    __galaxyPointScale?: GalaxyPointScaleDebug
   }
 }
 
@@ -76,7 +83,8 @@ export function mountGalaxyScene(
 
   const composer = new EffectComposer(renderer)
   const renderPass = new RenderPass(scene, camera)
-  const bloomPass = new UnrealBloomPass(new THREE.Vector2(1, 1), 1.0, 0.5, 0.85)
+  // strength 0: disable bloom for readability / solid-entity inspection (restore e.g. 1.0 when tuning glow).
+  const bloomPass = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.0, 0.5, 0.85)
   composer.addPass(renderPass)
   composer.addPass(bloomPass)
 
@@ -109,6 +117,21 @@ export function mountGalaxyScene(
   }
   window.__bloom = bloomDebug
   bloomDebug.log()
+
+  const uSizeScale = galaxy.material.uniforms.uSizeScale as THREE.Uniform<number>
+  const pointScaleDebug: GalaxyPointScaleDebug = {
+    get scale() {
+      return uSizeScale.value
+    },
+    set scale(value: number) {
+      uSizeScale.value = value
+    },
+    log() {
+      console.log(`[Galaxy] point size scale=${uSizeScale.value} (uniform uSizeScale)`)
+    },
+  }
+  window.__galaxyPointScale = pointScaleDebug
+  pointScaleDebug.log()
 
   const resize = () => {
     const w = Math.max(1, container.clientWidth)
@@ -157,6 +180,9 @@ export function mountGalaxyScene(
     galaxy.dispose()
     if (window.__bloom === bloomDebug) {
       delete window.__bloom
+    }
+    if (window.__galaxyPointScale === pointScaleDebug) {
+      delete window.__galaxyPointScale
     }
     composer.dispose()
     renderer.dispose()

@@ -5,6 +5,9 @@ import type { Movie } from '@/types/galaxy'
 import pointFragmentShader from './shaders/point.frag.glsl'
 import pointVertexShader from './shaders/point.vert.glsl'
 
+/** Multiplies `gl_PointSize` after JSON `size` and perspective; override at runtime via `window.__galaxyPointScale`. */
+export const DEFAULT_POINT_SIZE_SCALE = 0.3
+
 export interface GalaxyPointsHandle {
   points: THREE.Points
   material: THREE.ShaderMaterial
@@ -51,22 +54,31 @@ function fillMovieBuffers(movies: Movie[]): THREE.BufferGeometry {
 export function createGalaxyPoints(
   movies: Movie[],
   pixelRatio: number,
+  sizeScale: number = DEFAULT_POINT_SIZE_SCALE,
 ): GalaxyPointsHandle {
   const geometry = fillMovieBuffers(movies)
 
   const material = new THREE.ShaderMaterial({
     uniforms: {
       uPixelRatio: { value: pixelRatio },
+      uSizeScale: { value: sizeScale },
     },
     vertexShader: pointVertexShader,
     fragmentShader: pointFragmentShader,
-    transparent: true,
+    // Opaque hard discs + stroke (fragment alpha always 1).
+    transparent: false,
     depthTest: true,
-    depthWrite: false,
+    // Must write depth so farther points fail the depth test; depthWrite:false lets later
+    // fragments (often farther in buffer order) composite on top of nearer ones incorrectly.
+    depthWrite: true,
     blending: THREE.NormalBlending,
   })
 
   const points = new THREE.Points(geometry, material)
+
+  console.log(
+    `[Galaxy] uSizeScale=${sizeScale} (default ${DEFAULT_POINT_SIZE_SCALE}) — runtime: window.__galaxyPointScale`,
+  )
 
   const dispose = () => {
     geometry.dispose()

@@ -1,15 +1,15 @@
 ---
 name: Code review follow-up
-overview: 在继续 [TMDB Galaxy Dev Plan](.cursor/plans/tmdb_galaxy_dev_plan_5ad6bea5.plan.md) 的 Phase 4 之前，按 [Project_Status_and_Code_Review_Report.md](docs/reports/Project_Status_and_Code_Review_Report.md) 优先完成全量数据验证、渲染/Bloom 调参、根工作区 DX、相机边界与 ESLint 清理；色板复杂度作为非阻塞 backlog 记录。
+overview: 在继续 [TMDB Galaxy Dev Plan](.cursor/plans/tmdb_galaxy_dev_plan_5ad6bea5.plan.md) 的 Phase 4 之前，按 [Project_Status_and_Code_Review_Report.md](docs/reports/Project_Status_and_Code_Review_Report.md) 优先完成全量数据验证、根工作区 DX、相机边界与 ESLint 清理。**Bloom**：后续开发阶段保持 `scene.ts` 当前默认值不变；**生产向 Bloom 数值本阶段不定**，留待未来专门迭代（仍可用 `window.__bloom` 本地试验）。色板复杂度作为非阻塞 backlog 记录。
 todos:
   - id: full-pipeline-validate
     content: Run `run_pipeline.py --through-phase-2` on canonical `TMDB_all_movies.csv`; confirm row band, JSON validate; commit full `galaxy_data.json` per repo policy (watch host/Git LFS limits if needed)
-    status: pending
+    status: completed
   - id: frontend-scale-bloom
-    content: Load full `galaxy_data.json` in dev; profile FPS/overdraw; tune UnrealBloomPass defaults via `window.__bloom` then commit stable values in scene.ts
-    status: pending
+    content: "Bloom frozen: keep current UnrealBloomPass defaults in scene.ts for Phase 4–adjacent dev; production threshold/strength/radius TBD in a later polish pass (local tuning via window.__bloom only). Full JSON load + build already validated."
+    status: completed
   - id: npm-workspaces
-    content: Adopt root npm workspaces (`workspaces: [\"frontend\"]`), root `npm install` / scripts verified vs old `--prefix` proxy
+    content: "Adopt root npm workspaces (`workspaces: [\\\"frontend\\\"]`), root `npm install` / scripts verified vs old `--prefix` proxy"
     status: pending
   - id: camera-clamp
     content: Implement XY/Z clamp (padding from meta ranges) in three/camera.ts; optional spring soft bounds later
@@ -32,6 +32,7 @@ isProject: false
 
 **已确认决策（2026-04-14）**
 
+- **Todo 快照**：`full-pipeline-validate` → **已完成**（59,014 行、`galaxy_data.json` / `.gz` 已入库，校验与 Windows 编码修复见 `docs/reports/全量管线与粒子渲染调参会话实施报告.md`）。`frontend-scale-bloom` → **本阶段结案（completed）**：全量数据 + `npm run build` 已验证；**后续开发中 Bloom 保持 `scene.ts` 当前写入值**，不在本阶段锁定生产向 `threshold` / `strength` / `radius`；未来再做专门调参与（若需要）写回默认值。本地试验仍可用 `window.__bloom`。其余项仍为 pending。
 - **大 JSON 与 Git**：继续将全量生成的 [frontend/public/data/galaxy_data.json](frontend/public/data/galaxy_data.json) **纳入版本跟踪**；若远程托管有单文件大小上限，再考虑 Git LFS 或拆仓，不在本计划内默认 gitignore。
 - **根目录包管理**：采用 **npm workspaces**（根 `package.json` 声明 `workspaces: ["frontend"]`），替代仅 `--prefix` 代理。
 
@@ -39,7 +40,7 @@ isProject: false
 flowchart TD
   subgraph blockers [建议先于 Phase 4]
     A[全量管线 + JSON]
-    B[前端大点云 + Bloom 调参]
+    B[前端大点云 · Bloom 当前冻结]
     C[相机 XY/Z 边界]
     D[npm workspaces + ESLint]
   end
@@ -54,7 +55,7 @@ flowchart TD
 
 ## 1. 全量数据管线与前端联调（审查 3.1 — 最高优先级）
 
-**目标**：用真实清洗后规模（管线对 canonical 输入 [scripts/run_pipeline.py](scripts/run_pipeline.py) 默认断言约 **55k–65k** 行）生成 `galaxy_data.json` / `.json.gz`，并在浏览器中验证帧率、Overdraw、Bloom 是否大面积过曝。
+**目标**：用真实清洗后规模（管线对 canonical 输入 [scripts/run_pipeline.py](scripts/run_pipeline.py) 默认断言约 **55k–65k** 行）生成 `galaxy_data.json` / `.json.gz`，并在浏览器中验证帧率、Overdraw 等。**Bloom 生产标定本阶段不做**：代码中保持当前默认，过曝/辉光强度留待未来迭代。
 
 **执行要点**：
 
@@ -63,7 +64,7 @@ flowchart TD
   - `python scripts/run_pipeline.py --through-phase-2`
   - 或显式：`python scripts/run_pipeline.py --input data/raw/TMDB_all_movies.csv --through-phase-2`
 - 输出默认写入 [frontend/public/data/galaxy_data.json](frontend/public/data/galaxy_data.json)（及同 stem 的 gzip）；全量 JSON 体积大，注意**本地磁盘**与 **push 体积**（你已选择继续跟踪该文件；若接近平台限制再评估 LFS）。
-- **验收**：清洗行数落在断言区间；`validate_galaxy_json` 通过；本地 `npm run dev`（workspaces 落地后在根目录执行）加载后 **FPS 可接受**、无明显 Bloom 死白；必要时用已有 `window.__bloom`（[frontend/src/three/scene.ts](frontend/src/three/scene.ts)）现场调 `threshold` / `strength` / `radius`，再把稳定值写回代码。
+- **验收**：清洗行数落在断言区间；`validate_galaxy_json` 通过；本地 `npm run dev`（workspaces 落地后在根目录执行）加载后 **FPS 可接受**。**Bloom**：不强制本阶段定稿；开发期保持 [frontend/src/three/scene.ts](frontend/src/three/scene.ts) 当前默认，需要时用 `window.__bloom` 本地试参即可，**生产向数值未来再写回**。
 
 **风险备忘**：Embedding + UMAP 全量耗时长、占 GPU/内存；OOM 时按 [Tech Spec](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md) / [python-pipeline.mdc](.cursor/rules/python-pipeline.mdc) 降低 batch，而非丢样本。
 
@@ -113,4 +114,4 @@ flowchart TD
 
 ## 6. 与主开发计划的衔接
 
-完成 **§1–§4** 并记录全量下的 Bloom/性能基线后，再回到 [tmdb_galaxy_dev_plan_5ad6bea5.plan.md](.cursor/plans/tmdb_galaxy_dev_plan_5ad6bea5.plan.md) 从 **Phase 4.1 Raycaster** 继续；此时 Raycaster 与 HUD 将在真实点密度上开发，避免二次返工。
+完成 **§1–§4** 并在可行范围内记录全量下的**性能**观察后，再回到 [tmdb_galaxy_dev_plan_5ad6bea5.plan.md](.cursor/plans/tmdb_galaxy_dev_plan_5ad6bea5.plan.md) 从 **Phase 4.1 Raycaster** 继续；此时 Raycaster 与 HUD 将在真实点密度上开发，避免二次返工。**Bloom 生产标定**不纳入本阶段门禁，与 §1 决策一致。

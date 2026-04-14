@@ -32,8 +32,8 @@ isProject: false
 
 **已确认决策（2026-04-14）**
 
-- **大 JSON 与 Git**：继续将全量生成的 [frontend/public/data/galaxy_data.json](frontend/public/data/galaxy_data.json) **纳入版本跟踪**；若远程托管有单文件大小上限，再考虑 Git LFS 或拆仓，不在本计划内默认 gitignore。
-- **根目录包管理**：采用 **npm workspaces**（根 `package.json` 声明 `workspaces: ["frontend"]`），替代仅 `--prefix` 代理。
+- **任务清单与状态（单一事实源）**：与本计划相关的 **目标描述**、**完成度（`completed` / `pending`）** 以本文件顶部 **YAML frontmatter** 中的 **`todos`** 为准（各条的 **`id`**、**`content`**、**`status`**）；正文 **§1–§6** 展开实施要点，**不**再维护与 `todos` 平行的状态快照。
+- **大 JSON 与 Git**（策略性约定，不在 `todos` 中展开）：继续将全量生成的 [frontend/public/data/galaxy_data.json](frontend/public/data/galaxy_data.json) **纳入版本跟踪**；若远程托管有单文件大小上限，再考虑 Git LFS 或拆仓，不在本计划内默认 gitignore。
 
 ```mermaid
 flowchart TD

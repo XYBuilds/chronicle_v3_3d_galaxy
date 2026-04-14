@@ -205,7 +205,6 @@ def main(argv: list[str] | None = None) -> int:
                 str(vpath),
                 "--input",
                 str(args.galaxy_json),
-                "--print-movies",
             ]
             print(f"\n[Pipeline] >>> {' '.join(vcmd)}", flush=True)
             vproc = subprocess.run(vcmd, cwd=str(REPO_ROOT), env={**os.environ, "PYTHONUNBUFFERED": "1"})

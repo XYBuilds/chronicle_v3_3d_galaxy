@@ -113,6 +113,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def main(argv: list[str] | None = None) -> int:
+    # Windows consoles often default to a legacy code page; UTF-8 avoids UnicodeEncodeError
+    # when --print-movies emits non-ASCII titles (e.g. Chinese).
+    for stream in (sys.stdout, sys.stderr):
+        reconf = getattr(stream, "reconfigure", None)
+        if callable(reconf):
+            try:
+                reconf(encoding="utf-8", errors="replace")
+            except (OSError, ValueError, TypeError):
+                pass
+
     args = parse_args(argv)
     path = args.input.expanduser().resolve()
     if not path.is_file():

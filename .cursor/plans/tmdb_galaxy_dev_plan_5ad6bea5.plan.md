@@ -53,9 +53,6 @@ todos:
   - id: p3-review
     content: "Phase 3.7: Code review & follow-up — full-data pipeline validation, npm workspaces, ESLint cleanup (details → code_review_follow-up plan & docs/reports/Phase 3.7 子报告 3.7.0-3.7.4 索引.md)"
     status: completed
-  - id: p3-review-camera-clamp
-    content: "Phase 3.7 收尾: Camera XY/Z clamp (from review §3.3, pending)"
-    status: pending
   - id: p4-raycaster
     content: "Phase 4.1: Raycaster interaction (hover + click detection)"
     status: pending

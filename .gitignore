@@ -30,9 +30,7 @@ frontend/dist/
 frontend/storybook-static/
 frontend/.vite/
 frontend/.cache/
-# Regenerate with: python scripts/export/export_galaxy_json.py (full build can be very large)
-frontend/public/data/galaxy_data.json
-frontend/public/data/galaxy_data.json.gz
+# galaxy_data.json / .json.gz are tracked (full pipeline export; see code review follow-up plan).
 
 # ============================================================
 # IDE / OS

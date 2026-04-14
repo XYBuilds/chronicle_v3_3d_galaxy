@@ -79,9 +79,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument(
         "--device",
         type=str,
-        default="auto",
+        default="cuda",
         choices=("auto", "cuda", "cpu"),
-        help="Compute device (default: auto — CUDA when available)",
+        help="Compute device (default: cuda — requires CUDA; use cpu or auto otherwise)",
     )
     return p.parse_args(argv)
 

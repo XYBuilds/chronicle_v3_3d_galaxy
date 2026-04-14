@@ -1,4 +1,5 @@
 uniform float uPixelRatio;
+uniform float uSizeScale;
 
 attribute float size;
 attribute vec3 color;
@@ -15,6 +16,7 @@ void main() {
   gl_Position = projectionMatrix * mvPosition;
 
   float dist = max(0.001, -mvPosition.z);
-  float px = size * uPixelRatio * (500.0 / dist);
-  gl_PointSize = clamp(px, 1.0, 256.0);
+  float px = size * uPixelRatio * (500.0 / dist) * uSizeScale;
+  // No shader clamp — perspective size follows 1/dist; GPU may still enforce its own gl_PointSize max.
+  gl_PointSize = px;
 }

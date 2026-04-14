@@ -64,7 +64,7 @@ todos:
     status: completed
   - id: p4-timeline
     content: "Phase 4.4: Timeline indicator component"
-    status: pending
+    status: completed
   - id: p4-selected-planet
     content: "Phase 4.5: Selected state — IcoSphere + Perlin shader + camera fly-to animation"
     status: pending

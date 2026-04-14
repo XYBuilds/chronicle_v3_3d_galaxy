@@ -38,10 +38,13 @@ def _run_python_script(rel_script: Path, extra_args: list[str]) -> None:
         raise SystemExit(proc.returncode)
 
 
-def run_phase2_through_export(*, cleaned_csv: Path, galaxy_json: Path) -> None:
+def run_phase2_through_export(*, cleaned_csv: Path, galaxy_json: Path, embedding_device: str) -> None:
     """Phase 2.1–2.5 in order; paths must be absolute."""
     c = str(cleaned_csv)
-    _run_python_script(Path("scripts") / "feature_engineering" / "text_embedding.py", ["--input", c])
+    _run_python_script(
+        Path("scripts") / "feature_engineering" / "text_embedding.py",
+        ["--input", c, "--device", embedding_device],
+    )
     _run_python_script(Path("scripts") / "feature_engineering" / "genre_encoding.py", ["--input", c])
     _run_python_script(Path("scripts") / "feature_engineering" / "language_encoding.py", ["--input", c])
     _run_python_script(Path("scripts") / "feature_engineering" / "umap_projection.py", [])
@@ -98,6 +101,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--through-phase-2",
         action="store_true",
         help="After cleaning, run Phase 2.1 through 2.5 (embedding, UMAP, galaxy_data.json) using this run's cleaned CSV",
+    )
+    p.add_argument(
+        "--embedding-device",
+        type=str,
+        default="cuda",
+        choices=("cuda", "cpu", "auto"),
+        help="Phase 2.1 sentence-transformers device (default: cuda). Use cpu or auto without a CUDA-capable GPU.",
     )
     p.add_argument(
         "--phase-1-only",
@@ -197,7 +207,11 @@ def main(argv: list[str] | None = None) -> int:
                 file=sys.stderr,
             )
             return 1
-        run_phase2_through_export(cleaned_csv=args.output, galaxy_json=args.galaxy_json)
+        run_phase2_through_export(
+            cleaned_csv=args.output,
+            galaxy_json=args.galaxy_json,
+            embedding_device=args.embedding_device,
+        )
         if not args.skip_json_validate:
             vpath = REPO_ROOT / "scripts" / "validate_galaxy_json.py"
             vcmd = [

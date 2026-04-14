@@ -55,7 +55,7 @@ todos:
     status: completed
   - id: p4-raycaster
     content: "Phase 4.1: Raycaster interaction (hover + click detection)"
-    status: pending
+    status: completed
   - id: p4-tooltip
     content: "Phase 4.2: Tooltip component (shadcn) + Storybook story"
     status: pending

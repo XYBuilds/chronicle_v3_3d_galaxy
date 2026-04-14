@@ -7,6 +7,7 @@ import type { Meta, Movie } from '@/types/galaxy'
 
 import { attachGalaxyCameraControls, GALAXY_CAMERA_EULER } from './camera'
 import { createGalaxyPoints } from './galaxy'
+import { attachGalaxyPointsInteraction } from './interaction'
 
 interface BloomDebugControls {
   strength: number
@@ -153,9 +154,19 @@ export function mountGalaxyScene(
 
   container.appendChild(renderer.domElement)
 
-  const detachControls = attachGalaxyCameraControls(camera, renderer.domElement, {
+  const canvas = renderer.domElement
+
+  const detachControls = attachGalaxyCameraControls(camera, canvas, {
     zRange: meta.z_range,
     xyRange: meta.xy_range,
+  })
+
+  const detachInteraction = attachGalaxyPointsInteraction({
+    camera,
+    domElement: canvas,
+    points: galaxy.points,
+    movies,
+    meta,
   })
 
   const w = renderer.domElement.width
@@ -176,6 +187,7 @@ export function mountGalaxyScene(
     ro?.disconnect()
     window.removeEventListener('resize', resize)
     detachControls()
+    detachInteraction()
     galaxy.points.removeFromParent()
     galaxy.dispose()
     if (window.__bloom === bloomDebug) {

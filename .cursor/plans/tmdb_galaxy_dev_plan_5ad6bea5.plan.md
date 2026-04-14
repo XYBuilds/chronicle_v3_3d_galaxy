@@ -51,10 +51,10 @@ todos:
     content: "Phase 3.6: Post-processing Bloom pass"
     status: completed
   - id: p3-review
-    content: "Phase 3.6+: Code review & follow-up — full-data pipeline validation, npm workspaces, ESLint cleanup (details → code_review_follow-up plan & docs/reports/Phase-3.6-后代码审查与跟进/)"
+    content: "Phase 3.7: Code review & follow-up — full-data pipeline validation, npm workspaces, ESLint cleanup (details → code_review_follow-up plan & docs/reports/Phase 3.7 子报告 3.7.0-3.7.4 索引.md)"
     status: completed
   - id: p3-review-camera-clamp
-    content: "Phase 3.6+ 遗留: Camera XY/Z clamp (from review §3.3, pending)"
+    content: "Phase 3.7 收尾: Camera XY/Z clamp (from review §3.3, pending)"
     status: pending
   - id: p4-raycaster
     content: "Phase 4.1: Raycaster interaction (hover + click detection)"
@@ -329,22 +329,22 @@ flowchart LR
 
 ---
 
-## Phase 3.6+ — 代码审查与跟进（计划外插入）
+## Phase 3.7 — 代码审查与跟进（计划外插入）
 
-Phase 3.6 完成后、进入 Phase 4 前，执行了一次**全面代码审查**，识别出若干应提前收口的事项。
+Phase 3.6 完成后、进入 Phase 4 前，执行了一次**全面代码审查**，识别出若干应提前收口的事项。子报告位于 **`docs/reports/`** 根目录，与其它 Phase 实施报告同名式命名；**3.7.0–3.7.4** 索引见 [`Phase 3.7 子报告 3.7.0-3.7.4 索引.md`](docs/reports/Phase%203.7%20子报告%203.7.0-3.7.4%20索引.md)。
 
-- **审查报告与结论（SSOT）**：[`docs/reports/Phase-3.6-后代码审查与跟进/00-项目状态与代码审查报告.md`](docs/reports/Phase-3.6-后代码审查与跟进/00-项目状态与代码审查报告.md)
+- **审查报告与结论（SSOT）**：[`Phase 3.7.0 项目状态与代码审查 实施报告.md`](docs/reports/Phase%203.7.0%20项目状态与代码审查%20实施报告.md)
 - **执行计划与逐项状态（SSOT）**：[`code_review_follow-up_9d90ade4.plan.md`](.cursor/plans/code_review_follow-up_9d90ade4.plan.md)
-- **各项实施报告**：`docs/reports/Phase-3.6-后代码审查与跟进/01–04`
+- **分项实施报告**：[`3.7.1`](docs/reports/Phase%203.7.1%20全量管线与粒子渲染调参%20实施报告.md) · [`3.7.2`](docs/reports/Phase%203.7.2%20根目录%20npm%20workspaces%20与%20monorepo%20DX%20实施报告.md) · [`3.7.3`](docs/reports/Phase%203.7.3%20ESLint（react-refresh）告警清理%20实施报告.md) · [`3.7.4`](docs/reports/Phase%203.7.4%20代码审查后续%20plan%20余项与%20MVP%20后安排%20实施报告.md)
 
 ### 已完成
 
-| # | 事项 | 实施报告 |
-|---|------|----------|
-| 1 | 全量管线验证 (`run_pipeline.py` → ~60K 行 `galaxy_data.json`) + 前端加载验证 | `01-全量管线与粒子渲染调参会话实施报告.md` |
-| 2 | Bloom 参数冻结（保持 `scene.ts` 当前默认，`window.__bloom` 留待生产调参） | 同上 |
-| 3 | npm workspaces 落地（根 `package.json` `"workspaces": ["frontend"]"`） | `02-npm-workspaces-根目录monorepo-DX实施报告.md` |
-| 4 | ESLint react-refresh 告警清零 | `03-ESLint-react-refresh-告警清理实施报告.md` |
+| #   | 子报告 | 事项                                                                         | 实施报告 |
+| --- | ------ | ---------------------------------------------------------------------------- | -------- |
+| 1   | 3.7.1  | 全量管线验证 (`run_pipeline.py` → ~60K 行 `galaxy_data.json`) + 前端加载验证 | `Phase 3.7.1 全量管线与粒子渲染调参 实施报告.md` |
+| 2   | 3.7.1  | Bloom 参数冻结（保持 `scene.ts` 当前默认，`window.__bloom` 留待生产调参）    | 同上     |
+| 3   | 3.7.2  | npm workspaces 落地（根 `package.json` `"workspaces": ["frontend"]"`）     | `Phase 3.7.2 根目录 npm workspaces 与 monorepo DX 实施报告.md` |
+| 4   | 3.7.3  | ESLint react-refresh 告警清零                                                | `Phase 3.7.3 ESLint（react-refresh）告警清理 实施报告.md` |
 
 ### 仍开放（进入 Phase 4 前建议完成）
 
@@ -415,17 +415,17 @@ Phase 3.6 完成后、进入 Phase 4 前，执行了一次**全面代码审查**
 
 ## 里程碑 (Milestones)
 
-| 里程碑       | 交付物                                | 验收标准                                        | 状态 |
-| ------------ | ------------------------------------- | ----------------------------------------------- | ---- |
-| M1: 管线 MVP | `galaxy_data.json`（subsample 20 条） | JSON 结构完整，字段无 NaN，可手动检查语义合理性 | ✅ Done |
-| M2: 管线全量 | `galaxy_data.json`（~55-60K 条）      | 行数在预期范围；gzip 后 8–15 MB                 | ✅ Done (Phase 3.6+ 审查) |
-| M3: 粒子渲染 | 浏览器中看到彩色粒子星系 + Bloom      | 60K 粒子 1 draw call；滚轮可沿 Z 穿梭           | ✅ Done |
-| M4: 完整交互 | hover tooltip + click 选中 + 抽屉     | PRD 三层交互全部可用                            | Pending |
+| 里程碑       | 交付物                                | 验收标准                                        | 状态               |
+| ------------ | ------------------------------------- | ----------------------------------------------- | ------------------ |
+| M1: 管线 MVP | `galaxy_data.json`（subsample 20 条） | JSON 结构完整，字段无 NaN，可手动检查语义合理性 | ✅ Done             |
+| M2: 管线全量 | `galaxy_data.json`（~55-60K 条）      | 行数在预期范围；gzip 后 8–15 MB                 | ✅ Done (Phase 3.7) |
+| M3: 粒子渲染 | 浏览器中看到彩色粒子星系 + Bloom      | 60K 粒子 1 draw call；滚轮可沿 Z 穿梭           | ✅ Done             |
+| M4: 完整交互 | hover tooltip + click 选中 + 抽屉     | PRD 三层交互全部可用                            | Pending            |
 
 ---
 
 ## 实际开发顺序
 
-**Phase 0 → 1 → 2（subsample 先跑通）→ 3.0–3.6 → 3.6+ 代码审查与跟进（全量验证 + DX 收口）→ Phase 4**
+**Phase 0 → 1 → 2（subsample 先跑通）→ 3.0–3.6 → 3.7 代码审查与跟进（全量验证 + DX 收口）→ Phase 4**
 
-先用 20 行 subsample 验证管线正确性和 JSON schema，再搭前端骨架让 3D 渲染跑起来；在进入交互层之前做了一次计划外的代码审查，完成了全量数据管线验证、npm workspaces 落地、ESLint 清理等收口工作（Camera clamp 仍开放）。接下来进入 Phase 4 HUD 交互。
+先用 20 行 subsample 验证管线正确性和 JSON schema，再搭前端骨架让 3D 渲染跑起来；在进入交互层之前做了一次计划外的代码审查（记为 Phase 3.7），完成了全量数据管线验证、npm workspaces 落地、ESLint 清理等收口工作（Camera clamp 仍为 3.7 收尾项）。接下来进入 Phase 4 HUD 交互。

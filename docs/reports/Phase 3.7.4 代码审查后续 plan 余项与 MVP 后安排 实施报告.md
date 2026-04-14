@@ -1,7 +1,7 @@
-# 代码审查后续 plan — 余项与 MVP 后安排（说明报告）
+# Phase 3.7.4 代码审查后续 plan 余项与 MVP 后安排 实施报告
 
-> **关联计划**: `.cursor/plans/code_review_follow-up_9d90ade4.plan.md`  
-> **审查依据**: `docs/reports/Phase-3.6-后代码审查与跟进/00-项目状态与代码审查报告.md`  
+> **关联计划**: [`code_review_follow-up_9d90ade4.plan.md`](../../.cursor/plans/code_review_follow-up_9d90ade4.plan.md)  
+> **审查依据**: `docs/reports/Phase 3.7.0 项目状态与代码审查 实施报告.md`  
 > **报告日期**: 2026-04-14  
 > **范围**: 仅记录 **未实施**、拟在 **MVP 开发完成之后** 再做的调试与打磨项；**不包含** 已在其它报告中写过的已完成工作（见文末索引）。
 
@@ -9,12 +9,12 @@
 
 ## 1. 摘要
 
-[代码审查后续 plan](.cursor/plans/code_review_follow-up_9d90ade4.plan.md) 中，下列条目**不在本轮交付范围内**：计划在 **MVP 功能开发完成** 之后，再以调试 / 视觉打磨方式推进。
+[代码审查后续 plan](../../.cursor/plans/code_review_follow-up_9d90ade4.plan.md) 中，下列条目**不在本轮交付范围内**：计划在 **MVP 功能开发完成** 之后，再以调试 / 视觉打磨方式推进。
 
-| 计划章节 | 主题 | 安排 |
-| --- | --- | --- |
-| **§3** | 相机漫游边界（审查 **3.3**） | MVP 后调试 |
-| **§5** | Genre OKLCH 色板在全量下的可读性（审查 **3.4**，原列为非阻塞 backlog） | MVP 后调试 / 设计迭代 |
+| 计划章节 | 主题                                                                   | 安排                  |
+| -------- | ---------------------------------------------------------------------- | --------------------- |
+| **§3**   | 相机漫游边界（审查 **3.3**）                                           | MVP 后调试            |
+| **§5**   | Genre OKLCH 色板在全量下的可读性（审查 **3.4**，原列为非阻塞 backlog） | MVP 后调试 / 设计迭代 |
 
 计划中 **§6「与主开发计划的衔接」** 为**叙事性收尾**（说明完成 §1–§4 后回到 Phase 4），**无独立交付物或工程任务**，故不单独实施。
 
@@ -42,9 +42,9 @@
 
 ## 4. 相关报告索引（已完成条目，本报告不重复叙述）
 
-- `docs/reports/Phase-3.6-后代码审查与跟进/03-ESLint-react-refresh-告警清理实施报告.md` — 计划 **§4**  
-- `docs/reports/Phase-3.6-后代码审查与跟进/02-npm-workspaces-根目录monorepo-DX实施报告.md` — 计划 **§2**  
-- `docs/reports/Phase-3.6-后代码审查与跟进/01-全量管线与粒子渲染调参会话实施报告.md` — 计划 **§1**（及与渲染/Bloom 调参相关的会话结论）
+- `docs/reports/Phase 3.7.3 ESLint（react-refresh）告警清理 实施报告.md` — 计划 **§4**  
+- `docs/reports/Phase 3.7.2 根目录 npm workspaces 与 monorepo DX 实施报告.md` — 计划 **§2**  
+- `docs/reports/Phase 3.7.1 全量管线与粒子渲染调参 实施报告.md` — 计划 **§1**（及与渲染/Bloom 调参相关的会话结论）
 
 ---
 

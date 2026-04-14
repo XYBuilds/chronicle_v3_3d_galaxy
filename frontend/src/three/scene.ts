@@ -3,6 +3,7 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js'
 
+import { setGalaxyCameraZ } from '@/lib/galaxyCameraZBridge'
 import type { Meta, Movie } from '@/types/galaxy'
 
 import { attachGalaxyCameraControls, GALAXY_CAMERA_EULER } from './camera'
@@ -67,6 +68,7 @@ export function mountGalaxyScene(
   camera.position.set(cx, cy, zMin - 2)
   camera.rotation.copy(GALAXY_CAMERA_EULER)
   camera.updateMatrixWorld(true)
+  setGalaxyCameraZ(camera.position.z)
 
   const renderer = new THREE.WebGLRenderer({
     antialias: true,
@@ -178,6 +180,7 @@ export function mountGalaxyScene(
   let raf = 0
   const tick = () => {
     raf = requestAnimationFrame(tick)
+    setGalaxyCameraZ(camera.position.z)
     composer.render()
   }
   tick()

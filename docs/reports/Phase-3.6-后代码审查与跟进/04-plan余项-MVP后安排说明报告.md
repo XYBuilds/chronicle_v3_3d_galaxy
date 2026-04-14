@@ -1,7 +1,7 @@
 # 代码审查后续 plan — 余项与 MVP 后安排（说明报告）
 
 > **关联计划**: `.cursor/plans/code_review_follow-up_9d90ade4.plan.md`  
-> **审查依据**: `docs/reports/Project_Status_and_Code_Review_Report.md`  
+> **审查依据**: `docs/reports/Phase-3.6-后代码审查与跟进/00-项目状态与代码审查报告.md`  
 > **报告日期**: 2026-04-14  
 > **范围**: 仅记录 **未实施**、拟在 **MVP 开发完成之后** 再做的调试与打磨项；**不包含** 已在其它报告中写过的已完成工作（见文末索引）。
 
@@ -42,9 +42,9 @@
 
 ## 4. 相关报告索引（已完成条目，本报告不重复叙述）
 
-- `docs/reports/代码审查后续 ESLint react-refresh 告警清理 实施报告.md` — 计划 **§4**  
-- `docs/reports/代码审查后续 npm workspaces 根目录 monorepo DX 实施报告.md` — 计划 **§2**  
-- `docs/reports/全量管线与粒子渲染调参会话实施报告.md` — 计划 **§1**（及与渲染/Bloom 调参相关的会话结论）
+- `docs/reports/Phase-3.6-后代码审查与跟进/03-ESLint-react-refresh-告警清理实施报告.md` — 计划 **§4**  
+- `docs/reports/Phase-3.6-后代码审查与跟进/02-npm-workspaces-根目录monorepo-DX实施报告.md` — 计划 **§2**  
+- `docs/reports/Phase-3.6-后代码审查与跟进/01-全量管线与粒子渲染调参会话实施报告.md` — 计划 **§1**（及与渲染/Bloom 调参相关的会话结论）
 
 ---
 

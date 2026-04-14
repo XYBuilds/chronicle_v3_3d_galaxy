@@ -1,7 +1,7 @@
 # 代码审查后续：ESLint 历史告警（`react-refresh/only-export-components`）— 实施报告
 
 > **关联计划**: `.cursor/plans/code_review_follow-up_9d90ade4.plan.md` — **§4 ESLint 历史告警（审查 3.5）**  
-> **审查依据**: `docs/reports/Project_Status_and_Code_Review_Report.md`（建议在进入 Phase 4 前使 `npm run lint` 零告警或通过可解释的窄范围例外处理）  
+> **审查依据**: `docs/reports/Phase-3.6-后代码审查与跟进/00-项目状态与代码审查报告.md`（建议在进入 Phase 4 前使 `npm run lint` 零告警或通过可解释的窄范围例外处理）  
 > **报告日期**: 2026-04-14  
 > **范围**: `frontend/` 下 ESLint 扁平配置所覆盖的 **`*.ts` / `*.tsx`**；本次仅涉及 **UI Button** 模块的文件拆分。  
 > **不在范围**: 计划 **§3 相机漫游边界**、**§5 Genre 色板** 等其它条目。
@@ -123,7 +123,7 @@ npm run build
 | 路径 | 说明 |
 | --- | --- |
 | `.cursor/plans/code_review_follow-up_9d90ade4.plan.md` | follow-up 计划原文（§4） |
-| `docs/reports/Project_Status_and_Code_Review_Report.md` | 项目状态与代码审查报告 |
+| `docs/reports/Phase-3.6-后代码审查与跟进/00-项目状态与代码审查报告.md` | 项目状态与代码审查报告 |
 | `frontend/eslint.config.js` | ESLint 扁平配置（含 `react-refresh` Vite 预设） |
 | `frontend/src/components/ui/button.tsx` | 仅导出 `Button` 组件 |
 | `frontend/src/components/ui/button-variants.ts` | 导出 `buttonVariants`（`cva`） |

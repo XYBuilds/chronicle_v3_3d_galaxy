@@ -1,6 +1,6 @@
 ---
 name: Code review follow-up
-overview: 在继续 [TMDB Galaxy Dev Plan](.cursor/plans/tmdb_galaxy_dev_plan_5ad6bea5.plan.md) 的 Phase 4 之前，按 [Project_Status_and_Code_Review_Report.md](docs/reports/Project_Status_and_Code_Review_Report.md) 优先完成全量数据验证、根工作区 DX、相机边界与 ESLint 清理。**Bloom**：后续开发阶段保持 `scene.ts` 当前默认值不变；**生产向 Bloom 数值本阶段不定**，留待未来专门迭代（仍可用 `window.__bloom` 本地试验）。色板复杂度作为非阻塞 backlog 记录。
+overview: 在继续 [TMDB Galaxy Dev Plan](.cursor/plans/tmdb_galaxy_dev_plan_5ad6bea5.plan.md) 的 Phase 4 之前，按 [00-项目状态与代码审查报告.md](docs/reports/Phase-3.6-后代码审查与跟进/00-项目状态与代码审查报告.md) 优先完成全量数据验证、根工作区 DX、相机边界与 ESLint 清理。**Bloom**：后续开发阶段保持 `scene.ts` 当前默认值不变；**生产向 Bloom 数值本阶段不定**，留待未来专门迭代（仍可用 `window.__bloom` 本地试验）。色板复杂度作为非阻塞 backlog 记录。
 todos:
   - id: full-pipeline-validate
     content: Run `run_pipeline.py --through-phase-2` on canonical `TMDB_all_movies.csv`; confirm row band, JSON validate; commit full `galaxy_data.json` per repo policy (watch host/Git LFS limits if needed)
@@ -28,7 +28,7 @@ isProject: false
 ## 背景与进度对齐
 
 - 主计划 [tmdb_galaxy_dev_plan_5ad6bea5.plan.md](.cursor/plans/tmdb_galaxy_dev_plan_5ad6bea5.plan.md) 中 **Phase 0–3.6 已完成**，**Phase 4（Raycaster / Tooltip / Drawer 等）仍为 pending**。
-- [Project_Status_and_Code_Review_Report.md](docs/reports/Project_Status_and_Code_Review_Report.md) 的结论与主计划一致：在进入 Phase 4 前，应先消除「仅 subsample 规模验证」带来的性能与视觉盲区。
+- [00-项目状态与代码审查报告.md](docs/reports/Phase-3.6-后代码审查与跟进/00-项目状态与代码审查报告.md) 的结论与主计划一致：在进入 Phase 4 前，应先消除「仅 subsample 规模验证」带来的性能与视觉盲区。
 
 ```mermaid
 flowchart TD

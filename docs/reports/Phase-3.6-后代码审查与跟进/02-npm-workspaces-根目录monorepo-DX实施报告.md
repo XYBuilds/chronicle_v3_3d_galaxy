@@ -1,7 +1,7 @@
 # 代码审查后续：根目录 npm workspaces 与 monorepo DX — 实施报告
 
 > **关联计划**: `.cursor/plans/code_review_follow-up_9d90ade4.plan.md` — **§2 根目录 `package.json` 与 monorepo DX**  
-> **审查依据**: `docs/reports/Project_Status_and_Code_Review_Report.md`（建议采用 npm workspace，避免仅靠 `--prefix` 的「双根」代理）  
+> **审查依据**: `docs/reports/Phase-3.6-后代码审查与跟进/00-项目状态与代码审查报告.md`（建议采用 npm workspace，避免仅靠 `--prefix` 的「双根」代理）  
 > **报告日期**: 2026-04-14  
 > **范围**: 仓库根 **`package.json`**、**`package-lock.json`**（新增并作为唯一锁文件）、**`.gitignore`**、**`frontend/README.md`**；删除 **`frontend/package-lock.json`**。  
 > **不在范围**: 计划 **§4 ESLint 历史告警**（`npm run lint` 仍可能因既有规则失败，见下文「已知问题」）。
@@ -18,7 +18,7 @@
 - **`.gitignore`**：使用通配 **`node_modules/`**，忽略任意深度下的 `node_modules`（含根目录 hoist 后的依赖目录）。
 - **`frontend/README.md`**：补充「在仓库根 **`npm install` / `npm run dev`**」的说明，与根代理脚本及 workspaces 流程对齐。
 
-**Git 提交**: **`46a5973`** — `chore: adopt npm workspaces for frontend DX`（工作区与锁文件）；本 Markdown 在同分支以独立 **`docs:`** 提交纳入仓库（见 **`git log -- docs/reports/代码审查后续 npm workspaces 根目录 monorepo DX 实施报告.md`**）。
+**Git 提交**: **`46a5973`** — `chore: adopt npm workspaces for frontend DX`（工作区与锁文件）；本 Markdown 在同分支以独立 **`docs:`** 提交纳入仓库（见 **`git log -- docs/reports/Phase-3.6-后代码审查与跟进/02-npm-workspaces-根目录monorepo-DX实施报告.md`**；历史提交信息里可能仍为旧路径）。
 
 ---
 

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 
+import { MovieDetailDrawer } from '@/components/Drawer'
 import { Loading } from '@/components/Loading'
 import { MovieTooltip } from '@/components/MovieTooltip'
 import { useGalaxyDataStore } from '@/store/galaxyDataStore'
@@ -51,6 +52,7 @@ function App() {
         aria-label="Galaxy WebGL canvas host"
       />
       <MovieTooltip />
+      <MovieDetailDrawer />
     </main>
   )
 }

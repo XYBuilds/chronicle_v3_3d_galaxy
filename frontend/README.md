@@ -1,5 +1,16 @@
 # React + TypeScript + Vite
 
+## TMDB Galaxy frontend (npm workspace)
+
+From the **repository root** (not only `frontend/`):
+
+1. `npm install` — installs the `frontend` workspace and writes a single lockfile at the repo root (`package-lock.json`).
+2. `npm run dev` — same as `npm run dev -w frontend` (Vite dev server).
+
+You can still run package scripts from `frontend/` with `npm run <script>` after a root install; dependencies are hoisted per [npm workspaces](https://docs.npmjs.com/cli/using-npm/workspaces).
+
+---
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:

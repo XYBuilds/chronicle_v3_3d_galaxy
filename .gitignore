@@ -25,7 +25,7 @@ scripts/output/
 # ============================================================
 # Frontend (Node / Vite / Storybook)
 # ============================================================
-frontend/node_modules/
+node_modules/
 frontend/dist/
 frontend/storybook-static/
 frontend/.vite/

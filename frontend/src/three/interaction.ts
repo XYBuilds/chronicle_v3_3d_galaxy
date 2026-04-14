@@ -37,6 +37,32 @@ function ndcFromClient(domElement: HTMLElement, clientX: number, clientY: number
   return new THREE.Vector2(x, y)
 }
 
+const _worldProject = new THREE.Vector3()
+
+/** Project movie world (x,y,z) to viewport CSS pixels relative to the canvas element. */
+function movieToScreenCss(
+  movie: Pick<Movie, 'x' | 'y' | 'z'>,
+  camera: THREE.PerspectiveCamera,
+  domElement: HTMLElement,
+): { x: number; y: number } {
+  _worldProject.set(movie.x, movie.y, movie.z)
+  _worldProject.project(camera)
+  const rect = domElement.getBoundingClientRect()
+  const w = Math.max(1, rect.width)
+  const h = Math.max(1, rect.height)
+  const x = (_worldProject.x * 0.5 + 0.5) * w + rect.left
+  const y = (-_worldProject.y * 0.5 + 0.5) * h + rect.top
+  return { x, y }
+}
+
+type HoverEmitSnap = { id: number | null; ax: number; ay: number }
+
+function hoverEmitEqual(a: HoverEmitSnap, id: number | null, anchor: { x: number; y: number } | null): boolean {
+  const ax = anchor?.x ?? Number.NaN
+  const ay = anchor?.y ?? Number.NaN
+  return a.id === id && Math.abs(a.ax - ax) < 0.25 && Math.abs(a.ay - ay) < 0.25
+}
+
 /**
  * Raycaster against `THREE.Points`: updates `hoveredMovieId` / `selectedMovieId` in Zustand.
  * Click-select ignores gestures that were camera pans (primary drag beyond {@link CLICK_MAX_MOVE_PX}).
@@ -61,7 +87,8 @@ export function attachGalaxyPointsInteraction(options: {
   raycaster.params.Points = { threshold: computePointsThreshold(meta, movies.length) }
 
   const ndc = new THREE.Vector2()
-  let lastHoverId: number | null | undefined
+  let lastHoverLogId: number | null | undefined
+  let lastEmitted: HoverEmitSnap = { id: null, ax: Number.NaN, ay: Number.NaN }
 
   let pressX = 0
   let pressY = 0
@@ -78,17 +105,29 @@ export function attachGalaxyPointsInteraction(options: {
     return idx
   }
 
+  const emitHover = (id: number | null, anchor: { x: number; y: number } | null) => {
+    if (hoverEmitEqual(lastEmitted, id, anchor)) return
+    lastEmitted = {
+      id,
+      ax: anchor?.x ?? Number.NaN,
+      ay: anchor?.y ?? Number.NaN,
+    }
+    useGalaxyInteractionStore.setState({ hoveredMovieId: id, hoverAnchorCss: anchor })
+  }
+
   const setHoverFromClient = (clientX: number, clientY: number) => {
     const idx = pickIndex(clientX, clientY)
     const id = idx === null ? null : movies[idx].id
-    if (id === lastHoverId) return
-    lastHoverId = id
-    useGalaxyInteractionStore.setState({ hoveredMovieId: id })
-    if (id === null) {
-      console.log('[Hover] null')
-    } else {
-      const m = movies[idx!]
-      console.log(`[Hover] id=${id} title=${JSON.stringify(m.title)}`)
+    const anchor = idx === null ? null : movieToScreenCss(movies[idx], camera, domElement)
+    emitHover(id, anchor)
+    if (id !== lastHoverLogId) {
+      lastHoverLogId = id
+      if (id === null) {
+        console.log('[Hover] null')
+      } else {
+        const m = movies[idx!]
+        console.log(`[Hover] id=${id} title=${JSON.stringify(m.title)}`)
+      }
     }
   }
 
@@ -139,8 +178,9 @@ export function attachGalaxyPointsInteraction(options: {
   }
 
   const onPointerLeave = () => {
-    lastHoverId = undefined
-    useGalaxyInteractionStore.setState({ hoveredMovieId: null })
+    lastHoverLogId = undefined
+    lastEmitted = { id: null, ax: Number.NaN, ay: Number.NaN }
+    useGalaxyInteractionStore.setState({ hoveredMovieId: null, hoverAnchorCss: null })
     console.log('[Hover] null')
   }
 
@@ -155,8 +195,13 @@ export function attachGalaxyPointsInteraction(options: {
     domElement.removeEventListener('pointermove', onPointerMove)
     domElement.removeEventListener('pointerdown', onPointerDown)
     domElement.removeEventListener('pointerleave', onPointerLeave)
-    lastHoverId = undefined
-    useGalaxyInteractionStore.setState({ hoveredMovieId: null, selectedMovieId: null })
+    lastHoverLogId = undefined
+    lastEmitted = { id: null, ax: Number.NaN, ay: Number.NaN }
+    useGalaxyInteractionStore.setState({
+      hoveredMovieId: null,
+      selectedMovieId: null,
+      hoverAnchorCss: null,
+    })
     console.log('[Interaction] detached, cleared hover/select')
   }
 }

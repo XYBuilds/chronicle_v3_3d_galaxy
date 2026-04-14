@@ -16,7 +16,7 @@ todos:
     status: pending
   - id: eslint-cleanup
     content: Resolve react-refresh and other lint debt in frontend (split files or scoped eslint overrides)
-    status: pending
+    status: completed
   - id: backlog-genre-palette
     content: Defer genre_palette readability optimization to post–Phase-4 polish; track as separate design task
     status: pending

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Clapperboard } from 'lucide-react'
 
 import { AspectRatio } from '@/components/ui/aspect-ratio'
@@ -175,6 +175,8 @@ export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailD
 export function MovieDetailDrawer() {
   const selectedMovieId = useGalaxyInteractionStore((s) => s.selectedMovieId)
   const movies = useGalaxyDataStore((s) => s.data?.movies)
+  const prevSelectedRef = useRef<number | null>(null)
+  const [sheetDelayedOpen, setSheetDelayedOpen] = useState(false)
 
   const movie = useMemo(() => {
     if (selectedMovieId === null || !movies) return null
@@ -188,7 +190,23 @@ export function MovieDetailDrawer() {
     }
   }, [selectedMovieId, movies])
 
-  const open = selectedMovieId !== null && movie !== null
+  useEffect(() => {
+    if (selectedMovieId === null) {
+      setSheetDelayedOpen(false)
+      prevSelectedRef.current = null
+      return
+    }
+    const wasNull = prevSelectedRef.current === null
+    prevSelectedRef.current = selectedMovieId
+    if (wasNull) {
+      setSheetDelayedOpen(false)
+      const t = window.setTimeout(() => setSheetDelayedOpen(true), 420)
+      return () => window.clearTimeout(t)
+    }
+    setSheetDelayedOpen(true)
+  }, [selectedMovieId])
+
+  const open = sheetDelayedOpen && selectedMovieId !== null && movie !== null
 
   useEffect(() => {
     if (open && movie) {

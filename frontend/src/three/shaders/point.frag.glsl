@@ -1,3 +1,5 @@
+uniform float uPointsOpacity;
+
 varying vec3 vColor;
 varying float vEmissive; // kept for shader link; not used in this style pass.
 
@@ -10,5 +12,7 @@ void main() {
   // Hard-edged disc: genre fill inside, white stroke ring to outer edge.
   const float inner = 0.88;
   vec3 rgb = mix(vec3(1.0), vColor, step(r, inner));
-  gl_FragColor = vec4(rgb, 1.0);
+  float a = uPointsOpacity;
+  if (a < 0.001) discard;
+  gl_FragColor = vec4(rgb, a);
 }

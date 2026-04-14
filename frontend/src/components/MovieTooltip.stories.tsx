@@ -2,9 +2,10 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 
 import { MovieTooltipHud } from './MovieTooltip'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { subsampleMovieHappiness, subsampleMovieMarthasVineyard } from '@/storybook/fixtures/subsampleMovies'
 
 const meta: Meta<typeof MovieTooltipHud> = {
-  title: 'HUD/MovieTooltip',
+  title: 'MovieTooltip',
   component: MovieTooltipHud,
   decorators: [
     (Story) => (
@@ -25,18 +26,18 @@ export const Default: Story = {
   args: {
     open: true,
     anchor: { x: 320, y: 240 },
-    title: 'Inception',
-    primaryGenreLabel: 'Science Fiction',
+    title: subsampleMovieHappiness.title,
+    primaryGenreLabel: subsampleMovieHappiness.genres[0] ?? null,
   },
 }
 
+/** Subsample row 657018 — exercises multi-line title wrapping. */
 export const LongTitle: Story = {
   args: {
     open: true,
     anchor: { x: 320, y: 240 },
-    title:
-      'Dr. Strangelove or: How I Learned to Stop Worrying and Love the Bomb — extended director commentary edition',
-    primaryGenreLabel: 'Comedy',
+    title: subsampleMovieMarthasVineyard.title,
+    primaryGenreLabel: subsampleMovieMarthasVineyard.genres[0] ?? null,
   },
 }
 
@@ -44,7 +45,7 @@ export const NoPrimaryGenre: Story = {
   args: {
     open: true,
     anchor: { x: 80, y: 400 },
-    title: 'Untitled',
+    title: subsampleMovieHappiness.title,
     primaryGenreLabel: null,
   },
 }
@@ -53,7 +54,7 @@ export const CornerAnchor: Story = {
   args: {
     open: true,
     anchor: { x: 620, y: 40 },
-    title: 'Edge placement',
-    primaryGenreLabel: 'Thriller',
+    title: subsampleMovieHappiness.title,
+    primaryGenreLabel: subsampleMovieHappiness.genres[0] ?? null,
   },
 }

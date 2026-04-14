@@ -1,7 +1,14 @@
 import type { Preview } from '@storybook/react-vite'
 
+import '../src/index.css'
+
 const preview: Preview = {
   parameters: {
+    options: {
+      storySort: {
+        order: ['Loading', 'MovieTooltip', 'Drawer', 'Timeline', 'Dev'],
+      },
+    },
     controls: {
       matchers: {
        color: /(background|color)$/i,

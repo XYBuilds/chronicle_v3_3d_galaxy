@@ -30,11 +30,6 @@ isProject: false
 - 主计划 [tmdb_galaxy_dev_plan_5ad6bea5.plan.md](.cursor/plans/tmdb_galaxy_dev_plan_5ad6bea5.plan.md) 中 **Phase 0–3.6 已完成**，**Phase 4（Raycaster / Tooltip / Drawer 等）仍为 pending**。
 - [Project_Status_and_Code_Review_Report.md](docs/reports/Project_Status_and_Code_Review_Report.md) 的结论与主计划一致：在进入 Phase 4 前，应先消除「仅 subsample 规模验证」带来的性能与视觉盲区。
 
-**已确认决策（2026-04-14）**
-
-- **任务清单与状态（单一事实源）**：与本计划相关的 **目标描述**、**完成度（`completed` / `pending`）** 以本文件顶部 **YAML frontmatter** 中的 **`todos`** 为准（各条的 **`id`**、**`content`**、**`status`**）；正文 **§1–§6** 展开实施要点，**不**再维护与 `todos` 平行的状态快照。
-- **大 JSON 与 Git**（策略性约定，不在 `todos` 中展开）：继续将全量生成的 [frontend/public/data/galaxy_data.json](frontend/public/data/galaxy_data.json) **纳入版本跟踪**；若远程托管有单文件大小上限，再考虑 Git LFS 或拆仓，不在本计划内默认 gitignore。
-
 ```mermaid
 flowchart TD
   subgraph blockers [建议先于 Phase 4]

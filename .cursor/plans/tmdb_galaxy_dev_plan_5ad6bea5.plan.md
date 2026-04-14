@@ -67,7 +67,7 @@ todos:
     status: completed
   - id: p4-selected-planet
     content: "Phase 4.5: Selected state — IcoSphere + Perlin shader + camera fly-to animation"
-    status: pending
+    status: completed
   - id: p4-storybook
     content: "Phase 4.6: Storybook configuration (@storybook/react-vite) + all HUD stories"
     status: pending

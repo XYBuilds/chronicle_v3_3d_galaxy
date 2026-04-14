@@ -4,9 +4,12 @@ import { create } from 'zustand'
 export interface GalaxyInteractionState {
   hoveredMovieId: number | null
   selectedMovieId: number | null
+  /** Viewport CSS pixels for HUD anchor (world position of hovered point projected). */
+  hoverAnchorCss: { x: number; y: number } | null
 }
 
 export const useGalaxyInteractionStore = create<GalaxyInteractionState>(() => ({
   hoveredMovieId: null,
   selectedMovieId: null,
+  hoverAnchorCss: null,
 }))

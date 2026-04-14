@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 
 import { Loading } from '@/components/Loading'
+import { MovieTooltip } from '@/components/MovieTooltip'
 import { useGalaxyDataStore } from '@/store/galaxyDataStore'
 import { mountGalaxyScene } from '@/three/scene'
 
@@ -49,6 +50,7 @@ function App() {
         className="fixed inset-0 h-dvh w-full bg-black"
         aria-label="Galaxy WebGL canvas host"
       />
+      <MovieTooltip />
     </main>
   )
 }

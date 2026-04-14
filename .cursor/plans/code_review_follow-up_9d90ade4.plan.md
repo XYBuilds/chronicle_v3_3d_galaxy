@@ -3,13 +3,13 @@ name: Code review follow-up
 overview: 在继续 [TMDB Galaxy Dev Plan](.cursor/plans/tmdb_galaxy_dev_plan_5ad6bea5.plan.md) 的 Phase 4 之前，按 [Project_Status_and_Code_Review_Report.md](docs/reports/Project_Status_and_Code_Review_Report.md) 优先完成全量数据验证、渲染/Bloom 调参、根工作区 DX、相机边界与 ESLint 清理；色板复杂度作为非阻塞 backlog 记录。
 todos:
   - id: full-pipeline-validate
-    content: Run `run_pipeline.py --through-phase-2` on canonical `TMDB_all_movies.csv`; confirm row band, JSON validate, disk/git handling for large outputs
+    content: Run `run_pipeline.py --through-phase-2` on canonical `TMDB_all_movies.csv`; confirm row band, JSON validate; commit full `galaxy_data.json` per repo policy (watch host/Git LFS limits if needed)
     status: pending
   - id: frontend-scale-bloom
     content: Load full `galaxy_data.json` in dev; profile FPS/overdraw; tune UnrealBloomPass defaults via `window.__bloom` then commit stable values in scene.ts
     status: pending
   - id: npm-workspaces
-    content: Adopt root npm workspaces (or document frontend-as-root) to fix dual-root DX from review §3.2
+    content: Adopt root npm workspaces (`workspaces: [\"frontend\"]`), root `npm install` / scripts verified vs old `--prefix` proxy
     status: pending
   - id: camera-clamp
     content: Implement XY/Z clamp (padding from meta ranges) in three/camera.ts; optional spring soft bounds later
@@ -29,6 +29,11 @@ isProject: false
 
 - 主计划 [tmdb_galaxy_dev_plan_5ad6bea5.plan.md](.cursor/plans/tmdb_galaxy_dev_plan_5ad6bea5.plan.md) 中 **Phase 0–3.6 已完成**，**Phase 4（Raycaster / Tooltip / Drawer 等）仍为 pending**。
 - [Project_Status_and_Code_Review_Report.md](docs/reports/Project_Status_and_Code_Review_Report.md) 的结论与主计划一致：在进入 Phase 4 前，应先消除「仅 subsample 规模验证」带来的性能与视觉盲区。
+
+**已确认决策（2026-04-14）**
+
+- **大 JSON 与 Git**：继续将全量生成的 [frontend/public/data/galaxy_data.json](frontend/public/data/galaxy_data.json) **纳入版本跟踪**；若远程托管有单文件大小上限，再考虑 Git LFS 或拆仓，不在本计划内默认 gitignore。
+- **根目录包管理**：采用 **npm workspaces**（根 `package.json` 声明 `workspaces: ["frontend"]`），替代仅 `--prefix` 代理。
 
 ```mermaid
 flowchart TD
@@ -57,8 +62,8 @@ flowchart TD
 - 运行（与审查报告一致，可加显式 `--input` 避免歧义）：
   - `python scripts/run_pipeline.py --through-phase-2`
   - 或显式：`python scripts/run_pipeline.py --input data/raw/TMDB_all_movies.csv --through-phase-2`
-- 输出默认写入 [frontend/public/data/galaxy_data.json](frontend/public/data/galaxy_data.json)（及同 stem 的 gzip）；全量 JSON 体积大，注意磁盘与 Git：若 `galaxy_data.json` 被跟踪，需按仓库惯例决定是否 **gitignore 大文件**或保留压缩包策略（仅在有既定策略时改动，避免无意提交数十 MB）。
-- **验收**：清洗行数落在断言区间；`validate_galaxy_json` 通过；本地 `npm run dev`（根目录代理见下文）加载后 **FPS 可接受**、无明显 Bloom 死白；必要时用已有 `window.__bloom`（[frontend/src/three/scene.ts](frontend/src/three/scene.ts)）现场调 `threshold` / `strength` / `radius`，再把稳定值写回代码。
+- 输出默认写入 [frontend/public/data/galaxy_data.json](frontend/public/data/galaxy_data.json)（及同 stem 的 gzip）；全量 JSON 体积大，注意**本地磁盘**与 **push 体积**（你已选择继续跟踪该文件；若接近平台限制再评估 LFS）。
+- **验收**：清洗行数落在断言区间；`validate_galaxy_json` 通过；本地 `npm run dev`（workspaces 落地后在根目录执行）加载后 **FPS 可接受**、无明显 Bloom 死白；必要时用已有 `window.__bloom`（[frontend/src/three/scene.ts](frontend/src/three/scene.ts)）现场调 `threshold` / `strength` / `radius`，再把稳定值写回代码。
 
 **风险备忘**：Embedding + UMAP 全量耗时长、占 GPU/内存；OOM 时按 [Tech Spec](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md) / [python-pipeline.mdc](.cursor/rules/python-pipeline.mdc) 降低 batch，而非丢样本。
 
@@ -70,10 +75,7 @@ flowchart TD
 
 **目标**：减少「双根」带来的 ESLint/TS 解析歧义。
 
-**建议改动**（择一为主，优先 a）：
-
-- **a)** 根 `package.json` 增加 **`"workspaces": ["frontend"]`**，保留现有 scripts 但改为在 workspace 上下文中调用（或把 scripts 迁到根并由 workspace 执行 `vite`）。完成后在仓库根目录验证 `npm install`、`npm run dev` / `lint` / `storybook` 行为与文档一致。
-- **b)** 若暂不引入 workspaces：在 [frontend/README.md](frontend/README.md) 或团队约定中写明 **推荐用 `frontend` 作为 VS Code 单根文件夹** 打开，以规避语言服务混淆（不改代码也可，但审查建议偏向 a）。
+**已定方案**：根 [package.json](package.json) 增加 **`"workspaces": ["frontend"]`**；在根执行 `npm install` 安装依赖；根级 `dev` / `build` / `lint` / `storybook` 等脚本改为调用 workspace 包（或 `npm run -w frontend <script>`，以 npm 文档为准）。完成后验证与 [frontend/README.md](frontend/README.md) 中的说明一致，必要时更新 README 中的安装命令。
 
 ---
 

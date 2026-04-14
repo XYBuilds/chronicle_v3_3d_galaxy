@@ -339,12 +339,12 @@ Phase 3.6 完成后、进入 Phase 4 前，执行了一次**全面代码审查**
 
 ### 已完成
 
-| #   | 子报告 | 事项                                                                         | 实施报告 |
-| --- | ------ | ---------------------------------------------------------------------------- | -------- |
-| 1   | 3.7.1  | 全量管线验证 (`run_pipeline.py` → ~60K 行 `galaxy_data.json`) + 前端加载验证 | `Phase 3.7.1 全量管线与粒子渲染调参 实施报告.md` |
-| 2   | 3.7.1  | Bloom 参数冻结（保持 `scene.ts` 当前默认，`window.__bloom` 留待生产调参）    | 同上     |
-| 3   | 3.7.2  | npm workspaces 落地（根 `package.json` `"workspaces": ["frontend"]"`）     | `Phase 3.7.2 根目录 npm workspaces 与 monorepo DX 实施报告.md` |
-| 4   | 3.7.3  | ESLint react-refresh 告警清零                                                | `Phase 3.7.3 ESLint（react-refresh）告警清理 实施报告.md` |
+| #   | 子报告 | 事项                                                                         | 实施报告                                                       |
+| --- | ------ | ---------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| 1   | 3.7.1  | 全量管线验证 (`run_pipeline.py` → ~60K 行 `galaxy_data.json`) + 前端加载验证 | `Phase 3.7.1 全量管线与粒子渲染调参 实施报告.md`               |
+| 2   | 3.7.1  | Bloom 参数冻结（保持 `scene.ts` 当前默认，`window.__bloom` 留待生产调参）    | 同上                                                           |
+| 3   | 3.7.2  | npm workspaces 落地（根 `package.json` `"workspaces": ["frontend"]"`）       | `Phase 3.7.2 根目录 npm workspaces 与 monorepo DX 实施报告.md` |
+| 4   | 3.7.3  | ESLint react-refresh 告警清零                                                | `Phase 3.7.3 ESLint（react-refresh）告警清理 实施报告.md`      |
 
 ### 仍开放（进入 Phase 4 前建议完成）
 

@@ -10,7 +10,7 @@ todos:
     status: completed
   - id: npm-workspaces
     content: "Adopt root npm workspaces (`workspaces: [\\\"frontend\\\"]`), root `npm install` / scripts verified vs old `--prefix` proxy"
-    status: pending
+    status: completed
   - id: camera-clamp
     content: Implement XY/Z clamp (padding from meta ranges) in three/camera.ts; optional spring soft bounds later
     status: pending
@@ -29,12 +29,6 @@ isProject: false
 
 - 主计划 [tmdb_galaxy_dev_plan_5ad6bea5.plan.md](.cursor/plans/tmdb_galaxy_dev_plan_5ad6bea5.plan.md) 中 **Phase 0–3.6 已完成**，**Phase 4（Raycaster / Tooltip / Drawer 等）仍为 pending**。
 - [Project_Status_and_Code_Review_Report.md](docs/reports/Project_Status_and_Code_Review_Report.md) 的结论与主计划一致：在进入 Phase 4 前，应先消除「仅 subsample 规模验证」带来的性能与视觉盲区。
-
-**已确认决策（2026-04-14）**
-
-- **Todo 快照**：`full-pipeline-validate` → **已完成**（59,014 行、`galaxy_data.json` / `.gz` 已入库，校验与 Windows 编码修复见 `docs/reports/全量管线与粒子渲染调参会话实施报告.md`）。`frontend-scale-bloom` → **本阶段结案（completed）**：全量数据 + `npm run build` 已验证；**后续开发中 Bloom 保持 `scene.ts` 当前写入值**，不在本阶段锁定生产向 `threshold` / `strength` / `radius`；未来再做专门调参与（若需要）写回默认值。本地试验仍可用 `window.__bloom`。其余项仍为 pending。
-- **大 JSON 与 Git**：继续将全量生成的 [frontend/public/data/galaxy_data.json](frontend/public/data/galaxy_data.json) **纳入版本跟踪**；若远程托管有单文件大小上限，再考虑 Git LFS 或拆仓，不在本计划内默认 gitignore。
-- **根目录包管理**：采用 **npm workspaces**（根 `package.json` 声明 `workspaces: ["frontend"]`），替代仅 `--prefix` 代理。
 
 ```mermaid
 flowchart TD

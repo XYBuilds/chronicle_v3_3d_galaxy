@@ -70,7 +70,7 @@ todos:
     status: completed
   - id: p4-storybook
     content: "Phase 4.6: Storybook configuration (@storybook/react-vite) + all HUD stories"
-    status: pending
+    status: completed
 isProject: false
 ---
 

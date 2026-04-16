@@ -21,7 +21,7 @@ todos:
     content: "Phase 5.1.5: 视距窗口模型 — 引入 zCurrent/zVisWindow/zCamDistance，改造 camera.ts 滚轮逻辑 + bridge 升级 + camera clamp (T4, D1, 方案1)"
     status: pending
   - id: p5-1-6-three-layers
-    content: "Phase 5.1.6: 三层星球着色器 — shader 分层 A(背景)/B(焦点)/C(选中)，重新启用 Bloom，fragment 径向辉光 (D1, T2, T3, T5, B1, B2, 方案2)"
+    content: "Phase 5.1.6: 三层星球着色器 — A(背景)/B(焦点) shader 分层 + 重写 C(选中) Perlin 着色器为面积比例分区染色，重新启用 Bloom，fragment 径向辉光 (D1, T2, T3, T5, B1, B2, 方案2)"
     status: pending
   - id: p5-1-7-raycaster
     content: "Phase 5.1.7: Raycaster 适配 — 拾取范围限制到窗口内层 (T6)"
@@ -96,9 +96,9 @@ isProject: false
 
 **现状**: [Drawer.tsx](frontend/src/components/Drawer.tsx) 使用 shadcn Sheet，overlay 层在 `ui/sheet.tsx` 中定义为 `SheetOverlay` = `bg-black/10` + `supports-backdrop-filter:backdrop-blur-xs`。这层 blur 把左侧 3D 场景模糊掉了。
 
-**实现**: 去除或降低 `SheetOverlay` 的 `backdrop-blur`，改为仅半透明遮罩（或完全去除 overlay），确保 Detail 抽屉打开时 3D 星球仍清晰可见。
+**实现**: 完全去除 `SheetOverlay`（抽屉打开时背景无任何遮挡），让 3D 场景在详情态时保持完全可见。
 
-**验收**: 点击星球 → 抽屉弹出时，左侧 3D 场景不被模糊。
+**验收**: 点击星球 → 抽屉弹出时，左侧 3D 场景无遮罩、无模糊。
 
 ---
 
@@ -140,13 +140,18 @@ zCamDistance   — 相机到 zCurrent 的后退距离
 相机世界 Z = zCurrent - zCamDistance
 ```
 
+**已确认参数**:
+- `zVisWindow` 初始值 **1 年**（非常聚焦的视角；现代年份约 2000–3000 部/年，早期年份更少）
+- `zCurrent` 初始值 = `z_range[1]` 附近（~2026，现代电影）
+- `zCamDistance` 待开发中迭代确定
+
 **实现**:
-- **Zustand 状态**: 在 [galaxyInteractionStore.ts](frontend/src/store/galaxyInteractionStore.ts) 或新建 store 中添加 `zCurrent`, `zVisWindow`, `zCamDistance` 状态（初始值需开发中迭代；`zCurrent` 建议初始为 `z_range[1]` 附近即现代年份）
+- **Zustand 状态**: 在 [galaxyInteractionStore.ts](frontend/src/store/galaxyInteractionStore.ts) 或新建 store 中添加 `zCurrent`, `zVisWindow`, `zCamDistance` 状态
 - **相机控制改造**: [camera.ts](frontend/src/three/camera.ts) 的滚轮逻辑从直接修改 `camera.position.z` 改为修改 `zCurrent`，相机位置由 `zCurrent - zCamDistance` 驱动
 - **Z bridge 升级**: [galaxyCameraZBridge.ts](frontend/src/lib/galaxyCameraZBridge.ts) 同步 `zCurrent`（而非原始 camera.z），供 Timeline 等 HUD 消费
 - **camera clamp**: 顺带实现 [code_review_follow-up plan](/.cursor/plans/code_review_follow-up_9d90ade4.plan.md) 中 pending 的 camera-clamp — `zCurrent` 限制在 `z_range` 范围，XY 限制在 `xy_range` + padding
 
-**验收**: 首屏从现代年份（~2026）附近启动；滚轮改变 `zCurrent`，相机跟随；Timeline 显示 `zCurrent` 值。
+**验收**: 首屏从现代年份（~2026）附近启动；滚轮改变 `zCurrent`，相机跟随；Timeline 显示 `zCurrent` 值；窗口内约 1 年范围的星球以真实大小显示。
 
 ---
 
@@ -166,12 +171,20 @@ zCamDistance   — 相机到 zCurrent 的后退距离
 - 可 hover / click
 - 核心信息载体
 
-**层级 C — 选中层**: 沿用现有 [planet.ts](frontend/src/three/planet.ts) IcoSphere + Perlin 架构
+**层级 C — 选中层（需重写 Perlin 着色器）**:
 
-**实现方向**:
-- **方案 A（推荐起步）**: 单个 `THREE.Points` + shader 分支 — 在 [point.vert.glsl](frontend/src/three/shaders/point.vert.glsl) / [point.frag.glsl](frontend/src/three/shaders/point.frag.glsl) 中新增 uniform `uZCurrent`, `uZVisWindow`，vertex shader 按 z 与窗口的关系输出不同 `gl_PointSize`，fragment shader 输出不同视觉效果。优点：保持单 draw call
-- **方案 B**: 拆两个 Points（窗口内/外），便于独立调参 Bloom。适用于两层需要不同 BlendMode / 不同 Bloom 参数时
+当前 [planet.ts](frontend/src/three/planet.ts) + [perlin.frag.glsl](frontend/src/three/shaders/perlin.frag.glsl) 的实现与报告要求有本质差距：
+
+- **现状**: 所有 genre 颜色做加权混合成**单一颜色** `cMix = uColor0*uWeight0 + ...`，Perlin fbm 仅用于明暗调制（`cMix * (0.42 + 0.58 * n)`）。球面上没有颜色分区，只有一种混合色的亮度变化。fbm 参数全部硬编码。
+- **要求**: 按 genre 权重（黄金比衰减 w_k）**分配不同 genre 颜色的面积比例**，通过 Perlin Noise 生成分界形状。例如 Comedy 60%、Drama 38% 面积各自显示对应颜色，边界由噪声形态决定。`Threshold`、`Scale`、`Octaves`、`Persistence` 均可调（uniform）。
+
+**实现方向**: 将权重转为累积阈值序列 `[0, w0, w0+w1, ..., 1]`，Perlin 噪声输出 [0,1]，按落入哪个阈值区间选择对应 genre 颜色。新增 uniform `uScale`、`uOctaves`、`uPersistence`、`uThreshold`（边界锐利度 / smoothstep 宽度）。IcoSphere detail 可从 3 提升到 4–5 以匹配"高细分"要求。
+
+**已确认方案（层级 A + B）**: 先从**单 Points + shader 分支**开始（方案 A），如果 Bloom 调参有困难再拆成双 Points（方案 B）。
+- 在 [point.vert.glsl](frontend/src/three/shaders/point.vert.glsl) / [point.frag.glsl](frontend/src/three/shaders/point.frag.glsl) 中新增 uniform `uZCurrent`, `uZVisWindow`，vertex shader 按 z 与窗口的关系输出不同 `gl_PointSize`，fragment shader 输出不同视觉效果
 - 在 [galaxy.ts](frontend/src/three/galaxy.ts) 的 `createGalaxyPoints` 中传入新 uniform；[scene.ts](frontend/src/three/scene.ts) 每帧 tick 更新 `uZCurrent`
+
+**已确认方案（A↔B 过渡）**: 先用硬切，看效果再决定是否加渐变过渡（窗口边缘 size/alpha 平滑插值）。
 
 **Bloom 重新启用**: 当前 `UnrealBloomPass` strength=0（禁用）。分层后独立调试窗口内/外各层的 Bloom 效果，重新启用 strength（Spec 建议 0.8–1.2）
 
@@ -286,4 +299,4 @@ zCamDistance   — 相机到 zCurrent 的后退距离
 
 Phase 5.1 编号即为执行顺序：**5.1.1–5.1.3（快速修正）→ 5.1.4（中位数）→ 5.1.5（视距窗口）→ 5.1.6（三层着色器）→ 5.1.7（Raycaster 适配）→ 5.1.8（Spec 同步）**
 
-Phase 5.2 可在 5.1 完成后再做（UMAP 重跑需要时间，且视觉效果需要在新分层体系下重新评估）。Phase 5.3 与 5.1 有依赖（Timeline 拖动依赖 `zCurrent` 概念），建议在 5.1.5 后开始。Phase 5.4 可随时穿插。
+**已确认**: Phase 5.2 在 5.1 全部完成后再做（在新视觉体系下评估局部聚合是否仍需调参）。Phase 5.3 与 5.1 有依赖（Timeline 拖动依赖 `zCurrent` 概念），建议在 5.1.5 后开始。Phase 5.4 可随时穿插。

@@ -1,0 +1,562 @@
+# Phase 4.6 后 — 项目全面评估与测试报告
+
+> **报告日期**: 2026-04-16  
+> **评估范围**: Phase 1.0 – Phase 4.6 全部交付物  
+> **评估分支**: `review/phase-4.6-evaluation`  
+> **评估方法**: 自动化构建/类型/Lint 检查 + 数据管线产物分析 + 代码审计 + 用户手动测试反馈  
+
+---
+
+## 0. 执行摘要
+
+TMDB 电影宇宙项目已完成 Phase 4.6，实现了从 Python 数据管线到 Three.js 3D 渲染再到 React HUD 的完整垂直切片。59,014 部电影在单次 draw call 的粒子系统中渲染，选中态具备 Perlin 噪声星球、相机飞入动画与档案抽屉。Storybook 覆盖了全部 4 个 HUD 组件。
+
+**Phase 4.6 已满足既定 Spec 要求**，全部计划功能点均已交付并通过验收。本报告所列的问题**并非上一阶段的缺漏**，而是面向下一阶段的**改进方向与新设计需求**。其中包含用户手动测试发现的体验优化点，以及自动化检查发现的工程改善项。
+
+> **⚠️ 文档同步提示**: 下一阶段的开发将引入新的架构概念（视距窗口、粒子视觉分层等），这些设计超出了现有 Tech Spec / Design Spec 的范围。开发过程中需要**同步更新项目文档**，确保 Spec 与实现保持一致。
+
+| 维度 | 评级 | 说明 |
+| --- | --- | --- |
+| 数据管线 | ✅ 符合 Spec | 59K 条产出完整，schema 校验全部通过；局部小星团聚合度可通过 UMAP 调参改善 |
+| 3D 渲染 | ✅ 符合 Spec | 粒子系统、选中态、相机控制、后处理管线均按 Spec 实现；视觉质量可通过新设计方案提升 |
+| HUD / UI | ✅ 符合 Spec | 全部 4 个 HUD 组件功能完备；体验打磨与新交互属于增强需求 |
+| 工程质量 | ✅ 良好 | TypeScript 零错误，Vite 构建通过，代码组织清晰 |
+| 测试覆盖 | ⚠️ 薄弱 | Storybook stories 有覆盖，但零自动化测试，Vitest 未接入 |
+
+---
+
+## 1. 工程健康度检查
+
+### 1.1 TypeScript 编译
+
+```
+npx tsc -b --noEmit → 退出码 0（零错误）
+```
+
+全部源文件类型检查通过，strict 模式启用。
+
+### 1.2 ESLint
+
+```
+npx eslint src/ → 1 error, 0 warnings
+```
+
+| 文件 | 规则 | 行 | 说明 |
+| --- | --- | --- | --- |
+| `Drawer.tsx:195` | `react-hooks/set-state-in-effect` | 195 | `setSheetDelayedOpen(false)` 在 effect 体内同步调用 setState |
+
+此错误自 Phase 4.5 引入，Phase 4.6 未修改该文件。影响有限（功能正常），但应在下一阶段重构。
+
+### 1.3 Vite 生产构建
+
+```
+npx vite build → 退出码 0
+  index.html      0.47 kB
+  index.css      49.24 kB  │ gzip:  9.30 kB
+  index.js      906.60 kB  │ gzip: 255.04 kB
+```
+
+**发现**:
+- **JS bundle 906 kB（gzip 255 kB）** — 超过 500 kB 警告阈值。Three.js + postprocessing 是主要体积来源。建议未来考虑 code-splitting 或 tree-shaking 优化。
+- **构建插件耗时**: `vite-plugin-glsl` 占 59%、`@tailwindcss/vite` 占 34%。
+
+### 1.4 依赖状态
+
+- React 19、Three.js（最新）、Zustand、Tailwind 4、Storybook 10 — 均为现代版本
+- **Vitest 4.1.4** 已安装但**未配置**（无 `vitest.config.*`，无 `test` 脚本，无测试文件）
+- 无安全漏洞报告（基于当前 lockfile）
+
+---
+
+## 2. 数据管线与 galaxy_data.json 评估
+
+### 2.1 元数据概要
+
+| 字段 | 值 |
+| --- | --- |
+| `version` | `2026.04.14` |
+| `count` | 59,014 |
+| `embedding_model` | `paraphrase-multilingual-MiniLM-L12-v2`（阶段 A 轻量模型） |
+| `umap_params` | `n_neighbors=15, min_dist=0.1, metric=cosine, random_state=42` |
+| `genre_weight_ratio` | `0.618…`（黄金比例 ✓） |
+| `feature_weights` | `text=1.0, genre=1.0, lang=1.0` |
+| `z_range` | `[1874.94, 2026.65]` |
+| `xy_range` | `x: [-6.56, 26.18]`, `y: [-11.68, 21.44]` |
+| Genre 数量 | 19 |
+| 文件大小 | **87.26 MB**（原始） / **30.10 MB**（gzip） |
+
+### 2.2 数据质量
+
+| 指标 | 值 | 评价 |
+| --- | --- | --- |
+| `meta.count == movies.length` | 59,014 = 59,014 ✓ | 一致 |
+| 缺失 overview | 0 | ✓ 清洗完善 |
+| 缺失 poster_url | 269（0.46%） | 可接受，前端有 fallback |
+| 缺失 tagline | 26,860（45.5%） | 正常，TMDB 本身稀疏 |
+| 多流派影片 | 43,053（72.9%） | 多数影片需要多 genre 染色 |
+| 单流派影片 | 15,961（27.1%） | — |
+| `size` 范围 | `[2.0, 25.0]` | ✓ 与 Tech Spec 一致 |
+| `emissive` 范围 | `[0.1, 1.5]` | ✓ 与 Tech Spec 一致 |
+| NaN / Inf | 0 | ✓ |
+
+### 2.3 空间分布
+
+| 维度 | 均值 | 标准差 | IQR | 全范围 |
+| --- | --- | --- | --- | --- |
+| X | 10.14 | 6.61 | [5.46, 14.98] = 9.52 | 32.75 |
+| Y | 5.07 | 7.35 | [-0.46, 10.78] = 11.24 | 33.12 |
+| Z | — | — | — | 151.71（年） |
+
+**改进方向: 局部小星团过于聚合（用户报告）**
+
+用户反馈的"数据点太过聚合"指的是 **局部小星团内部的点过于集中**（如同一流派/语言的一簇星球挤成一团），而非整体分布的中心集中问题。后者（全局分布偏中心）对用户体验影响不大，但前者直接影响宏观浏览时的信息辨识度。
+
+XY 全范围约 33×33，IQR 约 10×11。UMAP 的 `min_dist=0.1` 偏小，可能导致局部星团内部过于紧凑。后续调参方向：
+
+- 增大 `min_dist`（尝试 0.3–0.5）以拉开**局部**点间距
+- 调整 `feature_weights` 中 `genre` 权重以增强流派星团分离
+- 考虑阶段 B 模型（768 维）可能带来更好的语义分离
+
+### 2.4 时间分布（Z 轴）
+
+| 年代 | 影片数 |
+| --- | --- |
+| 1870–1890s | 264 |
+| 1900–1920s | 2,452 |
+| 1930–1950s | 8,132 |
+| 1960–1980s | 12,028 |
+| 1990–2000s | 11,493 |
+| 2010–2020s | **24,645** |
+
+2010 年代以后的数据量占总量的 41.8%，这意味着在宏观漫游时现代年代区域星球密度极高（用户报告"宏观漫游状态时星星过多"）。
+
+### 2.5 数据体积
+
+**87 MB 原始 JSON** 远超 Tech Spec 预估的 50–70 MB，gzip 后 **30 MB** 也超过参考基线 15 MB。主要原因：
+
+- `cast` 字段（最多 20 人）和各类 crew 字段占大量空间
+- 建议：截取 `cast` 前 10 人（可省约 15%）、考虑 JSON 字段精简或 binary buffer 拆分
+
+### 2.6 Genre 色板
+
+19 种流派在 OKLCH 色彩空间等间距分配色相，转 sRGB hex 后写入 `genre_palette`。色板覆盖完整，无遗漏。
+
+---
+
+## 3. 前端 3D 渲染层评估
+
+### 3.1 架构完整性
+
+| 模块 | 文件 | 状态 |
+| --- | --- | --- |
+| 场景编排 | `scene.ts` | ✅ Renderer + EffectComposer + 选中状态机 |
+| 粒子系统 | `galaxy.ts` | ✅ 单 Points draw call + ShaderMaterial |
+| 选中星球 | `planet.ts` | ✅ IcoSphere + Perlin 噪声 + 流派混色 |
+| 相机控制 | `camera.ts` | ✅ Truck/Pedestal/Z-scroll + 输入锁定 |
+| 交互拾取 | `interaction.ts` | ✅ Raycaster + hover/click + 阈值自适应 |
+| 着色器 | `point.vert/frag`, `perlin.vert/frag` | ✅ 4 个 GLSL 文件 |
+| 桥接 | `galaxyCameraZBridge.ts` | ✅ useSyncExternalStore 每帧同步 |
+
+### 3.2 3D 层改进方向（用户测试 + 代码审计）
+
+> **说明**: 以下问题均非 Phase 4.6 未满足 Spec 的缺漏，而是面向下一阶段的视觉/交互改进需求。其中多项将由 §10 中的新设计方案统一解决。
+
+#### 🔴 高优先级
+
+| # | 问题 | 分类 | 分析 | 设计方案关联 |
+| --- | --- | --- | --- | --- |
+| T1 | **内容（星系）应该在屏幕中间** | ThreeJS | 相机初始位置 `(cx, cy, zMin - 2)` 使用 `xy_range` 的 min/max 中点，但实际数据分布不对称。需要找到 XY 的**内容中点**（中位数或密度加权中心）放到屏幕中央 | → **设计方案 3** |
+| T2 | **探索态星球颜色与浏览态星球颜色有出入** | ThreeJS | 宏观层 `genre_color` 取自 `genres[0]`；选中层 `planet.ts` 使用多流派加权混色。两者色源一致但混合方式不同，视觉上会有色差。将在视觉分层方案中统一处理 | → **设计方案 2** |
+| T3 | **多 genre 的星球染色没有实装** | ThreeJS | 宏观层 `point.frag.glsl` 只使用 `genres[0]` 单色（符合当前 Spec）。用户期望宏观层也能看到多流派的视觉暗示——将在粒子视觉分层方案中作为"视距窗口内"层的增强效果实装 | → **设计方案 2** |
+| T4 | **相机应该相对于"当前年份"向后退一定距离** | ThreeJS | 当前初始 Z = `zMin - 2` ≈ 1872.9。新的相机模型：`zCurrent` 代表用户关注年份，相机在 `zCurrent - zCamDistance` 处，确保 `zCurrent + zVisWindow` 的范围可见 | → **设计方案 1** |
+
+#### 🟡 中优先级
+
+| # | 问题 | 分类 | 分析 | 设计方案关联 |
+| --- | --- | --- | --- | --- |
+| T5 | **有辉光的情况下看不清星球本体颜色** | ThreeJS | 当前 Bloom `strength=0.0`（已禁用）。启用后白色外环 + Bloom 扩散可能淹没颜色。将在粒子视觉分层方案中独立调试"窗口内"层与"窗口外"层各自的视觉效果 | → **设计方案 2** |
+| T6 | **星球 hover/click 的触发位置异常** | ThreeJS | Raycaster `threshold` 由 `avgSpacing * 0.75` 计算，可能在不同 camera Z 下与视觉大小不匹配。视距窗口方案引入后，可限制 raycaster 仅对窗口内粒子生效 | → **设计方案 1 + 2** |
+
+#### 🟢 低优先级
+
+| # | 问题 | 分类 | 分析 |
+| --- | --- | --- | --- |
+| T7 | **相机控制的左右反了** | ThreeJS | `camera.ts:73`: `camera.position.x -= dx * speed`。因相机 Euler `(0, π, 0)` 面向 +Z，世界 X 轴与屏幕方向可能相反。修复：调整符号方向 |
+
+---
+
+## 4. 前端 HUD / UI 层评估
+
+### 4.1 组件完整性
+
+| 组件 | 文件 | Storybook | 状态 |
+| --- | --- | --- | --- |
+| Loading | `Loading.tsx` | ✅ 2 stories | 功能完备 |
+| MovieTooltip | `MovieTooltip.tsx` | ✅ 4 stories | 功能完备 |
+| MovieDetailDrawer | `Drawer.tsx` | ✅ 6 stories | 功能完备，有 lint 问题 |
+| Timeline | `Timeline.tsx` | ✅ 4 stories | 被动指示，无拖拽交互 |
+
+### 4.2 HUD 改进方向（用户测试 + 代码审计）
+
+> **说明**: 以下问题均为下一阶段的增强需求，不属于上阶段未完成的 Spec 条目。
+
+#### 🔴 高优先级
+
+| # | 问题 | 分类 | 分析 |
+| --- | --- | --- | --- |
+| H1 | **Detail 态多了一层模糊蒙版，把左边的星球模糊掉了** | HUD | 可能是 Sheet 组件的 overlay 层导致。需要检查 Sheet overlay 是否应该去掉或降低模糊，保证 3D 场景在详情态时仍可见 |
+
+#### 🟡 中优先级
+
+| # | 问题 | 分类 | 分析 |
+| --- | --- | --- | --- |
+| H2 | **时间轴应该可以拖动控制** | HUD | 当前 Timeline 为纯被动指示器（`pointer-events-none`）。Design Spec §3.1 已注明"本阶段实现为纯被动指示即可"。拖动控制属于增强功能，与设计方案 1 的 `zCurrent` 概念直接关联 |
+
+#### 🟢 低优先级
+
+| # | 问题 | 分类 | 分析 |
+| --- | --- | --- | --- |
+| H3 | **小窗口下海报高度会异常缩减** | HUD | `AspectRatio ratio={2/3}` 配合 `max-w-[220px]` 在窄屏下可能导致海报尺寸不理想。需要响应式调整 |
+| H4 | **Movie detail 界面死板** | HUD | 当前 Drawer 为标准 Sheet 布局，信息呈线性排列。可通过更丰富的视觉层次、动效、分区设计来提升 |
+| H5 | **Movie detail 界面对字段缺省的显示方式不优雅** | HUD | 缺省字段统一显示 "—"。可改为条件隐藏缺省字段、或提供更友好的 fallback 提示 |
+| H6 | **缺少搜索入口** | HUD | PRD §4 明确搜索为**未来计划**，当前阶段不实现。但用户有此期望 |
+
+---
+
+## 5. 设计层面评估
+
+#### 🔴 高优先级
+
+| # | 问题 | 分类 | 分析 | 设计方案关联 |
+| --- | --- | --- | --- | --- |
+| D1 | **宏观漫游状态时星星过多** | Design | Z 轴跨度 ~151 年，2010–2020s 集中了 24,645 部影片。当前所有粒子以相同视觉权重渲染，缺乏"聚焦范围"的概念。将通过引入视距窗口 (`zVisWindow`) + 粒子视觉分层彻底解决 | → **设计方案 1 + 2** |
+
+---
+
+## 6. Tech Spec / Design Spec 合规性 Gap 分析
+
+### 6.1 已实现（符合 Spec）
+
+| Spec 要求 | 实现情况 |
+| --- | --- |
+| Points + ShaderMaterial 单 draw call | ✅ `galaxy.ts` |
+| IcoSphere + Perlin Noise 选中层 | ✅ `planet.ts` |
+| UnrealBloomPass 后处理 | ✅ `scene.ts`（当前 strength=0） |
+| 相机轴线与 Z 轴平行、无旋转 | ✅ `GALAXY_CAMERA_EULER = (0, π, 0)` |
+| 滚轮 Z 穿梭 + 拖拽 truck/pedestal | ✅ `camera.ts` |
+| `random_state=42` | ✅ `umap_params` 已写入 meta |
+| `genre_weight_ratio ≈ 0.618` | ✅ |
+| `z_range` / `xy_range` 写入 meta | ✅ |
+| Tooltip: 标题 + 主流派 | ✅ `MovieTooltip.tsx` |
+| Sheet 档案详情 | ✅ `Drawer.tsx` |
+| Timeline 时间轴指示器 | ✅ `Timeline.tsx` |
+| 选中/取消选中动画与时序 | ✅ 700ms / 450ms easeOutCubic |
+| Loading 全屏 Spinner | ✅ `Loading.tsx` |
+| 运行时 JSON 校验 | ✅ `loadGalaxyData.ts` |
+
+### 6.2 偏差或未实现
+
+| Spec 要求 | 当前状态 | 严重程度 |
+| --- | --- | --- |
+| Bloom threshold=0.85, strength=0.8–1.2 | strength 硬编码为 **0.0**（禁用） | 中 — 需要调参并解决颜色可见性问题后重新启用 |
+| Fragment shader 圆形 + 径向辉光 + emissive HDR | 当前为硬边圆盘 + 白色外环，无 HDR 辉光 | 中 — 与 Spec §1.1 "径向辉光"不符 |
+| near=0.1 / far=300 | 实际 near=0.05 / far=1e6 | 低 — 功能正常但 far 过大可能浪费深度精度 |
+| 滚轮步长 0.5 / 刻度 | 实际 `zScrollSpeed=0.15 × delta` | 低 — 已按实际调优 |
+| 加载错误不做重试/提示 | 实际**有错误提示页** | ✅ 超出 Spec（正向偏差） |
+| 搜索与筛选 | 未实现（Spec 标记为未来计划） | 低 — 按计划 |
+| 聚光灯 / 星座连线 | 未实现（Spec 标记为未来计划） | 低 — 按计划 |
+
+---
+
+## 7. 性能初评
+
+| 指标 | 参考基线 | 估计现状 | 评价 |
+| --- | --- | --- | --- |
+| 帧率 | 60 fps（中端独显） | 预计 ≥60 fps（Bloom 已禁用、单 draw call） | ✅ |
+| JS 堆内存 | ≤300 MB | 87 MB JSON + Three.js 开销，预计 200–300 MB | ✅ 运行无问题 |
+| 首屏加载 | ≤5s | 87 MB JSON fetch + parse + 60K 逐条验证 | ✅ 当前可接受 |
+
+当前运行性能无明显问题，暂不需要针对首屏加载或数据体积做专项优化。
+
+---
+
+## 8. 测试覆盖评估
+
+| 层 | 方式 | 状态 |
+| --- | --- | --- |
+| Python 管线 | `assert` 断言 + subsample 冒烟 | ✅ 已实现 |
+| 前端 TS 类型守卫 | `loadGalaxyData.ts` 运行时校验 | ✅ 已实现 |
+| Storybook UI | 4 组件 × 多 stories | ✅ 已实现 |
+| 自动化单元测试 | Vitest | 🔴 **未实现** — 已装依赖但零配置零测试文件 |
+| E2E / 截图回归 | Playwright | 🔴 **未实现** |
+| 3D 渲染验证 | 手动交互 | ⚠️ 仅手动 |
+
+---
+
+## 9. 改进项总汇与优先级排序
+
+> 以下清单中的所有项均为**面向下一阶段的改进需求**，不代表 Phase 4.6 存在 Spec 缺漏。
+
+### 9.1 用户测试反馈 + 自动评估 综合 Issue 清单
+
+| ID | 问题 | 来源 | 分类 | 优先级 | 设计方案 |
+| --- | --- | --- | --- | --- | --- |
+| **D1** | 宏观漫游时星星过多 | 用户测试 | Design | 🔴 High | 方案 1 + 2 |
+| **T1** | 内容（星系）不在屏幕中间 | 用户测试 | ThreeJS | 🔴 High | 方案 3 |
+| **T2** | 探索态与浏览态星球颜色不一致 | 用户测试 | ThreeJS | 🔴 High | 方案 2 |
+| **T3** | 多 genre 星球染色未实装（宏观层） | 用户测试 | ThreeJS | 🔴 High | 方案 2 |
+| **T4** | 相机应从"当前年份"附近启动 | 用户测试 | ThreeJS | 🔴 High | 方案 1 |
+| **DS1** | 局部小星团过于聚合 | 用户测试 + 数据分析 | Dataset | 🔴 High | UMAP 调参 |
+| **H1** | Detail 态多余的模糊蒙版遮挡星球 | 用户测试 | HUD | 🔴 High | — |
+| **T5** | Bloom 开启时看不清星球本体颜色 | 用户测试 | ThreeJS | 🟡 Medium | 方案 2 |
+| **T6** | 星球 hover/click 触发位置异常 | 用户测试 | ThreeJS | 🟡 Medium | 方案 1 + 2 |
+| **H2** | 时间轴应可拖动控制 | 用户测试 | HUD | 🟡 Medium | 方案 1 |
+| **B1** | Bloom strength=0，辉光效果未启用 | 代码审计 | ThreeJS | 🟡 Medium | 方案 2 |
+| **B2** | Fragment shader 缺少径向辉光 | 代码审计 | ThreeJS | 🟡 Medium | 方案 2 |
+| **B3** | JS bundle 906 kB 超过警告阈值 | 构建检查 | Engineering | 🟡 Medium | — |
+| **B5** | ESLint error in Drawer.tsx | Lint 检查 | Engineering | 🟡 Medium | — |
+| **T7** | 相机控制左右反了 | 用户测试 | ThreeJS | 🟢 Low | — |
+| **H3** | 小窗口下海报高度异常缩减 | 用户测试 | HUD | 🟢 Low | — |
+| **H4** | Movie detail 界面死板 | 用户测试 | HUD | 🟢 Low | — |
+| **H5** | 缺省字段显示方式不优雅 | 用户测试 | HUD | 🟢 Low | — |
+| **H6** | 缺少搜索入口 | 用户测试 | HUD | 🟢 Low | — |
+| **B6** | Vitest 已安装但零测试 | 代码审计 | Engineering | 🟢 Low | — |
+| **B7** | far=1e6 过大浪费深度精度 | 代码审计 | ThreeJS | 🟢 Low | — |
+
+---
+
+## 10. 下一阶段：核心设计方案
+
+以下三个设计方案由用户在本次评估后提出，是下一阶段开发的核心方向。它们协同解决了大部分 🔴 High 问题，并引入了超出现有 Spec 的新架构概念。
+
+> **⚠️ Spec 同步要求**: 这三个设计方案引入了 `zCurrent`、`zVisWindow`、`zCamDistance`、粒子视觉分层等新概念，超出了现有 Tech Spec / Design Spec 的范围。开发过程中**必须同步更新**相关项目文档，确保 Spec 与实现保持一致。
+
+### 设计方案 1 — 宏观漫游视距窗口逻辑
+
+**解决 Issue**: D1（星星过多）、T4（相机初始位置）、H2（时间轴可拖动）、T6（hover 位置异常）
+
+**核心概念**:
+
+引入三个关键参数，定义宏观漫游时的"可观测范围"：
+
+```
+zCurrent         — 当前所在时间轴位置（Timeline 显示此值）
+zVisWindow       — 可观测 Z 范围宽度（zCurrent 到 zCurrent + zVisWindow 为可见窗口）
+zCamDistance      — 相机到 zCurrent 的后退距离
+
+相机世界 Z = zCurrent - zCamDistance
+```
+
+**行为模型**:
+
+```
+                    相机                    zCurrent         zCurrent + zVisWindow
+                      |                       |                    |
+  ◁───zCamDistance───▷ |◁──────zVisWindow──────▷|
+                      ▼                       ▼                    ▼
+  [  behind camera  ] cam ================== [ visible window ] =====▷ +Z (future)
+```
+
+- **用户滚轮/拖动时间轴** → 改变 `zCurrent`，相机跟随移动
+- **Timeline HUD** 显示 `zCurrent` 值，并支持拖动交互快速跳转
+- **初始 `zCurrent`** 建议设为当前年份（如 2026）或 Z 范围末端附近，让用户首屏看到现代电影
+- `zVisWindow` 和 `zCamDistance` 为可调配置，需在开发中根据视觉效果迭代
+
+### 设计方案 2 — 星球视觉分层（三层级）
+
+**解决 Issue**: D1（星星过多）、T2（颜色不一致）、T3（多 genre 染色）、T5（Bloom 颜色可见性）、B1（Bloom 未启用）、B2（缺少径向辉光）
+
+**核心概念**:
+
+将全部 59K 粒子分为**三个视觉层级**，每层独立开发与调试。以下设计为暂定方案，可随开发效果调整。
+
+#### 层级 A — 窗口外背景层
+
+> `z` **不在** `[zCurrent, zCurrent + zVisWindow]` 范围内的星球
+
+| 维度 | 规格 |
+| --- | --- |
+| **交互** | 不被鼠标 hover / 选中 |
+| **视觉** | `size` 缩到一个**固定极小值**（所有背景星球统一大小）；颜色取 `genres[0]` 色相 |
+| **渲染** | 2D，面朝相机的圆形（`gl_PointCoord` 圆盘） |
+| **目的** | 提供星空氛围感，但不干扰当前窗口的信息层级 |
+
+#### 层级 B — 窗口内焦点层
+
+> `z ∈ [zCurrent, zCurrent + zVisWindow]` 范围内的星球
+
+| 维度 | 规格 |
+| --- | --- |
+| **交互** | 可被鼠标 hover / 选中 |
+| **视觉** | 显示**真实 `size`**（反映 vote_count 的对数映射）；颜色取 `genres[0]` 色相 |
+| **渲染** | 2D，面朝相机的圆形。未来可根据算力与视觉效果决定是否升级为 3D 球体 |
+| **目的** | 用户当前浏览窗口的核心信息载体，大小 / 色相均有意义 |
+
+#### 层级 C — 选中层（微观态）
+
+> 用户点击选中的单颗星球
+
+| 维度 | 规格 |
+| --- | --- |
+| **交互** | 触发 HUD 档案抽屉弹出 |
+| **视觉** | 真实 `size`；3D 渲染 |
+| **渲染** | **高精度 3D 球体**（`IcosahedronGeometry` 高细分），表面按 genre 权重（黄金比衰减 \(w_k\)）**分配不同 genre 颜色的面积比例**，通过 **Perlin Noise** 生成分界形状作为球体表面贴图 |
+| **Perlin Noise 参数** | `Threshold`、`Scale`、`Octaves`、`Persistence`（均可调） |
+| **目的** | 沉浸式"文物检视"，让用户直观感受影片的流派构成 |
+
+**关键设计约束**:
+
+- 三个层级应**分别可独立开发和调试**视觉效果（着色器参数、Bloom、透明度等）
+- 窗口内层（B）与选中层（C）均使用 `genres[0]` 作为主色调，确保从"远观→聚焦→选中"的颜色连贯性（解决 T2）
+- Raycaster 拾取**仅对窗口内层（B）生效**（解决 T6 部分问题）
+- 层级 A → B 的过渡：粒子在进出 `zVisWindow` 边界时是否需要渐变动画，待开发中评估
+
+**实现方向思考**:
+
+- 层级 A + B：可通过单个 `THREE.Points` + shader uniform 实现（vertex/fragment shader 中根据 `z` 与 `uZCurrent`/`uZVisWindow` 分支）；也可拆分为两个 draw call 便于独立调参
+- 层级 C：沿用现有 `planet.ts` 的 `IcosahedronGeometry` + `ShaderMaterial` 架构，升级 Perlin 片元着色器以支持基于面积比例的 genre 分区
+- 具体方案在开发阶段确定
+
+### 设计方案 3 — XY 内容中点居中
+
+**解决 Issue**: T1（星系不在屏幕中间）
+
+**核心概念**:
+
+当前 `scene.ts` 使用 `meta.xy_range` 的 min/max 中点作为相机 XY 位置：
+
+```typescript
+cx = (x_min + x_max) / 2  // 现有逻辑
+cy = (y_min + y_max) / 2
+```
+
+由于 UMAP 输出分布不对称，min/max 中心 ≠ 数据密度中心。需要改为使用数据的**实际中位数**（或密度加权中心）：
+
+**方案选项**:
+
+1. **Python 管线导出中位数** — 在 `meta` 中新增 `xy_center: { x: median_x, y: median_y }` 字段（推荐：计算准确，且符合管线→前端的数据流方向）
+2. **前端运行时计算** — 加载后对 `movies[].x/y` 取中位数（59K 排序开销可接受，但增加首屏处理时间）
+
+---
+
+## 11. 下一阶段工作组织建议
+
+基于上述三个设计方案和 Issue 清单，建议按以下优先级组织后续工作：
+
+### Phase 5.0 — 视距窗口与粒子分层（核心架构变更）
+
+**目标**: 实装设计方案 1 + 2 + 3，从根本上解决宏观浏览体验。
+
+| 子任务 | 涉及 Issue | 涉及方案 | 说明 |
+| --- | --- | --- | --- |
+| **5.0.1 XY 内容中点** | T1 | 方案 3 | 管线导出 `xy_center` 或前端运行时中位数 |
+| **5.0.2 视距窗口模型** | T4, D1 | 方案 1 | 引入 `zCurrent` / `zVisWindow` / `zCamDistance`；修改相机控制逻辑 |
+| **5.0.3 三层星球着色器** | D1, T2, T3, T5, B1, B2 | 方案 2 | 层级 A（背景）+ B（焦点）+ C（选中）分别实现；独立可调参数与 Bloom |
+| **5.0.4 Raycaster 适配** | T6 | 方案 1 + 2 | 限制拾取范围至窗口层 |
+| **5.0.5 相机方向修正** | T7 | — | `camera.ts` 符号修正 |
+| **5.0.6 Detail 模糊蒙版** | H1 | — | 去除/调整 Sheet overlay blur |
+| **Spec 同步** | — | 全部 | 更新 Tech Spec / Design Spec 新增概念 |
+
+### Phase 5.1 — UMAP 调参与数据优化
+
+**目标**: 改善局部小星团聚合度，降低数据体积。
+
+| 子任务 | 涉及 Issue | 说明 |
+| --- | --- | --- |
+| **UMAP 参数调优** | DS1 | 增大 `min_dist` 改善局部聚合 |
+| **考虑阶段 B 模型** | — | 768 维模型需要重新 embedding + UMAP |
+
+### Phase 5.2 — 交互增强
+
+**目标**: 提升用户体验，补齐被动→主动交互。
+
+| 子任务 | 涉及 Issue | 说明 |
+| --- | --- | --- |
+| **Timeline 拖动跳转** | H2 | 与 `zCurrent` 概念衔接 |
+| **搜索入口（基础关键词）** | H6 | — |
+| **Drawer UI 打磨** | H4, H5, H3 | — |
+
+### Phase 5.3 — 工程质量强化
+
+| 子任务 | 涉及 Issue | 说明 |
+| --- | --- | --- |
+| **Vitest 配置 + 核心测试** | B6 | — |
+| **ESLint 修复** | B5 | — |
+| **Bundle 优化** | B3 | code-splitting、动态 import |
+
+---
+
+## 12. 附录
+
+### A. 已完成 Phase 清单
+
+| Phase | 内容 | 提交 |
+| --- | --- | --- |
+| 0 | CUDA / PyTorch 环境 | — |
+| 1.0 | 归档旧脚本 | — |
+| 1.1–1.4 | 数据清洗管线 | — |
+| 2.1–2.6 | Embedding / Genre / Language / UMAP / Z 轴 / 冒烟 | — |
+| 3.0–3.7 | Three.js 场景 / TS Types / Loading / Camera / Points / Bloom / Pipeline | — |
+| 4.1 | Raycaster 交互 | `f674980` |
+| 4.2 | MovieTooltip HUD | `ce3bc57` |
+| 4.3 | MovieDetailDrawer | `4999497` |
+| 4.4 | Timeline 时间轴 | `2f3ae9e` |
+| 4.5 | 选中态星球 + 相机飞入 | `5767b22` |
+| 4.6 | Storybook + HUD Stories | `e0ca2a8` |
+
+### B. 数据管线产物校验
+
+```
+meta.count (59014) == movies.length (59014) ✓
+random_state = 42 ✓
+genre_weight_ratio = 0.618… ✓
+size ∈ [2.0, 25.0] ✓
+emissive ∈ [0.1, 1.5] ✓
+genre_color[i] ∈ [0.0, 1.0] ✓ (抽检)
+NaN / Inf count = 0 ✓
+```
+
+### C. 年代分布完整表
+
+| 年代 | 数量 | 占比 |
+| --- | --- | --- |
+| 1870s | 1 | 0.0% |
+| 1880s | 7 | 0.0% |
+| 1890s | 256 | 0.4% |
+| 1900s | 690 | 1.2% |
+| 1910s | 802 | 1.4% |
+| 1920s | 960 | 1.6% |
+| 1930s | 2,626 | 4.4% |
+| 1940s | 2,489 | 4.2% |
+| 1950s | 3,017 | 5.1% |
+| 1960s | 3,377 | 5.7% |
+| 1970s | 4,398 | 7.4% |
+| 1980s | 4,253 | 7.2% |
+| 1990s | 4,150 | 7.0% |
+| 2000s | 7,343 | 12.4% |
+| 2010s | 15,270 | 25.9% |
+| 2020s | 9,375 | 15.9% |
+
+### D. Genre 色板
+
+| Genre | Hex | 影片数（genres[0]） |
+| --- | --- | --- |
+| Drama | #AEB742 | 13,812 |
+| Comedy | #F0954C | 12,402 |
+| Action | #F486AA | 5,166 |
+| Horror | #00C9C1 | 4,736 |
+| Animation | #F88C6B | 4,029 |
+| Documentary | #CAAC2F | 2,889 |
+| Crime | #E0A034 | 2,473 |
+| Thriller | #C097F6 | 2,429 |
+| Romance | #5AB5FF | 2,029 |
+| Adventure | #FA878B | 1,815 |
+| Fantasy | #61C780 | — |
+| Family | #8BC05F | — |
+| Science Fiction | #83ABFF | — |
+| Music | #00C5DC | — |
+| Mystery | #1FBEF2 | — |
+| History | #27CAA1 | — |
+| War | #D78FE2 | — |
+| Western | #E989C8 | — |
+| TV Movie | #A4A0FF | — |

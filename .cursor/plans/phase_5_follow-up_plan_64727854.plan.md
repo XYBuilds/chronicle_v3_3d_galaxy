@@ -7,7 +7,7 @@ todos:
     status: completed
   - id: p5-1-1-camera-dir
     content: "Phase 5.1.1: 相机方向修正 — camera.ts 拖拽 X 轴符号修正 (T7)"
-    status: pending
+    status: completed
   - id: p5-1-2-blur-fix
     content: "Phase 5.1.2: Detail 模糊蒙版修复 — 去除/降低 SheetOverlay backdrop-blur (H1)"
     status: pending

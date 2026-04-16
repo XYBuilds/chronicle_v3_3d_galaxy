@@ -10,7 +10,7 @@ todos:
     status: completed
   - id: p5-1-2-blur-fix
     content: "Phase 5.1.2: Detail 模糊蒙版修复 — 去除/降低 SheetOverlay backdrop-blur (H1)"
-    status: pending
+    status: completed
   - id: p5-1-3-eslint
     content: "Phase 5.1.3: ESLint 修复 — Drawer.tsx:195 react-hooks/set-state-in-effect (B5)"
     status: pending

@@ -70,7 +70,7 @@ export function attachGalaxyCameraControls(
     const dy = e.clientY - lastY
     lastX = e.clientX
     lastY = e.clientY
-    camera.position.x -= dx * truckPedestalSpeed
+    camera.position.x += dx * truckPedestalSpeed
     camera.position.y += dy * truckPedestalSpeed
     applyFixedOrientation(camera)
     console.log(

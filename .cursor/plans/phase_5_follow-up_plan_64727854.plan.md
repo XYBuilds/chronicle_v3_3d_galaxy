@@ -13,7 +13,7 @@ todos:
     status: completed
   - id: p5-1-3-eslint
     content: "Phase 5.1.3: ESLint 修复 — Drawer.tsx:195 react-hooks/set-state-in-effect (B5)"
-    status: pending
+    status: completed
   - id: p5-1-4-xy-center
     content: "Phase 5.1.4: XY 内容中点居中 — scene.ts 中用 movies[].x/y 中位数替代 xy_range min/max 中心 (T1, 方案3)"
     status: pending

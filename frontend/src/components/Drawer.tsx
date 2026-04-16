@@ -192,18 +192,33 @@ export function MovieDetailDrawer() {
 
   useEffect(() => {
     if (selectedMovieId === null) {
-      setSheetDelayedOpen(false)
-      prevSelectedRef.current = null
-      return
+      const tid = window.setTimeout(() => {
+        prevSelectedRef.current = null
+        setSheetDelayedOpen(false)
+      }, 0)
+      return () => window.clearTimeout(tid)
     }
+
     const wasNull = prevSelectedRef.current === null
     prevSelectedRef.current = selectedMovieId
+
     if (wasNull) {
-      setSheetDelayedOpen(false)
-      const t = window.setTimeout(() => setSheetDelayedOpen(true), 420)
-      return () => window.clearTimeout(t)
+      const ensureClosed = window.setTimeout(() => {
+        setSheetDelayedOpen(false)
+      }, 0)
+      const openAfterDelay = window.setTimeout(() => {
+        setSheetDelayedOpen(true)
+      }, 420)
+      return () => {
+        window.clearTimeout(ensureClosed)
+        window.clearTimeout(openAfterDelay)
+      }
     }
-    setSheetDelayedOpen(true)
+
+    const tid = window.setTimeout(() => {
+      setSheetDelayedOpen(true)
+    }, 0)
+    return () => window.clearTimeout(tid)
   }, [selectedMovieId])
 
   const open = sheetDelayedOpen && selectedMovieId !== null && movie !== null

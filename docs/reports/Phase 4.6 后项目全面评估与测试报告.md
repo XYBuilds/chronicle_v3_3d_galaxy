@@ -539,6 +539,8 @@ NaN / Inf count = 0 ✓
 
 ### D. Genre 色板
 
+对 `galaxy_data.json`（`meta.version = 2026.04.14`，59,014 条）逐条统计 **`genres[0]`**（TMDB 给定顺序下的主导流派）。**色板中的 19 种流派均至少出现过一次作为 `genres[0]`**；此前报告中 Fantasy 及以下写「—」为表格未补全所致，并非数据中从未作为主导流派出现。
+
 | Genre | Hex | 影片数（genres[0]） |
 | --- | --- | --- |
 | Drama | #AEB742 | 13,812 |
@@ -551,12 +553,12 @@ NaN / Inf count = 0 ✓
 | Thriller | #C097F6 | 2,429 |
 | Romance | #5AB5FF | 2,029 |
 | Adventure | #FA878B | 1,815 |
-| Fantasy | #61C780 | — |
-| Family | #8BC05F | — |
-| Science Fiction | #83ABFF | — |
-| Music | #00C5DC | — |
-| Mystery | #1FBEF2 | — |
-| History | #27CAA1 | — |
-| War | #D78FE2 | — |
-| Western | #E989C8 | — |
-| TV Movie | #A4A0FF | — |
+| Science Fiction | #83ABFF | 1,211 |
+| Family | #8BC05F | 1,055 |
+| Fantasy | #61C780 | 972 |
+| Mystery | #1FBEF2 | 824 |
+| Western | #E989C8 | 788 |
+| Music | #00C5DC | 755 |
+| TV Movie | #A4A0FF | 613 |
+| War | #D78FE2 | 594 |
+| History | #27CAA1 | 422 |

@@ -221,6 +221,7 @@ export function mountGalaxyScene(
   )
 
   const composer = new EffectComposer(renderer)
+  composer.setPixelRatio(renderer.getPixelRatio())
   const renderPass = new RenderPass(scene, camera)
   // strength 0: disable bloom for readability / solid-entity inspection (restore e.g. 1.0 when tuning glow).
   const bloomPass = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.0, 0.5, 0.85)
@@ -275,13 +276,21 @@ export function mountGalaxyScene(
   const resize = () => {
     const w = Math.max(1, container.clientWidth)
     const h = Math.max(1, container.clientHeight)
-    camera.aspect = w / h
-    camera.updateProjectionMatrix()
-    renderer.setSize(w, h, false)
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+    const pr = Math.min(window.devicePixelRatio, 2)
+
+    // H-G (Phase 5.1.4.7): set pixel ratio before setSize so drawing buffer uses the
+    // intended DPR; keep EffectComposer in sync to avoid RT vs canvas viewport mismatch.
+    renderer.setPixelRatio(pr)
+    composer.setPixelRatio(pr)
+
+    renderer.setSize(w, h, true)
     composer.setSize(w, h)
     bloomPass.setSize(w, h)
-    galaxy.material.uniforms.uPixelRatio.value = Math.min(window.devicePixelRatio, 2)
+
+    camera.aspect = w / h
+    camera.updateProjectionMatrix()
+
+    galaxy.material.uniforms.uPixelRatio.value = pr
   }
 
   resize()
@@ -319,6 +328,10 @@ export function mountGalaxyScene(
     raf = requestAnimationFrame(tick)
     applySelectionFrame(performance.now())
     setGalaxyCameraZ(camera.position.z)
+    const expectedPr = Math.min(window.devicePixelRatio, 2)
+    if (renderer.getPixelRatio() !== expectedPr) {
+      resize()
+    }
     composer.render()
   }
   tick()

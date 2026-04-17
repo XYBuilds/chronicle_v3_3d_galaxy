@@ -40,7 +40,7 @@ todos:
     status: completed
   - id: p5-1-6-three-layers
     content: "Phase 5.1.6: 三层星球着色器 — A(背景)/B(焦点) shader 分层 + 重写 C(选中) Perlin 着色器为面积比例分区染色，重新启用 Bloom，fragment 径向辉光 (D1, T2, T3, T5, B1, B2, 方案2)"
-    status: pending
+    status: completed
   - id: p5-1-7-raycaster
     content: "Phase 5.1.7: Raycaster 适配 — 拾取范围限制到窗口内层 (T6)"
     status: pending

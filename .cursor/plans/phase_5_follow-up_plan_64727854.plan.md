@@ -16,7 +16,7 @@ todos:
     status: completed
   - id: p5-1-4-1-t1-he
     content: "Phase 5.1.4.1: T1 根因 H-E — 运行时 camera.rotation 篡改检测（tick 循环 assert rotation.equals(GALAXY_CAMERA_EULER)）"
-    status: pending
+    status: completed
   - id: p5-1-4-2-t1-hd
     content: "Phase 5.1.4.2: T1 根因 H-D — 投影矩阵 / aspect 异常检查（打印 renderer size、camera.aspect、projectionMatrix）"
     status: pending

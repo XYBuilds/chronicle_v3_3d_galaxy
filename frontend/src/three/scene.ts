@@ -272,39 +272,6 @@ export function mountGalaxyScene(
   window.__galaxyPointScale = pointScaleDebug
   pointScaleDebug.log()
 
-  const t1HdSizeScratch = new THREE.Vector2()
-
-  const logT1HdProjectionDiagnostics = () => {
-    renderer.getSize(t1HdSizeScratch)
-    const sizeX = t1HdSizeScratch.x
-    const sizeY = t1HdSizeScratch.y
-    const expectedAspect = sizeY !== 0 ? sizeX / sizeY : Number.NaN
-    const canvasEl = renderer.domElement
-    const m = camera.projectionMatrix.elements
-    console.log('[T1/H-D]', {
-      canvasSize: [sizeX, sizeY],
-      clientSize: [canvasEl.clientWidth, canvasEl.clientHeight],
-      aspect: camera.aspect,
-      expectedAspect,
-      fov: camera.fov,
-      near: camera.near,
-      far: camera.far,
-      projectionMatrix: Array.from(m),
-    })
-    if (sizeY > 0 && Math.abs(camera.aspect - expectedAspect) > 1e-4) {
-      console.error('[T1/H-D] camera.aspect !== renderer width/height ratio', {
-        aspect: camera.aspect,
-        expectedAspect,
-      })
-    }
-    if (Math.abs(m[8]) > 1e-6 || Math.abs(m[9]) > 1e-6) {
-      console.error('[T1/H-D] projectionMatrix m[8]/m[9] non-zero (asymmetric / skew frustum)', {
-        m8: m[8],
-        m9: m[9],
-      })
-    }
-  }
-
   const resize = () => {
     const w = Math.max(1, container.clientWidth)
     const h = Math.max(1, container.clientHeight)
@@ -315,9 +282,6 @@ export function mountGalaxyScene(
     composer.setSize(w, h)
     bloomPass.setSize(w, h)
     galaxy.material.uniforms.uPixelRatio.value = Math.min(window.devicePixelRatio, 2)
-    if (renderer.domElement.parentElement) {
-      logT1HdProjectionDiagnostics()
-    }
   }
 
   resize()
@@ -327,7 +291,6 @@ export function mountGalaxyScene(
   window.addEventListener('resize', resize)
 
   container.appendChild(renderer.domElement)
-  logT1HdProjectionDiagnostics()
 
   const canvas = renderer.domElement
 

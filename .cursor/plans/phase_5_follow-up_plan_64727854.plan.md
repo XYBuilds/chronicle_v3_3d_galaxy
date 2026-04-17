@@ -27,10 +27,13 @@ todos:
     content: "Phase 5.1.4.4: T1 根因 H-B — 已复测中位数 XY；肉眼 T1 偏差仍明显 → 排除 H-B 为根因修复，已回滚方案 3 代码与 Tech Spec"
     status: completed
   - id: p5-1-4-5-t1-ha
-    content: "Phase 5.1.4.5: T1 根因 H-A — UMAP 坐标系朝向错配（PCA 主轴分析）；若成立则在 Python 管线端做正交旋转"
-    status: pending
+    content: "Phase 5.1.4.5: T1 根因 H-A — UMAP 坐标系朝向错配（PCA 主轴分析）；已被 H-G 超越，取消"
+    status: cancelled
   - id: p5-1-4-6-t1-hc
-    content: "Phase 5.1.4.6: T1 根因 H-C — HUD 非对称裁切复测（隐藏 HUD，纯 canvas 下肉眼验证）"
+    content: "Phase 5.1.4.6: T1 根因 H-C — HUD 非对称裁切复测（隐藏 HUD，纯 canvas 下肉眼验证）；已被 H-G 超越，取消"
+    status: cancelled
+  - id: p5-1-4-7-t1-hg
+    content: "Phase 5.1.4.7: T1 根因 H-G — Windows 系统缩放（DPR > 1）兼容性修复 — 经用户复测确认 100% 缩放下不复现、125%/150% 下右下视窗裁切；改造 scene.ts resize: setPixelRatio 先于 setSize、composer.setPixelRatio 同步、updateStyle=true 或外部 CSS 校验、设备像素比变化监听"
     status: pending
   - id: p5-1-5-z-window
     content: "Phase 5.1.5: 视距窗口模型 — 引入 zCurrent/zVisWindow/zCamDistance，改造 camera.ts 滚轮逻辑 + bridge 升级 + camera clamp (T4, D1, 方案1)"
@@ -78,6 +81,7 @@ isProject: false
 
 ## 修订记录
 
+- **Rev 3**: 用户复测锁定 T1 根因为 **Windows 系统缩放 / DPR 兼容性问题**——100% 缩放下不复现，125%/150% 下相机画面右下区域不在视窗内，视觉上形成"主轴向右下偏"的错觉。新增 **H-G（5.1.4.7）** 作为已确认的根因假设，并将尚未开展的 **5.1.4.5（H-A）** 与 **5.1.4.6（H-C）** 标记为 cancelled（被 H-G 超越，如 H-G 修复后仍有残留偏差可再复启）。已完成的 5.1.4.1–5.1.4.4 排查保持历史记录不变。
 - **Rev 2**: 根据报告对 T1 的改判，5.1.4 从"XY 内容中点居中（方案 3）"改为"T1 根因调查与修复（相机朝向非 Z 平行）"，拆分为 5.1.4.1–5.1.4.6 六个子任务，对应报告 §11.1 中 H-E → H-D → H-F → H-B → H-A → H-C 的排查顺序；设计方案 3 降级为 H-B 成立时的修复路径，内嵌于 5.1.4.4。
 - **Rev 1**: 5.1 内部按"快速修正 → 核心架构"重新编号；确认 overlay 完全去除、zVisWindow=1 年、A+B 先单 Points shader 分支、A↔B 先硬切。
 
@@ -141,19 +145,25 @@ isProject: false
 - 用户实测现象：需在 `GALAXY_CAMERA_EULER` 基础上叠加 `yaw ≈ -15°`、`pitch ≈ -7.5°` 才肉眼与 Z 平行
 - 代码 grep 确认仅 `camera.ts:20`、`scene.ts:86/133/151` 三处写入 `camera.rotation`（全部 copy `GALAXY_CAMERA_EULER`）
 - **现象与代码不符，属深层根因问题**
+- **Rev 3 关键更新**: 复测发现该现象**仅在 Windows 系统缩放 > 100% 时出现**（125%/150% 复现，100% 不复现）——根因从"几何/数据层问题"收敛为**渲染管线对 `devicePixelRatio > 1` 的兼容性问题**。直接导向新增的 **5.1.4.7 (H-G)**；已完成但未命中的 5.1.4.1–5.1.4.4 作为历史验证保留，尚未开展的 5.1.4.5 (H-A)、5.1.4.6 (H-C) 被超越、取消
 
 **修复原则（硬约束）**:
 - **禁止**将实测偏移值 `-15°/-7.5°` 写进 `GALAXY_CAMERA_EULER` 或任何代码常量 — 那是症状掩盖，且随 UMAP 重新训练 / 数据集变化后失效
 - 定位根因后，优先修正**世界坐标系构建端 / 数据生成端**，保持相机严格 `Euler(0, π, 0, 'YXZ')` 不动
 - 每个子任务（H-E 至 H-C）为**独立验证步骤**，排查成本从低到高排序；某一步成立即跳转对应修复路径，无需继续后续假设
 
-**调查流程总览**（报告 §11.1 推荐排查顺序）:
+**调查流程总览**（Rev 3 后；历史顺序保留于 §11.1）:
 
 ```
-H-E (rotation drift)  →  H-D (aspect/proj)  →  H-F (vertex shader)
-  │                         │                     │
-  ▼                         ▼                     ▼
-H-B (XY density + 透视)  →  H-A (UMAP 主轴)  →  H-C (HUD 非对称)
+[历史排查 — 均已完成且排除根因]
+H-E (rotation drift) ✔  →  H-D (aspect/proj) ✔  →  H-F (vertex shader) ✔  →  H-B (XY density) ✔
+
+[Rev 3 锁定路径]
+H-G (DPR > 1 视窗裁切) ← 用户复测确认 ← 进入 5.1.4.7 修复
+
+[取消]
+H-A (UMAP 主轴) ✗ cancelled    H-C (HUD 非对称) ✗ cancelled
+（若 H-G 修复后仍有残留偏差可再复启）
 ```
 
 ---
@@ -268,49 +278,127 @@ camera.position.set(medianX, medianY, zMin - 2)
 
 ---
 
-#### 5.1.4.5 H-A · UMAP 坐标系朝向错配（可能性最高但成本最贵）
+#### 5.1.4.5 H-A · UMAP 坐标系朝向错配 — **已取消**
 
-**假设**: UMAP 输出的二维嵌入 (x, y) 是任意降维坐标，其数据主轴未必与世界 +X / +Y 对齐。数据云整体"歪了"，即便相机严格 Z 平行，透视下星系主轴仍在屏幕上倾斜。
+> **Rev 3 取消**: 用户复测锁定根因为 DPR 兼容性问题（见 5.1.4.7），H-A 被超越。若 5.1.4.7 修复后仍有残留主轴偏移再复启本子任务；保留原假设描述供参考，不再作为排查路径。
 
-**验证方法**（两个角度，任一即可）:
-
-1. **Python 端 PCA 主轴分析** — 临时脚本读取 UMAP 产物：
-   ```python
-   import numpy as np
-   xy = np.load('data/output/umap_xy.npy')  # 或从 galaxy_data.json 读 (x, y)
-   xy_centered = xy - xy.mean(axis=0)
-   cov = np.cov(xy_centered.T)
-   eigvals, eigvecs = np.linalg.eigh(cov)
-   principal_angle_rad = np.arctan2(eigvecs[1, -1], eigvecs[0, -1])
-   print(f'主轴角度: {np.degrees(principal_angle_rad):.2f}° (与 +X 轴夹角)')
-   print(f'特征值比: {eigvals[-1] / eigvals[0]:.2f}')
-   ```
-2. **前端端 Ortho 视图复测** — 临时将 `PerspectiveCamera` 替换为 `OrthographicCamera`，正对 XY 平面查看点云，肉眼观察主轴是否偏离水平 / 垂直
-
-**判定标准**:
-- **成立**: 主轴角度显著偏离 0° / 90°（例如绝对值 > 5°） → 选择以下修复路径之一：
-  - **首选（Python 管线端）**: 在 [umap_projection.py](scripts/feature_engineering/umap_projection.py) 输出后追加 PCA 正交旋转，使主轴对齐世界 X / Y 轴；`meta` 中记录旋转角度供调试。优点：持久化到 `galaxy_data.json`，前端无需改动
-  - **备选（前端端）**: 在 [scene.ts](frontend/src/three/scene.ts) 给 galaxy Group 施加一次性 `rotation.z`，数值由 PCA 主轴角算出（**动态从数据计算，非硬编码 `-15°/-7.5°`**）
-- **不成立**: 主轴已对齐（夹角 < 5°） → 排除 H-A，进入 5.1.4.6
-
-**排除后下一步**: 进入 5.1.4.6（H-C HUD 裁切复测）。
+原假设：UMAP 输出的二维嵌入 (x, y) 主轴未必与世界 +X / +Y 对齐；若数据云整体"歪了"，即便相机严格 Z 平行，透视下星系主轴仍会倾斜。原修复路径为 Python 管线端追加 PCA 正交旋转，或前端对 galaxy Group 施加一次性 `rotation.z`。
 
 ---
 
-#### 5.1.4.6 H-C · HUD 非对称裁切导致构图中心偏移
+#### 5.1.4.6 H-C · HUD 非对称裁切导致构图中心偏移 — **已取消**
 
-**假设**: HUD（Timeline 吸底、Drawer 右侧、Tooltip 浮层）使用户主观的"画面中心"并非渲染器几何中心。渲染器本身中心化但用户视觉参照不对称，误读为相机歪。
+> **Rev 3 取消**: 同上，被 H-G 超越。若 5.1.4.7 修复后用户反馈 HUD 仍有主观构图偏斜，可复启为独立 HUD 布局优化项（并入 5.3.2 Drawer UI 打磨更合适）。
 
-**验证方法** — 临时给 HUD 根节点加样式 `display: none`（或浏览器 DevTools 禁用），在**纯 canvas 下肉眼复测**是否仍需 `-15°/-7.5°` 偏移。
+原假设：HUD（Timeline 吸底、Drawer 右侧）使用户主观"画面中心"偏离渲染器几何中心。原修复路径为 Timeline 居中底部布局 / Drawer 改为浮动弹窗。
+
+---
+
+#### 5.1.4.7 H-G · Windows 系统缩放（DPR > 1）兼容性修复 — **已锁定根因**
+
+**假设（已由用户复测确认）**: 在 `window.devicePixelRatio > 1` 环境下（Windows 显示设置缩放 125% / 150%），当前 `scene.ts` 的 `resize()` 逻辑使 renderer 绘图缓冲、Three.js 相机 aspect、EffectComposer 内部 RT 三者对 DPR 的处理不一致，导致相机画面右侧与下侧溢出 canvas 可见区域。用户视觉上将裁切后的画面解读为"主轴向右下偏移，需要旋转相机补偿"。
+
+**用户复测证据**:
+
+| 系统缩放 | 现象 |
+| --- | --- |
+| **100%** (DPR=1) | T1 不复现，星系主轴肉眼即与 Z 轴平行 |
+| **125%** (DPR=1.25) | 相机画面右下裁切，肉眼需叠加 `yaw ≈ -15° / pitch ≈ -7.5°` 才匹配主轴 |
+| **150%** (DPR=1.5) | 同 125%，裁切更显著 |
+
+**当前代码已知隐患**（`frontend/src/three/scene.ts:280-284`）:
+
+```ts
+renderer.setSize(w, h, false)                                // ①
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)) // ②
+composer.setSize(w, h)                                       // ③
+bloomPass.setSize(w, h)
+galaxy.material.uniforms.uPixelRatio.value = Math.min(window.devicePixelRatio, 2)
+```
+
+三个 DPR 反模式：
+
+| # | 问题 | 在 DPR=1 时的影响 | 在 DPR>1 时的影响 |
+| --- | --- | --- | --- |
+| ① | `setSize(..., false)` — `updateStyle=false`，Three.js 不写 `canvas.style.width/height` | 无（因 CSS 本就 100%） | 若外部 CSS 与 Three.js 内部 `_width/_height` 在 DPR 过渡态不一致，canvas CSS 显示尺寸与 drawing buffer 物理尺寸比例错位 |
+| ② | `setPixelRatio` 在 `setSize` **之后**调用 | 无（`pr=1`，setSize 不受影响） | `setSize(w, h)` 以当时的 `_pixelRatio` 设定 drawing buffer；随后 `setPixelRatio` 改变 `_pixelRatio` 并重算 drawing buffer，**首帧（挂载 → 第一次 resize 之间）存在 DPR 错位状态** |
+| ③ | 从未调用 `composer.setPixelRatio(renderer.getPixelRatio())` | 无（`_pixelRatio=1` 一致） | `EffectComposer` 内部 RT 按 **CSS 尺寸** 分配（`_pixelRatio=1` 默认），但最终 pass 写入 **DPR 缩放后** 的 canvas drawing buffer → viewport 或 RT 比例错位 → **画面被裁切/偏移** |
+
+**修复实现**（5.1.4.7 主要改动）:
+
+1. **`scene.ts` 挂载期（第 84–100 行附近）**
+   - 创建 renderer 后**立刻**调用 `renderer.setPixelRatio(...)`，再调用 `renderer.setSize(...)`（而非反向）
+   - 同步调用 `composer.setPixelRatio(renderer.getPixelRatio())`（若该版本 Three.js EffectComposer 支持；当前依赖 three 的 `three/examples/jsm/postprocessing/EffectComposer.js` 已含此 API）
+2. **`resize()` 函数（第 275–285 行）**
+   ```ts
+   const resize = () => {
+     const w = Math.max(1, container.clientWidth)
+     const h = Math.max(1, container.clientHeight)
+     const pr = Math.min(window.devicePixelRatio, 2)
+
+     // 1) pixel ratio 先行（避免 setSize 用到陈旧的 _pixelRatio）
+     renderer.setPixelRatio(pr)
+     composer.setPixelRatio(pr)
+
+     // 2) 尺寸 & 投影
+     renderer.setSize(w, h, true)     // updateStyle=true，让 Three.js 统一维护 canvas CSS 尺寸
+     composer.setSize(w, h)
+     bloomPass.setSize(w, h)          // UnrealBloomPass.setSize 内部以 CSS 尺寸入参即可
+     camera.aspect = w / h
+     camera.updateProjectionMatrix()
+
+     galaxy.material.uniforms.uPixelRatio.value = pr
+   }
+   ```
+   关键变更：
+   - `setPixelRatio` 在 `setSize` **之前**调用（renderer + composer 同步）
+   - `updateStyle` 由 `false` 改为 `true`（或改为手动设 `canvas.style.width/height` 为 `w/h` px），确保 CSS 尺寸由 Three.js 统一维护
+   - `composer.setPixelRatio` 显式调用，解决 EffectComposer 内部 RT 与 renderer drawing buffer 的 DPR 错位
+3. **新增 DPR 变化监听**（处理用户运行时将浏览器拖到不同 DPI 显示器或临时改 Windows 缩放的情况）:
+   ```ts
+   const dprQuery = window.matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`)
+   const onDprChange = () => resize()
+   dprQuery.addEventListener('change', onDprChange)
+   // dispose 时移除
+   ```
+   或更简单：每次 RAF 校验 `renderer.getPixelRatio()` 与 `window.devicePixelRatio` 是否一致，不一致则 `resize()`。
+4. **实时调试探针**（验证期保留，修复确认后移除，遵循 5.1.4.1 H-E 的模式）:
+   ```ts
+   const size = renderer.getSize(new THREE.Vector2())
+   const drawing = new THREE.Vector2(renderer.domElement.width, renderer.domElement.height)
+   console.log('[T1/H-G] dpr check', {
+     dpr: window.devicePixelRatio,
+     rendererPR: renderer.getPixelRatio(),
+     composerPR: (composer as any).getPixelRatio?.() ?? 'n/a',
+     cssSize: [size.x, size.y],
+     drawingBuffer: [drawing.x, drawing.y],
+     canvasStyle: [renderer.domElement.style.width, renderer.domElement.style.height],
+     clientSize: [renderer.domElement.clientWidth, renderer.domElement.clientHeight],
+     aspect: camera.aspect,
+     expectedAspect: size.x / size.y,
+   })
+   ```
+   在以下场景验证：初始挂载、窗口 resize、切换 Windows 缩放（100/125/150%）、浏览器 DevTools 开关、跨显示器拖拽。
 
 **判定标准**:
-- **成立**: 隐藏 HUD 后偏差**消失或显著减小** → 这是**视觉感知问题而非相机问题**，考虑：
-  - 将 Timeline 从右侧改为左右对称布局（例如居中底部）
-  - Drawer 改为浮动弹窗而非挤占右侧视口
-  - 记录为 HUD 布局优化项（可并入 5.3.2 Drawer UI 打磨）
-- **不成立**: 隐藏 HUD 后偏差仍在 → 全部 6 个候选假设均已排除，需扩充假设集并重新调查（此时应停下来向用户汇报）
+- **成立（预期）**: 修复后在 125% / 150% 缩放下 canvas 完全填充视口、星系主轴肉眼与 Z 轴平行，无需 `-15°/-7.5°` 补偿 → 关闭 T1，进入 5.1.5
+- **部分成立**: 修复后 125% 改善但 150% 仍有残留 → 核查 `Math.min(devicePixelRatio, 2)` 的 clamp 是否在高 DPR 下触发，以及 `bloomPass` / 其他 Pass 是否也需 pixelRatio 显式同步
+- **不成立**: 修复后偏差依旧存在 → 考虑复启 5.1.4.5 (H-A) 与 5.1.4.6 (H-C)，并扩充假设集（浏览器 compositor、`window.visualViewport` API、`content-visibility`、Electron/WebView 场景等）
 
-**排除后下一步**: 汇报调查结果，补充新假设（例如 `renderer.outputColorSpace` / `toneMapping` 引起的视觉偏差、或硬件 / 浏览器层面问题）。
+**验收**:
+- 100% / 125% / 150% 三档系统缩放下，肉眼观察相机画面边缘**恰好填充容器**，无裁切、无留白、无拉伸
+- `GALAXY_CAMERA_EULER` 保持 `(0, π, 0, 'YXZ')` 不变，代码库中**无**任何 `-15° / -7.5° / 0.26180 / 0.13090` 硬编码常量
+- 构建与现有 Storybook 通过；手动复测后移除 `[T1/H-G]` 诊断日志
+
+**规模评估**: S–M（核心改动约 15–30 行，`scene.ts` resize 与挂载段；新增 DPR 变化监听 5–10 行；诊断日志按 5.1.4.1 模式实施+回滚）。
+
+**涉及文件**:
+- `frontend/src/three/scene.ts`（主要）
+- 必要时 `frontend/src/App.tsx` 或 `frontend/src/index.css`（若外部 CSS 与 Three.js `updateStyle=true` 产生冲突）
+
+**Spec 同步（延伸至 5.1.8）**:
+- Tech Spec §1.4 相机 / 渲染管线章节补一条"DPR 兼容性约束"：pixelRatio 在 renderer + composer 间必须显式同步；Windows 缩放变化需触发 resize
+- 在相关 `CHANGELOG` / 开发者 FAQ 中记录该问题的定位过程（有助于后续同类 issue 排查）
 
 ---
 
@@ -322,7 +410,8 @@ camera.position.set(medianX, medianY, zMin - 2)
 
 **5.1.4 总体验收**:
 - 相机 `rotation` 严格等于 `GALAXY_CAMERA_EULER`（assert 不触发）
-- 首屏肉眼看到星系主轴与屏幕 X / Y 轴大致平行，无须用户在头脑中补偿倾斜
+- **在 Windows 系统缩放 100% / 125% / 150% 三档下，首屏肉眼看到星系主轴与屏幕 X / Y 轴大致平行**，无须用户在头脑中补偿倾斜
+- canvas 在各缩放档位下**边缘恰好贴合容器**，无右下裁切、无留白
 - 代码库中**无**任何 `-15°` / `-7.5°` / `0.26180` / `0.13090` 硬编码常量
 
 ---
@@ -500,11 +589,12 @@ zCamDistance   — 相机到 zCurrent 的后退距离
 
 ## 执行顺序说明
 
-Phase 5.1 编号即为执行顺序：**5.1.1–5.1.3（快速修正）→ 5.1.4（T1 根因调查，5.1.4.1 → 5.1.4.6 按成本递增逐一排查，命中任一假设即跳转对应修复路径并结束 5.1.4）→ 5.1.5（视距窗口）→ 5.1.6（三层着色器）→ 5.1.7（Raycaster 适配）→ 5.1.8（Spec 同步）**
+Phase 5.1 编号即为执行顺序：**5.1.1–5.1.3（快速修正）→ 5.1.4（T1 根因调查，Rev 3 后直接进入 5.1.4.7 H-G 修复）→ 5.1.5（视距窗口）→ 5.1.6（三层着色器）→ 5.1.7（Raycaster 适配）→ 5.1.8（Spec 同步）**
 
-**5.1.4 特别说明**:
-- 6 个子任务为**有序短路链**：H-E 成立即修复并结束；只在前一假设被排除后才进入下一个
-- 预期大多数 case 在 H-A（UMAP 主轴）或 H-B（XY 偏心）命中并结束
-- 若走 H-A Python 管线路径，可能需要重跑 Phase 2（与 Phase 5.2 UMAP 调参合并处理亦可）
+**5.1.4 特别说明（Rev 3）**:
+- 5.1.4.1–5.1.4.4（H-E/H-D/H-F/H-B）已完成且均排除 → 保留为历史证据链
+- 5.1.4.5 (H-A) 与 5.1.4.6 (H-C) 已被 **H-G（DPR > 1 视窗裁切）** 超越，cancelled
+- **主修复路径**: 直接实施 5.1.4.7（`scene.ts` resize 的 DPR 兼容性改造）；若修复后仍有残留偏差再复启被取消的子任务
+- 本次 T1 修复不触及 Python 管线，Phase 5.2 UMAP 调参独立推进
 
 **已确认**: Phase 5.2 在 5.1 全部完成后再做（在新视觉体系下评估局部聚合是否仍需调参）。Phase 5.3 与 5.1 有依赖（Timeline 拖动依赖 `zCurrent` 概念），建议在 5.1.5 后开始。Phase 5.4 可随时穿插。

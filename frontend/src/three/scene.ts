@@ -5,7 +5,7 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 
 import { setGalaxyCameraZ } from '@/lib/galaxyCameraZBridge'
 import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
-import type { Meta, Movie, XyRange } from '@/types/galaxy'
+import type { Meta, Movie } from '@/types/galaxy'
 
 import { attachGalaxyCameraControls, GALAXY_CAMERA_EULER } from './camera'
 import { createGalaxyPoints } from './galaxy'
@@ -39,25 +39,12 @@ export interface GalaxySceneMount {
   dispose: () => void
 }
 
-function xyRangeMidpoint(xyRange: XyRange): { cx: number; cy: number } {
-  const { x, y } = xyRange
+function xyCenter(meta: Pick<Meta, 'xy_range'>): { cx: number; cy: number } {
+  const { x, y } = meta.xy_range
   if (x.length !== 2 || y.length !== 2) {
     throw new Error('[Scene] meta.xy_range.x / .y must be length-2 [min, max]')
   }
   return { cx: (x[0] + x[1]) / 2, cy: (y[0] + y[1]) / 2 }
-}
-
-function median(values: number[]): number {
-  const sorted = values.slice().sort((a, b) => a - b)
-  const mid = sorted.length >> 1
-  return sorted.length % 2 === 0 ? (sorted[mid - 1]! + sorted[mid]!) / 2 : sorted[mid]!
-}
-
-/** Phase 5.1.4.4 (H-B / 方案 3): density-aware XY so the camera targets the point-mass center, not the AABB midpoint. */
-function xyCenterFromMovies(movies: Movie[]): { cx: number; cy: number } {
-  const medianX = median(movies.map((m) => m.x))
-  const medianY = median(movies.map((m) => m.y))
-  return { cx: medianX, cy: medianY }
 }
 
 /**
@@ -89,8 +76,7 @@ export function mountGalaxyScene(
     throw new Error('[Scene] meta.z_range must be [z_min, z_max]')
   }
   const [zMin] = zRange
-  const { cx, cy } =
-    movies.length > 0 ? xyCenterFromMovies(movies) : xyRangeMidpoint(meta.xy_range)
+  const { cx, cy } = xyCenter(meta)
 
   const scene = new THREE.Scene()
   scene.background = new THREE.Color(0x000000)
@@ -286,40 +272,6 @@ export function mountGalaxyScene(
   window.__galaxyPointScale = pointScaleDebug
   pointScaleDebug.log()
 
-  /** Phase 5.1.4.2 (H-D): re-enabled for T1 follow-up after 5.1.4.4 subjective retest. */
-  const t1HdSizeScratch = new THREE.Vector2()
-
-  const logT1HdProjectionDiagnostics = () => {
-    renderer.getSize(t1HdSizeScratch)
-    const sizeX = t1HdSizeScratch.x
-    const sizeY = t1HdSizeScratch.y
-    const expectedAspect = sizeY !== 0 ? sizeX / sizeY : Number.NaN
-    const canvasEl = renderer.domElement
-    const m = camera.projectionMatrix.elements
-    console.log('[T1/H-D]', {
-      canvasSize: [sizeX, sizeY],
-      clientSize: [canvasEl.clientWidth, canvasEl.clientHeight],
-      aspect: camera.aspect,
-      expectedAspect,
-      fov: camera.fov,
-      near: camera.near,
-      far: camera.far,
-      projectionMatrix: Array.from(m),
-    })
-    if (sizeY > 0 && Math.abs(camera.aspect - expectedAspect) > 1e-4) {
-      console.error('[T1/H-D] camera.aspect !== renderer width/height ratio', {
-        aspect: camera.aspect,
-        expectedAspect,
-      })
-    }
-    if (Math.abs(m[8] ?? 0) > 1e-6 || Math.abs(m[9] ?? 0) > 1e-6) {
-      console.error('[T1/H-D] projectionMatrix m[8]/m[9] non-zero (asymmetric / skew frustum)', {
-        m8: m[8],
-        m9: m[9],
-      })
-    }
-  }
-
   const resize = () => {
     const w = Math.max(1, container.clientWidth)
     const h = Math.max(1, container.clientHeight)
@@ -330,9 +282,6 @@ export function mountGalaxyScene(
     composer.setSize(w, h)
     bloomPass.setSize(w, h)
     galaxy.material.uniforms.uPixelRatio.value = Math.min(window.devicePixelRatio, 2)
-    if (renderer.domElement.parentElement) {
-      logT1HdProjectionDiagnostics()
-    }
   }
 
   resize()
@@ -342,7 +291,6 @@ export function mountGalaxyScene(
   window.addEventListener('resize', resize)
 
   container.appendChild(renderer.domElement)
-  logT1HdProjectionDiagnostics()
 
   const canvas = renderer.domElement
 

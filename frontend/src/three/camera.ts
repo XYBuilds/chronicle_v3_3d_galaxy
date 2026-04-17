@@ -15,8 +15,11 @@ export interface GalaxyCameraControlOptions {
   zScrollSpeed?: number
   /** Phase 4.5 — block truck / wheel while camera fly-to runs. */
   getInputLocked?: () => boolean
-  /** Phase 5.1.5 — block wheel only (e.g. while a movie detail planet is active). */
-  getWheelLocked?: () => boolean
+  /**
+   * Phase 5.1.5 — when true, scroll wheel updates store `zCurrent` and standoff `camera.position.z`.
+   * When false, wheel moves `camera.position.z` directly (e.g. planet close-up).
+   */
+  getMacroZWheel?: () => boolean
   /** Fraction of each XY axis span used as extra clamp margin beyond `xy_range`. Default 0.08. */
   xyClampPaddingRatio?: number
 }
@@ -36,6 +39,15 @@ function clampCameraXY(camera: THREE.PerspectiveCamera, xyRange: XyRange, padRat
   const padY = (y1 - y0) * padRatio
   camera.position.x = THREE.MathUtils.clamp(camera.position.x, x0 - padX, x1 + padX)
   camera.position.y = THREE.MathUtils.clamp(camera.position.y, y0 - padY, y1 + padY)
+}
+
+/** Phase 5.1.5 — keep truck / fly-to camera inside `xy_range` with padding (shared with render tick). */
+export function clampGalaxyCameraXY(
+  camera: THREE.PerspectiveCamera,
+  xyRange: XyRange,
+  padRatio = 0.08,
+): void {
+  clampCameraXY(camera, xyRange, padRatio)
 }
 
 /**
@@ -97,12 +109,18 @@ export function attachGalaxyCameraControls(
   }
 
   const onWheel = (e: WheelEvent) => {
-    if (options.getInputLocked?.() || options.getWheelLocked?.()) return
+    if (options.getInputLocked?.()) return
     e.preventDefault()
     const dz = Math.sign(e.deltaY) * zScrollSpeed * Math.min(Math.abs(e.deltaY) / 100, 3)
-    const prev = useGalaxyInteractionStore.getState().zCurrent
-    const next = THREE.MathUtils.clamp(prev + dz, zLo, zHi)
-    useGalaxyInteractionStore.setState({ zCurrent: next })
+    const macro = options.getMacroZWheel?.() ?? true
+    if (macro) {
+      const { zCurrent: prev, zCamDistance } = useGalaxyInteractionStore.getState()
+      const next = THREE.MathUtils.clamp(prev + dz, zLo, zHi)
+      useGalaxyInteractionStore.setState({ zCurrent: next })
+      camera.position.z = next - zCamDistance
+    } else {
+      camera.position.z += dz
+    }
     applyFixedOrientation(camera)
   }
 

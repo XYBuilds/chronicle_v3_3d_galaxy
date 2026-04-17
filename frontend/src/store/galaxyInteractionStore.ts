@@ -19,7 +19,7 @@ export const useGalaxyInteractionStore = create<GalaxyInteractionState>(() => ({
   hoveredMovieId: null,
   selectedMovieId: null,
   hoverAnchorCss: null,
-  zCurrent: 2000,
+  zCurrent: 0,
   zVisWindow: 1,
-  zCamDistance: 4,
+  zCamDistance: 2,
 }))

@@ -22,7 +22,7 @@ todos:
     status: completed
   - id: p5-1-4-3-t1-hf
     content: "Phase 5.1.4.3: T1 根因 H-F — Vertex shader world-space 变换审计（point.vert / perlin.vert）"
-    status: pending
+    status: completed
   - id: p5-1-4-4-t1-hb
     content: "Phase 5.1.4.4: T1 根因 H-B — XY 与数据密度中心偏离复测（临时用 medianX/medianY 作相机 XY）；若成立则实施设计方案 3"
     status: pending

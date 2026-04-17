@@ -10,7 +10,7 @@ import type { Meta, Movie } from '@/types/galaxy'
 import { attachGalaxyCameraControls, clampGalaxyCameraXY, GALAXY_CAMERA_EULER } from './camera'
 import { createGalaxyPoints } from './galaxy'
 import { attachGalaxyPointsInteraction } from './interaction'
-import { createSelectionPlanet } from './planet'
+import { createSelectionPlanet, type SelectionPlanetHandle } from './planet'
 
 interface BloomDebugControls {
   strength: number
@@ -37,6 +37,10 @@ export interface GalaxySceneMount {
   scene: THREE.Scene
   camera: THREE.PerspectiveCamera
   dispose: () => void
+  /** Same `ShaderMaterial` as the live galaxy `Points` (Storybook / dev tuning). */
+  galaxyMaterial: THREE.ShaderMaterial
+  /** Selection icosphere handle (Perlin uniforms + `setFromMovie` / `setOpacity`). */
+  selectionPlanet: SelectionPlanetHandle
 }
 
 function xyCenter(meta: Pick<Meta, 'xy_range'>): { cx: number; cy: number } {
@@ -108,6 +112,10 @@ export function mountGalaxyScene(
 
   const pr = Math.min(window.devicePixelRatio, 2)
   const galaxy = createGalaxyPoints(movies, pr)
+  const uZ = galaxy.material.uniforms.uZCurrent as THREE.Uniform<number>
+  const uZw = galaxy.material.uniforms.uZVisWindow as THREE.Uniform<number>
+  uZ.value = zCurrent
+  uZw.value = zVisWindow
   scene.add(galaxy.points)
 
   const planet = createSelectionPlanet()
@@ -233,8 +241,8 @@ export function mountGalaxyScene(
   const composer = new EffectComposer(renderer)
   composer.setPixelRatio(renderer.getPixelRatio())
   const renderPass = new RenderPass(scene, camera)
-  // strength 0: disable bloom for readability / solid-entity inspection (restore e.g. 1.0 when tuning glow).
-  const bloomPass = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.0, 0.5, 0.85)
+  // Phase 5.1.6 — Bloom re-enabled after macro A/B split (Design Spec / frontend-threejs: strength ~0.8–1.2).
+  const bloomPass = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.95, 0.52, 0.82)
   composer.addPass(renderPass)
   composer.addPass(bloomPass)
 
@@ -338,13 +346,14 @@ export function mountGalaxyScene(
   const tick = () => {
     raf = requestAnimationFrame(tick)
     applySelectionFrame(performance.now())
+    const st = useGalaxyInteractionStore.getState()
+    uZ.value = st.zCurrent
+    uZw.value = st.zVisWindow
     if (selectionPhase === 'idle') {
-      const { zCurrent: zc, zCamDistance: zd } = useGalaxyInteractionStore.getState()
-      camera.position.z = zc - zd
+      camera.position.z = st.zCurrent - st.zCamDistance
     }
     clampGalaxyCameraXY(camera, meta.xy_range, 0.08)
-    const { zCurrent: zc, zCamDistance: zd } = useGalaxyInteractionStore.getState()
-    const bridgeZ = selectionPhase === 'idle' ? zc : camera.position.z + zd
+    const bridgeZ = selectionPhase === 'idle' ? st.zCurrent : camera.position.z + st.zCamDistance
     setGalaxyCameraZ(bridgeZ)
     const expectedPr = Math.min(window.devicePixelRatio, 2)
     if (renderer.getPixelRatio() !== expectedPr) {
@@ -378,5 +387,5 @@ export function mountGalaxyScene(
     }
   }
 
-  return { renderer, scene, camera, dispose }
+  return { renderer, scene, camera, dispose, galaxyMaterial: galaxy.material, selectionPlanet: planet }
 }

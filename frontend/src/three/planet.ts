@@ -49,7 +49,7 @@ export interface SelectionPlanetHandle {
  * Phase 4.5 — “微观层”选中态：细分二十面体近似球体 + 3D 噪声着色，按流派顺位权重混色。
  */
 export function createSelectionPlanet(): SelectionPlanetHandle {
-  const detail = 3
+  const detail = 4
   const geometry = new THREE.IcosahedronGeometry(1, detail)
   const material = new THREE.ShaderMaterial({
     uniforms: {
@@ -63,11 +63,16 @@ export function createSelectionPlanet(): SelectionPlanetHandle {
       uWeight3: { value: 0 },
       uTime: { value: 0 },
       uAlpha: { value: 0 },
+      /** Phase 5.1.6 — Perlin partition tuning (area-weighted genre zones). */
+      uScale: { value: 2.35 },
+      uOctaves: { value: 4 },
+      uPersistence: { value: 0.52 },
+      uThreshold: { value: 0.048 },
     },
     vertexShader: perlinVertexShader,
     fragmentShader: perlinFragmentShader,
     transparent: true,
-    depthWrite: true,
+    depthWrite: false,
     depthTest: true,
   })
 

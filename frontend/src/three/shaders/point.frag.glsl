@@ -1,18 +1,25 @@
 uniform float uPointsOpacity;
 
 varying vec3 vColor;
-varying float vEmissive; // kept for shader link; not used in this style pass.
+varying float vEmissive;
+varying float vInFocus;
 
-// Normalized radius: 0 at center, 1 at circle edge (gl_PointCoord space).
 void main() {
   vec2 c = gl_PointCoord - vec2(0.5);
   float r = length(c) * 2.0;
   if (r > 1.0) discard;
 
-  // Hard-edged disc: genre fill inside, white stroke ring to outer edge.
-  const float inner = 0.88;
-  vec3 rgb = mix(vec3(1.0), vColor, step(r, inner));
-  float a = uPointsOpacity;
+  // Radial glow: bright core + soft halo; emissive scales HDR-ish output for Bloom.
+  float core = exp(-r * r * 7.0);
+  float halo = exp(-r * r * 2.2) * 0.62;
+  float glow = core + halo;
+
+  float e = clamp(vEmissive, 0.08, 2.5);
+  float focusBoost = mix(0.72, 1.0, vInFocus);
+  vec3 rgb = vColor * (0.18 + 0.82 * glow) * (0.35 + 1.15 * e) * focusBoost;
+
+  float edgeSoft = 1.0 - smoothstep(0.78, 1.0, r);
+  float a = uPointsOpacity * mix(0.55, 1.0, vInFocus) * edgeSoft;
   if (a < 0.001) discard;
   gl_FragColor = vec4(rgb, a);
 }

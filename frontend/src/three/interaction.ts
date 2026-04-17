@@ -28,6 +28,11 @@ function computePointsThreshold(
   return t
 }
 
+function movieInZFocusSlab(z: number, zCurrent: number, zVisWindow: number): boolean {
+  const zHi = zCurrent + zVisWindow
+  return z >= zCurrent && z <= zHi
+}
+
 function ndcFromClient(domElement: HTMLElement, clientX: number, clientY: number): THREE.Vector2 {
   const rect = domElement.getBoundingClientRect()
   const w = Math.max(1, rect.width)
@@ -100,9 +105,14 @@ export function attachGalaxyPointsInteraction(options: {
     raycaster.setFromCamera(ndc, camera)
     const hits = raycaster.intersectObject(points, false)
     if (hits.length === 0) return null
-    const idx = hits[0].index
-    if (idx === undefined || idx < 0 || idx >= movies.length) return null
-    return idx
+    const { zCurrent, zVisWindow } = useGalaxyInteractionStore.getState()
+    for (let i = 0; i < hits.length; i++) {
+      const idx = hits[i].index
+      if (idx === undefined || idx < 0 || idx >= movies.length) continue
+      if (!movieInZFocusSlab(movies[idx].z, zCurrent, zVisWindow)) continue
+      return idx
+    }
+    return null
   }
 
   const emitHover = (id: number | null, anchor: { x: number; y: number } | null) => {

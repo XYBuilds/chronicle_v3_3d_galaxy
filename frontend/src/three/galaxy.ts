@@ -63,13 +63,17 @@ export function createGalaxyPoints(
       uPixelRatio: { value: pixelRatio },
       uSizeScale: { value: sizeScale },
       uPointsOpacity: { value: 1 },
+      /** Phase 5.1.6 — Z slab for macro A/B layer split (world decimal years). */
+      uZCurrent: { value: 0 },
+      uZVisWindow: { value: 1 },
+      uBgPointSizePx: { value: 2.25 },
     },
     vertexShader: pointVertexShader,
     fragmentShader: pointFragmentShader,
     transparent: true,
     depthTest: true,
     // Phase 4.5: brief global fade needs blending; accept minor depth ordering quirks while uPointsOpacity<1.
-    depthWrite: true,
+    depthWrite: false,
     blending: THREE.NormalBlending,
   })
 

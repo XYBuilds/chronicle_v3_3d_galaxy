@@ -9,10 +9,18 @@ uniform float uWeight3;
 uniform float uTime;
 uniform float uAlpha;
 
+/** Multiplier on object-space position for noise sampling. */
+uniform float uScale;
+/** FBM octaves (1–8). */
+uniform float uOctaves;
+/** Amplitude decay per octave. */
+uniform float uPersistence;
+/** Boundary softness in normalized noise space (wider = softer genre borders). */
+uniform float uThreshold;
+
 varying vec3 vObjPos;
 varying vec3 vNormal;
 
-// Compact 3D value noise (tri-linear interpolation of hashed lattice).
 float hash31(vec3 p) {
   return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453123);
 }
@@ -42,32 +50,43 @@ float noise3(vec3 x) {
   return mix(nxy0, nxy1, f.z);
 }
 
-float fbm(vec3 p) {
+float fbmOctaves(vec3 p) {
   float sum = 0.0;
   float amp = 0.5;
+  float norm = 0.0;
   vec3 shift = vec3(100.0, 37.0, 19.0);
-  for (int i = 0; i < 4; i++) {
+  int o = int(clamp(uOctaves + 0.5, 1.0, 8.0));
+  float pers = clamp(uPersistence, 0.08, 0.98);
+  for (int i = 0; i < 8; i++) {
+    if (i >= o) break;
     sum += amp * noise3(p);
+    norm += amp;
     p = p * 2.02 + shift;
-    amp *= 0.5;
+    amp *= pers;
   }
-  return sum;
+  return norm > 1e-5 ? sum / norm : 0.0;
 }
 
 void main() {
-  vec3 p = vObjPos * 3.2 + vec3(uTime * 0.08, uTime * 0.05, uTime * 0.06);
-  float n = fbm(p);
-  n = smoothstep(0.15, 0.92, n);
+  vec3 p = vObjPos * uScale + vec3(uTime * 0.08, uTime * 0.05, uTime * 0.06);
+  float n = clamp(fbmOctaves(p), 0.0, 1.0);
 
-  vec3 cMix =
-    uColor0 * uWeight0 +
-    uColor1 * uWeight1 +
-    uColor2 * uWeight2 +
-    uColor3 * uWeight3;
+  float c1 = uWeight0;
+  float c2 = c1 + uWeight1;
+  float c3 = c2 + uWeight2;
+  float bw = max(0.002, uThreshold);
 
-  vec3 lit = cMix * (0.42 + 0.58 * n);
+  float s0 = 1.0 - smoothstep(c1 - bw, c1 + bw, n);
+  float s1 = smoothstep(c1 - bw, c1 + bw, n) * (1.0 - smoothstep(c2 - bw, c2 + bw, n));
+  float s2 = smoothstep(c2 - bw, c2 + bw, n) * (1.0 - smoothstep(c3 - bw, c3 + bw, n));
+  float s3 = smoothstep(c3 - bw, c3 + bw, n);
+
+  vec3 col = uColor0 * s0 + uColor1 * s1 + uColor2 * s2 + uColor3 * s3;
+  float wsum = s0 + s1 + s2 + s3;
+  col /= max(wsum, 1e-4);
+
   float rim = pow(1.0 - max(0.0, dot(vNormal, vec3(0.0, 0.0, 1.0))), 2.2);
-  lit += cMix * rim * 0.35;
+  col += col * rim * 0.36;
 
-  gl_FragColor = vec4(lit, uAlpha);
+  gl_FragColor = vec4(col, uAlpha);
 }

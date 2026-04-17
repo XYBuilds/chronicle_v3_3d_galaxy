@@ -72,7 +72,7 @@ export function createSelectionPlanet(): SelectionPlanetHandle {
     vertexShader: perlinVertexShader,
     fragmentShader: perlinFragmentShader,
     transparent: true,
-    depthWrite: true,
+    depthWrite: false,
     depthTest: true,
   })
 

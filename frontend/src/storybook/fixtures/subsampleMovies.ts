@@ -3,7 +3,7 @@
  * (TMDB id 657018, 77223, 8223, 489533). Galaxy fields (x, y, z, size, emissive,
  * genre_color) are synthetic placeholders for UI previews only.
  */
-import type { Movie } from '@/types/galaxy'
+import type { Meta, Movie } from '@/types/galaxy'
 
 export function releaseDateToDecimalYear(iso: string): number {
   const parts = iso.split('-').map(Number)
@@ -198,3 +198,42 @@ const zHappy = subsampleMovieHappiness.z
 export const SUBSAMPLE_DECIMAL_Z_RANGE = [Math.min(zKika, zParadise, zHappy, zMartha) - 0.5, Math.max(zKika, zParadise, zHappy, zMartha) + 0.5] as const
 
 assert(SUBSAMPLE_DECIMAL_Z_RANGE[0] < SUBSAMPLE_DECIMAL_Z_RANGE[1], 'z range order')
+
+function padRange1d(values: number[], pad: number): [number, number] {
+  const lo = Math.min(...values)
+  const hi = Math.max(...values)
+  return [lo - pad, hi + pad]
+}
+
+/** Single point for `GalaxyThreeLayerLab` / `mountGalaxyScene` tuning. */
+export const SUBSAMPLE_LAB_MOVIES: Movie[] = [subsampleMovieMarthasVineyard]
+
+/**
+ * Minimal `meta` slice for Three.js scene mount (fixtures only).
+ * `z_range` matches Storybook `zCurrent` lab slider (2018–2021) so wheel clamp stays consistent.
+ * XY envelope from the lab movie’s `x` / `y`.
+ */
+export const SUBSAMPLE_GALAXY_META: Pick<Meta, 'z_range' | 'xy_range' | 'count' | 'genre_palette'> = {
+  z_range: [2018, 2021],
+  xy_range: {
+    x: padRange1d(
+      SUBSAMPLE_LAB_MOVIES.map((m) => m.x),
+      0.15,
+    ),
+    y: padRange1d(
+      SUBSAMPLE_LAB_MOVIES.map((m) => m.y),
+      0.15,
+    ),
+  },
+  count: SUBSAMPLE_LAB_MOVIES.length,
+  genre_palette: {
+    Unknown: '#888888',
+    Mystery: '#7c3aed',
+    Drama: '#2563eb',
+    'TV Movie': '#64748b',
+    War: '#dc2626',
+    History: '#ca8a04',
+    Comedy: '#16a34a',
+    Animation: '#db2777',
+  },
+}

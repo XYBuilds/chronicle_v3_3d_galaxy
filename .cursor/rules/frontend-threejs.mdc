@@ -12,7 +12,6 @@ alwaysApply: false
 - **3D**: Raw Three.js (no R3F / TresJS) — direct control of render loop, ShaderMaterial, BufferAttribute
 - **UI**: React DOM overlay (HUD layer) — Tooltip, Drawer, Loading, Timeline
 - **State bridge**: Zustand — Three.js writes selection/hover state, React reads; React writes navigation commands, Three.js executes
-- **Component dev**: Storybook (`@storybook/react-vite`) for HUD components only (no 3D in stories)
 
 ## TypeScript
 

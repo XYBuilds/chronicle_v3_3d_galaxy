@@ -73,7 +73,7 @@ export function createGalaxyPoints(
     transparent: true,
     depthTest: true,
     // Phase 4.5: brief global fade needs blending; accept minor depth ordering quirks while uPointsOpacity<1.
-    depthWrite: true,
+    depthWrite: false,
     blending: THREE.NormalBlending,
   })
 

@@ -10,7 +10,7 @@ import type { Meta, Movie } from '@/types/galaxy'
 import { attachGalaxyCameraControls, clampGalaxyCameraXY, GALAXY_CAMERA_EULER } from './camera'
 import { createGalaxyPoints } from './galaxy'
 import { attachGalaxyPointsInteraction } from './interaction'
-import { createSelectionPlanet } from './planet'
+import { createSelectionPlanet, type SelectionPlanetHandle } from './planet'
 
 interface BloomDebugControls {
   strength: number
@@ -37,6 +37,10 @@ export interface GalaxySceneMount {
   scene: THREE.Scene
   camera: THREE.PerspectiveCamera
   dispose: () => void
+  /** Same `ShaderMaterial` as the live galaxy `Points` (Storybook / dev tuning). */
+  galaxyMaterial: THREE.ShaderMaterial
+  /** Selection icosphere handle (Perlin uniforms + `setFromMovie` / `setOpacity`). */
+  selectionPlanet: SelectionPlanetHandle
 }
 
 function xyCenter(meta: Pick<Meta, 'xy_range'>): { cx: number; cy: number } {
@@ -383,5 +387,5 @@ export function mountGalaxyScene(
     }
   }
 
-  return { renderer, scene, camera, dispose }
+  return { renderer, scene, camera, dispose, galaxyMaterial: galaxy.material, selectionPlanet: planet }
 }

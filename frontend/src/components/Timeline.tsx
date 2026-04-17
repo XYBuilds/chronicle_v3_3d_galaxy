@@ -37,7 +37,7 @@ function zToTrackBottomFraction(z: number, zMin: number, zMax: number): number {
 export interface TimelineHudProps {
   /** `[z_min, z_max]` decimal years from `meta.z_range`. */
   zRange: readonly [number, number]
-  /** Camera world Z (same axis as movie `z`). */
+  /** Macro time focus `zCurrent` (Phase 5.1.5), same axis as movie `z`. */
   cameraZ: number
   className?: string
 }
@@ -62,7 +62,7 @@ export function TimelineHud({ zRange, cameraZ, className }: TimelineHudProps) {
         className,
       )}
       role="img"
-      aria-label={`Release-year axis from ${Math.round(zMin)} to ${Math.round(zMax)}, camera near ${labelYear}`}
+      aria-label={`Release-year axis from ${Math.round(zMin)} to ${Math.round(zMax)}, view focus near ${labelYear}`}
     >
       <div className="relative min-h-0 flex-1">
         <div
@@ -95,7 +95,7 @@ export function TimelineHud({ zRange, cameraZ, className }: TimelineHudProps) {
   )
 }
 
-/** Wired HUD: reads `meta.z_range` and live camera Z from the galaxy scene bridge. */
+/** Wired HUD: reads `meta.z_range` and live `zCurrent` from the galaxy scene bridge. */
 export function Timeline() {
   const zRange = useGalaxyDataStore((s) => s.data?.meta.z_range)
   const cameraZ = useSyncExternalStore(subscribeGalaxyCameraZ, getGalaxyCameraZ, getGalaxyCameraZ)

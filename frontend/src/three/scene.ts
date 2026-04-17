@@ -75,17 +75,25 @@ export function mountGalaxyScene(
   if (zRange.length !== 2) {
     throw new Error('[Scene] meta.z_range must be [z_min, z_max]')
   }
-  const [zMin] = zRange
+  const zLo = Math.min(zRange[0], zRange[1])
+  const zHi = Math.max(zRange[0], zRange[1])
+  const zSpan = zHi - zLo
+  /** Phase 5.1.5 — macro standoff along Z; tuned with dataset span so framing stays stable. */
+  const zCamDistance = Math.max(2, zSpan * 0.045 + 1.2)
+  const zVisWindow = 1
+  const zCurrent = THREE.MathUtils.clamp(zHi, zLo, zHi)
+  useGalaxyInteractionStore.setState({ zCurrent, zVisWindow, zCamDistance })
+
   const { cx, cy } = xyCenter(meta)
 
   const scene = new THREE.Scene()
   scene.background = new THREE.Color(0x000000)
 
   const camera = new THREE.PerspectiveCamera(50, 1, 0.05, 1e6)
-  camera.position.set(cx, cy, zMin - 2)
+  camera.position.set(cx, cy, zCurrent - zCamDistance)
   camera.rotation.copy(GALAXY_CAMERA_EULER)
   camera.updateMatrixWorld(true)
-  setGalaxyCameraZ(camera.position.z)
+  setGalaxyCameraZ(zCurrent)
 
   const renderer = new THREE.WebGLRenderer({
     antialias: true,
@@ -106,6 +114,7 @@ export function mountGalaxyScene(
 
   type SelectionPhase = 'idle' | 'selecting' | 'selected' | 'deselecting'
   let selectionPhase: SelectionPhase = 'idle'
+  const wheelLocked = () => selectionPhase !== 'idle'
   let animStartMs = 0
   const restCam = new THREE.Vector3()
   const fromCam = new THREE.Vector3()
@@ -307,6 +316,7 @@ export function mountGalaxyScene(
     zRange: meta.z_range,
     xyRange: meta.xy_range,
     getInputLocked: () => inputLocked,
+    getWheelLocked: wheelLocked,
   })
 
   const detachInteraction = attachGalaxyPointsInteraction({
@@ -320,14 +330,18 @@ export function mountGalaxyScene(
   const w = renderer.domElement.width
   const h = renderer.domElement.height
   console.log(
-    `[Scene] Renderer: ${webglLabel} | Canvas: ${w}x${h} | Camera initial Z: ${camera.position.z.toFixed(4)}`,
+    `[Scene] Renderer: ${webglLabel} | Canvas: ${w}x${h} | zCurrent=${zCurrent.toFixed(2)} zCamDistance=${zCamDistance.toFixed(2)} → camera Z=${camera.position.z.toFixed(4)}`,
   )
 
   let raf = 0
   const tick = () => {
     raf = requestAnimationFrame(tick)
     applySelectionFrame(performance.now())
-    setGalaxyCameraZ(camera.position.z)
+    if (selectionPhase === 'idle') {
+      const { zCurrent: zc, zCamDistance: zd } = useGalaxyInteractionStore.getState()
+      camera.position.z = zc - zd
+    }
+    setGalaxyCameraZ(useGalaxyInteractionStore.getState().zCurrent)
     const expectedPr = Math.min(window.devicePixelRatio, 2)
     if (renderer.getPixelRatio() !== expectedPr) {
       resize()

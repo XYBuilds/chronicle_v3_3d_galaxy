@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 
 import type { XyRange } from '@/types/galaxy'
+import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
 
 /** Fixed orientation: parallel to Z, facing +world Z (no tilt / orbit). */
 export const GALAXY_CAMERA_EULER = new THREE.Euler(0, Math.PI, 0, 'YXZ')
@@ -14,10 +15,27 @@ export interface GalaxyCameraControlOptions {
   zScrollSpeed?: number
   /** Phase 4.5 — block truck / wheel while camera fly-to runs. */
   getInputLocked?: () => boolean
+  /** Phase 5.1.5 — block wheel only (e.g. while a movie detail planet is active). */
+  getWheelLocked?: () => boolean
+  /** Fraction of each XY axis span used as extra clamp margin beyond `xy_range`. Default 0.08. */
+  xyClampPaddingRatio?: number
 }
 
 function applyFixedOrientation(camera: THREE.PerspectiveCamera): void {
   camera.rotation.copy(GALAXY_CAMERA_EULER)
+}
+
+function sortedPair2(a: number, b: number): [number, number] {
+  return a <= b ? [a, b] : [b, a]
+}
+
+function clampCameraXY(camera: THREE.PerspectiveCamera, xyRange: XyRange, padRatio: number): void {
+  const [x0, x1] = sortedPair2(xyRange.x[0], xyRange.x[1])
+  const [y0, y1] = sortedPair2(xyRange.y[0], xyRange.y[1])
+  const padX = (x1 - x0) * padRatio
+  const padY = (y1 - y0) * padRatio
+  camera.position.x = THREE.MathUtils.clamp(camera.position.x, x0 - padX, x1 + padX)
+  camera.position.y = THREE.MathUtils.clamp(camera.position.y, y0 - padY, y1 + padY)
 }
 
 /**
@@ -31,6 +49,8 @@ export function attachGalaxyCameraControls(
 ): () => void {
   const truckPedestalSpeed = options.truckPedestalSpeed ?? 0.02
   const zScrollSpeed = options.zScrollSpeed ?? 0.15
+  const xyClampPaddingRatio = options.xyClampPaddingRatio ?? 0.08
+  const [zLo, zHi] = sortedPair2(options.zRange[0], options.zRange[1])
 
   if (options.zRange.length !== 2) {
     throw new Error('[Camera] zRange must be [z_min, z_max]')
@@ -72,19 +92,18 @@ export function attachGalaxyCameraControls(
     lastY = e.clientY
     camera.position.x += dx * truckPedestalSpeed
     camera.position.y += dy * truckPedestalSpeed
+    clampCameraXY(camera, options.xyRange, xyClampPaddingRatio)
     applyFixedOrientation(camera)
-    console.log(
-      `[Camera] X: ${camera.position.x.toFixed(4)} Y: ${camera.position.y.toFixed(4)}`,
-    )
   }
 
   const onWheel = (e: WheelEvent) => {
-    if (options.getInputLocked?.()) return
+    if (options.getInputLocked?.() || options.getWheelLocked?.()) return
     e.preventDefault()
     const dz = Math.sign(e.deltaY) * zScrollSpeed * Math.min(Math.abs(e.deltaY) / 100, 3)
-    camera.position.z += dz
+    const prev = useGalaxyInteractionStore.getState().zCurrent
+    const next = THREE.MathUtils.clamp(prev + dz, zLo, zHi)
+    useGalaxyInteractionStore.setState({ zCurrent: next })
     applyFixedOrientation(camera)
-    console.log(`[Camera] Z: ${camera.position.z.toFixed(4)}`)
   }
 
   domElement.style.touchAction = 'none'

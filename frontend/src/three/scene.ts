@@ -317,12 +317,6 @@ export function mountGalaxyScene(
   let raf = 0
   const tick = () => {
     raf = requestAnimationFrame(tick)
-    if (!camera.rotation.equals(GALAXY_CAMERA_EULER)) {
-      console.error('[T1/H-E] camera.rotation drift', {
-        actual: [camera.rotation.x, camera.rotation.y, camera.rotation.z, camera.rotation.order],
-        expected: [0, Math.PI, 0, 'YXZ'],
-      })
-    }
     applySelectionFrame(performance.now())
     setGalaxyCameraZ(camera.position.z)
     composer.render()

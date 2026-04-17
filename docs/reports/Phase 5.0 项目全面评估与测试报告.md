@@ -392,7 +392,7 @@ zCamDistance      — 相机到 zCurrent 的后退距离
 
 - **用户滚轮/拖动时间轴** → 改变 `zCurrent`，相机跟随移动
 - **Timeline HUD** 显示 `zCurrent` 值，并支持拖动交互快速跳转
-- **初始 `zCurrent`** 建议设为当前年份（如 2026）或 Z 范围末端附近，让用户首屏看到现代电影
+- **初始 `zCurrent`** 建议设为最早年份（`z_range[0]`）或其附近，让用户首屏从时间起点开始浏览
 - `zVisWindow` 和 `zCamDistance` 为可调配置，需在开发中根据视觉效果迭代
 
 ### 设计方案 2 — 星球视觉分层（三层级）

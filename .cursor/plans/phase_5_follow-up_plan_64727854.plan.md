@@ -19,7 +19,7 @@ todos:
     status: completed
   - id: p5-1-4-2-t1-hd
     content: "Phase 5.1.4.2: T1 根因 H-D — 投影矩阵 / aspect 异常检查（打印 renderer size、camera.aspect、projectionMatrix）"
-    status: pending
+    status: completed
   - id: p5-1-4-3-t1-hf
     content: "Phase 5.1.4.3: T1 根因 H-F — Vertex shader world-space 变换审计（point.vert / perlin.vert）"
     status: pending

@@ -300,11 +300,11 @@ camera.position.set(medianX, medianY, zMin - 2)
 
 **用户复测证据**:
 
-| 系统缩放 | 现象 |
-| --- | --- |
-| **100%** (DPR=1) | T1 不复现，星系主轴肉眼即与 Z 轴平行 |
+| 系统缩放            | 现象                                                                 |
+| ------------------- | -------------------------------------------------------------------- |
+| **100%** (DPR=1)    | T1 不复现，星系主轴肉眼即与 Z 轴平行                                 |
 | **125%** (DPR=1.25) | 相机画面右下裁切，肉眼需叠加 `yaw ≈ -15° / pitch ≈ -7.5°` 才匹配主轴 |
-| **150%** (DPR=1.5) | 同 125%，裁切更显著 |
+| **150%** (DPR=1.5)  | 同 125%，裁切更显著                                                  |
 
 **当前代码已知隐患**（`frontend/src/three/scene.ts:280-284`）:
 
@@ -318,11 +318,11 @@ galaxy.material.uniforms.uPixelRatio.value = Math.min(window.devicePixelRatio, 2
 
 三个 DPR 反模式：
 
-| # | 问题 | 在 DPR=1 时的影响 | 在 DPR>1 时的影响 |
-| --- | --- | --- | --- |
-| ① | `setSize(..., false)` — `updateStyle=false`，Three.js 不写 `canvas.style.width/height` | 无（因 CSS 本就 100%） | 若外部 CSS 与 Three.js 内部 `_width/_height` 在 DPR 过渡态不一致，canvas CSS 显示尺寸与 drawing buffer 物理尺寸比例错位 |
-| ② | `setPixelRatio` 在 `setSize` **之后**调用 | 无（`pr=1`，setSize 不受影响） | `setSize(w, h)` 以当时的 `_pixelRatio` 设定 drawing buffer；随后 `setPixelRatio` 改变 `_pixelRatio` 并重算 drawing buffer，**首帧（挂载 → 第一次 resize 之间）存在 DPR 错位状态** |
-| ③ | 从未调用 `composer.setPixelRatio(renderer.getPixelRatio())` | 无（`_pixelRatio=1` 一致） | `EffectComposer` 内部 RT 按 **CSS 尺寸** 分配（`_pixelRatio=1` 默认），但最终 pass 写入 **DPR 缩放后** 的 canvas drawing buffer → viewport 或 RT 比例错位 → **画面被裁切/偏移** |
+| #   | 问题                                                                                   | 在 DPR=1 时的影响              | 在 DPR>1 时的影响                                                                                                                                                                 |
+| --- | -------------------------------------------------------------------------------------- | ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ①   | `setSize(..., false)` — `updateStyle=false`，Three.js 不写 `canvas.style.width/height` | 无（因 CSS 本就 100%）         | 若外部 CSS 与 Three.js 内部 `_width/_height` 在 DPR 过渡态不一致，canvas CSS 显示尺寸与 drawing buffer 物理尺寸比例错位                                                           |
+| ②   | `setPixelRatio` 在 `setSize` **之后**调用                                              | 无（`pr=1`，setSize 不受影响） | `setSize(w, h)` 以当时的 `_pixelRatio` 设定 drawing buffer；随后 `setPixelRatio` 改变 `_pixelRatio` 并重算 drawing buffer，**首帧（挂载 → 第一次 resize 之间）存在 DPR 错位状态** |
+| ③   | 从未调用 `composer.setPixelRatio(renderer.getPixelRatio())`                            | 无（`_pixelRatio=1` 一致）     | `EffectComposer` 内部 RT 按 **CSS 尺寸** 分配（`_pixelRatio=1` 默认），但最终 pass 写入 **DPR 缩放后** 的 canvas drawing buffer → viewport 或 RT 比例错位 → **画面被裁切/偏移**   |
 
 **修复实现**（5.1.4.7 主要改动）:
 

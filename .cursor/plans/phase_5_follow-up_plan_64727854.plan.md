@@ -14,8 +14,23 @@ todos:
   - id: p5-1-3-eslint
     content: "Phase 5.1.3: ESLint 修复 — Drawer.tsx:195 react-hooks/set-state-in-effect (B5)"
     status: completed
-  - id: p5-1-4-xy-center
-    content: "Phase 5.1.4: XY 内容中点居中 — scene.ts 中用 movies[].x/y 中位数替代 xy_range min/max 中心 (T1, 方案3)"
+  - id: p5-1-4-1-t1-he
+    content: "Phase 5.1.4.1: T1 根因 H-E — 运行时 camera.rotation 篡改检测（tick 循环 assert rotation.equals(GALAXY_CAMERA_EULER)）"
+    status: pending
+  - id: p5-1-4-2-t1-hd
+    content: "Phase 5.1.4.2: T1 根因 H-D — 投影矩阵 / aspect 异常检查（打印 renderer size、camera.aspect、projectionMatrix）"
+    status: pending
+  - id: p5-1-4-3-t1-hf
+    content: "Phase 5.1.4.3: T1 根因 H-F — Vertex shader world-space 变换审计（point.vert / perlin.vert）"
+    status: pending
+  - id: p5-1-4-4-t1-hb
+    content: "Phase 5.1.4.4: T1 根因 H-B — XY 与数据密度中心偏离复测（临时用 medianX/medianY 作相机 XY）；若成立则实施设计方案 3"
+    status: pending
+  - id: p5-1-4-5-t1-ha
+    content: "Phase 5.1.4.5: T1 根因 H-A — UMAP 坐标系朝向错配（PCA 主轴分析）；若成立则在 Python 管线端做正交旋转"
+    status: pending
+  - id: p5-1-4-6-t1-hc
+    content: "Phase 5.1.4.6: T1 根因 H-C — HUD 非对称裁切复测（隐藏 HUD，纯 canvas 下肉眼验证）"
     status: pending
   - id: p5-1-5-z-window
     content: "Phase 5.1.5: 视距窗口模型 — 引入 zCurrent/zVisWindow/zCamDistance，改造 camera.ts 滚轮逻辑 + bridge 升级 + camera clamp (T4, D1, 方案1)"
@@ -60,6 +75,11 @@ isProject: false
 
 > 承接 [tmdb_galaxy_dev_plan_5ad6bea5.plan.md](.cursor/plans/tmdb_galaxy_dev_plan_5ad6bea5.plan.md) 全部已完成的 Phase 0–4.6
 > 依据 [Phase 5.0 项目全面评估与测试报告.md](docs/reports/Phase%205.0%20项目全面评估与测试报告.md)
+
+## 修订记录
+
+- **Rev 2**: 根据报告对 T1 的改判，5.1.4 从"XY 内容中点居中（方案 3）"改为"T1 根因调查与修复（相机朝向非 Z 平行）"，拆分为 5.1.4.1–5.1.4.6 六个子任务，对应报告 §11.1 中 H-E → H-D → H-F → H-B → H-A → H-C 的排查顺序；设计方案 3 降级为 H-B 成立时的修复路径，内嵌于 5.1.4.4。
+- **Rev 1**: 5.1 内部按"快速修正 → 核心架构"重新编号；确认 overlay 完全去除、zVisWindow=1 年、A+B 先单 Points shader 分支、A↔B 先硬切。
 
 ---
 
@@ -112,18 +132,198 @@ isProject: false
 
 ---
 
-### 5.1.4 XY 内容中点居中
+### 5.1.4 T1 根因调查与修复（相机朝向非 Z 平行）
 
-**解决**: T1（星系不在屏幕中间）| **方案 3**
+**解决**: T1（相机视线与 Z 轴不平行）| 根因调查，不绑定单一设计方案
 
-**现状**: [scene.ts](frontend/src/three/scene.ts) 使用 `(x_min+x_max)/2, (y_min+y_max)/2` 作为相机 XY（`xyCenter` 函数），UMAP 分布不对称导致内容偏离屏幕中心。
+**背景**:
+- `GALAXY_CAMERA_EULER = Euler(0, π, 0, 'YXZ')` 数学上严格 Z 平行（forward=+Z / up=+Y），与 Design Spec §2.1 一致
+- 用户实测现象：需在 `GALAXY_CAMERA_EULER` 基础上叠加 `yaw ≈ -15°`、`pitch ≈ -7.5°` 才肉眼与 Z 平行
+- 代码 grep 确认仅 `camera.ts:20`、`scene.ts:86/133/151` 三处写入 `camera.rotation`（全部 copy `GALAXY_CAMERA_EULER`）
+- **现象与代码不符，属深层根因问题**
 
-**实现**:
-- 在 [scene.ts](frontend/src/three/scene.ts) 的 `mountGalaxyScene` 中，数据加载后对 `movies[].x` / `movies[].y` 分别排序求**中位数** `medianX`, `medianY`（59K 量级，单次排序可接受）
-- 用 `(medianX, medianY)` 替代现有 `xyCenter(meta)` 的返回值作为相机初始 XY
-- 可选：`console.log` 输出中位数与 min/max 中点差值供调试
+**修复原则（硬约束）**:
+- **禁止**将实测偏移值 `-15°/-7.5°` 写进 `GALAXY_CAMERA_EULER` 或任何代码常量 — 那是症状掩盖，且随 UMAP 重新训练 / 数据集变化后失效
+- 定位根因后，优先修正**世界坐标系构建端 / 数据生成端**，保持相机严格 `Euler(0, π, 0, 'YXZ')` 不动
+- 每个子任务（H-E 至 H-C）为**独立验证步骤**，排查成本从低到高排序；某一步成立即跳转对应修复路径，无需继续后续假设
 
-**验收**: 首屏星系视觉中心在屏幕中央附近，不再明显偏移。
+**调查流程总览**（报告 §11.1 推荐排查顺序）:
+
+```
+H-E (rotation drift)  →  H-D (aspect/proj)  →  H-F (vertex shader)
+  │                         │                     │
+  ▼                         ▼                     ▼
+H-B (XY density + 透视)  →  H-A (UMAP 主轴)  →  H-C (HUD 非对称)
+```
+
+---
+
+#### 5.1.4.1 H-E · 运行时 camera.rotation 篡改检测
+
+**假设**: 存在未识别的代码（第三方库、EffectComposer 内部、异步回调）在运行中写入 `camera.rotation` / `camera.quaternion`。
+
+**验证代码片段** — 在 [scene.ts](frontend/src/three/scene.ts) render tick 开头（`composer.render()` 之前）插入：
+
+```ts
+if (!camera.rotation.equals(GALAXY_CAMERA_EULER)) {
+  console.error('[T1/H-E] camera.rotation drift', {
+    actual: [camera.rotation.x, camera.rotation.y, camera.rotation.z, camera.rotation.order],
+    expected: [0, Math.PI, 0, 'YXZ'],
+  })
+}
+```
+
+**判定标准**:
+- **成立**: 控制台持续报错（每帧或特定时机） → 定位篡改源（grep `camera.rotation` / `camera.quaternion` / `lookAt` / `.up.set`，包括 `node_modules` 下的 three.js 扩展），修正后移除 assert
+- **不成立**: 每帧 rotation 恒等，assert 不触发 → 排除 H-E，进入 5.1.4.2
+
+**排除后下一步**: 进入 5.1.4.2（H-D 投影矩阵检查）。
+
+---
+
+#### 5.1.4.2 H-D · 投影矩阵 / aspect 异常
+
+**假设**: 容器尺寸被 DevTools / CSS 缩放 / 非标准 devicePixelRatio 干扰，`camera.aspect ≠ canvas.width/canvas.height`，灭点偏移导致透视不对称。
+
+**验证代码片段** — 在挂载后和每次 resize 后打印：
+
+```ts
+const size = renderer.getSize(new THREE.Vector2())
+console.log('[T1/H-D]', {
+  canvasSize: [size.x, size.y],
+  clientSize: [canvas.clientWidth, canvas.clientHeight],
+  aspect: camera.aspect,
+  expectedAspect: size.x / size.y,
+  fov: camera.fov,
+  near: camera.near,
+  far: camera.far,
+  projectionMatrix: Array.from(camera.projectionMatrix.elements),
+})
+```
+
+**判定标准**:
+- **成立**: `camera.aspect` 与 `size.x/size.y` 不一致，或 `projectionMatrix` 非标准透视（元素 `m[8]` / `m[9]` 非零，表示灭点偏移） → 修正 resize 逻辑，确保 `camera.aspect = size.x/size.y` 且 `camera.updateProjectionMatrix()` 每次 resize 后调用
+- **不成立**: aspect 正确，`projectionMatrix` 为标准透视矩阵（`m[8]=m[9]=0`，`m[0]=1/(aspect*tan(fov/2))`） → 排除 H-D，进入 5.1.4.3
+
+**排除后下一步**: 进入 5.1.4.3（H-F vertex shader 审计）。
+
+---
+
+#### 5.1.4.3 H-F · Vertex shader world-space 变换审计
+
+**假设**: `point.vert.glsl` / `perlin.vert.glsl` 对顶点坐标做了非预期的旋转 / 缩放 / 位移，使星系整体偏转，视觉上伪装成"相机斜了"。
+
+**验证方法** — 审计所有 vertex shader 文件：
+
+```
+frontend/src/three/shaders/point.vert.glsl
+frontend/src/three/shaders/perlin.vert.glsl
+```
+
+确认变换严格为：
+```glsl
+gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+```
+
+**判定标准**:
+- **成立**: 发现自定义 `mat4` / `mat3` 作用于 `position`、或 `modelMatrix` 被替换、或顶点做了 `sin()/cos()` 位移 → 修正 shader，保留标准变换
+- **不成立**: 所有 vertex shader 仅使用标准 MVP 变换 → 排除 H-F，进入 5.1.4.4
+
+**排除后下一步**: 进入 5.1.4.4（H-B XY 偏心复测）。
+
+---
+
+#### 5.1.4.4 H-B · 相机 XY 与数据密度中心偏离 + 透视效应
+
+**假设**: 相机位于 `(cx, cy, zMin-2)` 严格沿 +Z 看，但若数据密度中心偏离 `(cx, cy)`，透视近大远小会让远方内容"飘向屏幕一侧"，用户视觉上解读为"相机斜了"。**这是设计方案 3（中位数居中）重新获得价值的路径。**
+
+**验证代码片段** — 在 [scene.ts](frontend/src/three/scene.ts) `mountGalaxyScene` 中临时替换 `xyCenter(meta)` 返回值：
+
+```ts
+function median(values: number[]): number {
+  const sorted = values.slice().sort((a, b) => a - b)
+  const mid = sorted.length >> 1
+  return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid]
+}
+const medianX = median(data.movies.map((m) => m.x))
+const medianY = median(data.movies.map((m) => m.y))
+console.log('[T1/H-B]', {
+  minMaxCenter: [(meta.xy_range.x[0] + meta.xy_range.x[1]) / 2, (meta.xy_range.y[0] + meta.xy_range.y[1]) / 2],
+  median: [medianX, medianY],
+  delta: [medianX - (meta.xy_range.x[0] + meta.xy_range.x[1]) / 2, medianY - (meta.xy_range.y[0] + meta.xy_range.y[1]) / 2],
+})
+camera.position.set(medianX, medianY, zMin - 2)
+```
+
+然后**由用户肉眼复测**：改用中位数后，是否仍需 `-15°/-7.5°` 偏移才能"视觉平行"。
+
+**判定标准**:
+- **成立**: 改用中位数后肉眼偏差**消失或显著减小** → 确认 H-B，**按设计方案 3 实施中位数居中作为本子任务的修复方案**：
+  - 将 `xyCenter(meta)` 重构为 `xyCenterFromMovies(movies)`，返回 `(medianX, medianY)`
+  - 移除临时 `console.log`
+  - 记录 median 与 min/max 中点差值到实施报告
+- **不成立**: 偏差依旧 → 排除 H-B，进入 5.1.4.5；同时方案 3 不必实施
+
+**排除后下一步**: 进入 5.1.4.5（H-A UMAP 主轴分析）。
+
+---
+
+#### 5.1.4.5 H-A · UMAP 坐标系朝向错配（可能性最高但成本最贵）
+
+**假设**: UMAP 输出的二维嵌入 (x, y) 是任意降维坐标，其数据主轴未必与世界 +X / +Y 对齐。数据云整体"歪了"，即便相机严格 Z 平行，透视下星系主轴仍在屏幕上倾斜。
+
+**验证方法**（两个角度，任一即可）:
+
+1. **Python 端 PCA 主轴分析** — 临时脚本读取 UMAP 产物：
+   ```python
+   import numpy as np
+   xy = np.load('data/output/umap_xy.npy')  # 或从 galaxy_data.json 读 (x, y)
+   xy_centered = xy - xy.mean(axis=0)
+   cov = np.cov(xy_centered.T)
+   eigvals, eigvecs = np.linalg.eigh(cov)
+   principal_angle_rad = np.arctan2(eigvecs[1, -1], eigvecs[0, -1])
+   print(f'主轴角度: {np.degrees(principal_angle_rad):.2f}° (与 +X 轴夹角)')
+   print(f'特征值比: {eigvals[-1] / eigvals[0]:.2f}')
+   ```
+2. **前端端 Ortho 视图复测** — 临时将 `PerspectiveCamera` 替换为 `OrthographicCamera`，正对 XY 平面查看点云，肉眼观察主轴是否偏离水平 / 垂直
+
+**判定标准**:
+- **成立**: 主轴角度显著偏离 0° / 90°（例如绝对值 > 5°） → 选择以下修复路径之一：
+  - **首选（Python 管线端）**: 在 [umap_projection.py](scripts/feature_engineering/umap_projection.py) 输出后追加 PCA 正交旋转，使主轴对齐世界 X / Y 轴；`meta` 中记录旋转角度供调试。优点：持久化到 `galaxy_data.json`，前端无需改动
+  - **备选（前端端）**: 在 [scene.ts](frontend/src/three/scene.ts) 给 galaxy Group 施加一次性 `rotation.z`，数值由 PCA 主轴角算出（**动态从数据计算，非硬编码 `-15°/-7.5°`**）
+- **不成立**: 主轴已对齐（夹角 < 5°） → 排除 H-A，进入 5.1.4.6
+
+**排除后下一步**: 进入 5.1.4.6（H-C HUD 裁切复测）。
+
+---
+
+#### 5.1.4.6 H-C · HUD 非对称裁切导致构图中心偏移
+
+**假设**: HUD（Timeline 吸底、Drawer 右侧、Tooltip 浮层）使用户主观的"画面中心"并非渲染器几何中心。渲染器本身中心化但用户视觉参照不对称，误读为相机歪。
+
+**验证方法** — 临时给 HUD 根节点加样式 `display: none`（或浏览器 DevTools 禁用），在**纯 canvas 下肉眼复测**是否仍需 `-15°/-7.5°` 偏移。
+
+**判定标准**:
+- **成立**: 隐藏 HUD 后偏差**消失或显著减小** → 这是**视觉感知问题而非相机问题**，考虑：
+  - 将 Timeline 从右侧改为左右对称布局（例如居中底部）
+  - Drawer 改为浮动弹窗而非挤占右侧视口
+  - 记录为 HUD 布局优化项（可并入 5.3.2 Drawer UI 打磨）
+- **不成立**: 隐藏 HUD 后偏差仍在 → 全部 6 个候选假设均已排除，需扩充假设集并重新调查（此时应停下来向用户汇报）
+
+**排除后下一步**: 汇报调查结果，补充新假设（例如 `renderer.outputColorSpace` / `toneMapping` 引起的视觉偏差、或硬件 / 浏览器层面问题）。
+
+---
+
+**5.1.4 收尾**:
+- 将最终确认的根因与修复方案写入 Phase 5.1.4 实施报告
+- 移除所有临时 `console.log` / assert 探针
+- 确认 `GALAXY_CAMERA_EULER` 保持 `(0, π, 0, 'YXZ')` 不变
+- 若修复涉及 Python 管线（H-A 首选路径）或世界坐标系构建，一并更新相关 Spec 文档（5.1.8 处理）
+
+**5.1.4 总体验收**:
+- 相机 `rotation` 严格等于 `GALAXY_CAMERA_EULER`（assert 不触发）
+- 首屏肉眼看到星系主轴与屏幕 X / Y 轴大致平行，无须用户在头脑中补偿倾斜
+- 代码库中**无**任何 `-15°` / `-7.5°` / `0.26180` / `0.13090` 硬编码常量
 
 ---
 
@@ -211,9 +411,12 @@ zCamDistance   — 相机到 zCurrent 的后退距离
 
 ### 5.1.8 Spec 文档同步
 
-方案 1/2/3 引入的 `zCurrent`、`zVisWindow`、`zCamDistance`、粒子三层分层等概念超出现有 Tech Spec / Design Spec 范围。每完成一个子任务后同步更新：
+方案 1/2 引入的 `zCurrent`、`zVisWindow`、`zCamDistance`、粒子三层分层等概念超出现有 Tech Spec / Design Spec 范围。5.1.4 T1 根因修复若涉及世界坐标系构建或 UMAP 管线，也需在此统一同步。每完成一个子任务后更新：
+
 - [TMDB 电影宇宙 Tech Spec.md](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md) — 相机模型 §1.4、粒子渲染 §1.1
 - [TMDB 电影宇宙 Design Spec.md](docs/project_docs/TMDB%20电影宇宙%20Design%20Spec.md) — 视觉分层、交互模型
+- **若 5.1.4 确认 H-A 并走 Python 管线修复路径**: 更新 [TMDB 数据处理规则.md](docs/project_docs/TMDB%20数据处理规则.md) / [TMDB 数据特征工程与 3D 映射总表.md](docs/project_docs/TMDB%20数据特征工程与%203D%20映射总表.md) 的 UMAP 章节，记录 PCA 正交旋转步骤
+- **若 5.1.4 确认 H-B 并走设计方案 3 修复路径**: Tech Spec §1.4 相机初始 XY 改为中位数定义
 
 ---
 
@@ -297,6 +500,11 @@ zCamDistance   — 相机到 zCurrent 的后退距离
 
 ## 执行顺序说明
 
-Phase 5.1 编号即为执行顺序：**5.1.1–5.1.3（快速修正）→ 5.1.4（中位数）→ 5.1.5（视距窗口）→ 5.1.6（三层着色器）→ 5.1.7（Raycaster 适配）→ 5.1.8（Spec 同步）**
+Phase 5.1 编号即为执行顺序：**5.1.1–5.1.3（快速修正）→ 5.1.4（T1 根因调查，5.1.4.1 → 5.1.4.6 按成本递增逐一排查，命中任一假设即跳转对应修复路径并结束 5.1.4）→ 5.1.5（视距窗口）→ 5.1.6（三层着色器）→ 5.1.7（Raycaster 适配）→ 5.1.8（Spec 同步）**
+
+**5.1.4 特别说明**:
+- 6 个子任务为**有序短路链**：H-E 成立即修复并结束；只在前一假设被排除后才进入下一个
+- 预期大多数 case 在 H-A（UMAP 主轴）或 H-B（XY 偏心）命中并结束
+- 若走 H-A Python 管线路径，可能需要重跑 Phase 2（与 Phase 5.2 UMAP 调参合并处理亦可）
 
 **已确认**: Phase 5.2 在 5.1 全部完成后再做（在新视觉体系下评估局部聚合是否仍需调参）。Phase 5.3 与 5.1 有依赖（Timeline 拖动依赖 `zCurrent` 概念），建议在 5.1.5 后开始。Phase 5.4 可随时穿插。

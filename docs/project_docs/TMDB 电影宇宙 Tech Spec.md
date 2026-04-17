@@ -59,7 +59,7 @@ Output
 
 #### **相机初始位置**
 
-* **X, Y**：`meta.xy_range` 的中心点（`(x_min + x_max) / 2`、`(y_min + y_max) / 2`）。  
+* **X, Y**：全部 `movies[]` 的 **UMAP 坐标中位数**（`median(movies.map(m => m.x))`、`median(movies.map(m => m.y))`）；若 `movies` 为空则回退为 `meta.xy_range` 的 AABB 中点（`(x_min + x_max) / 2`、`(y_min + y_max) / 2`）。目的：使相机对准**点云密度中心**，减轻非对称分布下 min/max 中点与视觉质心偏离导致的透视构图偏移（Phase 5.1.4.4 / 方案 3）。  
 * **Z**：`meta.z_range[0]`（数据集最早年份）减去一个小偏移（初始建议 **-2**，即最早数据年份再往前约 2 年），确保最早的星球处于视野内可见的前方。  
 * **朝向**：始终看向 **+Z 方向**（向未来），Rotation 恒定不变（与 Design Spec §2.1 一致）。
 

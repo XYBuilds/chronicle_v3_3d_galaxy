@@ -5,7 +5,7 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 
 import { setGalaxyCameraZ } from '@/lib/galaxyCameraZBridge'
 import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
-import type { Meta, Movie } from '@/types/galaxy'
+import type { Meta, Movie, XyRange } from '@/types/galaxy'
 
 import { attachGalaxyCameraControls, GALAXY_CAMERA_EULER } from './camera'
 import { createGalaxyPoints } from './galaxy'
@@ -39,12 +39,25 @@ export interface GalaxySceneMount {
   dispose: () => void
 }
 
-function xyCenter(meta: Pick<Meta, 'xy_range'>): { cx: number; cy: number } {
-  const { x, y } = meta.xy_range
+function xyRangeMidpoint(xyRange: XyRange): { cx: number; cy: number } {
+  const { x, y } = xyRange
   if (x.length !== 2 || y.length !== 2) {
     throw new Error('[Scene] meta.xy_range.x / .y must be length-2 [min, max]')
   }
   return { cx: (x[0] + x[1]) / 2, cy: (y[0] + y[1]) / 2 }
+}
+
+function median(values: number[]): number {
+  const sorted = values.slice().sort((a, b) => a - b)
+  const mid = sorted.length >> 1
+  return sorted.length % 2 === 0 ? (sorted[mid - 1]! + sorted[mid]!) / 2 : sorted[mid]!
+}
+
+/** Phase 5.1.4.4 (H-B / 方案 3): density-aware XY so the camera targets the point-mass center, not the AABB midpoint. */
+function xyCenterFromMovies(movies: Movie[]): { cx: number; cy: number } {
+  const medianX = median(movies.map((m) => m.x))
+  const medianY = median(movies.map((m) => m.y))
+  return { cx: medianX, cy: medianY }
 }
 
 /**
@@ -76,7 +89,8 @@ export function mountGalaxyScene(
     throw new Error('[Scene] meta.z_range must be [z_min, z_max]')
   }
   const [zMin] = zRange
-  const { cx, cy } = xyCenter(meta)
+  const { cx, cy } =
+    movies.length > 0 ? xyCenterFromMovies(movies) : xyRangeMidpoint(meta.xy_range)
 
   const scene = new THREE.Scene()
   scene.background = new THREE.Color(0x000000)

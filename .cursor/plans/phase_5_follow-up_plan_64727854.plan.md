@@ -25,7 +25,7 @@ todos:
     status: completed
   - id: p5-1-4-4-t1-hb
     content: "Phase 5.1.4.4: T1 根因 H-B — XY 与数据密度中心偏离复测（临时用 medianX/medianY 作相机 XY）；若成立则实施设计方案 3"
-    status: pending
+    status: completed
   - id: p5-1-4-5-t1-ha
     content: "Phase 5.1.4.5: T1 根因 H-A — UMAP 坐标系朝向错配（PCA 主轴分析）；若成立则在 Python 管线端做正交旋转"
     status: pending

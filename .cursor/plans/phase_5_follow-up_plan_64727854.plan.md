@@ -34,7 +34,7 @@ todos:
     status: cancelled
   - id: p5-1-4-7-t1-hg
     content: "Phase 5.1.4.7: T1 根因 H-G — Windows 系统缩放（DPR > 1）兼容性修复 — 经用户复测确认 100% 缩放下不复现、125%/150% 下右下视窗裁切；改造 scene.ts resize: setPixelRatio 先于 setSize、composer.setPixelRatio 同步、updateStyle=true 或外部 CSS 校验、设备像素比变化监听"
-    status: pending
+    status: completed
   - id: p5-1-5-z-window
     content: "Phase 5.1.5: 视距窗口模型 — 引入 zCurrent/zVisWindow/zCamDistance，改造 camera.ts 滚轮逻辑 + bridge 升级 + camera clamp (T4, D1, 方案1)"
     status: pending

@@ -6,6 +6,8 @@
 > **范围**: 在 `frontend/src/three/scene.ts` 的 **`mountGalaxyScene`** 中临时加入 **renderer 尺寸、`camera.aspect`、`projectionMatrix` 及与计划一致的辅助判定**；经控制台观测 **排除 H-D** 后 **移除全部诊断代码**，与计划「5.1.4 收尾」一致。  
 > **不在范围**: H-F（vertex shader）、H-B / H-A / H-C；视距窗口、三层着色器、Raycaster、Spec 同步等。
 
+**修订（2026-04-17）**：使用者完成 **Phase 5.1.4.4** 肉眼复测后 **T1 仍明显**，在 **`frontend/src/three/scene.ts`** 中 **重新加入** 与本报告 **§6** 附录一致的 **`[T1/H-D]`** 诊断（`resize` 挂 DOM 后 + **`appendChild` 后**）。历史结论（当时采样下 **H-D 不成立**）不变；复挂仅为 **复核** 画布 / 投影。若再次确认无异常，应按 **5.1.4 收尾** 移除探针。详见 **`docs/reports/Phase 5.1.4.4 T1 根因 H-B 中位数 XY 居中 实施报告.md`** §6。
+
 ---
 
 ## 1. 摘要
@@ -21,7 +23,7 @@
 | **假设（H-D）** | 尺寸或 CSS 干扰导致 **`camera.aspect` ≠ 绘制缓冲宽高比**，或 **`projectionMatrix` 非标准透视**（如 `m[8]` / `m[9]` 非零），灭点偏移使画面「像相机歪了」。 |
 | **检测方式** | **`renderer.getSize`**、`camera.aspect`、`expectedAspect`、`fov` / `near` / `far`、**`projectionMatrix`** 全量打印；**aspect 偏差**与 **m[8]/m[9]** 辅助报错。 |
 | **观测结论** | **排除 H-D**；T1 继续按计划在 **Phase 5.1.4.3（H-F）** 等后续假设上排查。 |
-| **代码终态** | **无** H-D 诊断残留；行为与加入诊断前一致。 |
+| **代码终态（初版交付）** | **无** H-D 诊断残留；行为与加入诊断前一致。 **2026-04-17 修订**：`scene.ts` 已 **临时恢复** H-D 探针（见文首修订说明）。 |
 
 **Git 参考（诊断曾存在于功能分支）**:
 
@@ -135,7 +137,7 @@ npm run build
 | --- | --- |
 | 实施报告（本文） | **`docs/reports/Phase 5.1.4.2 T1 根因 H-D 投影矩阵 aspect 检查 实施报告.md`** |
 | 计划 todo | **`.cursor/plans/phase_5_follow-up_plan_64727854.plan.md`** — **`p5-1-4-2-t1-hd`** → **`completed`** |
-| 代码终态 | **`frontend/src/three/scene.ts`** — **无** `[T1/H-D]` 诊断代码 |
+| 代码终态 | **`frontend/src/three/scene.ts`** — 初版交付 **无** `[T1/H-D]`；**2026-04-17** 起 **已恢复** 探针（见文首修订） |
 
 ### 5.3 合并建议
 
@@ -145,7 +147,7 @@ npm run build
 
 ## 6. 附录：已移除代码片段（仅作文档归档）
 
-以下代码 **曾** 存在于 **`scene.ts`** 的 **`mountGalaxyScene`** 内（**`pointScaleDebug.log()`** 与 **`resize` 定义之间**，以及 **`resize` 末尾**、**`appendChild` 之后**），**现已删除**，勿再复制进生产分支除非重新启用调查。
+以下代码 **曾** 存在于 **`scene.ts`** 的 **`mountGalaxyScene`** 内（**`pointScaleDebug.log()`** 与 **`resize` 定义之间**，以及 **`resize` 末尾**、**`appendChild` 之后**）。初版调查结束后 **已删除**。**2026-04-17**：因 **5.1.4.4** 肉眼复测 T1 仍存，**同型代码已再次合入** `scene.ts`（与下述片段等价；以仓库为准）。
 
 ```ts
 const t1HdSizeScratch = new THREE.Vector2()

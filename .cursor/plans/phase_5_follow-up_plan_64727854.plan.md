@@ -37,7 +37,7 @@ todos:
     status: completed
   - id: p5-1-5-z-window
     content: "Phase 5.1.5: 视距窗口模型 — 引入 zCurrent/zVisWindow/zCamDistance，改造 camera.ts 滚轮逻辑 + bridge 升级 + camera clamp (T4, D1, 方案1)"
-    status: pending
+    status: completed
   - id: p5-1-6-three-layers
     content: "Phase 5.1.6: 三层星球着色器 — A(背景)/B(焦点) shader 分层 + 重写 C(选中) Perlin 着色器为面积比例分区染色，重新启用 Bloom，fragment 径向辉光 (D1, T2, T3, T5, B1, B2, 方案2)"
     status: pending

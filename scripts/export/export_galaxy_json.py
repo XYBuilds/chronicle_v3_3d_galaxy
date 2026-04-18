@@ -177,7 +177,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--w-genre", type=float, default=1.0)
     p.add_argument("--w-lang", type=float, default=1.0)
     p.add_argument("--n-neighbors", type=int, default=15, help="UMAP hyperparameter echoed in meta (match Phase 2.4 run)")
-    p.add_argument("--min-dist", type=float, default=0.1)
+    p.add_argument(
+        "--min-dist",
+        type=float,
+        default=0.4,
+        help="Echoed in meta.umap_params; must match umap_projection.py run (Phase 5.2.1)",
+    )
     p.add_argument("--metric", type=str, default="cosine")
     p.add_argument("--random-state", type=int, default=42)
     p.add_argument("--size-min", type=float, default=2.0)

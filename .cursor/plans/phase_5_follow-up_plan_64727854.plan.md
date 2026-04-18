@@ -49,7 +49,7 @@ todos:
     status: completed
   - id: p5-2-1-umap-tune
     content: "Phase 5.2.1: UMAP 参数调优 — min_dist 增大至 0.3-0.5，重跑管线，确保 export meta 同步 (DS1)"
-    status: pending
+    status: completed
   - id: p5-2-2-model-b
     content: "Phase 5.2.2: 阶段 B Embedding 模型评估（可选）— 768 维模型语义分离评估"
     status: pending

@@ -78,7 +78,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=15,
         help="UMAP n_neighbors (capped to n_samples-1 automatically)",
     )
-    p.add_argument("--min-dist", type=float, default=0.1, help="UMAP min_dist")
+    p.add_argument(
+        "--min-dist",
+        type=float,
+        default=0.4,
+        help="UMAP min_dist (Phase 5.2.1: 0.3–0.5 reduces local clump density; keep export meta in sync)",
+    )
     p.add_argument("--metric", type=str, default="cosine", help="UMAP distance metric")
     p.add_argument(
         "--umap-verbose",

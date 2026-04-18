@@ -125,7 +125,8 @@
 | 项 | 值 |
 | --- | --- |
 | **分支** | `phase-5-1-7-raycaster` |
-| **代表性提交** | **`43811b6`** — `feat(frontend): Phase 5.1.7 raycaster focus-slab threshold (T6)` |
+| **代码提交** | **`43811b6`** — `feat(frontend): Phase 5.1.7 raycaster focus-slab threshold (T6)` |
+| **本报告提交** | **`3552d40`** — `docs(reports): add Phase 5.1.7 Raycaster implementation report` |
 
 ---
 
@@ -145,7 +146,7 @@
 
 | 日期 | 摘要 | 关联提交 |
 | ---- | ---- | -------- |
-| 2026-04-18 | 首版：实施说明、公式、验收与 Git 信息 | **`43811b6`** |
+| 2026-04-18 | 首版：实施说明、公式、验收与 Git 信息 | **`43811b6`**（代码）、**`3552d40`**（本报告） |
 
 ---
 

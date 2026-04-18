@@ -46,7 +46,7 @@ todos:
     status: completed
   - id: p5-1-8-spec-sync
     content: "Phase 5.1.8: Spec 文档同步 — 更新 Tech Spec / Design Spec 新增的视距窗口与分层概念"
-    status: pending
+    status: completed
   - id: p5-2-1-umap-tune
     content: "Phase 5.2.1: UMAP 参数调优 — min_dist 增大至 0.3-0.5，重跑管线，确保 export meta 同步 (DS1)"
     status: pending

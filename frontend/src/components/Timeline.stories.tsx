@@ -1,3 +1,4 @@
+import { useCallback, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 
 import { TimelineHud } from './Timeline'
@@ -50,4 +51,15 @@ export const WideZSpan: Story = {
     zRange: [1874, 2026],
     cameraZ: 1950,
   },
+}
+
+function InteractiveHudHarness() {
+  const [z, setZ] = useState((zLo + zHi) / 2)
+  const onZCurrentChange = useCallback((next: number) => setZ(next), [])
+  return <TimelineHud zRange={[zLo, zHi]} cameraZ={z} onZCurrentChange={onZCurrentChange} />
+}
+
+/** Drag the track or click ticks; thumb follows local `cameraZ` state (no WebGL). */
+export const Interactive: Story = {
+  render: () => <InteractiveHudHarness />,
 }

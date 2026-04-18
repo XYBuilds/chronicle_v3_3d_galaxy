@@ -52,7 +52,7 @@ todos:
     status: completed
   - id: p5-2-2-model-b
     content: "Phase 5.2.2: 阶段 B Embedding 模型评估（可选）— 768 维模型语义分离评估"
-    status: pending
+    status: completed
   - id: p5-3-1-timeline-drag
     content: "Phase 5.3.1: Timeline 拖动跳转 — 移除 pointer-events-none，拖动交互写入 zCurrent (H2)"
     status: pending
@@ -528,6 +528,8 @@ zCamDistance   — 相机到 zCurrent 的后退距离
 ### 5.2.2 阶段 B Embedding 模型评估（可选）
 
 768 维模型可能带来更好的语义分离，但需要完整重跑 embedding + UMAP。作为评估项记录，视 5.2.1 效果决定是否执行。
+
+**已交付**: [embedding_model_eval.py](scripts/feature_engineering/embedding_model_eval.py) — 在相同 `cleaned.csv` 行集上对 Model A（384d MiniLM）与 Model B（768d mpnet）编码，输出流派对齐指标（same/cross primary-genre cosine margin、kNN purity、cosine silhouette）到 JSON。**实施报告**: [Phase 5.2.2 阶段 B Embedding 模型评估 实施报告.md](docs/reports/Phase%205.2.2%20阶段%20B%20Embedding%20模型评估%20实施报告.md)。**产物**: 子样本 [Phase_5.2.2_embedding_model_eval_subsample20.json](docs/reports/Phase_5.2.2_embedding_model_eval_subsample20.json)；全量（59014 行，CUDA）[Phase_5.2.2_embedding_model_eval_full.json](docs/reports/Phase_5.2.2_embedding_model_eval_full.json)。**复现（Windows CUDA 建议用项目 venv）**: `.venv\Scripts\python.exe scripts/feature_engineering/embedding_model_eval.py --device cuda`（默认读 `data/output/cleaned.csv`）。**计划 todo**: `p5-2-2-model-b` → **completed**。
 
 ---
 

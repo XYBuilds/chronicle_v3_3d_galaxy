@@ -43,7 +43,7 @@ todos:
     status: completed
   - id: p5-1-7-raycaster
     content: "Phase 5.1.7: Raycaster 适配 — 拾取范围限制到窗口内层 (T6)"
-    status: pending
+    status: completed
   - id: p5-1-8-spec-sync
     content: "Phase 5.1.8: Spec 文档同步 — 更新 Tech Spec / Design Spec 新增的视距窗口与分层概念"
     status: pending

@@ -18,11 +18,25 @@
 * **宏观层（始终存在）**：一套 **`THREE.Points`** \+ 自定义 **`ShaderMaterial`**。  
   * 全部 ~60K 粒子在 **1 次 draw call** 内完成。每颗粒子通过 `BufferAttribute` 携带 position (x,y,z)、size (对数缩放后的 vote\_count)、color (genres\[0\] 映射色)、emissive (vote\_average 映射强度)。  
   * **vertex shader**：根据 attribute 设置 `gl_PointSize`（考虑 camera distance 衰减）。  
-  * **fragment shader**：在 point 方形区域内绘制**圆形 + 径向辉光**，`discard` 四角像素；emissive 强度决定 fragment RGB 峰值（允许 >1.0 HDR），为后处理 Bloom 提供亮度源。  
-* **选中层（按需生成）**：用户点击星球后，在该位置叠加一个 **`IcoSphereGeometry`**（detail ≈ 4，约 2.5K 三角形），材质挂 **Perlin Noise ShaderMaterial**。  
-  * Perlin Noise 参数（均可调）：**Scale**、**Octaves**、**Persistence**、**edgeSoftness**（控制流派颜色分界的柔和度，增加星球间视觉差异）。  
-  * 混合该电影所有 genres 的映射色，权重使用与 UMAP 相同的 \(w_k\) 等比衰减。  
+  * **fragment shader**：在 point 方形区域内绘制**圆形 + 径向辉光**（core/halo 指数曲线），`discard` 四角像素；emissive 强度决定 fragment RGB 峰值（允许 >1.0 HDR），为后处理 Bloom 提供亮度源。  
+* **选中层（按需生成）**：用户点击星球后，在该位置叠加一个 **`IcoSphereGeometry`**（**`detail = 4`**，约 2.5K 三角形；Phase 5.1.6 从 3 提升到 4 以匹配「高细分」观感），材质挂 **Perlin Noise ShaderMaterial**。  
+  * **面积比例分区着色（Phase 5.1.6 重写）**：将该电影的流派权重 \(w_k\)（§2.1.2 黄金比等比衰减）转为累积阈值序列 \([0, w_1, w_1+w_2, \ldots, 1]\)，**3D FBM 噪声**输出归一化到 \([0, 1]\)，按落入哪个阈值区间**选择对应 genre 颜色**；边界使用 `smoothstep(uThreshold)` 做柔和过渡。**不再采用**"所有 genre 颜色加权混合为单色 × 噪声明暗"的旧实现——此前实现球面上仅有一种混合色的亮度变化，违反"按面积比例分区"的设计意图。  
+  * **可调 uniform**：**`uScale`**（物体空间噪声缩放）、**`uOctaves`**（FBM 八度，上限 8 内 clamp）、**`uPersistence`**（八度振幅衰减）、**`uThreshold`**（流派边界 smoothstep 半宽）。实施时默认值约为 2.35 / 4 / 0.52 / 0.048。  
   * 过渡效果：Points 层中对应粒子 alpha 渐出，球体 Mesh alpha 渐入——视觉上"光点凝聚成星球"。
+
+**粒子分层（Phase 5.1.6 · 方案 2）**：在**单 `THREE.Points` + shader 分支**（保持 1 次 draw call）基础上，按视距窗口将宏观粒子分为三个视觉层级：
+
+| 层 | 定义 | 视觉 | 交互 |
+| :---- | :---- | :---- | :---- |
+| **A（背景层）** | **`z ∉ [zCurrent, zCurrent + zVisWindow]`** | 固定极小 `gl_PointSize`（shader uniform **`uBgPointSizePx`**，默认 ≈ **2.25** CSS 像素）、`genres[0]` 单色、圆盘 + 低亮度 | **不可** hover / click |
+| **B（焦点层）** | **`z ∈ [zCurrent, zCurrent + zVisWindow]`** | 真实 `size` × 透视 × **`uSizeScale`**、`genres[0]` 色相、径向辉光、emissive 驱动 HDR | 可 hover / click |
+| **C（选中层）** | 用户点击 B 层中某颗星球后生成 | IcoSphere + Perlin 面积比例分区 | 选中态焦点，抽屉同步 |
+
+实现要点：  
+* 顶点 shader 新增 uniform **`uZCurrent`**、**`uZVisWindow`**，按 `step` 在 A / B 间二值混合 `gl_PointSize`（计划确认 A↔B **先硬切**，如后续需要再加宽边缘渐变）；输出 `vInFocus` 给片元做亮度差异。  
+* A / B 分层与 **§1.5 交互拾取** 中的 `movieInZFocusSlab` 判定**区间一致**（**闭区间**）。  
+* **每帧 tick** 从 Zustand **`useGalaxyInteractionStore`** 读取 `zCurrent` / `zVisWindow` 写入 uniform，避免与滚轮更新脱节。  
+* 点云 `ShaderMaterial.depthWrite = false`，减轻透明粒子与后处理叠画时的深度排序压力。
 
 ### **1.2 后处理管线（Bloom）**
 
@@ -41,7 +55,9 @@ Output
 * **初始参数（均为可调配置，将随视觉调试迭代）**：  
   * `strength`：**0.8 – 1.2**  
   * `radius`：**0.4 – 0.6**  
-  * `threshold`：**0.85**（须与 vote\_average → emissive 映射的值域对齐——以 §4.3A 默认 emissive 映射，P75 评分 ≈ 6.8 对应 emissive ≈ 1.0，threshold 0.85 使大致前 25% 高分影片触发泛光）
+  * `threshold`：**0.85**（须与 vote\_average → emissive 映射的值域对齐——以 §4.3A 默认 emissive 映射，P75 评分 ≈ 6.8 对应 emissive ≈ 1.0，threshold 0.85 使大致前 25% 高分影片触发泛光）  
+* **Phase 5.1.6 实施工作点**：Bloom 曾在早期分层调试中被 strength=0 关闭；重写径向辉光片元与 A/B 分层后恢复为 **strength ≈ 0.95 / radius ≈ 0.52 / threshold ≈ 0.82**（落在上述建议区间内），运行时亦保留 **`window.__bloom`** 读写接口供调参。  
+* **DPR 约束**：`UnrealBloomPass` 的 `setSize` 与 `EffectComposer.setPixelRatio` 必须随 renderer 同步——详见 **§1.4 DPR 兼容性约束**。
 
 ### **1.3 性能参考基线（非强制，仅作优化阶段对照）**
 
@@ -57,25 +73,84 @@ Output
 
 ### **1.4 相机初始配置与首屏加载**
 
-#### **相机初始位置**
+#### **1.4.1 视距窗口模型（Phase 5.1.5 · 方案 1）**
+
+引入三个参数刻画宏观漫游下「相机 Z」与「用户时间关注点」的解耦——**均作为 Zustand `useGalaxyInteractionStore` 的一级字段**，`camera.ts` / `scene.ts` / `point.*.glsl` / `interaction.ts` 共享同一份状态：
+
+| 参数 | 含义 | 初值与来源 |
+| :---- | :---- | :---- |
+| **`zCurrent`** | 用户当前关注的发行年（世界 Z，与 `movies[i].z` 同轴，含小数年） | 挂载时写入 **`z_range` 排序后的较早端 `zLo`**（计划 Rev 4；从时间轴起点开始漫游） |
+| **`zVisWindow`** | 可观测 Z 窗口宽度（年），定义 **`[zCurrent, zCurrent + zVisWindow]`** 闭区间 | 默认 **1 年**（非常聚焦），供 §1.1 粒子分层与 §1.5 拾取共用 |
+| **`zCamDistance`** | 相机沿 −Z 相对 `zCurrent` 的后退距离 | `max(2, zSpan × 0.045 + 1.2)`，随数据集 `z_range` 跨度微调 |
+
+**相机世界 Z 关系（宏观 idle 态）**：
+
+\[
+\text{camera.position.z} = z_{\text{Current}} - z_{\text{CamDistance}}
+\]
+
+* **挂载时**与 **RAF `tick`** 中 `selectionPhase === 'idle'` 的每一帧重置一次，使相机与 store 单向对齐。  
+* **非 idle（选中飞入 / 特写）**：不再用 `zCurrent - zCamDistance` 覆盖 `camera.position.z`，避免打断飞入动画；Timeline bridge 改为 **`camera.position.z + zCamDistance`** 推导「等效时间轴读数」。
+
+#### **1.4.2 相机初始位置**
 
 * **X, Y**：`meta.xy_range` 的中心点（`(x_min + x_max) / 2`、`(y_min + y_max) / 2`）。  
-* **Z**：`meta.z_range[0]`（数据集最早年份）减去一个小偏移（初始建议 **-2**，即最早数据年份再往前约 2 年），确保最早的星球处于视野内可见的前方。  
-* **朝向**：始终看向 **+Z 方向**（向未来），Rotation 恒定不变（与 Design Spec §2.1 一致）。
+* **Z**：由 §1.4.1 关系计算得 **`camera.position.z = zLo - zCamDistance`**（不再使用旧的"`z_range[0] - 2`"固定偏移）。  
+* **朝向**：始终看向 **+Z 方向**（向未来），`GALAXY_CAMERA_EULER = Euler(0, π, 0, 'YXZ')`，**运行期恒定不变**（与 Design Spec §2.1 一致）；**严禁**将目测 yaw / pitch 补偿（如 -15° / -7.5°）写入代码常量（Phase 5.1.4 硬约束）。
 
-#### **滚轮步长与近远裁面**
+#### **1.4.3 滚轮与拖拽控制**
 
-以下均为**初始估值**，在开发阶段根据实际视觉效果调整：
+* **滚轮双模式**（Phase 5.1.5）：  
+  * **宏观 idle 态**：滚轮修改 **`zCurrent`**（受 `[zLo, zHi]` clamp），随即同帧写 `camera.position.z = next - zCamDistance`，减少一帧延迟感。  
+  * **非 idle（选中飞入 / 特写）**：滚轮直接调节 `camera.position.z`，保留 Phase 4.5 的特写推拉体验。  
+  * 控制函数暴露 **`getMacroZWheel?: () => boolean`** 钩子；缺省视为 true。  
+* **滚轮步长初值**：每刻度约 **0.5**（半年），在开发阶段按实际视觉效果调整。  
+* **拖拽**：仅执行 truck / pedestal（XY 平移），Rotation 恒定。
 
-* **滚轮步长**：每滚轮刻度移动 Z 轴 **0.5**（对应约半年的时间跨度）。  
+#### **1.4.4 Clamp（相机运动约束）**
+
+* **`zCurrent`** 限制在 **`[zLo, zHi] = sorted(meta.z_range)`** 内。  
+* **相机 XY** 限制在 **`meta.xy_range`** 加 **padding = 0.08 × 轴跨度**；`clampGalaxyCameraXY` 在拖拽回调与每帧 tick 均被调用，全相位一致。
+
+#### **1.4.5 近远裁面**
+
 * **near**：**0.1**  
-* **far**：**300**（Z 轴跨度 ~125 + 足够余量）
+* **far**：**300**（Z 轴跨度 ~125 + 足够余量）；视距窗口实装后可按 `zVisWindow` 与后退距离进一步收窄（Phase 5.4.3 低优先）。
 
-#### **首屏加载体验**
+#### **1.4.6 DPR 兼容性约束（Phase 5.1.4.7 · H-G）**
+
+在 **`window.devicePixelRatio > 1`**（Windows 显示缩放 125% / 150% 等）下，`WebGLRenderer` / `EffectComposer` 的 pixelRatio 处理必须严格同步，否则会出现**画面右下裁切**与"主轴非 Z 平行"的**错觉**（用户曾在 Phase 5.0 评估中报告 T1，Rev 3 锁定为 DPR 问题）。
+
+**强制约束**（实现于 `scene.ts`）：
+
+1. **顺序**：`renderer.setPixelRatio(pr)` **必须早于** `renderer.setSize(w, h, ...)`；composer 侧在同次 resize 中同步 **`composer.setPixelRatio(pr)`**。  
+2. **`EffectComposer` 显式对齐**：不得依赖 `EffectComposer` 构造时继承的 pixelRatio 默认值；每次 resize 都显式 `setPixelRatio`。`UnrealBloomPass.setSize(w, h)` 入参为 **CSS 尺寸**（composer 内部再乘以 pixelRatio）。  
+3. **CSS 尺寸交由 Three.js 维护**：`renderer.setSize(w, h, true)`（`updateStyle=true`）或等效手动 CSS 同步，避免 drawing buffer 与 canvas CSS 尺寸比例错位。  
+4. **DPR 变化兜底**：RAF `tick` 中比对 `renderer.getPixelRatio()` 与 `Math.min(window.devicePixelRatio, 2)`，不一致则重新调用 resize 流程（处理运行中跨显示器拖拽或 Windows 缩放变化）。  
+5. **pixelRatio 上限**：`Math.min(window.devicePixelRatio, 2)`，避免在 3x 高 DPI 下 Bloom 多 pass RT 爆显存。  
+6. `galaxy.material.uniforms.uPixelRatio.value` 同步使用**同一份** `pr`（以维持 `gl_PointSize` 的屏幕像素语义）。
+
+**非目标 / 禁止**：任何将目测 `-15° / -7.5° / 0.26180 / 0.13090` 等旋转值写入 `GALAXY_CAMERA_EULER` 或相机常量的"症状掩盖"式修复。
+
+#### **1.4.7 首屏加载体验**
 
 * 显示**全屏居中 Spinner**（极简旋转动效），不做确定性进度条。  
 * 前端必须**全量解析** `galaxy_data.json` 完毕后，才初始化 Three.js 场景并移除 Loading 覆盖层。  
 * 当前阶段**不做**加载失败重试 / 错误提示页。
+
+### **1.5 交互拾取（Raycaster · Phase 5.1.7）**
+
+`Raycaster` 继续对单 `THREE.Points` 执行 `intersectObject`，但拾取结果在**命中序列中按序过滤**，仅采纳 Z 落在焦点 slab 内的命中（A 背景层不可交互，与 §1.1 分层语义一致）。
+
+| 环节 | 规则 |
+| :---- | :---- |
+| **Slab 判定函数** | **`movieInZFocusSlab(z, zCurrent, zVisWindow) = zCurrent ≤ z ≤ zCurrent + zVisWindow`**（**闭区间**，与 `point.vert.glsl` 分支一致） |
+| **命中采纳** | 遍历 raycaster 返回的按射线距离排序的 `hits`，采纳**第一个** slab 内且索引合法的命中；其余（包括 A 层小点命中）**一律跳过** |
+| **`Points.threshold`（世界空间）** | 按当前 **`zVisWindow`** 估算焦点 slab 内期望点数 **`nSlab ≈ movieCount × zVisWindow / |z_span|`**，再由 `xy_range` 面积推导 **`avgXYSpacing = sqrt(xyArea / nSlab)`**，取 **`threshold = clamp(0.75 × avgXYSpacing, xyMin × 1e-4, xyMin × 0.08)`** |
+| **更新时机** | **`zVisWindow` 变化**时重算 threshold 并缓存；仅 `zCurrent` 滚动时 **O(1) 早退**，避免日志 / 计算刷屏 |
+| **双 Points 方案（备选）** | 当前保持**单 Points**；若 Bloom 或分层调参困难再拆为窗内 / 窗外两套 `THREE.Points`，拾取仅对窗内对象 `intersectObject`——计划 5.1.6 / 5.1.7 均列为后备路径 |
+
+**假设与局限**：`nSlab` 假设发行年在 `z_range` 上**近似均匀**；在极密局部簇或非均匀年分布下拾取手感可能偏差，但 **Z 过滤** 保证窗外点**绝不会**成为交互目标。若后续 T6 仍有边缘案例，可按 z 分桶预计算或二分精修。
 
 ## **2\. 核心坐标生成算法 (Coordinate Generation)**
 

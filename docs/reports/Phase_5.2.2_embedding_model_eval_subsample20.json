@@ -1,0 +1,46 @@
+{
+  "phase": "5.2.2",
+  "input_csv": "E:\\projects\\chronicle_v3_3d_galaxy\\data\\subsample\\tmdb2025_random20.csv",
+  "max_chars": 3000,
+  "n_rows_used": 20,
+  "primary_genre_counts": {
+    "Mystery": 1,
+    "War": 2,
+    "Comedy": 4,
+    "Animation": 3,
+    "Drama": 4,
+    "Crime": 1,
+    "Thriller": 1,
+    "Horror": 1,
+    "TV Movie": 1,
+    "Adventure": 1,
+    "Action": 1
+  },
+  "model_a": {
+    "model_id": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+    "embed_dim": 384,
+    "separation_margin": 0.07573836121708155,
+    "intra_cosine_mean": 0.27701987290382385,
+    "inter_cosine_mean": 0.2012815116867423,
+    "knn_purity_mean": 0.14,
+    "silhouette_cosine": -0.06865157186985016,
+    "n_rows": 20,
+    "n_genres": 11,
+    "n_pair_intra": 500,
+    "n_pair_inter": 500
+  },
+  "model_b": {
+    "model_id": "sentence-transformers/paraphrase-multilingual-mpnet-base-v2",
+    "embed_dim": 768,
+    "separation_margin": 0.08197492855042221,
+    "intra_cosine_mean": 0.32291989609599114,
+    "inter_cosine_mean": 0.24094496754556893,
+    "knn_purity_mean": 0.12000000000000002,
+    "silhouette_cosine": -0.04320218414068222,
+    "n_rows": 20,
+    "n_genres": 11,
+    "n_pair_intra": 500,
+    "n_pair_inter": 500
+  },
+  "notes": "separation_margin = mean_cosine(same primary genre pairs) - mean_cosine(cross-genre pairs); higher is better. knn_purity_mean = fraction of kNN sharing primary genre. silhouette_cosine uses sklearn cosine metric on a subsample."
+}

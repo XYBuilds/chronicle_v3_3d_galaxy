@@ -55,7 +55,7 @@ todos:
     status: completed
   - id: p5-3-1-timeline-drag
     content: "Phase 5.3.1: Timeline 拖动跳转 — 移除 pointer-events-none，拖动交互写入 zCurrent (H2)"
-    status: pending
+    status: completed
   - id: p5-3-2-drawer-polish
     content: "Phase 5.3.2: Drawer UI 打磨 — 响应式海报、视觉层次提升、缺省字段条件隐藏 (H3, H4, H5)"
     status: pending

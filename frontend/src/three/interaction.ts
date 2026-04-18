@@ -6,9 +6,16 @@ import type { Meta, Movie } from '@/types/galaxy'
 /** Pixels of movement with primary button held before we treat the gesture as camera pan, not a pick click. */
 const CLICK_MAX_MOVE_PX = 6
 
-function computePointsThreshold(
+/**
+ * World-space ray–point margin for `Raycaster.params.Points.threshold`, tuned for the
+ * **focus slab** (layer B) only — assumes ~uniform release years so expected count in
+ * `[z, z+zVisWindow]` scales with `zVisWindow / z_span`, then derives typical XY spacing
+ * in the plot footprint (Phase 5.1.7 / T6).
+ */
+function computeFocusSlabPointsThreshold(
   meta: Pick<Meta, 'xy_range' | 'z_range' | 'count'>,
   movieCount: number,
+  zVisWindow: number,
 ): number {
   const xr = meta.xy_range.x
   const yr = meta.xy_range.y
@@ -18,14 +25,15 @@ function computePointsThreshold(
     meta.count === movieCount,
     `[Interaction] meta.count (${meta.count}) should equal movies.length (${movieCount})`,
   )
-  const span = Math.max(xr[1] - xr[0], yr[1] - yr[0], zr[1] - zr[0])
-  const n = Math.max(1, movieCount)
-  const avgSpacing = span / Math.sqrt(n)
-  const t = THREE.MathUtils.clamp(avgSpacing * 0.75, span * 1e-4, span * 0.08)
-  console.log(
-    `[Interaction] Points pick threshold (world): ${t.toFixed(6)} | span=${span.toFixed(4)} avgSpacing≈${avgSpacing.toFixed(6)}`,
-  )
-  return t
+  const zSpan = Math.abs(zr[1] - zr[0])
+  const zWin = Math.max(zVisWindow, 1e-9)
+  const nSlab = Math.max(1, (movieCount * zWin) / Math.max(zSpan, 1e-9))
+  const xyW = Math.max(1e-12, xr[1] - xr[0])
+  const xyH = Math.max(1e-12, yr[1] - yr[0])
+  const xyArea = xyW * xyH
+  const avgXYSpacing = Math.sqrt(xyArea / nSlab)
+  const xyMin = Math.min(xyW, xyH)
+  return THREE.MathUtils.clamp(avgXYSpacing * 0.75, xyMin * 1e-4, xyMin * 0.08)
 }
 
 function movieInZFocusSlab(z: number, zCurrent: number, zVisWindow: number): boolean {
@@ -71,6 +79,9 @@ function hoverEmitEqual(a: HoverEmitSnap, id: number | null, anchor: { x: number
 /**
  * Raycaster against `THREE.Points`: updates `hoveredMovieId` / `selectedMovieId` in Zustand.
  * Click-select ignores gestures that were camera pans (primary drag beyond {@link CLICK_MAX_MOVE_PX}).
+ *
+ * Phase 5.1.7 — Only layer B (`z ∈ [zCurrent, zCurrent+zVisWindow]`, same slab as `point.vert.glsl`)
+ * can be hovered or selected; hits outside the slab are skipped. Pick threshold follows slab density.
  */
 export function attachGalaxyPointsInteraction(options: {
   camera: THREE.PerspectiveCamera
@@ -89,7 +100,20 @@ export function attachGalaxyPointsInteraction(options: {
   console.log(`[Interaction] attach | movies=${movies.length}`)
 
   const raycaster = new THREE.Raycaster()
-  raycaster.params.Points = { threshold: computePointsThreshold(meta, movies.length) }
+  let cachedThresholdZVis = Number.NaN
+  const syncPickThreshold = () => {
+    const { zVisWindow } = useGalaxyInteractionStore.getState()
+    if (zVisWindow === cachedThresholdZVis) return
+    cachedThresholdZVis = zVisWindow
+    const zSpan = Math.abs(meta.z_range[1] - meta.z_range[0])
+    const nSlabApprox = Math.max(1, (movies.length * Math.max(zVisWindow, 1e-9)) / Math.max(zSpan, 1e-9))
+    const t = computeFocusSlabPointsThreshold(meta, movies.length, zVisWindow)
+    raycaster.params.Points = { threshold: t }
+    console.log(
+      `[Interaction] Focus-slab pick threshold (world): ${t.toFixed(6)} | zVisWindow=${zVisWindow} nSlab≈${nSlabApprox.toFixed(1)}`,
+    )
+  }
+  syncPickThreshold()
 
   const ndc = new THREE.Vector2()
   let lastHoverLogId: number | null | undefined
@@ -101,6 +125,7 @@ export function attachGalaxyPointsInteraction(options: {
   let primaryPressActive = false
 
   const pickIndex = (clientX: number, clientY: number): number | null => {
+    syncPickThreshold()
     ndc.copy(ndcFromClient(domElement, clientX, clientY))
     raycaster.setFromCamera(ndc, camera)
     const hits = raycaster.intersectObject(points, false)

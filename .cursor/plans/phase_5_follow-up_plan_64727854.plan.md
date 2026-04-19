@@ -58,7 +58,7 @@ todos:
     status: completed
   - id: p5-3-2-drawer-polish
     content: "Phase 5.3.2: Drawer UI 打磨 — 响应式海报、视觉层次提升、缺省字段条件隐藏 (H3, H4, H5)"
-    status: pending
+    status: completed
   - id: p5-3-3-search
     content: "Phase 5.3.3: 搜索入口（低优先级/可选）— 基础关键词前端搜索 (H6)"
     status: pending

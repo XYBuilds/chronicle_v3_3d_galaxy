@@ -31,8 +31,9 @@ function formatVoteCount(n: number): string {
   return `${n}`
 }
 
-function formatUsd(n: number): string {
-  if (!Number.isFinite(n) || n === 0) return '—'
+/** Present only when the pipeline has a positive USD amount (H5: hide missing money fields). */
+function formatUsdPresent(n: number): string | null {
+  if (!Number.isFinite(n) || n <= 0) return null
   return new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)
 }
 
@@ -71,6 +72,19 @@ export interface MovieDetailDrawerHudProps {
 export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailDrawerHudProps) {
   const title = movie?.title ?? 'Film'
 
+  const budgetStr = movie ? formatUsdPresent(movie.budget) : null
+  const revenueStr = movie ? formatUsdPresent(movie.revenue) : null
+  const runtimeMin = movie?.runtime ?? null
+  const showRuntime = runtimeMin != null
+  const showLanguage = movie != null && Boolean(movie.original_language?.trim())
+  const showDirector = movie != null && movie.director.length > 0
+  const showWriters = movie != null && movie.writers.length > 0
+  const showMetaBlock =
+    movie != null && (showRuntime || showLanguage || showDirector || showWriters || budgetStr != null || revenueStr != null)
+  const overviewText = movie?.overview?.trim() ?? ''
+  const showOverview = overviewText.length > 0
+  const showCast = movie != null && movie.cast.length > 0
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -82,8 +96,8 @@ export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailD
         )}
         style={{ ['--sheet-ease' as string]: SHEET_OPEN_EASE }}
       >
-        <SheetHeader className="gap-3 border-b border-border p-4 text-left">
-          <SheetTitle className="pr-10 text-lg leading-snug">{title}</SheetTitle>
+        <SheetHeader className="gap-3 border-b border-border/80 bg-muted/25 p-4 text-left">
+          <SheetTitle className="pr-10 text-lg font-semibold leading-snug tracking-tight">{title}</SheetTitle>
           <SheetDescription className="sr-only">
             {movie ? `${movie.title}, released ${movie.release_date}.` : 'No film selected.'}
           </SheetDescription>
@@ -92,13 +106,17 @@ export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailD
           ) : null}
           {movie ? (
             <div className="flex flex-wrap gap-2">
-              <Badge variant="secondary" className="font-mono tabular-nums">
+              <Badge variant="secondary" className="font-mono tabular-nums transition-colors duration-150">
                 ★ {movie.vote_average.toFixed(1)}
               </Badge>
-              <Badge variant="outline">{formatVoteCount(movie.vote_count)} votes</Badge>
-              <Badge variant="outline">{formatReleaseDate(movie.release_date)}</Badge>
+              <Badge variant="outline" className="transition-colors duration-150">
+                {formatVoteCount(movie.vote_count)} votes
+              </Badge>
+              <Badge variant="outline" className="transition-colors duration-150">
+                {formatReleaseDate(movie.release_date)}
+              </Badge>
               {movie.genres.slice(0, 4).map((g) => (
-                <Badge key={g} variant="outline">
+                <Badge key={g} variant="outline" className="transition-colors duration-150">
                   {g}
                 </Badge>
               ))}
@@ -107,63 +125,96 @@ export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailD
         </SheetHeader>
 
         {movie ? (
-          <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
-            <AspectRatio ratio={2 / 3} className="w-full max-w-[220px] overflow-hidden rounded-md border border-border bg-muted">
-              <DrawerPoster key={`${movie.id}|${movie.poster_url}`} posterUrl={movie.poster_url} title={movie.title} />
-            </AspectRatio>
-
-            {movie.tagline ? (
-              <p className="text-sm italic text-muted-foreground leading-snug">&ldquo;{movie.tagline}&rdquo;</p>
-            ) : null}
-
-            <div className="space-y-2">
-              <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Overview</h3>
-              <p className="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap">{movie.overview || '—'}</p>
+          <div className="flex flex-1 flex-col gap-5 overflow-y-auto p-4 motion-safe:scroll-smooth">
+            {/*
+              H3: width uses min/max against viewport so narrow sheets keep a readable poster;
+              height follows 2:3. Center on xs, align start from sm.
+            */}
+            <div className="group/poster flex justify-center sm:justify-start">
+              <AspectRatio
+                ratio={2 / 3}
+                className={cn(
+                  'overflow-hidden rounded-lg border border-border/80 bg-muted shadow-sm',
+                  'w-[min(100%,max(8.875rem,min(56vw,15rem)))] sm:w-[min(100%,15rem)]',
+                  'motion-safe:transition-[box-shadow,border-color,transform] motion-safe:duration-200',
+                  'motion-safe:hover:border-border motion-safe:hover:shadow-md',
+                )}
+              >
+                <DrawerPoster key={`${movie.id}|${movie.poster_url}`} posterUrl={movie.poster_url} title={movie.title} />
+              </AspectRatio>
             </div>
 
-            <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs text-muted-foreground">
-              <div>
-                <dt className="font-medium text-foreground/80">Runtime</dt>
-                <dd>{movie.runtime != null ? `${movie.runtime} min` : '—'}</dd>
-              </div>
-              <div>
-                <dt className="font-medium text-foreground/80">Language</dt>
-                <dd className="uppercase">{movie.original_language || '—'}</dd>
-              </div>
-              <div className="col-span-2">
-                <dt className="font-medium text-foreground/80">Director</dt>
-                <dd>{movie.director.length ? movie.director.join(', ') : '—'}</dd>
-              </div>
-              <div className="col-span-2">
-                <dt className="font-medium text-foreground/80">Writers</dt>
-                <dd>{movie.writers.length ? movie.writers.join(', ') : '—'}</dd>
-              </div>
-              <div>
-                <dt className="font-medium text-foreground/80">Budget</dt>
-                <dd>{formatUsd(movie.budget)}</dd>
-              </div>
-              <div>
-                <dt className="font-medium text-foreground/80">Revenue</dt>
-                <dd>{formatUsd(movie.revenue)}</dd>
-              </div>
-            </dl>
+            {movie.tagline ? (
+              <p className="border-l-2 border-primary/35 pl-3 text-sm italic leading-snug text-muted-foreground motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-left-2 motion-safe:duration-300">
+                &ldquo;{movie.tagline}&rdquo;
+              </p>
+            ) : null}
 
-            <div className="min-h-0 flex-1 space-y-2">
-              <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Cast</h3>
-              <ScrollArea className="h-48 rounded-md border border-border pr-2">
-                <ol className="list-decimal space-y-1.5 py-2 pl-5 text-sm leading-snug">
-                  {movie.cast.length === 0 ? (
-                    <li className="text-muted-foreground">—</li>
-                  ) : (
-                    movie.cast.map((name, i) => (
+            {showOverview ? (
+              <section className="space-y-2 rounded-lg border border-border/60 bg-card/40 p-3 shadow-sm">
+                <h3 className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">Overview</h3>
+                <p className="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap">{overviewText}</p>
+              </section>
+            ) : null}
+
+            {showMetaBlock ? (
+              <section className="rounded-lg border border-border/60 bg-muted/20 p-3 shadow-sm">
+                <h3 className="mb-2 text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">Details</h3>
+                <dl className="grid grid-cols-2 gap-x-3 gap-y-2.5 text-xs text-muted-foreground">
+                  {showRuntime ? (
+                    <div>
+                      <dt className="font-medium text-foreground/80">Runtime</dt>
+                      <dd>{runtimeMin} min</dd>
+                    </div>
+                  ) : null}
+                  {showLanguage ? (
+                    <div>
+                      <dt className="font-medium text-foreground/80">Language</dt>
+                      <dd className="uppercase">{movie.original_language}</dd>
+                    </div>
+                  ) : null}
+                  {showDirector ? (
+                    <div className="col-span-2">
+                      <dt className="font-medium text-foreground/80">Director</dt>
+                      <dd>{movie.director.join(', ')}</dd>
+                    </div>
+                  ) : null}
+                  {showWriters ? (
+                    <div className="col-span-2">
+                      <dt className="font-medium text-foreground/80">Writers</dt>
+                      <dd>{movie.writers.join(', ')}</dd>
+                    </div>
+                  ) : null}
+                  {budgetStr != null ? (
+                    <div>
+                      <dt className="font-medium text-foreground/80">Budget</dt>
+                      <dd>{budgetStr}</dd>
+                    </div>
+                  ) : null}
+                  {revenueStr != null ? (
+                    <div>
+                      <dt className="font-medium text-foreground/80">Revenue</dt>
+                      <dd>{revenueStr}</dd>
+                    </div>
+                  ) : null}
+                </dl>
+              </section>
+            ) : null}
+
+            {showCast ? (
+              <section className="min-h-0 flex-1 space-y-2">
+                <h3 className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">Cast</h3>
+                <ScrollArea className="h-48 rounded-lg border border-border/60 bg-card/30 pr-2 shadow-sm motion-safe:transition-shadow motion-safe:duration-200 motion-safe:hover:shadow-md">
+                  <ol className="list-decimal space-y-1.5 py-2 pl-5 text-sm leading-snug">
+                    {movie.cast.map((name, i) => (
                       <li key={`${name}-${i}`} className="marker:text-muted-foreground">
                         {name}
                       </li>
-                    ))
-                  )}
-                </ol>
-              </ScrollArea>
-            </div>
+                    ))}
+                  </ol>
+                </ScrollArea>
+              </section>
+            ) : null}
           </div>
         ) : null}
       </SheetContent>

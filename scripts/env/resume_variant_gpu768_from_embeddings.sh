@@ -1,10 +1,5 @@
 #!/usr/bin/env bash
-# Alternate full Phase 2 export: 768d mpnet embeddings, n_neighbors=100, no DensMAP, cuML UMAP (GPU).
-# Writes npy under data/output/variant_gpu768_n100/ and galaxy_data_gpu768_n100.json(.gz) in frontend/public/data/.
-# Requires Phase 1 cleaned.csv at data/output/cleaned.csv (same row order as TMDB pipeline).
-#
-# Usage: from repo root on WSL (or Windows: wsl -d Ubuntu -- bash scripts/env/run_variant_gpu768_n100_cuml.sh)
-# Activates conda env chronicle when CONDA_DEFAULT_ENV is not already chronicle.
+# Resume run_variant_gpu768_n100_cuml.sh after text_embeddings.npy is already present (skip HF download).
 set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
@@ -17,37 +12,19 @@ if [[ "${CONDA_DEFAULT_ENV:-}" != "chronicle" ]] && [[ -f "${HOME}/miniforge3/et
 fi
 set -o pipefail
 cd "${REPO_ROOT}"
-export PYTHONUNBUFFERED=1
 # shellcheck source=/dev/null
 source "${REPO_ROOT}/scripts/env/wsl_proxy_clash.sh"
+export PYTHONUNBUFFERED=1
 
 ART="${REPO_ROOT}/data/output/variant_gpu768_n100"
 CLEANED="${REPO_ROOT}/data/output/cleaned.csv"
 OUT_JSON="${REPO_ROOT}/frontend/public/data/galaxy_data_gpu768_n100.json"
 OUT_GZ="${REPO_ROOT}/frontend/public/data/galaxy_data_gpu768_n100.json.gz"
-
-MPNET_ID="sentence-transformers/paraphrase-multilingual-mpnet-base-v2"
 META_MODEL="paraphrase-multilingual-mpnet-base-v2"
 
-mkdir -p "${ART}"
-
-if [[ ! -f "${CLEANED}" ]]; then
-  echo "Missing ${CLEANED} — run Phase 1 (e.g. scripts/run_pipeline.py on raw CSV) first." >&2
+if [[ ! -f "${ART}/text_embeddings.npy" ]]; then
+  echo "Missing ${ART}/text_embeddings.npy — run run_variant_gpu768_n100_cuml.sh first." >&2
   exit 1
-fi
-
-nvidia-smi --query-gpu=name,memory.total,memory.used --format=csv
-date -Is
-
-if [[ -f "${ART}/text_embeddings.npy" ]]; then
-  echo "[variant] reuse existing ${ART}/text_embeddings.npy (delete to re-encode)"
-else
-  python scripts/feature_engineering/text_embedding.py \
-    --input "${CLEANED}" \
-    --output "${ART}/text_embeddings.npy" \
-    --model-id "${MPNET_ID}" \
-    --device cuda \
-    --batch-size 16
 fi
 
 python scripts/feature_engineering/genre_encoding.py \
@@ -82,5 +59,4 @@ python scripts/export/export_galaxy_json.py \
   --random-state 42
 
 python scripts/validate_galaxy_json.py --input "${OUT_JSON}"
-date -Is
-echo "Done. Artifacts: ${ART}  ${OUT_JSON}"
+echo "Resume complete: ${OUT_JSON}"

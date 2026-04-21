@@ -34,6 +34,6 @@ alwaysApply: false
 
 ## Dependencies
 
-- Pin major.minor versions in `requirements.txt`
+- Pin major.minor versions in `requirements.cpu.txt` (included by `requirements.txt`); WSL GPU conda spec: `scripts/env/rapids_env.yml`; optional pip-only extras for that env: `requirements.gpu.txt`
 - PyTorch: for GPU embeddings, install CUDA wheels from PyTorch’s wheel index (`https://download.pytorch.org/whl/cu128` or the variant listed on pytorch.org for your OS/driver); PyPI-default `torch` is CPU (`+cpu`). See Tech Spec §2.1.1.
 - GPU-first for sentence-transformers encode; lower batch_size on OOM, never drop samples

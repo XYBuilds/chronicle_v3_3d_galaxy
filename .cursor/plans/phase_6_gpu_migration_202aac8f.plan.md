@@ -7,7 +7,7 @@ todos:
     status: completed
   - id: m2-rapids-env
     content: "M2 (§8.3.3): 安装 Miniforge (mamba) → 创建 conda env `chronicle`，`mamba create -n chronicle -c rapidsai -c conda-forge -c nvidia cuml=25.* python=3.11 cuda-version=12.5 pytorch pytorch-cuda=12.* sentence-transformers joblib tqdm pandas numpy scikit-learn`；冒烟 `python -c 'import cuml; from cuml.manifold import UMAP'`。写 `scripts/env/rapids_env.yml`。若失败 fallback pip wheels 分支。（§8.3.2 CUDA toolkit 因 conda cuda-version 元包包含 runtime，退化为可选，按需补 `cuda-toolkit-wsl-ubuntu`。）"
-    status: pending
+    status: completed
   - id: m3-req-split
     content: "M3 (§8.3.4): 拆分依赖 — 保留 `requirements.txt` 作为 Windows CPU 回退（重命名为 `requirements.cpu.txt` 或保持原名 + 注释）；新增 `requirements.gpu.txt` 作为 conda env 的 pip 补集（若 mamba 已覆盖则仅注释指向 `scripts/env/rapids_env.yml`）。Windows `.venv` 运行 Phase 1 + CPU UMAP 必须仍通过。"
     status: pending

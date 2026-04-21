@@ -154,7 +154,7 @@ main() {
 
   log ""
   log "M1 bootstrap finished."
-  log "Next (Phase 6 M2): create conda env per scripts/env/rapids_env.yml (once added) or project docs."
+  log "Next (Phase 6 M2): bash scripts/env/install_chronicle_conda_env.sh  # uses scripts/env/rapids_env.yml"
 }
 
 main "$@"

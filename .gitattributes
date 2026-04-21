@@ -1,0 +1,3 @@
+# Phase 6 M6: env scripts run under WSL bash; force LF so Windows checkouts do not inject CRLF
+# (which breaks shebang lines and line-continuation in bash).
+scripts/env/*.sh text eol=lf

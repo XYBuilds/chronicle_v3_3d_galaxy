@@ -19,7 +19,7 @@ todos:
     status: completed
   - id: m6-code-layout
     content: "M6 (§8.3.7): 代码/数据 WSL 布局 — `git clone` 到 `~/chronicle_v3_3d_galaxy`（而非 `/mnt/e/` 直挂，避免 ext4/ntfs IO 差）；`data/raw/TMDB_all_movies.csv` 从 Windows 侧 rsync 到 WSL 目录（或建软链 `data/raw -> /mnt/e/...`，由 agent 评估后选一）；产物回写策略：`scripts/env/sync_artifacts_to_windows.sh` 把 `data/output/*.npy`、`frontend/public/data/galaxy_data.json(.gz)` rsync 回 `/mnt/e/projects/chronicle_v3_3d_galaxy/...`；CRLF / 权限 / `.gitignore` 冲突在此统一处理。"
-    status: pending
+    status: completed
   - id: m7-smoke
     content: "M7 (§8.3.8): 子样本端到端冒烟 — 在 WSL `chronicle` env 里 `python scripts/run_pipeline.py --input data/subsample/tmdb2025_random20.csv`（Phase 2.6 auto path），验证 cuml UMAP 分支走通，产物 `galaxy_data.json` 经 `validate_galaxy_json.py` 通过；回写到 Windows `/mnt/e/.../frontend/public/data/`，`npm run dev` 加载无错。记录 GPU 显存/耗时基线。产出 `Phase 6M7 ... 实施报告.md`。"
     status: pending

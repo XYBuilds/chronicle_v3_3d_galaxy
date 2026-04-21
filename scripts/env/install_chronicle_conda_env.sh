@@ -124,6 +124,7 @@ main() {
     mamba env update -n chronicle -f "${YAML}" --prune -y
     run_smoke
     log "Done (update)."
+    log "M6: bash scripts/env/sync_raw_from_windows.sh | bash scripts/env/sync_artifacts_to_windows.sh"
     return 0
   fi
 
@@ -131,6 +132,7 @@ main() {
     log "Conda env 'chronicle' already exists."
     log "To refresh packages: bash scripts/env/install_chronicle_conda_env.sh --update"
     log "To recreate:       mamba env remove -n chronicle -y  # then re-run this script"
+    log "M6 WSL ↔ Windows sync: scripts/env/sync_raw_from_windows.sh | sync_artifacts_to_windows.sh"
     exit 0
   fi
 
@@ -144,6 +146,9 @@ main() {
   run_smoke
   log ""
   log "M2 conda env ready. Activate with:  mamba activate chronicle"
+  log "M6 layout: clone/work on ext4 (e.g. ~/chronicle_v3_3d_galaxy), not only /mnt/e/...;"
+  log "  pull raw:  bash scripts/env/sync_raw_from_windows.sh"
+  log "  push out:  bash scripts/env/sync_artifacts_to_windows.sh"
 }
 
 main "$@"

@@ -16,7 +16,8 @@ venv/
 # ============================================================
 # Raw / large data  (subsample/ is tracked)
 # ============================================================
-data/raw/
+# Match directory or M6 WSL symlink at data/raw (trailing-slash-only rules miss symlinks).
+data/raw
 data/output/
 scripts/output/
 *.pkl

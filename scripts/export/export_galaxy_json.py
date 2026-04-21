@@ -183,6 +183,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=0.4,
         help="Echoed in meta.umap_params; must match umap_projection.py run (Phase 5.2.1)",
     )
+    p.add_argument(
+        "--densmap",
+        action="store_true",
+        help="Echo DensMAP usage in meta.umap_params.densmap (must match Phase 2.4 umap_projection run)",
+    )
     p.add_argument("--metric", type=str, default="cosine")
     p.add_argument("--random-state", type=int, default=42)
     p.add_argument("--size-min", type=float, default=2.0)
@@ -352,6 +357,7 @@ def main(argv: list[str] | None = None) -> int:
             "min_dist": float(args.min_dist),
             "metric": str(args.metric),
             "random_state": int(args.random_state),
+            "densmap": bool(args.densmap),
         },
         "genre_weight_ratio": float(args.genre_weight_ratio),
         "genre_palette": genre_palette,

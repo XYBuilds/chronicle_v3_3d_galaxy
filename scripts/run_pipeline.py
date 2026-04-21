@@ -38,7 +38,19 @@ def _run_python_script(rel_script: Path, extra_args: list[str]) -> None:
         raise SystemExit(proc.returncode)
 
 
-def run_phase2_through_export(*, cleaned_csv: Path, galaxy_json: Path, embedding_device: str) -> None:
+def run_phase2_through_export(
+    *,
+    cleaned_csv: Path,
+    galaxy_json: Path,
+    embedding_device: str,
+    umap_backend: str,
+    densmap: bool,
+    n_neighbors: int,
+    min_dist: float,
+    metric: str,
+    random_state: int,
+    force_umap_cpu: bool,
+) -> None:
     """Phase 2.1–2.5 in order; paths must be absolute."""
     c = str(cleaned_csv)
     _run_python_script(
@@ -47,12 +59,44 @@ def run_phase2_through_export(*, cleaned_csv: Path, galaxy_json: Path, embedding
     )
     _run_python_script(Path("scripts") / "feature_engineering" / "genre_encoding.py", ["--input", c])
     _run_python_script(Path("scripts") / "feature_engineering" / "language_encoding.py", ["--input", c])
-    _run_python_script(Path("scripts") / "feature_engineering" / "umap_projection.py", [])
+
+    backend = "umap" if force_umap_cpu else umap_backend
+    umap_args: list[str] = [
+        "--backend",
+        backend,
+        "--n-neighbors",
+        str(n_neighbors),
+        "--min-dist",
+        str(min_dist),
+        "--metric",
+        metric,
+        "--random-state",
+        str(random_state),
+    ]
+    if densmap:
+        umap_args.append("--densmap")
+    _run_python_script(Path("scripts") / "feature_engineering" / "umap_projection.py", umap_args)
+
     gz_path = galaxy_json.parent / f"{galaxy_json.stem}.json.gz"
-    _run_python_script(
-        Path("scripts") / "export" / "export_galaxy_json.py",
-        ["--input", c, "--output-json", str(galaxy_json), "--output-gzip", str(gz_path)],
-    )
+    export_args: list[str] = [
+        "--input",
+        c,
+        "--output-json",
+        str(galaxy_json),
+        "--output-gzip",
+        str(gz_path),
+        "--n-neighbors",
+        str(n_neighbors),
+        "--min-dist",
+        str(min_dist),
+        "--metric",
+        metric,
+        "--random-state",
+        str(random_state),
+    ]
+    if densmap:
+        export_args.append("--densmap")
+    _run_python_script(Path("scripts") / "export" / "export_galaxy_json.py", export_args)
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -119,6 +163,47 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         type=Path,
         default=_DEFAULT_GALAXY_JSON,
         help=f"Output path for galaxy_data.json when using --through-phase-2 (default: {_DEFAULT_GALAXY_JSON})",
+    )
+    p.add_argument(
+        "--umap-backend",
+        type=str,
+        default="auto",
+        choices=("auto", "umap", "cuml"),
+        help="Phase 2.4 UMAP: umap-learn (CPU), cuML (GPU), or auto (matches umap_projection.py)",
+    )
+    p.add_argument(
+        "--densmap",
+        action="store_true",
+        help="Phase 2.4: enable DensMAP (must match export meta; forwarded to umap_projection + export)",
+    )
+    p.add_argument(
+        "--n-neighbors",
+        type=int,
+        default=15,
+        help="UMAP n_neighbors (forwarded to umap_projection.py and export_galaxy_json.py meta)",
+    )
+    p.add_argument(
+        "--min-dist",
+        type=float,
+        default=0.4,
+        help="UMAP min_dist (forwarded to umap_projection + export meta; default 0.4)",
+    )
+    p.add_argument(
+        "--umap-metric",
+        type=str,
+        default="cosine",
+        help="UMAP distance metric (forwarded to umap_projection + export meta)",
+    )
+    p.add_argument(
+        "--umap-random-state",
+        type=int,
+        default=42,
+        help="UMAP random_state (forwarded to umap_projection + export meta)",
+    )
+    p.add_argument(
+        "--cpu",
+        action="store_true",
+        help="Force umap-learn (CPU) for Phase 2.4, ignoring --umap-backend and GPU auto-select",
     )
     p.add_argument(
         "--skip-json-validate",
@@ -211,6 +296,13 @@ def main(argv: list[str] | None = None) -> int:
             cleaned_csv=args.output,
             galaxy_json=args.galaxy_json,
             embedding_device=args.embedding_device,
+            umap_backend=str(args.umap_backend),
+            densmap=bool(args.densmap),
+            n_neighbors=int(args.n_neighbors),
+            min_dist=float(args.min_dist),
+            metric=str(args.umap_metric),
+            random_state=int(args.umap_random_state),
+            force_umap_cpu=bool(args.cpu),
         )
         if not args.skip_json_validate:
             vpath = REPO_ROOT / "scripts" / "validate_galaxy_json.py"

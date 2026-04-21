@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import inspect
 import os
 import sys
 from pathlib import Path
@@ -10,7 +11,6 @@ from typing import Any, Literal
 
 import joblib
 import numpy as np
-import umap
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _DEFAULT_TEXT = _REPO_ROOT / "data" / "output" / "text_embeddings.npy"
@@ -130,6 +130,8 @@ def _fit_umap_learn(
     densmap: bool,
     umap_verbose: bool,
 ) -> tuple[np.ndarray, Any]:
+    import umap  # umap-learn; optional on GPU-only conda envs (cuml path does not import this)
+
     reducer = umap.UMAP(
         n_components=2,
         n_neighbors=n_neighbors,
@@ -152,20 +154,19 @@ def _fit_cuml(
     min_dist: float,
     metric: str,
     random_state: int,
-    densmap: bool,
     umap_verbose: bool,
 ) -> tuple[np.ndarray, Any]:
     from cuml.manifold import UMAP as CumlUMAP
 
     X = np.asarray(combined, dtype=np.float32, order="C")
     # cuML mirrors umap-learn hyperparameters; output_type='numpy' keeps downstream float32 (n, 2).
+    # DensMAP is not supported on GPU UMAP in RAPIDS (see cuml/manifold/umap.pyx); handled in main().
     kw: dict[str, Any] = {
         "n_components": 2,
         "n_neighbors": n_neighbors,
         "min_dist": float(min_dist),
         "metric": str(metric),
         "random_state": int(random_state),
-        "densmap": bool(densmap),
         "output_type": "numpy",
     }
     if umap_verbose:
@@ -204,7 +205,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument(
         "--densmap",
         action="store_true",
-        help="Enable DensMAP (supported by umap-learn and cuml; denser manifold preservation)",
+        help="Enable DensMAP (umap-learn CPU). cuML GPU UMAP does not implement DensMAP — we fall back to umap-learn for this step.",
     )
     p.add_argument(
         "--n-neighbors",
@@ -265,14 +266,27 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Combined shape: {combined.shape}")
 
     backend = _resolve_backend(str(args.backend))
-    _ensure_cuml_runtime(backend=backend)
+    fit_backend: BackendName = backend
+
     if str(args.backend) == "auto":
         print(f"[UMAP] backend auto -> {backend} (CUDA_VISIBLE_DEVICES={os.environ.get('CUDA_VISIBLE_DEVICES', '<unset>')!r})")
     else:
         print(f"[UMAP] backend {backend}")
 
+    if backend == "cuml" and bool(args.densmap):
+        print(
+            "[UMAP] cuML GPU UMAP does not support DensMAP; using umap-learn (CPU) for Phase 2.4 "
+            "(embeddings already ran on GPU in Phase 2.1).",
+            flush=True,
+        )
+        fit_backend = "umap"
+    if fit_backend != backend:
+        print(f"[UMAP] effective fit backend -> {fit_backend}", flush=True)
+
+    _ensure_cuml_runtime(backend=fit_backend)
+
     nn = _umap_n_neighbors(n, args.n_neighbors)
-    if backend == "umap":
+    if fit_backend == "umap":
         xy, reducer = _fit_umap_learn(
             combined,
             n_neighbors=nn,
@@ -289,9 +303,23 @@ def main(argv: list[str] | None = None) -> int:
             min_dist=float(args.min_dist),
             metric=str(args.metric),
             random_state=int(args.random_state),
-            densmap=bool(args.densmap),
             umap_verbose=bool(args.umap_verbose),
         )
+        if not np.isfinite(xy).all():
+            print(
+                "[UMAP] cuML returned non-finite coordinates (observed on very small n); "
+                "falling back to umap-learn (CPU).",
+                flush=True,
+            )
+            xy, reducer = _fit_umap_learn(
+                combined,
+                n_neighbors=nn,
+                min_dist=float(args.min_dist),
+                metric=str(args.metric),
+                random_state=int(args.random_state),
+                densmap=bool(args.densmap),
+                umap_verbose=bool(args.umap_verbose),
+            )
 
     if not np.isfinite(xy).all():
         raise AssertionError("UMAP output contains non-finite values")

@@ -90,8 +90,9 @@ ensure_mamba_on_path() {
   name="$(detect_miniforge_name)"
   url="https://github.com/conda-forge/miniforge/releases/latest/download/${name}"
   log "Installing Miniforge (mamba) to ${install_dir} ..."
+  # Installer refuses to run when the temp path does not end in .sh (it detects "source" misuse).
   local tmp
-  tmp="$(mktemp)"
+  tmp="$(mktemp /tmp/miniforgeXXXXXX.sh)"
   curl -fsSL "${url}" -o "${tmp}"
   bash "${tmp}" -b -p "${install_dir}"
   rm -f "${tmp}"

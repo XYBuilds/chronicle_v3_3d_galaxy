@@ -23,16 +23,20 @@ name: chronicle
 channels:
   - rapidsai
   - conda-forge
+  - pytorch
   - nvidia
 dependencies:
   - python=3.11
   - cuda-version=12.5
   - cuml=25.*
-  - pytorch
-  - pytorch-cuda=12.*
+  # pytorch-cuda lives on the pytorch channel (not conda-forge alone)
+  - pytorch::pytorch
+  - pytorch::pytorch-cuda=12.4
   - sentence-transformers
   - joblib
   - tqdm
   - pandas
   - numpy
-  - scikit-learn
+  # cuml 25.x fails to import with scikit-learn 1.8+ (BaseEstimator API); keep <1.8 until RAPIDS catches up
+  - scikit-learn>=1.4,<1.8
+  - umap-learn

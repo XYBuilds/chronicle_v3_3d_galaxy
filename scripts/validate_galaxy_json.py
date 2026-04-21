@@ -87,6 +87,20 @@ def _check_movie(mid: int, m: dict[str, Any]) -> None:
             raise AssertionError(f"movie id={mid}: {k} must be finite float, got {v!r}")
 
 
+def _check_umap_params(umap_params: Any) -> None:
+    if not isinstance(umap_params, dict):
+        raise AssertionError("meta.umap_params must be an object")
+    for k in ("n_neighbors", "min_dist", "metric", "random_state"):
+        if k not in umap_params:
+            raise AssertionError(f"meta.umap_params missing key {k!r}")
+        if _is_null(umap_params[k]):
+            raise AssertionError(f"meta.umap_params.{k} must not be null")
+    if "densmap" in umap_params:
+        d = umap_params["densmap"]
+        if not isinstance(d, bool):
+            raise AssertionError(f"meta.umap_params.densmap must be bool if present, got {d!r}")
+
+
 def validate_payload(data: dict[str, Any]) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     if "meta" not in data or "movies" not in data:
         raise AssertionError("top-level keys must include 'meta' and 'movies'")
@@ -97,6 +111,7 @@ def validate_payload(data: dict[str, Any]) -> tuple[dict[str, Any], list[dict[st
             raise AssertionError(f"meta missing key {k!r}")
         if _is_null(meta[k]):
             raise AssertionError(f"meta.{k} must not be null")
+    _check_umap_params(meta.get("umap_params"))
     if meta["count"] != len(movies):
         raise AssertionError(f"meta.count ({meta['count']}) != len(movies) ({len(movies)})")
     for m in movies:

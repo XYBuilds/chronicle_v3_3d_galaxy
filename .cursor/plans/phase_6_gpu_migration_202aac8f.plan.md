@@ -16,7 +16,7 @@ todos:
     status: completed
   - id: m5-pipeline-export
     content: "M5 (§8.3.6 + meta 同步): (a) `scripts/run_pipeline.py:41-55` `run_phase2_through_export()` 增加 `backend/densmap/n_neighbors` 透传；CLI 加 `--umap-backend`、`--densmap`、`--n-neighbors`、`--cpu`（强制 umap-learn 回退）；(b) `scripts/export/export_galaxy_json.py:179-187, :350-355` CLI 加 `--densmap`，`meta.umap_params` 写入 `densmap: bool`；(c) 同步前端 `galaxy_data.json` schema 类型（如有 `frontend/src/data/types.ts`）；(d) `scripts/validate_galaxy_json.py` 兼容新字段。"
-    status: pending
+    status: completed
   - id: m6-code-layout
     content: "M6 (§8.3.7): 代码/数据 WSL 布局 — `git clone` 到 `~/chronicle_v3_3d_galaxy`（而非 `/mnt/e/` 直挂，避免 ext4/ntfs IO 差）；`data/raw/TMDB_all_movies.csv` 从 Windows 侧 rsync 到 WSL 目录（或建软链 `data/raw -> /mnt/e/...`，由 agent 评估后选一）；产物回写策略：`scripts/env/sync_artifacts_to_windows.sh` 把 `data/output/*.npy`、`frontend/public/data/galaxy_data.json(.gz)` rsync 回 `/mnt/e/projects/chronicle_v3_3d_galaxy/...`；CRLF / 权限 / `.gitignore` 冲突在此统一处理。"
     status: pending

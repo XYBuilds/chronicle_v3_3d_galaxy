@@ -13,6 +13,8 @@ export interface UmapParams {
   metric: string
   /** Pipeline contract: must be `42` (Tech Spec §2.1 / §4.2). */
   random_state: number
+  /** DensMAP flag; newer pipeline exports always set this (Phase 6). */
+  densmap?: boolean
 }
 
 /** §2.1.3 multimodal fusion weights (`meta.feature_weights`). */

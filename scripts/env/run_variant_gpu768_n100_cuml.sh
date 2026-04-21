@@ -3,6 +3,7 @@
 # Writes npy under data/output/variant_gpu768_n100/ and galaxy_data_gpu768_n100.json(.gz) in frontend/public/data/.
 # Requires Phase 1 cleaned.csv at data/output/cleaned.csv (same row order as TMDB pipeline).
 #
+# If embedding already exists but later steps failed: bash scripts/env/resume_variant_gpu768_from_embeddings.sh
 # Usage: from repo root on WSL (or Windows: wsl -d Ubuntu -- bash scripts/env/run_variant_gpu768_n100_cuml.sh)
 # Activates conda env chronicle when CONDA_DEFAULT_ENV is not already chronicle.
 set -e

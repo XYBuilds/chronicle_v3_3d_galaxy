@@ -22,7 +22,7 @@ todos:
     status: completed
   - id: m7-smoke
     content: "M7 (§8.3.8): 子样本端到端冒烟 — 在 WSL `chronicle` env 里 `python scripts/run_pipeline.py --input data/subsample/tmdb2025_random20.csv`（Phase 2.6 auto path），验证 cuml UMAP 分支走通，产物 `galaxy_data.json` 经 `validate_galaxy_json.py` 通过；回写到 Windows `/mnt/e/.../frontend/public/data/`，`npm run dev` 加载无错。记录 GPU 显存/耗时基线。产出 `Phase 6M7 ... 实施报告.md`。"
-    status: pending
+    status: completed
   - id: m8-full-retrain
     content: "M8 (§8.3.9): 全量 59K 重训（I1 的实际发动） — `python scripts/run_pipeline.py --through-phase-2 --umap-backend cuml --densmap --n-neighbors 100 --min-dist 0.4`；备份旧产物 `cp data/output/umap_xy.npy data/output/umap_xy.umap-learn.npy`；记录耗时、GPU 显存峰值、`xy_range` 变化；回写到 Windows 侧并在前端肉眼复测（I1 子任务的接力点）。产出 `Phase 6M8 ... 实施报告.md` + I1 复测记录（I1 完整修复属另一 plan）。"
     status: pending

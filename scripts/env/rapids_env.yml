@@ -16,6 +16,9 @@
 # If mamba fails to solve (CUDA / channel conflicts), see the pip wheel fallback
 # printed by install_chronicle_conda_env.sh or RAPIDS “Release Selector” docs.
 #
+# M3: After activation, add pip-only packages (rare) via `requirements.gpu.txt`
+# at repo root — keep minimal to avoid conflicting with this conda stack.
+#
 name: chronicle
 channels:
   - rapidsai

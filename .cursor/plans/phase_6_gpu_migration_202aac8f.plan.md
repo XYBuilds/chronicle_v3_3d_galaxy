@@ -10,7 +10,7 @@ todos:
     status: completed
   - id: m3-req-split
     content: "M3 (§8.3.4): 拆分依赖 — 保留 `requirements.txt` 作为 Windows CPU 回退（重命名为 `requirements.cpu.txt` 或保持原名 + 注释）；新增 `requirements.gpu.txt` 作为 conda env 的 pip 补集（若 mamba 已覆盖则仅注释指向 `scripts/env/rapids_env.yml`）。Windows `.venv` 运行 Phase 1 + CPU UMAP 必须仍通过。"
-    status: pending
+    status: completed
   - id: m4-umap-backend
     content: "M4 (§8.3.5): 重构 `scripts/feature_engineering/umap_projection.py` — 新增 `--backend {umap,cuml}`（默认按 `CUDA_VISIBLE_DEVICES` 自动选）、`--densmap`、`--n-neighbors`；cuml 分支用 `cuml.manifold.UMAP(output_type='numpy', densmap=args.densmap, n_neighbors=nn, ...)`；输出保持 `(n, 2) float32`；`umap_model.pkl` 对 cuml 走 `joblib.dump(reducer)` 或跳过（cuml estimator 可 pickle，但 transform 路径差异在报告里注明）。单元级 CLI smoke：`python umap_projection.py --backend cuml --densmap --n-neighbors 50` 在子样本上跑通。"
     status: pending

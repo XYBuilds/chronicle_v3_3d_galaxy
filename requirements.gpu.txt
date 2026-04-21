@@ -1,0 +1,12 @@
+# Phase 6 — WSL GPU path: pip supplements for the `chronicle` conda environment
+#
+# Primary install (cuML, PyTorch CUDA, sentence-transformers, pandas, etc.) is
+# **not** listed here — it comes from conda:
+#   mamba env create -f scripts/env/rapids_env.yml
+#   # or: bash scripts/env/install_chronicle_conda_env.sh
+#
+# After `mamba activate chronicle`, only add lines below if you need a
+# pip-only package or a version override that conda does not provide. Keep this
+# list minimal to avoid CUDA/ABI conflicts with the RAPIDS stack.
+#
+# (no default pip-only packages; conda env is self-contained for M2–M3)

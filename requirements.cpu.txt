@@ -1,0 +1,18 @@
+# Core data processing
+pandas>=3.0,<4
+numpy>=2.4,<3
+
+# NLP embeddings (multilingual sentence-transformers — Tech Spec §2.1.1)
+sentence-transformers>=5.3,<6
+# torch: plain `pip install -r requirements.txt` often resolves PyPI CPU wheels (+cpu).
+# For NVIDIA GPU, reinstall from PyTorch CUDA index (see Tech Spec §2.1.1), e.g.:
+#   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+torch>=2.11,<3
+
+# Dimensionality reduction
+umap-learn>=0.5.12,<0.6
+scikit-learn>=1.8,<2
+
+# Utilities
+joblib>=1.5,<2
+tqdm>=4.67,<5

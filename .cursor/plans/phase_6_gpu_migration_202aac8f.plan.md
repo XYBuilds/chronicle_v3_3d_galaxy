@@ -25,7 +25,7 @@ todos:
     status: completed
   - id: m8-full-retrain
     content: "M8 (§8.3.9): 全量 59K 重训（I1 的实际发动） — `python scripts/run_pipeline.py --through-phase-2 --umap-backend cuml --densmap --n-neighbors 100 --min-dist 0.4`；备份旧产物 `cp data/output/umap_xy.npy data/output/umap_xy.umap-learn.npy`；记录耗时、GPU 显存峰值、`xy_range` 变化；回写到 Windows 侧并在前端肉眼复测（I1 子任务的接力点）。产出 `Phase 6M8 ... 实施报告.md` + I1 复测记录（I1 完整修复属另一 plan）。"
-    status: pending
+    status: completed
   - id: m9-docs
     content: "M9 (§8.3.10 + I6 联动): 文档同步 — (a) Tech Spec §2 数据管线章节追加 'Backend: umap-learn (CPU, Windows) / cuML (GPU, WSL)' 分支；(b) 根 README 的 '运行管线' 小节加 WSL 路径（首次运行 `scripts/env/bootstrap_wsl.sh` → `mamba activate chronicle` → `python scripts/run_pipeline.py ...`）；(c) `docs/project_docs/TMDB 电影宇宙 Tech Spec.md` 更新 `meta.umap_params.densmap` schema；(d) 归档本 §8 的总结到 `docs/reports/Phase 6M9 GPU 迁移 §8 总结报告.md`，为 Phase 6.0 I1–I6 的下一份 plan 提供交接面。"
     status: pending

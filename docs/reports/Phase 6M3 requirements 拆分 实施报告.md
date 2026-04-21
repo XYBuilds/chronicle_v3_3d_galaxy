@@ -10,6 +10,23 @@
 
 ---
 
+## 本次操作概要（做了什么）
+
+本次 M3 在仓库根目录将 **单一 `requirements.txt`** 拆成 **CPU 钉扎文件 + GPU 说明文件**，并保持 **`pip install -r requirements.txt` 与迁移前安装同一套 pip 依赖**，以满足计划要求：Windows `.venv` 仍能跑 Phase 1 + CPU UMAP；WSL 仍以 conda `chronicle` 环境为主（见 M2 的 `rapids_env.yml`）。
+
+| 序号 | 操作 |
+| ---- | ---- |
+| 1 | 新增 **`requirements.cpu.txt`**：承接原 `requirements.txt` 内全部包钉扎与注释（`pandas` / `numpy` / `sentence-transformers` / `torch` / `umap-learn` / `scikit-learn` / `joblib` / `tqdm` 等）。 |
+| 2 | 将 **`requirements.txt`** 改为薄封装：说明默认用途 + **`-r requirements.cpu.txt`**，避免各处文档仍写 `requirements.txt` 时出现两套不一致的钉扎。 |
+| 3 | 新增 **`requirements.gpu.txt`**：说明 GPU 路径以 **`scripts/env/rapids_env.yml`**（及 `install_chronicle_conda_env.sh`）为准；conda 已覆盖主要依赖，故该文件**无默认 pip 包行**，仅在日后需要 pip-only 补丁时按需追加。 |
+| 4 | 更新 **`.cursor/rules/python-pipeline.mdc`**「Dependencies」：指明钉扎落在 `requirements.cpu.txt`，并引用 conda 与 `requirements.gpu.txt`。 |
+| 5 | 在 **`scripts/env/rapids_env.yml`** 头部注释中增加与 **`requirements.gpu.txt`** 的交叉说明（激活环境后慎用额外 pip，避免与 RAPIDS 栈冲突）。 |
+| 6 | 在计划文件中将 **`m3-req-split`** 的 todo 标为 **`completed`**（见下文 §4）。 |
+
+**未改动**：管线 Python 源码（`scripts/feature_engineering/` 等）；M4 才涉及 `umap_projection.py` 的 backend 开关。
+
+---
+
 ## 1. 背景与目标
 
 按计划 §8.3.4：在 **M2 已提供 `scripts/env/rapids_env.yml`** 的前提下，将原先单一的 `requirements.txt` 拆成：

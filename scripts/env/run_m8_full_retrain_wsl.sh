@@ -7,6 +7,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 cd "${REPO_ROOT}"
 export PYTHONUNBUFFERED=1
+# shellcheck source=/dev/null
+source "${REPO_ROOT}/scripts/env/wsl_proxy_clash.sh"
 nvidia-smi --query-gpu=name,memory.total,memory.used --format=csv
 date -Is
 python scripts/run_pipeline.py \

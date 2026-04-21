@@ -4,7 +4,7 @@ overview: 将整条 Python 数据管线（Phase 1 清洗 → 2.1 embedding → 2
 todos:
   - id: m1-wsl-base
     content: "M1 (§8.3.1): WSL Ubuntu 基础环境 bootstrap — apt update/upgrade、git、build-essential、curl、ca-certificates、python3.11+ (或 deadsnakes PPA)、pip、venv；确认 `nvidia-smi` 在 WSL 内可见 GPU。产出幂等脚本 `scripts/env/bootstrap_wsl.sh`。"
-    status: pending
+    status: completed
   - id: m2-rapids-env
     content: "M2 (§8.3.3): 安装 Miniforge (mamba) → 创建 conda env `chronicle`，`mamba create -n chronicle -c rapidsai -c conda-forge -c nvidia cuml=25.* python=3.11 cuda-version=12.5 pytorch pytorch-cuda=12.* sentence-transformers joblib tqdm pandas numpy scikit-learn`；冒烟 `python -c 'import cuml; from cuml.manifold import UMAP'`。写 `scripts/env/rapids_env.yml`。若失败 fallback pip wheels 分支。（§8.3.2 CUDA toolkit 因 conda cuda-version 元包包含 runtime，退化为可选，按需补 `cuda-toolkit-wsl-ubuntu`。）"
     status: pending

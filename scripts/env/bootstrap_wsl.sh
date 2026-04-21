@@ -155,6 +155,7 @@ main() {
   log ""
   log "M1 bootstrap finished."
   log "Next (Phase 6 M2): bash scripts/env/install_chronicle_conda_env.sh  # uses scripts/env/rapids_env.yml"
+  log "M6 (WSL ext4 clone ↔ /mnt/...): sync_raw_from_windows.sh / sync_artifacts_to_windows.sh under scripts/env/"
 }
 
 main "$@"

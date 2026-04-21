@@ -1,0 +1,35 @@
+# Chronicle Phase 6 M2 — conda environment: RAPIDS cuML + PyTorch (CUDA 12.x)
+# Channels and pins follow plan §8.3.3 (phase_6_gpu_migration_202aac8f.plan.md).
+#
+# Prerequisites: WSL2 Ubuntu + NVIDIA driver with WSL GPU; M1 bootstrap optional
+# (system Python is not used once this env is active).
+#
+# Create (from repo root on WSL/Linux):
+#   bash scripts/env/install_chronicle_conda_env.sh
+#   # or manually:
+#   mamba env create -f scripts/env/rapids_env.yml
+#
+# Smoke:
+#   mamba activate chronicle
+#   python -c "import cuml; from cuml.manifold import UMAP; print('OK')"
+#
+# If mamba fails to solve (CUDA / channel conflicts), see the pip wheel fallback
+# printed by install_chronicle_conda_env.sh or RAPIDS “Release Selector” docs.
+#
+name: chronicle
+channels:
+  - rapidsai
+  - conda-forge
+  - nvidia
+dependencies:
+  - python=3.11
+  - cuda-version=12.5
+  - cuml=25.*
+  - pytorch
+  - pytorch-cuda=12.*
+  - sentence-transformers
+  - joblib
+  - tqdm
+  - pandas
+  - numpy
+  - scikit-learn

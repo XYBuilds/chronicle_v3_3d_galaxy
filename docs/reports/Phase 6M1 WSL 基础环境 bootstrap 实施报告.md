@@ -1,4 +1,4 @@
-# Phase 6.0.8.1 M1 WSL 基础环境 bootstrap 实施报告
+# Phase 6M1 WSL 基础环境 bootstrap 实施报告
 
 > **关联计划**: `.cursor/plans/phase_6_gpu_migration_202aac8f.plan.md` — 里程碑 **M1（§8.3.1）**  
 > **上游依据**: `docs/reports/Phase 6.0 项目回顾与下一阶段规划报告.md` §8「管线全链路 GPU 化」  
@@ -98,7 +98,7 @@ sudo bash scripts/env/bootstrap_wsl.sh --skip-apt-upgrade
 | `scripts/env/bootstrap_wsl.sh` | 新增 | M1 幂等 bootstrap 脚本（可执行位 **755**） |
 | `.gitignore` | 修改 | `env/` → **`/env/`**，避免忽略 **`scripts/env/`** |
 | `.cursor/plans/phase_6_gpu_migration_202aac8f.plan.md` | 修改 | **`m1-wsl-base`** 状态 **`completed`** |
-| `docs/reports/Phase 6.0.8.1 M1 WSL 基础环境 bootstrap 实施报告.md` | 新增 | 本报告 |
+| `docs/reports/Phase 6M1 WSL 基础环境 bootstrap 实施报告.md` | 新增 | 本报告 |
 
 ---
 

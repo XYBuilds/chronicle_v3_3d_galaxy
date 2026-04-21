@@ -21,13 +21,13 @@ todos:
     content: "M6 (§8.3.7): 代码/数据 WSL 布局 — `git clone` 到 `~/chronicle_v3_3d_galaxy`（而非 `/mnt/e/` 直挂，避免 ext4/ntfs IO 差）；`data/raw/TMDB_all_movies.csv` 从 Windows 侧 rsync 到 WSL 目录（或建软链 `data/raw -> /mnt/e/...`，由 agent 评估后选一）；产物回写策略：`scripts/env/sync_artifacts_to_windows.sh` 把 `data/output/*.npy`、`frontend/public/data/galaxy_data.json(.gz)` rsync 回 `/mnt/e/projects/chronicle_v3_3d_galaxy/...`；CRLF / 权限 / `.gitignore` 冲突在此统一处理。"
     status: pending
   - id: m7-smoke
-    content: "M7 (§8.3.8): 子样本端到端冒烟 — 在 WSL `chronicle` env 里 `python scripts/run_pipeline.py --input data/subsample/tmdb2025_random20.csv`（Phase 2.6 auto path），验证 cuml UMAP 分支走通，产物 `galaxy_data.json` 经 `validate_galaxy_json.py` 通过；回写到 Windows `/mnt/e/.../frontend/public/data/`，`npm run dev` 加载无错。记录 GPU 显存/耗时基线。产出 `Phase 6.0.8.7 ... 实施报告.md`。"
+    content: "M7 (§8.3.8): 子样本端到端冒烟 — 在 WSL `chronicle` env 里 `python scripts/run_pipeline.py --input data/subsample/tmdb2025_random20.csv`（Phase 2.6 auto path），验证 cuml UMAP 分支走通，产物 `galaxy_data.json` 经 `validate_galaxy_json.py` 通过；回写到 Windows `/mnt/e/.../frontend/public/data/`，`npm run dev` 加载无错。记录 GPU 显存/耗时基线。产出 `Phase 6M7 ... 实施报告.md`。"
     status: pending
   - id: m8-full-retrain
-    content: "M8 (§8.3.9): 全量 59K 重训（I1 的实际发动） — `python scripts/run_pipeline.py --through-phase-2 --umap-backend cuml --densmap --n-neighbors 100 --min-dist 0.4`；备份旧产物 `cp data/output/umap_xy.npy data/output/umap_xy.umap-learn.npy`；记录耗时、GPU 显存峰值、`xy_range` 变化；回写到 Windows 侧并在前端肉眼复测（I1 子任务的接力点）。产出 `Phase 6.0.8.8 ... 实施报告.md` + I1 复测记录（I1 完整修复属另一 plan）。"
+    content: "M8 (§8.3.9): 全量 59K 重训（I1 的实际发动） — `python scripts/run_pipeline.py --through-phase-2 --umap-backend cuml --densmap --n-neighbors 100 --min-dist 0.4`；备份旧产物 `cp data/output/umap_xy.npy data/output/umap_xy.umap-learn.npy`；记录耗时、GPU 显存峰值、`xy_range` 变化；回写到 Windows 侧并在前端肉眼复测（I1 子任务的接力点）。产出 `Phase 6M8 ... 实施报告.md` + I1 复测记录（I1 完整修复属另一 plan）。"
     status: pending
   - id: m9-docs
-    content: "M9 (§8.3.10 + I6 联动): 文档同步 — (a) Tech Spec §2 数据管线章节追加 'Backend: umap-learn (CPU, Windows) / cuML (GPU, WSL)' 分支；(b) 根 README 的 '运行管线' 小节加 WSL 路径（首次运行 `scripts/env/bootstrap_wsl.sh` → `mamba activate chronicle` → `python scripts/run_pipeline.py ...`）；(c) `docs/project_docs/TMDB 电影宇宙 Tech Spec.md` 更新 `meta.umap_params.densmap` schema；(d) 归档本 §8 的总结到 `docs/reports/Phase 6.0.8 ... 总结报告.md`，为 Phase 6.0 I1–I6 的下一份 plan 提供交接面。"
+    content: "M9 (§8.3.10 + I6 联动): 文档同步 — (a) Tech Spec §2 数据管线章节追加 'Backend: umap-learn (CPU, Windows) / cuML (GPU, WSL)' 分支；(b) 根 README 的 '运行管线' 小节加 WSL 路径（首次运行 `scripts/env/bootstrap_wsl.sh` → `mamba activate chronicle` → `python scripts/run_pipeline.py ...`）；(c) `docs/project_docs/TMDB 电影宇宙 Tech Spec.md` 更新 `meta.umap_params.densmap` schema；(d) 归档本 §8 的总结到 `docs/reports/Phase 6M9 GPU 迁移 §8 总结报告.md`，为 Phase 6.0 I1–I6 的下一份 plan 提供交接面。"
     status: pending
 isProject: false
 ---
@@ -71,7 +71,7 @@ flowchart TD
 ## 工程原则（延续报告 §8.4）
 
 - **agent 自治优先**；每次 sudo / 交互式输入前先请示用户
-- **每个 M* 完成后单独产出一篇 `docs/reports/Phase 6.0.8.X ... 实施报告.md`**
+- **每个 M* 完成后单独产出一篇 `docs/reports/Phase 6Mn ... 实施报告.md`**（n 为里程碑序号，如 Phase 6M1、Phase 6M2）
 - **不破坏现有 Windows 管线**：M3 完成前 Windows `.venv` 必须仍能运行 Phase 1 + CPU UMAP
 - **数值结果差异**：cuML DensMAP 与 `umap-learn` 会有差异，旧 `umap_xy.npy` 备份为 `umap_xy.umap-learn.npy`，随报告留存
 

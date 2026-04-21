@@ -185,7 +185,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(
         description="Fuse text/genre/lang features and run UMAP (Phase 2.4). Saves model .pkl for transform()."
     )
-    p.add_argument("--text-input", type=Path, default=_DEFAULT_TEXT, help="text_embeddings.npy (n, 384)")
+    p.add_argument("--text-input", type=Path, default=_DEFAULT_TEXT, help="text_embeddings.npy (n, d_text)")
     p.add_argument("--genre-input", type=Path, default=_DEFAULT_GENRE, help="genre_vectors.npy (n, N_genre)")
     p.add_argument("--lang-input", type=Path, default=_DEFAULT_LANG, help="language_vectors.npy (n, N_lang)")
     p.add_argument("--output-xy", type=Path, default=_DEFAULT_XY, help="Output float32 (n, 2) UMAP coordinates")

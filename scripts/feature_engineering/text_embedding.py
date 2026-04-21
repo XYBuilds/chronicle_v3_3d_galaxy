@@ -11,8 +11,7 @@ import pandas as pd
 import torch
 from sentence_transformers import SentenceTransformer
 
-MODEL_ID = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
-EMBED_DIM = 384
+DEFAULT_MODEL_ID = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 DEFAULT_MAX_CHARS = 3000
 DEFAULT_BATCH_SIZE = 64
 
@@ -61,7 +60,9 @@ def resolve_device(name: str) -> str:
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="Compute L2-normalized 384d text embeddings (Phase A MiniLM).")
+    p = argparse.ArgumentParser(
+        description="Compute L2-normalized text embeddings (default: MiniLM 384d; use --model-id for mpnet 768d).",
+    )
     p.add_argument(
         "--input",
         type=Path,
@@ -72,7 +73,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--output",
         type=Path,
         default=_REPO_ROOT / "data" / "output" / "text_embeddings.npy",
-        help="Output path for float32 array of shape (n_rows, 384)",
+        help="Output path for float32 array of shape (n_rows, d_model)",
+    )
+    p.add_argument(
+        "--model-id",
+        type=str,
+        default=DEFAULT_MODEL_ID,
+        help=(
+            "sentence-transformers model id (default: MiniLM 384d). "
+            "Full-quality per Tech Spec: sentence-transformers/paraphrase-multilingual-mpnet-base-v2 (768d)."
+        ),
     )
     p.add_argument("--max-chars", type=int, default=DEFAULT_MAX_CHARS, help="Max characters after concat (head kept)")
     p.add_argument("--batch-size", type=int, default=DEFAULT_BATCH_SIZE, help="Encode batch size (lower on OOM)")
@@ -96,6 +106,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     device = resolve_device(args.device)
+    model_id = str(args.model_id).strip()
     df = pd.read_csv(inp)
     n = len(df)
     if "overview" not in df.columns:
@@ -105,12 +116,13 @@ def main(argv: list[str] | None = None) -> int:
     tagline_col = df["tagline"] if "tagline" in df.columns else pd.Series([""] * n, index=df.index)
     texts = [build_embedding_text(tg, ov, max_chars=args.max_chars) for tg, ov in zip(tagline_col, df["overview"])]
 
+    model = SentenceTransformer(model_id, device=device)
+    embed_dim = int(model.get_sentence_embedding_dimension())
     print(
-        f"[Embedding] Device: {device} / Model: paraphrase-multilingual-MiniLM-L12-v2 / "
-        f"Input rows: {n} / Output shape: ({n}, {EMBED_DIM})"
+        f"[Embedding] Device: {device} / Model: {model_id} / "
+        f"Input rows: {n} / Output shape: ({n}, {embed_dim})"
     )
 
-    model = SentenceTransformer(MODEL_ID, device=device)
     raw = model.encode(
         texts,
         batch_size=args.batch_size,
@@ -119,8 +131,8 @@ def main(argv: list[str] | None = None) -> int:
         show_progress_bar=True,
     )
     embeddings = np.asarray(raw, dtype=np.float32)
-    if embeddings.shape != (n, EMBED_DIM):
-        raise AssertionError(f"Expected shape ({n}, {EMBED_DIM}), got {embeddings.shape}")
+    if embeddings.shape != (n, embed_dim):
+        raise AssertionError(f"Expected shape ({n}, {embed_dim}), got {embeddings.shape}")
 
     embeddings = l2_normalize_rows(embeddings)
     if np.isnan(embeddings).any():

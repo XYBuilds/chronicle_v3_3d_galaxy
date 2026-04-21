@@ -13,7 +13,7 @@ todos:
     status: completed
   - id: m4-umap-backend
     content: "M4 (§8.3.5): 重构 `scripts/feature_engineering/umap_projection.py` — 新增 `--backend {umap,cuml}`（默认按 `CUDA_VISIBLE_DEVICES` 自动选）、`--densmap`、`--n-neighbors`；cuml 分支用 `cuml.manifold.UMAP(output_type='numpy', densmap=args.densmap, n_neighbors=nn, ...)`；输出保持 `(n, 2) float32`；`umap_model.pkl` 对 cuml 走 `joblib.dump(reducer)` 或跳过（cuml estimator 可 pickle，但 transform 路径差异在报告里注明）。单元级 CLI smoke：`python umap_projection.py --backend cuml --densmap --n-neighbors 50` 在子样本上跑通。"
-    status: pending
+    status: completed
   - id: m5-pipeline-export
     content: "M5 (§8.3.6 + meta 同步): (a) `scripts/run_pipeline.py:41-55` `run_phase2_through_export()` 增加 `backend/densmap/n_neighbors` 透传；CLI 加 `--umap-backend`、`--densmap`、`--n-neighbors`、`--cpu`（强制 umap-learn 回退）；(b) `scripts/export/export_galaxy_json.py:179-187, :350-355` CLI 加 `--densmap`，`meta.umap_params` 写入 `densmap: bool`；(c) 同步前端 `galaxy_data.json` schema 类型（如有 `frontend/src/data/types.ts`）；(d) `scripts/validate_galaxy_json.py` 兼容新字段。"
     status: pending

@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from pathlib import Path
+from typing import Any, Literal
 
 import joblib
 import numpy as np
@@ -16,6 +18,8 @@ _DEFAULT_GENRE = _REPO_ROOT / "data" / "output" / "genre_vectors.npy"
 _DEFAULT_LANG = _REPO_ROOT / "data" / "output" / "language_vectors.npy"
 _DEFAULT_XY = _REPO_ROOT / "data" / "output" / "umap_xy.npy"
 _DEFAULT_MODEL = _REPO_ROOT / "data" / "output" / "umap_model.pkl"
+
+BackendName = Literal["umap", "cuml"]
 
 
 def _scale_block(mat: np.ndarray, *, w: float) -> np.ndarray:
@@ -59,6 +63,123 @@ def _umap_n_neighbors(n_samples: int, requested: int) -> int:
     return max(2, min(int(requested), hi))
 
 
+def _cuda_visible_devices_allows_gpu() -> bool:
+    """Empty CUDA_VISIBLE_DEVICES means no GPU is visible to CUDA RT APIs."""
+    if os.environ.get("CUDA_VISIBLE_DEVICES") == "":
+        return False
+    return True
+
+
+def _gpu_device_count() -> int:
+    try:
+        import cupy as cp
+
+        return int(cp.cuda.runtime.getDeviceCount())
+    except Exception:
+        return 0
+
+
+def infer_auto_backend() -> BackendName:
+    """Prefer cuML on a visible CUDA device when cuML is importable; else umap-learn (CPU)."""
+    if not _cuda_visible_devices_allows_gpu():
+        return "umap"
+    if _gpu_device_count() < 1:
+        return "umap"
+    try:
+        import cuml  # noqa: F401
+    except ImportError:
+        return "umap"
+    return "cuml"
+
+
+def _resolve_backend(requested: str) -> BackendName:
+    if requested == "auto":
+        return infer_auto_backend()
+    if requested in ("umap", "cuml"):
+        return requested  # type: ignore[return-value]
+    raise ValueError(f"Unknown backend: {requested!r}")
+
+
+def _ensure_cuml_runtime(*, backend: BackendName) -> None:
+    if backend != "cuml":
+        return
+    try:
+        import cuml  # noqa: F401
+    except ImportError as e:
+        print(
+            "Error: backend cuml requires RAPIDS cuML (e.g. conda env from scripts/env/rapids_env.yml).",
+            file=sys.stderr,
+        )
+        raise SystemExit(1) from e
+    if not _cuda_visible_devices_allows_gpu() or _gpu_device_count() < 1:
+        print(
+            "Error: backend cuml requires a visible CUDA GPU "
+            "(check nvidia-smi, WSL GPU, and CUDA_VISIBLE_DEVICES).",
+            file=sys.stderr,
+        )
+        raise SystemExit(1)
+
+
+def _fit_umap_learn(
+    combined: np.ndarray,
+    *,
+    n_neighbors: int,
+    min_dist: float,
+    metric: str,
+    random_state: int,
+    densmap: bool,
+    umap_verbose: bool,
+) -> tuple[np.ndarray, Any]:
+    reducer = umap.UMAP(
+        n_components=2,
+        n_neighbors=n_neighbors,
+        min_dist=float(min_dist),
+        metric=str(metric),
+        random_state=int(random_state),
+        densmap=bool(densmap),
+        n_jobs=1,
+        verbose=bool(umap_verbose),
+    )
+    xy = reducer.fit_transform(combined)
+    xy = np.asarray(xy, dtype=np.float32)
+    return xy, reducer
+
+
+def _fit_cuml(
+    combined: np.ndarray,
+    *,
+    n_neighbors: int,
+    min_dist: float,
+    metric: str,
+    random_state: int,
+    densmap: bool,
+    umap_verbose: bool,
+) -> tuple[np.ndarray, Any]:
+    from cuml.manifold import UMAP as CumlUMAP
+
+    X = np.asarray(combined, dtype=np.float32, order="C")
+    # cuML mirrors umap-learn hyperparameters; output_type='numpy' keeps downstream float32 (n, 2).
+    kw: dict[str, Any] = {
+        "n_components": 2,
+        "n_neighbors": n_neighbors,
+        "min_dist": float(min_dist),
+        "metric": str(metric),
+        "random_state": int(random_state),
+        "densmap": bool(densmap),
+        "output_type": "numpy",
+    }
+    if umap_verbose:
+        kw["verbose"] = True
+    try:
+        reducer = CumlUMAP(**kw)
+    except TypeError:
+        kw.pop("verbose", None)
+        reducer = CumlUMAP(**kw)
+    xy = reducer.fit_transform(X)
+    xy = np.asarray(xy, dtype=np.float32)
+    return xy, reducer
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(
         description="Fuse text/genre/lang features and run UMAP (Phase 2.4). Saves model .pkl for transform()."
@@ -72,6 +193,19 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--w-genre", type=float, default=1.0, help="Modal weight for genre block (default 1.0)")
     p.add_argument("--w-lang", type=float, default=1.0, help="Modal weight for language block (default 1.0)")
     p.add_argument("--random-state", type=int, default=42, help="UMAP random_state (fixed 42 per spec)")
+    p.add_argument(
+        "--backend",
+        type=str,
+        default="auto",
+        choices=("auto", "umap", "cuml"),
+        help="UMAP implementation: umap-learn (CPU), cuml (GPU), or auto "
+        "(cuML when CUDA_VISIBLE_DEVICES allows a GPU and cuML is installed)",
+    )
+    p.add_argument(
+        "--densmap",
+        action="store_true",
+        help="Enable DensMAP (supported by umap-learn and cuml; denser manifold preservation)",
+    )
     p.add_argument(
         "--n-neighbors",
         type=int,
@@ -130,18 +264,34 @@ def main(argv: list[str] | None = None) -> int:
     )
     print(f"Combined shape: {combined.shape}")
 
+    backend = _resolve_backend(str(args.backend))
+    _ensure_cuml_runtime(backend=backend)
+    if str(args.backend) == "auto":
+        print(f"[UMAP] backend auto -> {backend} (CUDA_VISIBLE_DEVICES={os.environ.get('CUDA_VISIBLE_DEVICES', '<unset>')!r})")
+    else:
+        print(f"[UMAP] backend {backend}")
+
     nn = _umap_n_neighbors(n, args.n_neighbors)
-    reducer = umap.UMAP(
-        n_components=2,
-        n_neighbors=nn,
-        min_dist=float(args.min_dist),
-        metric=str(args.metric),
-        random_state=int(args.random_state),
-        n_jobs=1,
-        verbose=bool(args.umap_verbose),
-    )
-    xy = reducer.fit_transform(combined)
-    xy = np.asarray(xy, dtype=np.float32)
+    if backend == "umap":
+        xy, reducer = _fit_umap_learn(
+            combined,
+            n_neighbors=nn,
+            min_dist=float(args.min_dist),
+            metric=str(args.metric),
+            random_state=int(args.random_state),
+            densmap=bool(args.densmap),
+            umap_verbose=bool(args.umap_verbose),
+        )
+    else:
+        xy, reducer = _fit_cuml(
+            combined,
+            n_neighbors=nn,
+            min_dist=float(args.min_dist),
+            metric=str(args.metric),
+            random_state=int(args.random_state),
+            densmap=bool(args.densmap),
+            umap_verbose=bool(args.umap_verbose),
+        )
 
     if not np.isfinite(xy).all():
         raise AssertionError("UMAP output contains non-finite values")

@@ -11,7 +11,7 @@ void main() {
 
   // Radial glow: bright core + soft halo; emissive scales HDR-ish output for Bloom.
   float core = exp(-r * r * 7.0);
-  float halo = exp(-r * r * 2.2) * 0.62;
+  float halo = exp(-r * r * 2.2) * 0.30;
   float glow = core + halo;
 
   float e = clamp(vEmissive, 0.08, 2.5);

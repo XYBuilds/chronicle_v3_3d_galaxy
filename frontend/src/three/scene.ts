@@ -116,6 +116,8 @@ export function mountGalaxyScene(
   const uZw = galaxy.material.uniforms.uZVisWindow as THREE.Uniform<number>
   uZ.value = zCurrent
   uZw.value = zVisWindow
+  // I4 P6.2.1: core depth first (no alphaTest), then semi-transparent color pass; shared BufferGeometry
+  scene.add(galaxy.depthPoints)
   scene.add(galaxy.points)
 
   const planet = createSelectionPlanet()
@@ -372,6 +374,7 @@ export function mountGalaxyScene(
     detachInteraction()
     planet.mesh.removeFromParent()
     planet.dispose()
+    galaxy.depthPoints.removeFromParent()
     galaxy.points.removeFromParent()
     galaxy.dispose()
     if (window.__bloom === bloomDebug) {

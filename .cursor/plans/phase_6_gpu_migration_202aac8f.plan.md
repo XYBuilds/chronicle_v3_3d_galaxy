@@ -28,7 +28,7 @@ todos:
     status: completed
   - id: m9-docs
     content: "M9 (§8.3.10 + I6 联动): 文档同步 — (a) Tech Spec §2 数据管线章节追加 'Backend: umap-learn (CPU, Windows) / cuML (GPU, WSL)' 分支；(b) 根 README 的 '运行管线' 小节加 WSL 路径（首次运行 `scripts/env/bootstrap_wsl.sh` → `mamba activate chronicle` → `python scripts/run_pipeline.py ...`）；(c) `docs/project_docs/TMDB 电影宇宙 Tech Spec.md` 更新 `meta.umap_params.densmap` schema；(d) 归档本 §8 的总结到 `docs/reports/Phase 6M9 GPU 迁移 §8 总结报告.md`，为 Phase 6.0 I1–I6 的下一份 plan 提供交接面。"
-    status: pending
+    status: completed
 isProject: false
 ---
 

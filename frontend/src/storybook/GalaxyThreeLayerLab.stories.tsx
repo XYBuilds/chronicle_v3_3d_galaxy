@@ -28,15 +28,20 @@ const meta = {
     docs: {
       description: {
         component:
-          'Mounts the production `mountGalaxyScene` with a single subsample point. Use Controls to tune Z slab (A/B split), point sizing, Bloom, and Perlin planet uniforms. Selection uses the real fly-to animation.',
+          'Mounts the production `mountGalaxyScene` with a single subsample point. Use Controls for Z slab size split, OKLCH macro color, optional Bloom (revive), and Perlin planet uniforms. Selection uses the real fly-to + visibility hard-cuts (P6.2.2).',
       },
     },
   },
   argTypes: {
     zCurrent: { control: { type: 'range', min: Z_CONTROL_LO, max: Z_CONTROL_HI, step: 0.02 } },
     zVisWindow: { control: { type: 'range', min: 0.05, max: 8, step: 0.05 } },
-    uBgPointSizePx: { control: { type: 'range', min: 0.5, max: 8, step: 0.05 } },
+    uFocusSizeMul: { control: { type: 'range', min: 0.2, max: 2, step: 0.02 } },
+    uBgSizeMul: { control: { type: 'range', min: 0.1, max: 1.5, step: 0.02 } },
+    uLMin: { control: { type: 'range', min: 0.05, max: 0.6, step: 0.01 } },
+    uLMax: { control: { type: 'range', min: 0.4, max: 0.99, step: 0.01 } },
+    uChroma: { control: { type: 'range', min: 0.02, max: 0.35, step: 0.01 } },
     uSizeScale: { control: { type: 'range', min: 0.05, max: 1.2, step: 0.01 } },
+    postProcessBloom: { control: 'boolean' },
     bloomStrength: { control: { type: 'range', min: 0, max: 2.5, step: 0.02 } },
     bloomRadius: { control: { type: 'range', min: 0, max: 1.5, step: 0.01 } },
     bloomThreshold: { control: { type: 'range', min: 0, max: 1, step: 0.01 } },
@@ -51,8 +56,13 @@ const meta = {
     movies: SUBSAMPLE_LAB_MOVIES,
     zCurrent: zCurrentDefault,
     zVisWindow: 1,
-    uBgPointSizePx: 2.25,
+    uFocusSizeMul: 1.0,
+    uBgSizeMul: 0.4,
+    uLMin: 0.4,
+    uLMax: 0.85,
+    uChroma: 0.15,
     uSizeScale: 0.3,
+    postProcessBloom: false,
     bloomStrength: 0.95,
     bloomRadius: 0.52,
     bloomThreshold: 0.82,
@@ -68,7 +78,11 @@ export default meta
 
 type Story = StoryObj<typeof GalaxyThreeLayerLab>
 
-export const PointsAndBloom: Story = {}
+export const PointsAndBloom: Story = {
+  args: {
+    postProcessBloom: true,
+  },
+}
 
 /** Pre-select a movie so the Perlin planet is visible after the fly-to (~0.7s). */
 export const WithSelectedPlanet: Story = {

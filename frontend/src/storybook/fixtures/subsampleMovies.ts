@@ -1,7 +1,7 @@
 /**
  * HUD / Storybook fixtures built from `data/subsample/tmdb2025_random20.csv`
- * (TMDB id 657018, 77223, 8223, 489533). Galaxy fields (x, y, z, size, emissive,
- * genre_color) are synthetic placeholders for UI previews only.
+ * (TMDB id 657018, 77223, 8223, 489533). Galaxy fields (x, y, z, size, emissive for JSON,
+ * genre_color) are synthetic placeholders; the live scene fills GPU `voteNorm` from `vote_average`.
  */
 import type { Meta, Movie } from '@/types/galaxy'
 

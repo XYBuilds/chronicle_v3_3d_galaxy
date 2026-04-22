@@ -17,11 +17,26 @@ interface BloomDebugControls {
   radius: number
   threshold: number
   log: () => void
+  /** True when `UnrealBloomPass` is attached and the render loop uses `composer.render()`. */
+  readonly enabled: boolean
+  enable: () => void
+  disable: () => void
 }
 
 interface GalaxyPointScaleDebug {
   /** Multiplier on screen point diameter (JSON `size` × perspective × this). */
   scale: number
+  /** In-focus slab size multiplier (see `uFocusSizeMul`). */
+  focusSizeMul: number
+  /** Background slab size multiplier (see `uBgSizeMul`). */
+  bgSizeMul: number
+  log: () => void
+}
+
+interface GalaxyColorDebug {
+  lMin: number
+  lMax: number
+  chroma: number
   log: () => void
 }
 
@@ -29,6 +44,7 @@ declare global {
   interface Window {
     __bloom?: BloomDebugControls
     __galaxyPointScale?: GalaxyPointScaleDebug
+    __galaxyColor?: GalaxyColorDebug
   }
 }
 
@@ -106,6 +122,7 @@ export function mountGalaxyScene(
     powerPreference: 'high-performance',
   })
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+  renderer.outputColorSpace = THREE.SRGBColorSpace
 
   const gl = renderer.getContext()
   const webglLabel = gl instanceof WebGL2RenderingContext ? 'WebGL2' : 'WebGL1'
@@ -116,8 +133,6 @@ export function mountGalaxyScene(
   const uZw = galaxy.material.uniforms.uZVisWindow as THREE.Uniform<number>
   uZ.value = zCurrent
   uZw.value = zVisWindow
-  // I4 P6.2.1: core depth first (no alphaTest), then semi-transparent color pass; shared BufferGeometry
-  scene.add(galaxy.depthPoints)
   scene.add(galaxy.points)
 
   const planet = createSelectionPlanet()
@@ -132,15 +147,13 @@ export function mountGalaxyScene(
   const toCam = new THREE.Vector3()
   let inputLocked = false
 
-  const uPointsOpacity = galaxy.material.uniforms.uPointsOpacity as THREE.Uniform<number>
-  console.assert(uPointsOpacity.value === 1, '[Scene] initial uPointsOpacity must be 1')
-
   const applySelectionFrame = (nowMs: number) => {
     planet.material.uniforms.uTime.value = nowMs * 0.001
 
     if (selectionPhase === 'idle') {
-      uPointsOpacity.value = 1
-      planet.setOpacity(0)
+      galaxy.points.visible = true
+      planet.mesh.visible = false
+      planet.material.uniforms.uAlpha.value = 0
       inputLocked = false
       return
     }
@@ -148,15 +161,13 @@ export function mountGalaxyScene(
     if (selectionPhase === 'selecting') {
       inputLocked = true
       const t = Math.min(1, (nowMs - animStartMs) / SELECT_MS)
-      const e = easeOutCubic(t)
-      camera.position.lerpVectors(fromCam, toCam, e)
+      camera.position.lerpVectors(fromCam, toCam, easeOutCubic(t))
       camera.rotation.copy(GALAXY_CAMERA_EULER)
-      uPointsOpacity.value = 1 - easeOutCubic(Math.min(1, t / 0.58))
-      planet.setOpacity(easeOutCubic(THREE.MathUtils.clamp((t - 0.12) / 0.88, 0, 1)))
       if (t >= 1) {
         selectionPhase = 'selected'
-        uPointsOpacity.value = 0
-        planet.setOpacity(1)
+        galaxy.points.visible = false
+        planet.mesh.visible = true
+        planet.material.uniforms.uAlpha.value = 1
         camera.position.copy(toCam)
         console.log('[Selection] phase=selected | points hidden | planet visible')
       }
@@ -166,27 +177,29 @@ export function mountGalaxyScene(
     if (selectionPhase === 'deselecting') {
       inputLocked = true
       const t = Math.min(1, (nowMs - animStartMs) / DESELECT_MS)
-      const e = easeOutCubic(t)
-      camera.position.lerpVectors(fromCam, toCam, e)
+      camera.position.lerpVectors(fromCam, toCam, easeOutCubic(t))
       camera.rotation.copy(GALAXY_CAMERA_EULER)
-      planet.setOpacity(1 - e)
-      uPointsOpacity.value = easeOutCubic(THREE.MathUtils.clamp((t - 0.28) / 0.72, 0, 1))
       if (t >= 1) {
         selectionPhase = 'idle'
-        uPointsOpacity.value = 1
-        planet.setOpacity(0)
+        galaxy.points.visible = true
+        planet.mesh.visible = false
+        planet.material.uniforms.uAlpha.value = 0
         console.log('[Selection] phase=idle | camera restored | points visible')
       }
       return
     }
 
-    // selected — user may truck/pedestal; only keep points dimmed + planet lit
+    // selected — user may truck/pedestal; macro points stay hidden
     inputLocked = false
-    uPointsOpacity.value = 0
-    planet.setOpacity(1)
+    galaxy.points.visible = false
+    planet.mesh.visible = true
+    planet.material.uniforms.uAlpha.value = 1
   }
 
   const beginSelect = (movie: Movie) => {
+    galaxy.points.visible = true
+    planet.mesh.visible = true
+    planet.material.uniforms.uAlpha.value = 1
     const span = worldSpan(meta)
     const r = THREE.MathUtils.clamp(span * 0.014, 0.07, span * 0.05)
     const standoff = Math.max(r * 4.2, span * 0.018)
@@ -201,6 +214,7 @@ export function mountGalaxyScene(
   }
 
   const beginDeselect = () => {
+    galaxy.points.visible = true
     fromCam.copy(camera.position)
     toCam.copy(restCam)
     animStartMs = performance.now()
@@ -243,10 +257,10 @@ export function mountGalaxyScene(
   const composer = new EffectComposer(renderer)
   composer.setPixelRatio(renderer.getPixelRatio())
   const renderPass = new RenderPass(scene, camera)
-  // Phase 5.1.6 — Bloom re-enabled after macro A/B split (Design Spec / frontend-threejs: strength ~0.8–1.2).
   const bloomPass = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.95, 0.52, 0.82)
   composer.addPass(renderPass)
-  composer.addPass(bloomPass)
+  /** P6.2.2: Bloom off by default — `window.__bloom.enable()` attaches `bloomPass` and switches to `composer.render()`. */
+  let postFxBloomEnabled = false
 
   const bloomDebug: BloomDebugControls = {
     get strength() {
@@ -269,16 +283,37 @@ export function mountGalaxyScene(
     },
     log() {
       console.log(
-        `[PostFX] Bloom enabled | threshold=${bloomPass.threshold.toFixed(2)} strength=${bloomPass.strength.toFixed(
+        `[PostFX] Bloom ${postFxBloomEnabled ? 'enabled' : 'available (off)'} | threshold=${bloomPass.threshold.toFixed(
           2,
-        )} radius=${bloomPass.radius.toFixed(2)}`,
+        )} strength=${bloomPass.strength.toFixed(2)} radius=${bloomPass.radius.toFixed(2)}`,
       )
+    },
+    get enabled() {
+      return postFxBloomEnabled
+    },
+    enable() {
+      if (postFxBloomEnabled) return
+      composer.addPass(bloomPass)
+      postFxBloomEnabled = true
+      bloomDebug.log()
+    },
+    disable() {
+      if (!postFxBloomEnabled) return
+      composer.removePass(bloomPass)
+      postFxBloomEnabled = false
+      console.log('[PostFX] Bloom disabled — using direct renderer.render (SRGB output)')
     },
   }
   window.__bloom = bloomDebug
   bloomDebug.log()
 
   const uSizeScale = galaxy.material.uniforms.uSizeScale as THREE.Uniform<number>
+  const uFocusSizeMul = galaxy.material.uniforms.uFocusSizeMul as THREE.Uniform<number>
+  const uBgSizeMul = galaxy.material.uniforms.uBgSizeMul as THREE.Uniform<number>
+  const uLMin = galaxy.material.uniforms.uLMin as THREE.Uniform<number>
+  const uLMax = galaxy.material.uniforms.uLMax as THREE.Uniform<number>
+  const uChroma = galaxy.material.uniforms.uChroma as THREE.Uniform<number>
+
   const pointScaleDebug: GalaxyPointScaleDebug = {
     get scale() {
       return uSizeScale.value
@@ -286,12 +321,52 @@ export function mountGalaxyScene(
     set scale(value: number) {
       uSizeScale.value = value
     },
+    get focusSizeMul() {
+      return uFocusSizeMul.value
+    },
+    set focusSizeMul(value: number) {
+      uFocusSizeMul.value = value
+    },
+    get bgSizeMul() {
+      return uBgSizeMul.value
+    },
+    set bgSizeMul(value: number) {
+      uBgSizeMul.value = value
+    },
     log() {
-      console.log(`[Galaxy] point size scale=${uSizeScale.value} (uniform uSizeScale)`)
+      console.log(
+        `[Galaxy] uSizeScale=${uSizeScale.value} uFocusSizeMul=${uFocusSizeMul.value} uBgSizeMul=${uBgSizeMul.value}`,
+      )
     },
   }
   window.__galaxyPointScale = pointScaleDebug
   pointScaleDebug.log()
+
+  const galaxyColorDebug: GalaxyColorDebug = {
+    get lMin() {
+      return uLMin.value
+    },
+    set lMin(value: number) {
+      uLMin.value = value
+    },
+    get lMax() {
+      return uLMax.value
+    },
+    set lMax(value: number) {
+      uLMax.value = value
+    },
+    get chroma() {
+      return uChroma.value
+    },
+    set chroma(value: number) {
+      uChroma.value = value
+    },
+    log() {
+      console.log(`[Galaxy] OKLCH uLMin=${uLMin.value} uLMax=${uLMax.value} uChroma=${uChroma.value}`)
+    },
+  }
+  window.__galaxyColor = galaxyColorDebug
+  galaxyColorDebug.log()
 
   const resize = () => {
     const w = Math.max(1, container.clientWidth)
@@ -361,7 +436,11 @@ export function mountGalaxyScene(
     if (renderer.getPixelRatio() !== expectedPr) {
       resize()
     }
-    composer.render()
+    if (postFxBloomEnabled) {
+      composer.render()
+    } else {
+      renderer.render(scene, camera)
+    }
   }
   tick()
 
@@ -374,7 +453,6 @@ export function mountGalaxyScene(
     detachInteraction()
     planet.mesh.removeFromParent()
     planet.dispose()
-    galaxy.depthPoints.removeFromParent()
     galaxy.points.removeFromParent()
     galaxy.dispose()
     if (window.__bloom === bloomDebug) {
@@ -382,6 +460,13 @@ export function mountGalaxyScene(
     }
     if (window.__galaxyPointScale === pointScaleDebug) {
       delete window.__galaxyPointScale
+    }
+    if (window.__galaxyColor === galaxyColorDebug) {
+      delete window.__galaxyColor
+    }
+    if (postFxBloomEnabled) {
+      composer.removePass(bloomPass)
+      postFxBloomEnabled = false
     }
     composer.dispose()
     renderer.dispose()

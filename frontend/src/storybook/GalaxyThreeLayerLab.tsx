@@ -11,10 +11,20 @@ export interface GalaxyThreeLayerLabProps {
   zCurrent: number
   /** Visible slab width along Z (world years). */
   zVisWindow: number
-  /** Screen-space background point diameter scale (layer A). */
-  uBgPointSizePx: number
+  /** In-focus slab point size multiplier (`uFocusSizeMul`). */
+  uFocusSizeMul: number
+  /** Background slab point size multiplier (`uBgSizeMul`). */
+  uBgSizeMul: number
+  /** OKLCH lightness floor (`uLMin`). */
+  uLMin: number
+  /** OKLCH lightness ceiling (`uLMax`). */
+  uLMax: number
+  /** OKLCH chroma (`uChroma`). */
+  uChroma: number
   /** Multiplier on in-focus point size (`uSizeScale`). */
   uSizeScale: number
+  /** When true, attaches `UnrealBloomPass` and uses composer rendering (revive path). */
+  postProcessBloom: boolean
   bloomStrength: number
   bloomRadius: number
   bloomThreshold: number
@@ -38,8 +48,13 @@ export function GalaxyThreeLayerLab(props: GalaxyThreeLayerLabProps) {
     movies,
     zCurrent,
     zVisWindow,
-    uBgPointSizePx,
+    uFocusSizeMul,
+    uBgSizeMul,
+    uLMin,
+    uLMax,
+    uChroma,
     uSizeScale,
+    postProcessBloom,
     bloomStrength,
     bloomRadius,
     bloomThreshold,
@@ -68,11 +83,17 @@ export function GalaxyThreeLayerLab(props: GalaxyThreeLayerLabProps) {
     useGalaxyInteractionStore.setState({ zCurrent, zVisWindow, selectedMovieId })
 
     const gm = m.galaxyMaterial
-    gm.uniforms.uBgPointSizePx.value = uBgPointSizePx
+    gm.uniforms.uFocusSizeMul.value = uFocusSizeMul
+    gm.uniforms.uBgSizeMul.value = uBgSizeMul
+    gm.uniforms.uLMin.value = uLMin
+    gm.uniforms.uLMax.value = uLMax
+    gm.uniforms.uChroma.value = uChroma
     gm.uniforms.uSizeScale.value = uSizeScale
 
     const b = window.__bloom
     if (b) {
+      if (postProcessBloom) b.enable()
+      else b.disable()
       b.strength = bloomStrength
       b.radius = bloomRadius
       b.threshold = bloomThreshold
@@ -86,8 +107,13 @@ export function GalaxyThreeLayerLab(props: GalaxyThreeLayerLabProps) {
   }, [
     zCurrent,
     zVisWindow,
-    uBgPointSizePx,
+    uFocusSizeMul,
+    uBgSizeMul,
+    uLMin,
+    uLMax,
+    uChroma,
     uSizeScale,
+    postProcessBloom,
     bloomStrength,
     bloomRadius,
     bloomThreshold,

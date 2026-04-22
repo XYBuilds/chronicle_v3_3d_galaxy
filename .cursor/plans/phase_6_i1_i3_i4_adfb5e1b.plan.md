@@ -11,6 +11,9 @@ todos:
   - id: p6-2-1-fix-i4-depth-prepass
     content: P6.2.1（I4 深度预通补丁）：M1（`depthWrite:true + alphaTest:0.5`）实测仅减轻未根治——背景层 shader α 上限 0.55 使 alphaTest 之外几乎不写深度，近处点无法遮挡远处点核心。改走"**深度预通 + 半透明颜色通**"双 pass：Pass 1（`colorWrite:false / depthWrite:true / transparent:false`，片元按 `r > R_core ≈ 0.65` discard）只盖核心深度；Pass 2 恢复原半透明材质（`transparent:true / depthWrite:false`，移除 alphaTest，保留 `point.frag.glsl` 软边）。两个 `Points` 共享同一 `BufferGeometry`，Pass 1 `renderOrder = -1` 且 `raycast = () => {}`。目标同时满足：Bloom 无黑边 / 真 alpha blending 半透明 / 前后遮挡核心正确。改动面：新增 `frontend/src/three/shaders/point.depth.frag.glsl`（仅 discard + 空输出）、`galaxy.ts` 返回 `depthPoints` 与 `depthMaterial`、`scene.ts` 多 `add` 一次；撤回 P6.2 的 `GALAXY_POINT_ALPHA_TEST`，新增 `GALAXY_DEPTH_PREPASS_RADIUS`（0.55–0.70 可调）。验收：①近处点不再被远处点穿透 ②软光晕外缘无硬边/黑环 ③三层 shader / uZCurrent/uZVisWindow / uPointsOpacity 过渡不退化     ④hover 命中数不翻倍。
     status: completed
+  - id: p6-2-2-macro-simplify
+    content: P6.2.2（宏观层简化 · supersedes P6.2 / P6.2.1）：用户设计评估后决定宏观层只渲染"简单圆点"，取消 halo+core 光晕、取消 Bloom、取消选中淡入淡出动画；I4 因此从"半透明排序问题"降级为"不存在"（单 pass `transparent:false / depthWrite:true` 天然写深度）。颜色改走 **OKLCH 组合**（vote_average → L，genre0 → H，C 固定），在顶点着色器内用标准 sRGB↔OKLab 矩阵现算、不改 Python 管线与 JSON 契约。焦点切片仅保留 size 调制（`uFocusSizeMul=1.0 / uBgSizeMul=0.4`），颜色/透明度在焦点内外一致。选中行为按"方案 X"：保留 camera fly-in/fly-out 的 600–800ms lerp，`points.visible` 与 `planet.visible` 在 selecting 起点 / selected 落定 / deselecting 起点 / idle 落定 四个时刻**硬切**，不再有任何 shader 透明度渐变。改动面：① 删 `point.depth.frag.glsl`、`GALAXY_DEPTH_PREPASS_RADIUS`、`depthMaterial` / `depthPoints`、`uPointsOpacity`、`planet.setOpacity`、`SelectionPhase` 里的 opacity ramp；② 重写 `point.frag.glsl` 为"circle discard + flat vColor + 1 行 smoothstep 抗锯齿"；③ `point.vert.glsl` 接入 OKLCH（新 uniform `uLMin/uLMax/uChroma`），焦点切片改 size-only（新 uniform `uFocusSizeMul/uBgSizeMul`，删 `uBgPointSizePx`）；④ `fillMovieBuffers` 把 GPU attribute `emissive` 改名为 `voteNorm`，内容从 `m.vote_average/10` 填（`Movie.emissive` TS 字段保留为 JSON 契约镜像）；⑤ `scene.ts` 删 `EffectComposer/RenderPass/UnrealBloomPass` 的 `add`（保留 import 与实例化注释掉、通过 `window.__bloom.enable()` 可 revive）、改回 `renderer.render(scene, camera)`、显式 `renderer.outputColorSpace = THREE.SRGBColorSpace`；⑥ 新 debug 钩子 `window.__galaxyColor = { lMin, lMax, chroma }`，`window.__galaxyPointScale` 扩展 `focusSizeMul/bgSizeMul`；⑦ 同步改 `.cursor/rules/frontend-threejs.mdc` 的 Macro layer / Post-processing 两段；⑧ 给 `docs/reports/Phase 6.2 I4 深度修复 实施报告.md` 与 `docs/reports/Phase 6.2.1 I4 深度预通 P6.2.1 实施报告.md` 顶部加 `**SUPERSEDED by P6.2.2**` banner。验收：①单 pass 宏观层不再出现近远穿透 ②OKLCH 颜色在焦点内外一致（仅 size 变化）③高评分点明显偏亮、低评分偏暗 ④camera fly-in/fly-out 节奏与原先一致，无透明度闪烁 ⑤hover 命中数与 P6.2.1 等价 ⑥帧时间较 P6.2.1 下降（去 Bloom pass + 去 depth prepass）⑦ `window.__bloom.enable()` 可热开 Bloom 恢复旧视觉。
+    status: pending
   - id: p6-3-fix-i3
     content: P6.3（I3 hover threshold 修复）：按 P6.1 结论改 `scripts/export/export_galaxy_json.py`（路径 1）或 `frontend/src/three/interaction.ts`（路径 2）；清理/dev-only 诊断日志。
     status: pending
@@ -49,7 +52,8 @@ flowchart TD
     Escalate -->|"否"| Fix
     Fix["P6.2 I4 深度修复 (M1 alphaTest) + P6.3 I3 threshold 修复 (可并行实施)"]
     Fix --> P621["P6.2.1 I4 深度预通补丁 (M1 未根治→双 pass depth prepass)"]
-    P621 --> Smoke["前端本地复测 (当前数据)"]
+    P621 --> P622["P6.2.2 宏观层简化 (supersedes P6.2/P6.2.1: 圆点+OKLCH，删 Bloom/halo/动画)"]
+    P622 --> Smoke["前端本地复测 (当前数据)"]
     Smoke --> Retrain["P6.4 · I1 最终重训 (768d + DensMAP + n=100, CPU)"]
     Retrain --> Regress["P6.5 · 重训后 I3/I4 回归复测"]
     Regress --> HandoffB["交接 Plan B (I2 + I5 + I6)"]
@@ -93,6 +97,74 @@ flowchart TD
   - draw call 从 1→2，59K 点帧时间增量 < 0.5ms
 - **风险与回退**：若羽化重叠区的细粒度顺序瑕疵仍不可接受，升级到 M2（CPU 每帧 index 排序，59K radix 2–5 ms，可按相机静止节流）；B 与 M2 可叠加。
 
+### I4+I2 · P6.2.2 宏观层简化（supersedes P6.2 / P6.2.1）
+
+> 用户在 P6.2.1 完成后重新评估视觉方向：当前"halo+core + HDR emissive + Bloom + 深度预通双 pass"链路为了自洽互相支撑，**复杂度超出设计阶段所需**。决定把宏观层降级为"简单圆点 + OKLCH 编码"，I4 在新架构下天然消失。
+
+- **总原则**
+  - 宏观层单 pass、不透明、无后处理——I4 从"排序问题"变成"不存在"
+  - 颜色语义从 HDR 亮度 + 色相 双通道，改为 **OKLCH 单通道统一承载 genre + vote_average**
+  - 焦点切片（Phase 5.1.6 三层）**仅保留 size 调制**，作为"时间轴导航线索"的最小幸存者
+  - Bloom / halo / 选中过渡动画 **当前阶段禁用**但保留 revive path，Spec 标记 "deferred to polish"
+- **用户定稿（本轮对话）**
+  - ① 焦点切片：保留，仅 size 调制（内/外两个系数），颜色与 alpha 在焦点内外一致
+  - ② 颜色：OKLCH，`vote_average → L / genre0 → H / C 固定`；**不扫描 palette H 重合**，未来若出现"同色系 genre 看不出差别"再处理
+  - ③ 选中动画：camera fly-in/fly-out（600–800ms lerp）保留；`uPointsOpacity` 淡出与 `planet.setOpacity` 淡入**全删**，改用方案 **X**（飞入过程 points 与 planet 同时渲染，t=1 硬切 `visible`）
+  - ④ `.cursor/rules/frontend-threejs.mdc` 同步改写
+- **方案与实现路径**
+  - **OKLCH 现算于顶点着色器**（不改 Python 管线 / JSON 契约）：
+    - 输入：`color` attribute（sRGB genre_color）、`voteNorm` attribute（`m.vote_average / 10` clamp [0,1]）
+    - 流程：`srgbToLinear → linearToOklab → H = atan2(b, a)` → 用 `mix(uLMin, uLMax, voteNorm)` 覆盖 L、`uChroma` 覆盖 C → `oklabToLinear → linearToSrgb` → `vColor`
+    - 矩阵常量采用 Björn Ottosson OKLab 定义，~25 行 GLSL
+  - **焦点切片降级为 size-only**：
+    - `gl_PointSize = size * uPixelRatio * (500.0 / dist) * mix(uBgSizeMul, uFocusSizeMul, vInFocus) * uSizeScale`
+    - 删 `uBgPointSizePx`；新增 `uBgSizeMul=0.4 / uFocusSizeMul=1.0`
+    - `vInFocus` varying 只透给 vert 自己用（frag 不再读）
+  - **片元精简**：
+    - `if (r > 1.0) discard; float a = 1.0 - smoothstep(0.95, 1.0, r); gl_FragColor = vec4(vColor, a);`
+    - 保留 1 行 smoothstep 仅为抗锯齿软边（不是 halo）
+    - 材质 `transparent: false / depthWrite: true / depthTest: true`（边缘 alpha 经由 discard 近似 cutout——圆盘边缘 4 px 内的抗锯齿薄带影响可忽略）
+  - **GPU attribute 重命名**：`emissive` → `voteNorm`（仅前端；JSON 与 `Movie.emissive` TS 字段不动）
+  - **选中动画（方案 X）**：
+    - `selecting` 起点：`planet.mesh.visible = true`；points 不动（保持全亮）
+    - `selecting` 落定（t=1）：`galaxy.points.visible = false`
+    - `deselecting` 起点：`galaxy.points.visible = true`
+    - `deselecting` 落定（t=1）：`planet.mesh.visible = false`
+    - 删 `uPointsOpacity`、`planet.setOpacity`、`SelectionPhase` 里所有 ramp 计算
+  - **Bloom 禁用但保留 revive**：
+    - `EffectComposer / RenderPass / UnrealBloomPass` 实例化保留
+    - 不 `composer.addPass(bloomPass)`，改用 `renderer.render(scene, camera)`
+    - 显式 `renderer.outputColorSpace = THREE.SRGBColorSpace`（Bloom 链路之前帮忙做 tonemap/color conversion，直渲必须显式）
+    - `window.__bloom.enable() / disable()` 热开关：enable 时切回 `composer.render()` 并 addPass
+- **改动面清单**
+  - 新增：无（删掉 `point.depth.frag.glsl`，不新增 shader）
+  - 删除：[`frontend/src/three/shaders/point.depth.frag.glsl`](frontend/src/three/shaders/point.depth.frag.glsl)
+  - 重写：[`frontend/src/three/shaders/point.frag.glsl`](frontend/src/three/shaders/point.frag.glsl)（halo+core → 圆盘 discard + 抗锯齿边）
+  - 修改：[`frontend/src/three/shaders/point.vert.glsl`](frontend/src/three/shaders/point.vert.glsl)（OKLCH + size-only 焦点）
+  - 修改：[`frontend/src/three/galaxy.ts`](frontend/src/three/galaxy.ts)（删 `depthMaterial/depthPoints/GALAXY_DEPTH_PREPASS_RADIUS/uPointsOpacity/uBgPointSizePx`；新 `uLMin/uLMax/uChroma/uBgSizeMul/uFocusSizeMul`；attribute `emissive` → `voteNorm`；material `transparent:false + depthWrite:true`）
+  - 修改：[`frontend/src/three/scene.ts`](frontend/src/three/scene.ts)（删 selection opacity ramp；Bloom pass 不 add；`outputColorSpace`；新增 `window.__galaxyColor` debug；删 `scene.add(depthPoints)`）
+  - 修改：[`frontend/src/three/planet.ts`](frontend/src/three/planet.ts)（`setOpacity` 可保留但外部不再调用——先不删，后续 polish 时再清理）
+  - 修改：[`.cursor/rules/frontend-threejs.mdc`](.cursor/rules/frontend-threejs.mdc)（Macro layer / Post-processing 段整段改写）
+  - 归档 banner：[`docs/reports/Phase 6.2 I4 深度修复 实施报告.md`](docs/reports/Phase%206.2%20I4%20深度修复%20实施报告.md) + [`docs/reports/Phase 6.2.1 I4 深度预通 P6.2.1 实施报告.md`](docs/reports/Phase%206.2.1%20I4%20深度预通%20P6.2.1%20实施报告.md) 顶部加 `**SUPERSEDED by P6.2.2**`
+- **默认 uniform 起点**（皆可 debug 调整）
+  - `uLMin = 0.40 / uLMax = 0.85`（OKLCH 亮度窗口）
+  - `uChroma = 0.15`（色度定值；过高偏霓虹、过低趋灰）
+  - `uBgSizeMul = 0.4 / uFocusSizeMul = 1.0`（背景点屏幕半径按 focus 的 40%）
+- **验收**
+  - ① 单 pass 宏观层下近/远遮挡直觉正确，I4 现象消失
+  - ② OKLCH 颜色：高评分点明显偏亮、低评分偏暗；焦点内外同一星**颜色/alpha 完全一致**，仅 size 变化
+  - ③ camera fly-in/fly-out 节奏与 P6.2.1 一致，**无任何透明度闪烁**；t=1 的 `visible` 硬切肉眼可接受
+  - ④ hover / raycast 命中数与 P6.2.1 等价（仍仅一个 `Points`）
+  - ⑤ 帧时间较 P6.2.1 下降（-1 Bloom pass - 1 depth prepass pass）
+  - ⑥ `window.__bloom.enable()` 可热恢复 Bloom 到 P6.2.1 近似视觉（作为 revive 通道的 smoke）
+  - ⑦ `.cursor/rules/frontend-threejs.mdc` 更新后与 `docs/project_docs/TMDB 电影宇宙 Tech Spec.md` / `Design Spec.md` 的 Bloom 段不再矛盾（Spec 侧仅打 deferred banner、不做大改，避免扩张 scope）
+- **风险与回退**
+  - OKLCH 暴露 genre palette H 重合 → 用户已同意"未来再解决"；必要时可把 `uChroma` 降到 0.08–0.10 暂时弱化色相差异、或重排 palette（归入后续 polish）
+  - "圆盘 + 纯色 + 无 Bloom" 视觉过于扁平 → `window.__bloom.enable()` 即可恢复；若需永久 polish 再在后续 plan 里重启 Bloom + 调 `uChroma/uLMax`
+  - `transparent:false` 下 smoothstep 抗锯齿边缘可能有轻微边界硬感 → 实测若不可接受，可退回 `transparent:true, depthWrite:true`（单 pass 不透明但允许片元 alpha 参与 blend）
+  - camera 飞入过程中"一堆星里飞向其中一颗"的视觉锚点模糊 → 用户已接受方案 X；未来若需锚点可加 `uSelectedIdx` 在 vert 中把单星 size 置 0
+  - Bloom 架构保留的代码体积（~10 行注释 + 条件 addPass）→ 可接受，作为 revive 明确入口
+
 ### I3（§4） hover 偏移
 - **路径 1 验证**：console 打印当前 `meta.xy_range` vs `movies.map(m=>m.x/y)` 的 `min/max`；若 `xy_range` 与实际坐标错位，主因为导出链路 meta 透传 bug
 - **路径 2 验证**：在 `interaction.ts` 加诊断日志打印 `threshold` 与相邻两星 XY 距离；若 threshold ≥ 局部点间距，主因为 `avgXYSpacing * 0.75` 对局部密度估计过粗
@@ -118,7 +190,7 @@ flowchart TD
 
 ## 验收
 
-- **I4**：近星不再被远星遮挡；三层 shader / Bloom / 视距窗口边缘过渡无退化
+- **I4**（P6.2.2 定稿口径）：近星不再被远星遮挡（单 pass `transparent:false + depthWrite:true` 天然写深度）；OKLCH 颜色在焦点内外一致，仅 size 随 `vInFocus` 变化；`window.__bloom.enable()` 可热恢复 Bloom revive 通道。原"三层 shader / Bloom 不退化"的 P6.2 / P6.2.1 验收口径随 supersede 作废。
 - **I3**：鼠标悬停命中率在高密度星团内肉眼一致；诊断日志撤除/改为 dev-only
 - **I1**：重训后 `galaxy_data.json` 加载正常；肉眼对比旧主数据，局部高密度星团由"糖浆"转为"可辨别星云"；`meta.umap_params` 与文件一致
 
@@ -132,3 +204,5 @@ flowchart TD
 | I1 最终 CPU 重训耗时/内存不可接受（59K × 890d + DensMAP）  | 先子样本 smoke；必要时 PCA 前处理到 128/256d 再 UMAP               |
 | `run_pipeline.py` 未透传 `--model-id` 到 Phase 2.1         | P6.4 内补丁，属小改动但需与现有 CLI 兼容                           |
 | I3 / I4 指向 Points → InstancedSprites 级重构              | 立即停手、出 Phase 6.1 独立 plan，不在本 plan 内扩张               |
+| P6.2.2 OKLCH 暴露 genre palette H 重合（"同色 genre"）     | 用户已同意"未来再解决"；临时可调低 `uChroma` 弱化色相差异或重排 palette，归入后续 polish plan |
+| P6.2.2 删 Bloom 后视觉过于扁平                             | `window.__bloom.enable()` 热开关为 revive 通道；后续 polish plan 可永久重启 Bloom 并重调 `uChroma/uLMax` |

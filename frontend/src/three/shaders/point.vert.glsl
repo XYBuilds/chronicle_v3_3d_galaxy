@@ -45,8 +45,8 @@ vec3 oklab_to_linear_srgb(vec3 lab) {
   float m_ = lab.x - 0.1055613458 * lab.y - 0.0638541728 * lab.z;
   float s_ = lab.x - 0.0894841775 * lab.y - 1.2914855480 * lab.z;
   float l = l_ * l_ * l_;
-  float m = m_ * m_;
-  float s = s_ * s_;
+  float m = m_ * m_ * m_;
+  float s = s_ * s_ * s_;
   return vec3(
     dot(vec3(l, m, s), vec3(+4.0767416621, -3.3077115913, +0.2309699292)),
     dot(vec3(l, m, s), vec3(-1.2684380046, +2.6097574011, -0.3413193965)),

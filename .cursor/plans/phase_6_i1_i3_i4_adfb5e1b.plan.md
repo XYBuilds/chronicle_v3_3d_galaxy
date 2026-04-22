@@ -8,6 +8,9 @@ todos:
   - id: p6-2-fix-i4
     content: P6.2（I4 深度/前后关系修复）：依据 P6.1 报告选定 M1 / M2 / M4 之一落地，汇入 `frontend/src/three/galaxy.ts`；保证 Bloom / 三层 shader / 视距窗口过渡不退化；产出 `docs/reports/Phase 6.2 I4 深度修复 实施报告.md`。
     status: completed
+  - id: p6-2-1-fix-i4-depth-prepass
+    content: P6.2.1（I4 深度预通补丁）：M1（`depthWrite:true + alphaTest:0.5`）实测仅减轻未根治——背景层 shader α 上限 0.55 使 alphaTest 之外几乎不写深度，近处点无法遮挡远处点核心。改走"**深度预通 + 半透明颜色通**"双 pass：Pass 1（`colorWrite:false / depthWrite:true / transparent:false`，片元按 `r > R_core ≈ 0.65` discard）只盖核心深度；Pass 2 恢复原半透明材质（`transparent:true / depthWrite:false`，移除 alphaTest，保留 `point.frag.glsl` 软边）。两个 `Points` 共享同一 `BufferGeometry`，Pass 1 `renderOrder = -1` 且 `raycast = () => {}`。目标同时满足：Bloom 无黑边 / 真 alpha blending 半透明 / 前后遮挡核心正确。改动面：新增 `frontend/src/three/shaders/point.depth.frag.glsl`（仅 discard + 空输出）、`galaxy.ts` 返回 `depthPoints` 与 `depthMaterial`、`scene.ts` 多 `add` 一次；撤回 P6.2 的 `GALAXY_POINT_ALPHA_TEST`，新增 `GALAXY_DEPTH_PREPASS_RADIUS`（0.55–0.70 可调）。验收：①近处点不再被远处点穿透 ②软光晕外缘无硬边/黑环 ③三层 shader / uZCurrent/uZVisWindow / uPointsOpacity 过渡不退化 ④hover 命中数不翻倍。产出 `docs/reports/Phase 6.2.1 I4 深度预通补丁 实施报告.md`。
+    status: pending
   - id: p6-3-fix-i3
     content: P6.3（I3 hover threshold 修复）：按 P6.1 结论改 `scripts/export/export_galaxy_json.py`（路径 1）或 `frontend/src/three/interaction.ts`（路径 2）；清理/dev-only 诊断日志；产出 `docs/reports/Phase 6.3 I3 hover 修复 实施报告.md`。
     status: pending
@@ -44,8 +47,9 @@ flowchart TD
     R --> Escalate{"方案是否超出 Points 小修?"}
     Escalate -->|"是: Instanced Sprites"| P61["升级为 Phase 6.1 独立 plan"]
     Escalate -->|"否"| Fix
-    Fix["P6.2 I4 深度修复 + P6.3 I3 threshold 修复 (可并行实施)"]
-    Fix --> Smoke["前端本地复测 (当前数据)"]
+    Fix["P6.2 I4 深度修复 (M1 alphaTest) + P6.3 I3 threshold 修复 (可并行实施)"]
+    Fix --> P621["P6.2.1 I4 深度预通补丁 (M1 未根治→双 pass depth prepass)"]
+    P621 --> Smoke["前端本地复测 (当前数据)"]
     Smoke --> Retrain["P6.4 · I1 最终重训 (768d + DensMAP + n=100, CPU)"]
     Retrain --> Regress["P6.5 · 重训后 I3/I4 回归复测 + 报告"]
     Regress --> HandoffB["交接 Plan B (I2 + I5 + I6)"]
@@ -68,6 +72,26 @@ flowchart TD
   - M2：CPU 每帧按相机距离排序 geometry index（59K 成本实测）
   - M4：按 slab 分层 mesh + 分别 `depthWrite`（与 5.1.6 三层架构天然契合）
 - **硬边不可接受 / CPU 排序抖动 / 分层重排**超出本 plan 代价——**升 Phase 6.1**
+
+### I4 · P6.2.1 深度预通补丁（M1 未根治的后续）
+- **M1 残留 bug**：`point.frag.glsl` 背景层 `a = 0.55 * edgeSoft`，α 上限仅 0.55；`alphaTest:0.5` 下背景点仅核心极小圆盘（r≲0.80）写深度，外圈透明光晕**完全不写深度**——近处背景点无法遮挡远处焦点点的核心，错位残留。
+- **硬约束（本补丁立项前提）**：① Bloom 无黑边（→ 排除 `transparent:false`、`alphaToCoverage`、高 `alphaTest`）；② 真 alpha blending 半透明；③ 前后遮挡正确。
+- **方案 B（双 pass）**：
+  - Pass 1 深度预通：`colorWrite:false / depthWrite:true / depthTest:true / transparent:false`；新 `point.depth.frag.glsl` 仅按 `r > GALAXY_DEPTH_PREPASS_RADIUS (默认 0.65)` discard，其余 `gl_FragColor = vec4(0.0)`；`renderOrder = -1`；`raycast = () => {}` 防 hover 命中翻倍。
+  - Pass 2 颜色通：材质回归原 `transparent:true / depthWrite:false / depthTest:true`，**移除 alphaTest**，`point.frag.glsl` 不变。
+  - 两 `Points` 共享同一 `BufferGeometry`；`point.vert.glsl` 不变；Pass 1 的 `uPixelRatio/uSizeScale/uZCurrent/uZVisWindow/uBgPointSizePx` 与 Pass 2 同步（否则核心印记尺寸错位）。
+- **代码面**：
+  - 新文件：[`frontend/src/three/shaders/point.depth.frag.glsl`](frontend/src/three/shaders/point.depth.frag.glsl)
+  - 改 [`frontend/src/three/galaxy.ts`](frontend/src/three/galaxy.ts)：撤回 `GALAXY_POINT_ALPHA_TEST`，新增 `GALAXY_DEPTH_PREPASS_RADIUS`；`GalaxyPointsHandle` 扩展 `depthPoints / depthMaterial`，`dispose` 一并清理。
+  - 改 [`frontend/src/three/scene.ts`](frontend/src/three/scene.ts)：`scene.add(galaxy.depthPoints)` 放在 `scene.add(galaxy.points)` 之前。
+- **调参边界**：`GALAXY_DEPTH_PREPASS_RADIUS` 0.55–0.70；偏小→远处点透过近处亮区；偏大→近处"实心盘"切断后方光晕致弱黑环。
+- **验收**：
+  - 肉眼目检近/远遮挡完全一致（无"远处球透过近处球核心"）
+  - 光晕外缘无硬边/黑环；Bloom 强度与 P5 基线视觉一致
+  - 三层 shader（`vInFocus` / 背景层尺寸 `uBgPointSizePx`）/ uZCurrent & uZVisWindow 过渡不退化
+  - hover 命中数不因多一个 Points 而翻倍（`raycast` 禁用生效）
+  - draw call 从 1→2，59K 点帧时间增量 < 0.5ms
+- **风险与回退**：若羽化重叠区的细粒度顺序瑕疵仍不可接受，升级到 M2（CPU 每帧 index 排序，59K radix 2–5 ms，可按相机静止节流）；B 与 M2 可叠加。
 
 ### I3（§4） hover 偏移
 - **路径 1 验证**：console 打印当前 `meta.xy_range` vs `movies.map(m=>m.x/y)` 的 `min/max`；若 `xy_range` 与实际坐标错位，主因为导出链路 meta 透传 bug
@@ -104,6 +128,7 @@ flowchart TD
 | 风险                                                      | 对策                                                                             |
 | --------------------------------------------------------- | -------------------------------------------------------------------------------- |
 | I4 诊断后 M1 `alphaTest` 边缘硬边不可接受                 | 本 plan 最多做到 M2 CPU 排序；若仍不行→升 Phase 6.1                              |
+| P6.2.1 `GALAXY_DEPTH_PREPASS_RADIUS` 取值与 Bloom 视觉冲突 | 0.55–0.70 范围内人工调参；实在不行→升级 M2（CPU 排序），两者可叠加                |
 | I3 路径 2 局部 kNN 估计在 59K 上过慢                      | fallback 为"点视觉半径 × 世界尺度系数"静态策略                                   |
 | I1 最终 CPU 重训耗时/内存不可接受（59K × 890d + DensMAP） | 先子样本 smoke；必要时 PCA 前处理到 128/256d 再 UMAP（报告 §10.2 / §8.5 同思路） |
 | `run_pipeline.py` 未透传 `--model-id` 到 Phase 2.1        | P6.4 内补丁，属小改动但需与现有 CLI 兼容                                         |

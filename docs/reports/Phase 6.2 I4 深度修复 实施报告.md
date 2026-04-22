@@ -1,5 +1,7 @@
 # Phase 6.2 · I4 深度/前后关系修复 — 实施报告
 
+**SUPERSEDED by P6.2.2** — 宏观层已改为单 pass 不透明圆点 + OKLCH；Bloom / 深度预通 / `alphaTest` 路径不再作为默认架构。见 `phase_6_i1_i3_i4` Plan **P6.2.2** 与当前 `frontend/src/three/galaxy.ts`。
+
 > 对应 Plan A **P6.2**：依据 [Phase 6.1 I3+I4 根因调查 报告](Phase%206.1%20I3%2bI4%20%E6%A0%B9%E5%9B%A0%E8%B0%83%E6%9F%A5%20%E6%8A%A5%E5%91%8A.md) 在 `frontend/src/three/galaxy.ts` 落地 I4 修复；目标为恢复「相机深度优先」的遮挡关系，同时用 **M1** 的 `alphaTest` 缓解软边对深度写入的干扰。
 
 ## 1. 背景与选型

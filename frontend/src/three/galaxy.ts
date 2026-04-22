@@ -2,6 +2,7 @@ import * as THREE from 'three'
 
 import type { Movie } from '@/types/galaxy'
 
+import pointDepthFragmentShader from './shaders/point.depth.frag.glsl'
 import pointFragmentShader from './shaders/point.frag.glsl'
 import pointVertexShader from './shaders/point.vert.glsl'
 
@@ -9,15 +10,17 @@ import pointVertexShader from './shaders/point.vert.glsl'
 export const DEFAULT_POINT_SIZE_SCALE = 0.3
 
 /**
- * With `depthWrite: true`, discard very soft fringe so depth buffer updates are stable
- * (avoids "near star covered by far" from buffer order). Tune 0.35–0.55 if hard edges or Bloom regress.
- * @see docs/reports/Phase 6.1 I3+I4 根因调查 报告.md §3.3 M1
+ * I4 P6.2.1: depth-prepass core radius in point UV space (same r as `point.frag.glsl`).
+ * Only r ≤ R writes depth; soft halo in Pass 2 remains alpha-blended without `alphaTest`.
+ * Tune 0.55–0.70: lower → more bleed-through; higher → harsher halo/depth disc edges.
  */
-export const GALAXY_POINT_ALPHA_TEST = 0.5
+export const GALAXY_DEPTH_PREPASS_RADIUS = 0.65
 
 export interface GalaxyPointsHandle {
   points: THREE.Points
   material: THREE.ShaderMaterial
+  depthPoints: THREE.Points
+  depthMaterial: THREE.ShaderMaterial
   dispose: () => void
 }
 
@@ -50,13 +53,13 @@ function fillMovieBuffers(movies: Movie[]): THREE.BufferGeometry {
   geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1))
   geometry.setAttribute('emissive', new THREE.BufferAttribute(emissives, 1))
 
-  console.log(`[Galaxy] Points count: ${n} | draw calls: 1 (single Points mesh)`)
+  console.log(`[Galaxy] Points count: ${n} | draw calls: 2 (depth + color, shared BufferGeometry)`)
 
   return geometry
 }
 
 /**
- * One `THREE.Points` draw call: position, per-point size, genre RGB, emissive (HDR-ish for Bloom).
+ * Two `THREE.Points` passes on shared `BufferGeometry`: (1) depth core only, (2) color + soft halo.
  */
 export function createGalaxyPoints(
   movies: Movie[],
@@ -79,14 +82,35 @@ export function createGalaxyPoints(
     fragmentShader: pointFragmentShader,
     transparent: true,
     depthTest: true,
-    // I4 / M1: write depth + alphaTest so point draw order follows camera Z, not buffer order.
-    // uPointsOpacity<1 (global fade) still blends; soft halo below alphaTest is discarded (M1 硬边风险).
-    depthWrite: true,
-    alphaTest: GALAXY_POINT_ALPHA_TEST,
+    depthWrite: false,
     blending: THREE.NormalBlending,
   })
 
   const points = new THREE.Points(geometry, material)
+
+  const depthMaterial = new THREE.ShaderMaterial({
+    uniforms: {
+      uPixelRatio: material.uniforms.uPixelRatio,
+      uSizeScale: material.uniforms.uSizeScale,
+      uZCurrent: material.uniforms.uZCurrent,
+      uZVisWindow: material.uniforms.uZVisWindow,
+      uBgPointSizePx: material.uniforms.uBgPointSizePx,
+      uPointsOpacity: material.uniforms.uPointsOpacity,
+      uDepthPrepassRadius: { value: GALAXY_DEPTH_PREPASS_RADIUS },
+    },
+    vertexShader: pointVertexShader,
+    fragmentShader: pointDepthFragmentShader,
+    transparent: false,
+    depthTest: true,
+    depthWrite: true,
+    colorWrite: false,
+    blending: THREE.NoBlending,
+  })
+
+  const depthPoints = new THREE.Points(geometry, depthMaterial)
+  depthPoints.renderOrder = -1
+  /** Avoid doubling hover / raycast hits; interaction uses the color `points` only. */
+  depthPoints.raycast = () => {}
 
   console.log(
     `[Galaxy] uSizeScale=${sizeScale} (default ${DEFAULT_POINT_SIZE_SCALE}) — runtime: window.__galaxyPointScale`,
@@ -95,7 +119,8 @@ export function createGalaxyPoints(
   const dispose = () => {
     geometry.dispose()
     material.dispose()
+    depthMaterial.dispose()
   }
 
-  return { points, material, dispose }
+  return { points, material, depthPoints, depthMaterial, dispose }
 }

@@ -156,14 +156,17 @@ Output
 
 ### **2.1 X/Y 平面生成 (UMAP 预计算)**
 
-通过 Python 的 umap-learn 计算生成二维语义坐标。
+二维语义坐标的 (X, Y) 在 Python 管线中**预计算**后写入 `galaxy_data.json`。**UMAP 实现后端**分为两条路径，由运行参数选择（`scripts/run_pipeline.py` 的 `--umap-backend` / `--cpu` 等），二者**不保证** bitwise 一致；**任意更换后端**须 bump 宇宙数据版本并在变更中注明。
+
+* **Backend: `umap-learn`（CPU，Windows 本地回退）**：在 **Windows** 侧 **`.venv`** 与 `pip` 依赖（`requirements.txt` → `requirements.cpu.txt`）上运行。适合小样本、无 NVIDIA GPU、或仅做清洗与联调。  
+* **Backend: RAPIDS cuML（GPU，WSL2 Ubuntu 主路径）**：在 **WSL2** 的 conda 环境 **`chronicle`**（由 `scripts/env/rapids_env.yml` 创建）中，通过 `cuml.manifold.UMAP` 计算，典型用于全量与 **DensMAP** 等需要 GPU 的超参；数据与代码宜放在 WSL 文件系统，产物可同步回 Windows 工作区见 `scripts/env/sync_artifacts_to_windows.sh`。
 
 * **输入特征 (Input Features)**：  
   1. **剧情文本**：overview \+ tagline，通过 NLP 模型生成 Embeddings（**规范见下节 2.1.1**）。  
   2. **流派分类 (genres)**：采用**顺位加权编码 (Rank-Weighted Encoding)**；顺位权重为**等比衰减**，**现行默认公比为黄金比例** \(q=1/\varphi\)（**见下节 2.1.2**）。  
   3. **文化锚点 (original\_language)**：执行 One-hot 编码。  
 * **UMAP 超参数**：`n_neighbors`、`min_dist`、`metric` 等**不在此文档锁死数值**；由实验阶段**手动调参**，并将最终取值写入运行配置与产物元数据（与宇宙数据版本号一并记录）。  
-* **UMAP 随机种子（可复现）**：`umap-learn` 调用中必须传入 **`random_state=42`**（固定整数，**不可省略**）。同一套输入特征与超参下，重跑管线应得到一致的 (X, Y) 拓扑（在相同 `torch` / `numpy` / `umap-learn` 版本前提下）。若因升级库导致 bitwise 漂移，须在变更日志中注明；**故意**更换 `random_state` 视为新宇宙版本，须 bump 版本号并重新 `fit_transform`。该值须写入 `meta.umap_params.random_state`。  
+* **UMAP 随机种子（可复现）**：`umap-learn` 与 **cuML** 调用中均须传入 **`random_state=42`**（固定整数，**不可省略**）。同一套输入特征、超参与**同一后端**下，重跑管线应得到**稳定可比对**的 (X, Y) 拓扑（在相同 `torch` / `numpy` 及 **`umap-learn` 或 `cuml` 等版本**前提下的各自语义下）。`umap-learn` 与 `cuml` 之间、或库大版本升级导致的数值漂移，须在变更日志中注明；**故意**更换 `random_state` 视为新宇宙版本，须 bump 版本号并重新 `fit`/`fit_transform`。该值须写入 `meta.umap_params.random_state`。  
 * **排除字段**：绝对排除 release\_date、vote\_count、vote\_average、revenue、budget 以及具有强共线性的 spoken\_languages 和 production\_countries。  
 * **数据驱动原则**：genre 集合、language 集合及其对应的向量维度（N\_genre、N\_lang）均须在管线运行时**从当前数据源动态计算**，严禁写死为常量。所有依赖这些维度的下游数值（如 `1/√d` 缩放因子、色板 hueStep、One-hot 编码宽度等）也必须跟随动态计算。此原则同样适用于 `vote_count`/`vote_average` 的值域边界——映射函数的输入范围由实际数据的 min/max 决定，不可硬编码。
 
@@ -269,7 +272,7 @@ Python 管线的最终产物为**一个 JSON 文件**，前端一次性加载后
 | `generated_at` | string (ISO 8601) | 本文件的生成时间 |
 | `count` | int | `movies` 数组长度 |
 | `embedding_model` | string | 所用 sentence-transformers 模型 HF ID |
-| `umap_params` | object | `{ n_neighbors, min_dist, metric, random_state, ... }` 实际使用的 UMAP 超参；其中 **`random_state` 固定为 `42`**（见 §2.1） |
+| `umap_params` | object | `{ n_neighbors, min_dist, metric, random_state, densmap, ... }` 实际使用的 UMAP 超参；**`random_state` 固定为 `42`**（见 §2.1）；**`densmap`** 为 **bool**（`true`/`false`），与 Phase 2.4 `umap_projection.py` 及导出入口是否传入 **`--densmap`** 一致，表示是否启用 DensMAP |
 | `genre_weight_ratio` | float | 流派权重公比（默认 ≈0.618） |
 | `genre_palette` | object | **genre 名 → sRGB hex 色值** 映射表，例如 `{ "Drama": "#E74C3C", ... }`。源色彩空间为 **OKLCH**（规则见 Design Spec §1.1），管线中转为 sRGB hex 后写入此处。前端渲染与 Shader 共用此色板 |
 | `feature_weights` | object | `{ text: 1.0, genre: 1.0, lang: 1.0 }` §2.1.3 多模态融合的权重乘子 |

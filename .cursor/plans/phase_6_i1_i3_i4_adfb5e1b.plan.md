@@ -7,7 +7,7 @@ todos:
     status: completed
   - id: p6-2-fix-i4
     content: P6.2（I4 深度/前后关系修复）：依据 P6.1 报告选定 M1 / M2 / M4 之一落地，汇入 `frontend/src/three/galaxy.ts`；保证 Bloom / 三层 shader / 视距窗口过渡不退化；产出 `docs/reports/Phase 6.2 I4 深度修复 实施报告.md`。
-    status: pending
+    status: completed
   - id: p6-3-fix-i3
     content: P6.3（I3 hover threshold 修复）：按 P6.1 结论改 `scripts/export/export_galaxy_json.py`（路径 1）或 `frontend/src/three/interaction.ts`（路径 2）；清理/dev-only 诊断日志；产出 `docs/reports/Phase 6.3 I3 hover 修复 实施报告.md`。
     status: pending

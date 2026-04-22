@@ -8,6 +8,13 @@ import pointVertexShader from './shaders/point.vert.glsl'
 /** Multiplies `gl_PointSize` after JSON `size` and perspective; override at runtime via `window.__galaxyPointScale`. */
 export const DEFAULT_POINT_SIZE_SCALE = 0.3
 
+/**
+ * With `depthWrite: true`, discard very soft fringe so depth buffer updates are stable
+ * (avoids "near star covered by far" from buffer order). Tune 0.35–0.55 if hard edges or Bloom regress.
+ * @see docs/reports/Phase 6.1 I3+I4 根因调查 报告.md §3.3 M1
+ */
+export const GALAXY_POINT_ALPHA_TEST = 0.5
+
 export interface GalaxyPointsHandle {
   points: THREE.Points
   material: THREE.ShaderMaterial
@@ -72,8 +79,10 @@ export function createGalaxyPoints(
     fragmentShader: pointFragmentShader,
     transparent: true,
     depthTest: true,
-    // Phase 4.5: brief global fade needs blending; accept minor depth ordering quirks while uPointsOpacity<1.
-    depthWrite: false,
+    // I4 / M1: write depth + alphaTest so point draw order follows camera Z, not buffer order.
+    // uPointsOpacity<1 (global fade) still blends; soft halo below alphaTest is discarded (M1 硬边风险).
+    depthWrite: true,
+    alphaTest: GALAXY_POINT_ALPHA_TEST,
     blending: THREE.NormalBlending,
   })
 

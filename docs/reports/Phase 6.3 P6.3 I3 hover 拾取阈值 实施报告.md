@@ -1,5 +1,7 @@
 # Phase 6.3 · P6.3 I3 hover 拾取阈值 — 实施报告
 
+**SUPERSEDED by P6.3.1**（屏幕空间圆盘拾取；见 [Phase 6.3.1 hover 圆盘拾取 实施报告.md](Phase%206.3.1%20hover%20%E5%9C%86%E7%9B%98%E6%8B%BE%E5%8F%96%20%E5%AE%9E%E6%96%BD%E6%8A%A5%E5%91%8A.md)）。
+
 > 对应 Plan A **P6.3**（I3：悬停 / 拾取与视觉锚点不一致）。依据 [Phase 6.1 I3+I4 根因调查 报告](Phase%206.1%20I3%2bI4%20%E6%A0%B9%E5%9B%A0%E8%B0%83%E6%9F%A5%20%E6%8A%A5%E5%91%8A.md)：Path 1（`meta.xy_range` 与坐标脱节）对当前主数据**不成立**；Path 2（按「Z 均匀」估 slab 人数导致 `Raycaster.params.Points.threshold` **偏大**）成立。本轮仅走 **Path 2**，改动集中在 `frontend/src/three/interaction.ts`。
 
 ## 1. 代码变更摘要

@@ -19,7 +19,7 @@ todos:
     status: completed
   - id: p6-3-1-disc-pick
     content: "P6.3.1（hover 圆盘拾取 · supersedes P6.3）：CPU 侧镜像 `point.vert.glsl` 的 `gl_PointSize` 公式，在 `interaction.ts` 用\"鼠标 CSS 坐标 vs 每个 slab 内点投影后 CSS 坐标 + 半径\"判定命中——视觉圆盘与交互几何 1:1 对齐。用户定稿：① 边缘阈值 `r ≤ 1.0`（含 ~2.5% 抗锯齿半透明边带，与 `discard` 对齐）；② 多点重叠选 **front-most**（`distCam` 最小者，与 `depthTest/depthWrite:true` 视觉压顶一致）；③ Z-slab 过滤保留（Phase 5.1.7：仅 focus slab 可 hover/click，背景 slab 小圆点**不**可拾取）。改动面：删 `computeFocusSlabPointsThreshold / countMoviesInFocusSlab / syncPickThreshold / raycaster.params.Points`；新增 `computePointScreenRadiusCss(movie, camera, uniforms, inFocus)` 辅助函数（文件头强约束注释：必须与 `point.vert.glsl` 的 `gl_PointSize` 公式同步）；`pickIndex()` 改为遍历 slab + 屏幕距离平方比较 + 取 `distCam` 最小；`attachGalaxyPointsInteraction` 入参加 `material: THREE.ShaderMaterial`（读 `uSizeScale/uFocusSizeMul` 运行时值，自动跟随 `window.__galaxyPointScale` debug hook）；`scene.ts` 传 `galaxy.material` 进去；`Raycaster` 实例可删（或保留空壳、不设 `params.Points`）。同步改 `.cursor/rules/frontend-threejs.mdc` 交互段、给 `docs/reports/Phase 6.3 P6.3 I3 hover 拾取阈值 实施报告.md` 顶部加 `**SUPERSEDED by P6.3.1**` banner、新增 `docs/reports/Phase 6.3.1 hover 圆盘拾取 实施报告.md`。验收：①鼠标严格进入视觉圆盘才触发 hover/click，圆盘外不误拾 ②密集 slab 内取 front-most 稳定 ③背景 slab 不可拾 ④`window.__galaxyPointScale` 运行时改动后 hover 半径即时同步 ⑤`pointermove` profile 无新增抖动（59K / 密集 slab ≤ 5K 下 CPU 遍历 << 1ms）。 "
-    status: pending
+    status: completed
   - id: p6-4-i1-final-retrain
     content: "P6.4（I1 最终重训）：备份旧主数据 → （如需）`run_pipeline.py` 补上 `--text-model` 透传 → WSL 下 `--through-phase-2 --text-model mpnet --umap-backend umap --densmap --n-neighbors 100 --min-dist 0.4` 跑完整 Phase 2.1–2.5；`meta.version` bump；`validate_galaxy_json.py` 通过；回写 `frontend/public/data/galaxy_data.json(.gz)`。 "
     status: pending

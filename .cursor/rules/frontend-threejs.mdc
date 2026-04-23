@@ -34,6 +34,10 @@ alwaysApply: false
 - Drag: truck (horizontal) + pedestal (vertical) only
 - Click-select: smooth fly-to (600–800ms easeOutCubic), axis stays parallel
 
+## Interaction (P6.3.1)
+
+- **Hover / click 拾取**不用 `Raycaster` / `params.Points.threshold`，而用 **屏幕空间圆盘**与 `point.vert.glsl` 的 `gl_PointSize` **1:1** 对齐：命中与半径见 `frontend/src/three/interaction.ts` 中 `computePointScreenRadiusCss` 与 `pickIndex`。若改顶点里的点大小、视距基准常数或 `uSizeScale` / `uFocusSizeMul` 语义，**须同步改**该 TS 端公式。
+
 ## Data Loading
 
 - Single `galaxy_data.json` fetched at startup; full-screen spinner until parsed

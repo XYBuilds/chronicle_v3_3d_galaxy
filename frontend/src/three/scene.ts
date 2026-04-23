@@ -410,7 +410,7 @@ export function mountGalaxyScene(
     domElement: canvas,
     points: galaxy.points,
     movies,
-    meta,
+    material: galaxy.material,
   })
 
   const w = renderer.domElement.width

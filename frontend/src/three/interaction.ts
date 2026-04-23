@@ -1,7 +1,29 @@
 import * as THREE from 'three'
 
 import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
-import type { Meta, Movie } from '@/types/galaxy'
+import type { Movie } from '@/types/galaxy'
+
+/**
+ * P6.3.1 — 屏幕空间圆盘拾取（CPU）必须与 `point.vert.glsl` 中 `gl_PointSize` 的公式**逐行同构**。
+ * 若只改 GLSL 侧点大小/视距/尺寸系数，必须同步改 `computePointScreenRadiusCss`（及本文件中的命中判定）。
+ *
+ * 顶点里：`gl_PointSize = size * uPixelRatio * (500.0 / dist) * uSizeScale * mix(uBgSizeMul, uFocusSizeMul, inFocus);`
+ * CSS 半径（与 uPixelRatio 相消）：`radiusCssPx = size * (500 / distCam) * uSizeScale * mix(...) / 2`
+ */
+export function computePointScreenRadiusCss(
+  pointSizeAttr: number,
+  distCam: number,
+  material: THREE.ShaderMaterial,
+  inFocus: boolean,
+): number {
+  const u = material.uniforms
+  const uSizeScale = (u.uSizeScale as THREE.Uniform<number>).value
+  const uFocusSizeMul = (u.uFocusSizeMul as THREE.Uniform<number>).value
+  const uBgSizeMul = (u.uBgSizeMul as THREE.Uniform<number>).value
+  const sizeMul = inFocus ? uFocusSizeMul : uBgSizeMul
+  const d = Math.max(0.001, distCam)
+  return (pointSizeAttr * (500.0 / d) * uSizeScale * sizeMul) * 0.5
+}
 
 /** Pixels of movement with primary button held before we treat the gesture as camera pan, not a pick click. */
 const CLICK_MAX_MOVE_PX = 6
@@ -11,52 +33,8 @@ function movieInZFocusSlab(z: number, zCurrent: number, zVisWindow: number): boo
   return z >= zCurrent && z <= zHi
 }
 
-function countMoviesInFocusSlab(movies: Movie[], zCurrent: number, zVisWindow: number): number {
-  let n = 0
-  for (let i = 0; i < movies.length; i++) {
-    if (movieInZFocusSlab(movies[i].z, zCurrent, zVisWindow)) n++
-  }
-  return n
-}
-
-/**
- * World-space ray–point margin for `Raycaster.params.Points.threshold`, tuned for the
- * **focus slab** (layer B). Uses the **actual** number of movies in `[zCurrent, zCurrent+zVisWindow]`
- * so dense release years do not inherit a too-large threshold from a uniform-Z assumption
- * (Phase 6.1 I3 / P6.3).
- */
-function computeFocusSlabPointsThreshold(
-  meta: Pick<Meta, 'xy_range' | 'z_range' | 'count'>,
-  slabMovieCount: number,
-  movieCount: number,
-): number {
-  const xr = meta.xy_range.x
-  const yr = meta.xy_range.y
-  const zr = meta.z_range
-  console.assert(xr.length === 2 && yr.length === 2 && zr.length === 2, '[Interaction] meta ranges must be [min,max]')
-  console.assert(
-    meta.count === movieCount,
-    `[Interaction] meta.count (${meta.count}) should equal movies.length (${movieCount})`,
-  )
-  const nSlab = Math.max(1, slabMovieCount)
-  const xyW = Math.max(1e-12, xr[1] - xr[0])
-  const xyH = Math.max(1e-12, yr[1] - yr[0])
-  const xyArea = xyW * xyH
-  const avgXYSpacing = Math.sqrt(xyArea / nSlab)
-  const xyMin = Math.min(xyW, xyH)
-  return THREE.MathUtils.clamp(avgXYSpacing * 0.75, xyMin * 1e-4, xyMin * 0.08)
-}
-
-function ndcFromClient(domElement: HTMLElement, clientX: number, clientY: number): THREE.Vector2 {
-  const rect = domElement.getBoundingClientRect()
-  const w = Math.max(1, rect.width)
-  const h = Math.max(1, rect.height)
-  const x = ((clientX - rect.left) / w) * 2 - 1
-  const y = -((clientY - rect.top) / h) * 2 + 1
-  return new THREE.Vector2(x, y)
-}
-
 const _worldProject = new THREE.Vector3()
+const _modelView = new THREE.Vector3()
 
 /** Project movie world (x,y,z) to viewport CSS pixels relative to the canvas element. */
 function movieToScreenCss(
@@ -83,43 +61,32 @@ function hoverEmitEqual(a: HoverEmitSnap, id: number | null, anchor: { x: number
 }
 
 /**
- * Raycaster against `THREE.Points`: updates `hoveredMovieId` / `selectedMovieId` in Zustand.
- * Click-select ignores gestures that were camera pans (primary drag beyond {@link CLICK_MAX_MOVE_PX}).
+ * 屏幕空间圆盘拾取（P6.3.1），更新 `hoveredMovieId` / `selectedMovieId`。
+ * Click 忽略被判定为相机动拖移的手势（超过 {@link CLICK_MAX_MOVE_PX} 的主键位移）。
  *
- * Phase 5.1.7 — Only layer B (`z ∈ [zCurrent, zCurrent+zVisWindow]`, same slab as `point.vert.glsl`)
- * can be hovered or selected; hits outside the slab are skipped. Pick threshold scales with **actual**
- * movie count in that slab (P6.3), not a uniform-Z density estimate.
+ * Phase 5.1.7 — 仅 `z ∈ [zCurrent, zCurrent+zVisWindow]` 的层可 hover/click；同一屏幕位置多颗星重叠时选 **front-most**（`distCam` 最小，与深度缓冲一致）。背景层点不参与拾取。
  */
 export function attachGalaxyPointsInteraction(options: {
   camera: THREE.PerspectiveCamera
   domElement: HTMLElement
   points: THREE.Points
   movies: Movie[]
-  meta: Pick<Meta, 'xy_range' | 'z_range' | 'count'>
+  material: THREE.ShaderMaterial
 }): () => void {
-  const { camera, domElement, points, movies, meta } = options
+  const { camera, domElement, points, movies, material } = options
   const posAttr = points.geometry.getAttribute('position') as THREE.BufferAttribute | undefined
+  const sizeAttr = points.geometry.getAttribute('size') as THREE.BufferAttribute | undefined
   console.assert(!!posAttr, '[Interaction] points.geometry must have position attribute')
+  console.assert(!!sizeAttr, '[Interaction] points.geometry must have size attribute')
   console.assert(
     posAttr!.count === movies.length,
     `[Interaction] position count ${posAttr?.count} must equal movies.length ${movies.length}`,
   )
+  console.assert(
+    sizeAttr!.count === movies.length,
+    `[Interaction] size count ${sizeAttr?.count} must equal movies.length ${movies.length}`,
+  )
 
-  const raycaster = new THREE.Raycaster()
-  let cachedZCurrent = Number.NaN
-  let cachedZVisWindow = Number.NaN
-  const syncPickThreshold = () => {
-    const { zCurrent, zVisWindow } = useGalaxyInteractionStore.getState()
-    if (zCurrent === cachedZCurrent && zVisWindow === cachedZVisWindow) return
-    cachedZCurrent = zCurrent
-    cachedZVisWindow = zVisWindow
-    const slabN = countMoviesInFocusSlab(movies, zCurrent, zVisWindow)
-    const t = computeFocusSlabPointsThreshold(meta, slabN, movies.length)
-    raycaster.params.Points = { threshold: t }
-  }
-  syncPickThreshold()
-
-  const ndc = new THREE.Vector2()
   let lastEmitted: HoverEmitSnap = { id: null, ax: Number.NaN, ay: Number.NaN }
 
   let pressX = 0
@@ -128,19 +95,29 @@ export function attachGalaxyPointsInteraction(options: {
   let primaryPressActive = false
 
   const pickIndex = (clientX: number, clientY: number): number | null => {
-    syncPickThreshold()
-    ndc.copy(ndcFromClient(domElement, clientX, clientY))
-    raycaster.setFromCamera(ndc, camera)
-    const hits = raycaster.intersectObject(points, false)
-    if (hits.length === 0) return null
     const { zCurrent, zVisWindow } = useGalaxyInteractionStore.getState()
-    for (let i = 0; i < hits.length; i++) {
-      const idx = hits[i].index
-      if (idx === undefined || idx < 0 || idx >= movies.length) continue
-      if (!movieInZFocusSlab(movies[idx].z, zCurrent, zVisWindow)) continue
-      return idx
+    let bestIdx: number | null = null
+    let bestDistCam = Number.POSITIVE_INFINITY
+    for (let i = 0; i < movies.length; i++) {
+      const m = movies[i]
+      if (!movieInZFocusSlab(m.z, zCurrent, zVisWindow)) continue
+      _modelView.set(m.x, m.y, m.z)
+      _modelView.applyMatrix4(points.matrixWorld)
+      _modelView.applyMatrix4(camera.matrixWorldInverse)
+      if (_modelView.z >= 0) continue
+      const distCam = Math.max(0.001, -_modelView.z)
+      const pSize = sizeAttr!.getX(i)
+      const rCss = computePointScreenRadiusCss(pSize, distCam, material, true)
+      const { x: sx, y: sy } = movieToScreenCss(m, camera, domElement)
+      const dx = clientX - sx
+      const dy = clientY - sy
+      if (dx * dx + dy * dy > rCss * rCss) continue
+      if (distCam < bestDistCam) {
+        bestDistCam = distCam
+        bestIdx = i
+      }
     }
-    return null
+    return bestIdx
   }
 
   const emitHover = (id: number | null, anchor: { x: number; y: number } | null) => {

@@ -25,7 +25,7 @@ todos:
     status: completed
   - id: p6-5-regression-handoff
     content: "P6.5（回归 + Plan A 交接）：基于最终数据复测 I3 / I4 是否仍稳定；若需调参小补丁即地修；为 Plan B（I2 + I5 + I6）提供交接面（含最终数据版本、当前 Tech Spec / Design Spec diff 点、待 I2 总表的参数入口）。 "
-    status: pending
+    status: completed
 isProject: false
 ---
 

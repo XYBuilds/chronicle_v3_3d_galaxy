@@ -16,7 +16,7 @@ todos:
     status: completed
   - id: p6-3-fix-i3
     content: P6.3（I3 hover threshold 修复）：按 P6.1 结论改 `scripts/export/export_galaxy_json.py`（路径 1）或 `frontend/src/three/interaction.ts`（路径 2）；清理/dev-only 诊断日志。
-    status: pending
+    status: completed
   - id: p6-4-i1-final-retrain
     content: P6.4（I1 最终重训）：备份旧主数据 → （如需）`run_pipeline.py` 补上 `--text-model` 透传 → WSL 下 `--through-phase-2 --text-model mpnet --umap-backend umap --densmap --n-neighbors 100 --min-dist 0.4` 跑完整 Phase 2.1–2.5；`meta.version` bump；`validate_galaxy_json.py` 通过；回写 `frontend/public/data/galaxy_data.json(.gz)`。
     status: pending
@@ -196,13 +196,13 @@ flowchart TD
 
 ## 风险
 
-| 风险                                                       | 对策                                                               |
-| ---------------------------------------------------------- | ------------------------------------------------------------------ |
-| I4 诊断后 M1 `alphaTest` 边缘硬边不可接受                  | 本 plan 最多做到 M2 CPU 排序；若仍不行→升 Phase 6.1                |
-| P6.2.1 `GALAXY_DEPTH_PREPASS_RADIUS` 取值与 Bloom 视觉冲突 | 0.55–0.70 范围内人工调参；实在不行→升级 M2（CPU 排序），两者可叠加 |
-| I3 路径 2 局部 kNN 估计在 59K 上过慢                       | fallback 为"点视觉半径 × 世界尺度系数"静态策略                     |
-| I1 最终 CPU 重训耗时/内存不可接受（59K × 890d + DensMAP）  | 先子样本 smoke；必要时 PCA 前处理到 128/256d 再 UMAP               |
-| `run_pipeline.py` 未透传 `--model-id` 到 Phase 2.1         | P6.4 内补丁，属小改动但需与现有 CLI 兼容                           |
-| I3 / I4 指向 Points → InstancedSprites 级重构              | 立即停手、出 Phase 6.1 独立 plan，不在本 plan 内扩张               |
-| P6.2.2 OKLCH 暴露 genre palette H 重合（"同色 genre"）     | 用户已同意"未来再解决"；临时可调低 `uChroma` 弱化色相差异或重排 palette，归入后续 polish plan |
+| 风险                                                       | 对策                                                                                                     |
+| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| I4 诊断后 M1 `alphaTest` 边缘硬边不可接受                  | 本 plan 最多做到 M2 CPU 排序；若仍不行→升 Phase 6.1                                                      |
+| P6.2.1 `GALAXY_DEPTH_PREPASS_RADIUS` 取值与 Bloom 视觉冲突 | 0.55–0.70 范围内人工调参；实在不行→升级 M2（CPU 排序），两者可叠加                                       |
+| I3 路径 2 局部 kNN 估计在 59K 上过慢                       | fallback 为"点视觉半径 × 世界尺度系数"静态策略                                                           |
+| I1 最终 CPU 重训耗时/内存不可接受（59K × 890d + DensMAP）  | 先子样本 smoke；必要时 PCA 前处理到 128/256d 再 UMAP                                                     |
+| `run_pipeline.py` 未透传 `--model-id` 到 Phase 2.1         | P6.4 内补丁，属小改动但需与现有 CLI 兼容                                                                 |
+| I3 / I4 指向 Points → InstancedSprites 级重构              | 立即停手、出 Phase 6.1 独立 plan，不在本 plan 内扩张                                                     |
+| P6.2.2 OKLCH 暴露 genre palette H 重合（"同色 genre"）     | 用户已同意"未来再解决"；临时可调低 `uChroma` 弱化色相差异或重排 palette，归入后续 polish plan            |
 | P6.2.2 删 Bloom 后视觉过于扁平                             | `window.__bloom.enable()` 热开关为 revive 通道；后续 polish plan 可永久重启 Bloom 并重调 `uChroma/uLMax` |

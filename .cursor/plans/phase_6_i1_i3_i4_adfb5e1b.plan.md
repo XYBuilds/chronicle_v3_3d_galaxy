@@ -1,27 +1,30 @@
 ---
-name: phase 6 i1 i3 i4
-overview: Phase 6.0 Plan A：并行调查 I3（hover 偏移）/ I4（前后遮挡）根因并落地修复，最后以"768d mpnet + DensMAP + n_neighbors=100（CPU）"一次性重训定稿 I1。本 plan 只覆盖 I1 收尾 + I3 + I4；I2/I5/I6 归入后续 Plan B。
+name: "phase 6 i1 i3 i4 "
+overview: "Phase 6.0 Plan A：并行调查 I3（hover 偏移）/ I4（前后遮挡）根因并落地修复，最后以\"768d mpnet + DensMAP + n_neighbors=100（CPU）\"一次性重训定稿 I1。本 plan 只覆盖 I1 收尾 + I3 + I4；I2/I5/I6 归入后续 Plan B。I3 链路最终定稿：P6.3（Raycaster 世界阈值 × slab 密度）→ 实测仍误拾 → P6.3.1（CPU 屏幕空间圆盘命中，镜像 `point.vert.glsl` 的 `gl_PointSize` 公式）supersede。 "
 todos:
   - id: p6-1-diagnose-i3-i4
-    content: P6.1（I3+I4 根因调查 / 并行）：I4 临时 depthWrite:true+alphaTest 复测 + I3 打印 meta.xy_range 与实际坐标 / threshold 与点间距诊断日志；形成推荐修复方案（不改生产代码）。如诊断结果指向 Points→InstancedSprites 重构，此处停止并升为 Phase 6.1 独立设计 plan。
+    content: "P6.1（I3+I4 根因调查 / 并行）：I4 临时 depthWrite:true+alphaTest 复测 + I3 打印 meta.xy_range 与实际坐标 / threshold 与点间距诊断日志；形成推荐修复方案（不改生产代码）。如诊断结果指向 Points→InstancedSprites 重构，此处停止并升为 Phase 6.1 独立设计 plan。 "
     status: completed
   - id: p6-2-fix-i4
-    content: P6.2（I4 深度/前后关系修复）：依据 P6.1 结论选定 M1 / M2 / M4 之一落地，汇入 `frontend/src/three/galaxy.ts`；保证 Bloom / 三层 shader / 视距窗口过渡不退化。
+    content: "P6.2（I4 深度/前后关系修复）：依据 P6.1 结论选定 M1 / M2 / M4 之一落地，汇入 `frontend/src/three/galaxy.ts`；保证 Bloom / 三层 shader / 视距窗口过渡不退化。 "
     status: completed
   - id: p6-2-1-fix-i4-depth-prepass
-    content: P6.2.1（I4 深度预通补丁）：M1（`depthWrite:true + alphaTest:0.5`）实测仅减轻未根治——背景层 shader α 上限 0.55 使 alphaTest 之外几乎不写深度，近处点无法遮挡远处点核心。改走"**深度预通 + 半透明颜色通**"双 pass：Pass 1（`colorWrite:false / depthWrite:true / transparent:false`，片元按 `r > R_core ≈ 0.65` discard）只盖核心深度；Pass 2 恢复原半透明材质（`transparent:true / depthWrite:false`，移除 alphaTest，保留 `point.frag.glsl` 软边）。两个 `Points` 共享同一 `BufferGeometry`，Pass 1 `renderOrder = -1` 且 `raycast = () => {}`。目标同时满足：Bloom 无黑边 / 真 alpha blending 半透明 / 前后遮挡核心正确。改动面：新增 `frontend/src/three/shaders/point.depth.frag.glsl`（仅 discard + 空输出）、`galaxy.ts` 返回 `depthPoints` 与 `depthMaterial`、`scene.ts` 多 `add` 一次；撤回 P6.2 的 `GALAXY_POINT_ALPHA_TEST`，新增 `GALAXY_DEPTH_PREPASS_RADIUS`（0.55–0.70 可调）。验收：①近处点不再被远处点穿透 ②软光晕外缘无硬边/黑环 ③三层 shader / uZCurrent/uZVisWindow / uPointsOpacity 过渡不退化     ④hover 命中数不翻倍。
+    content: "P6.2.1（I4 深度预通补丁）：M1（`depthWrite:true + alphaTest:0.5`）实测仅减轻未根治——背景层 shader α 上限 0.55 使 alphaTest 之外几乎不写深度，近处点无法遮挡远处点核心。改走\"**深度预通 + 半透明颜色通**\"双 pass：Pass 1（`colorWrite:false / depthWrite:true / transparent:false`，片元按 `r > R_core ≈ 0.65` discard）只盖核心深度；Pass 2 恢复原半透明材质（`transparent:true / depthWrite:false`，移除 alphaTest，保留 `point.frag.glsl` 软边）。两个 `Points` 共享同一 `BufferGeometry`，Pass 1 `renderOrder = -1` 且 `raycast = () => {}`。目标同时满足：Bloom 无黑边 / 真 alpha blending 半透明 / 前后遮挡核心正确。改动面：新增 `frontend/src/three/shaders/point.depth.frag.glsl`（仅 discard + 空输出）、`galaxy.ts` 返回 `depthPoints` 与 `depthMaterial`、`scene.ts` 多 `add` 一次；撤回 P6.2 的 `GALAXY_POINT_ALPHA_TEST`，新增 `GALAXY_DEPTH_PREPASS_RADIUS`（0.55–0.70 可调）。验收：①近处点不再被远处点穿透 ②软光晕外缘无硬边/黑环 ③三层 shader / uZCurrent/uZVisWindow / uPointsOpacity 过渡不退化     ④hover 命中数不翻倍。 "
     status: completed
   - id: p6-2-2-macro-simplify
-    content: P6.2.2（宏观层简化 · supersedes P6.2 / P6.2.1）：用户设计评估后决定宏观层只渲染"简单圆点"，取消 halo+core 光晕、取消 Bloom、取消选中淡入淡出动画；I4 因此从"半透明排序问题"降级为"不存在"（单 pass `transparent:false / depthWrite:true` 天然写深度）。颜色改走 **OKLCH 组合**（vote_average → L，genre0 → H，C 固定），在顶点着色器内用标准 sRGB↔OKLab 矩阵现算、不改 Python 管线与 JSON 契约。焦点切片仅保留 size 调制（`uFocusSizeMul=1.0 / uBgSizeMul=0.4`），颜色/透明度在焦点内外一致。选中行为按"方案 X"：保留 camera fly-in/fly-out 的 600–800ms lerp，`points.visible` 与 `planet.visible` 在 selecting 起点 / selected 落定 / deselecting 起点 / idle 落定 四个时刻**硬切**，不再有任何 shader 透明度渐变。改动面：① 删 `point.depth.frag.glsl`、`GALAXY_DEPTH_PREPASS_RADIUS`、`depthMaterial` / `depthPoints`、`uPointsOpacity`、`planet.setOpacity`、`SelectionPhase` 里的 opacity ramp；② 重写 `point.frag.glsl` 为"circle discard + flat vColor + 1 行 smoothstep 抗锯齿"；③ `point.vert.glsl` 接入 OKLCH（新 uniform `uLMin/uLMax/uChroma`），焦点切片改 size-only（新 uniform `uFocusSizeMul/uBgSizeMul`，删 `uBgPointSizePx`）；④ `fillMovieBuffers` 把 GPU attribute `emissive` 改名为 `voteNorm`，内容从 `m.vote_average/10` 填（`Movie.emissive` TS 字段保留为 JSON 契约镜像）；⑤ `scene.ts` 删 `EffectComposer/RenderPass/UnrealBloomPass` 的 `add`（保留 import 与实例化注释掉、通过 `window.__bloom.enable()` 可 revive）、改回 `renderer.render(scene, camera)`、显式 `renderer.outputColorSpace = THREE.SRGBColorSpace`；⑥ 新 debug 钩子 `window.__galaxyColor = { lMin, lMax, chroma }`，`window.__galaxyPointScale` 扩展 `focusSizeMul/bgSizeMul`；⑦ 同步改 `.cursor/rules/frontend-threejs.mdc` 的 Macro layer / Post-processing 两段；⑧ 给 `docs/reports/Phase 6.2 I4 深度修复 实施报告.md` 与 `docs/reports/Phase 6.2.1 I4 深度预通 P6.2.1 实施报告.md` 顶部加 `**SUPERSEDED by P6.2.2**` banner。验收：①单 pass 宏观层不再出现近远穿透 ②OKLCH 颜色在焦点内外一致（仅 size 变化）③高评分点明显偏亮、低评分偏暗 ④camera fly-in/fly-out 节奏与原先一致，无透明度闪烁 ⑤hover 命中数与 P6.2.1 等价 ⑥帧时间较 P6.2.1 下降（去 Bloom pass + 去 depth prepass）⑦ `window.__bloom.enable()` 可热开 Bloom 恢复旧视觉。
+    content: "P6.2.2（宏观层简化 · supersedes P6.2 / P6.2.1）：用户设计评估后决定宏观层只渲染\"简单圆点\"，取消 halo+core 光晕、取消 Bloom、取消选中淡入淡出动画；I4 因此从\"半透明排序问题\"降级为\"不存在\"（单 pass `transparent:false / depthWrite:true` 天然写深度）。颜色改走 **OKLCH 组合**（vote_average → L，genre0 → H，C 固定），在顶点着色器内用标准 sRGB↔OKLab 矩阵现算、不改 Python 管线与 JSON 契约。焦点切片仅保留 size 调制（`uFocusSizeMul=1.0 / uBgSizeMul=0.4`），颜色/透明度在焦点内外一致。选中行为按\"方案 X\"：保留 camera fly-in/fly-out 的 600–800ms lerp，`points.visible` 与 `planet.visible` 在 selecting 起点 / selected 落定 / deselecting 起点 / idle 落定 四个时刻**硬切**，不再有任何 shader 透明度渐变。改动面：① 删 `point.depth.frag.glsl`、`GALAXY_DEPTH_PREPASS_RADIUS`、`depthMaterial` / `depthPoints`、`uPointsOpacity`、`planet.setOpacity`、`SelectionPhase` 里的 opacity ramp；② 重写 `point.frag.glsl` 为\"circle discard + flat vColor + 1 行 smoothstep 抗锯齿\"；③ `point.vert.glsl` 接入 OKLCH（新 uniform `uLMin/uLMax/uChroma`），焦点切片改 size-only（新 uniform `uFocusSizeMul/uBgSizeMul`，删 `uBgPointSizePx`）；④ `fillMovieBuffers` 把 GPU attribute `emissive` 改名为 `voteNorm`，内容从 `m.vote_average/10` 填（`Movie.emissive` TS 字段保留为 JSON 契约镜像）；⑤ `scene.ts` 删 `EffectComposer/RenderPass/UnrealBloomPass` 的 `add`（保留 import 与实例化注释掉、通过 `window.__bloom.enable()` 可 revive）、改回 `renderer.render(scene, camera)`、显式 `renderer.outputColorSpace = THREE.SRGBColorSpace`；⑥ 新 debug 钩子 `window.__galaxyColor = { lMin, lMax, chroma }`，`window.__galaxyPointScale` 扩展 `focusSizeMul/bgSizeMul`；⑦ 同步改 `.cursor/rules/frontend-threejs.mdc` 的 Macro layer / Post-processing 两段；⑧ 给 `docs/reports/Phase 6.2 I4 深度修复 实施报告.md` 与 `docs/reports/Phase 6.2.1 I4 深度预通 P6.2.1 实施报告.md` 顶部加 `**SUPERSEDED by P6.2.2**` banner。验收：①单 pass 宏观层不再出现近远穿透 ②OKLCH 颜色在焦点内外一致（仅 size 变化）③高评分点明显偏亮、低评分偏暗 ④camera fly-in/fly-out 节奏与原先一致，无透明度闪烁 ⑤hover 命中数与 P6.2.1 等价 ⑥帧时间较 P6.2.1 下降（去 Bloom pass + 去 depth prepass）⑦ `window.__bloom.enable()` 可热开 Bloom 恢复旧视觉。 "
     status: completed
   - id: p6-3-fix-i3
-    content: P6.3（I3 hover threshold 修复）：按 P6.1 结论改 `scripts/export/export_galaxy_json.py`（路径 1）或 `frontend/src/three/interaction.ts`（路径 2）；清理/dev-only 诊断日志。
+    content: "P6.3（I3 hover threshold 修复 · SUPERSEDED by P6.3.1）：按 P6.1 结论改 `scripts/export/export_galaxy_json.py`（路径 1）或 `frontend/src/three/interaction.ts`（路径 2）；清理/dev-only 诊断日志。——复测结论：从 P6.1 的\"难触发\"走到\"鼠标不在视觉圆盘内也被命中\"，根因是 `Raycaster.params.Points.threshold`（世界空间圆柱半径）与片元着色器实际画出的屏幕空间圆盘在维度上不对齐，改系数只能在\"太松/太紧\"之间摆动。决策：放弃此路径，升为 P6.3.1 屏幕空间圆盘命中。 "
     status: completed
+  - id: p6-3-1-disc-pick
+    content: "P6.3.1（hover 圆盘拾取 · supersedes P6.3）：CPU 侧镜像 `point.vert.glsl` 的 `gl_PointSize` 公式，在 `interaction.ts` 用\"鼠标 CSS 坐标 vs 每个 slab 内点投影后 CSS 坐标 + 半径\"判定命中——视觉圆盘与交互几何 1:1 对齐。用户定稿：① 边缘阈值 `r ≤ 1.0`（含 ~2.5% 抗锯齿半透明边带，与 `discard` 对齐）；② 多点重叠选 **front-most**（`distCam` 最小者，与 `depthTest/depthWrite:true` 视觉压顶一致）；③ Z-slab 过滤保留（Phase 5.1.7：仅 focus slab 可 hover/click，背景 slab 小圆点**不**可拾取）。改动面：删 `computeFocusSlabPointsThreshold / countMoviesInFocusSlab / syncPickThreshold / raycaster.params.Points`；新增 `computePointScreenRadiusCss(movie, camera, uniforms, inFocus)` 辅助函数（文件头强约束注释：必须与 `point.vert.glsl` 的 `gl_PointSize` 公式同步）；`pickIndex()` 改为遍历 slab + 屏幕距离平方比较 + 取 `distCam` 最小；`attachGalaxyPointsInteraction` 入参加 `material: THREE.ShaderMaterial`（读 `uSizeScale/uFocusSizeMul` 运行时值，自动跟随 `window.__galaxyPointScale` debug hook）；`scene.ts` 传 `galaxy.material` 进去；`Raycaster` 实例可删（或保留空壳、不设 `params.Points`）。同步改 `.cursor/rules/frontend-threejs.mdc` 交互段、给 `docs/reports/Phase 6.3 P6.3 I3 hover 拾取阈值 实施报告.md` 顶部加 `**SUPERSEDED by P6.3.1**` banner、新增 `docs/reports/Phase 6.3.1 hover 圆盘拾取 实施报告.md`。验收：①鼠标严格进入视觉圆盘才触发 hover/click，圆盘外不误拾 ②密集 slab 内取 front-most 稳定 ③背景 slab 不可拾 ④`window.__galaxyPointScale` 运行时改动后 hover 半径即时同步 ⑤`pointermove` profile 无新增抖动（59K / 密集 slab ≤ 5K 下 CPU 遍历 << 1ms）。 "
+    status: pending
   - id: p6-4-i1-final-retrain
-    content: P6.4（I1 最终重训）：备份旧主数据 → （如需）`run_pipeline.py` 补上 `--text-model` 透传 → WSL 下 `--through-phase-2 --text-model mpnet --umap-backend umap --densmap --n-neighbors 100 --min-dist 0.4` 跑完整 Phase 2.1–2.5；`meta.version` bump；`validate_galaxy_json.py` 通过；回写 `frontend/public/data/galaxy_data.json(.gz)`。
+    content: "P6.4（I1 最终重训）：备份旧主数据 → （如需）`run_pipeline.py` 补上 `--text-model` 透传 → WSL 下 `--through-phase-2 --text-model mpnet --umap-backend umap --densmap --n-neighbors 100 --min-dist 0.4` 跑完整 Phase 2.1–2.5；`meta.version` bump；`validate_galaxy_json.py` 通过；回写 `frontend/public/data/galaxy_data.json(.gz)`。 "
     status: pending
   - id: p6-5-regression-handoff
-    content: P6.5（回归 + Plan A 交接）：基于最终数据复测 I3 / I4 是否仍稳定；若需调参小补丁即地修；为 Plan B（I2 + I5 + I6）提供交接面（含最终数据版本、当前 Tech Spec / Design Spec diff 点、待 I2 总表的参数入口）。
+    content: "P6.5（回归 + Plan A 交接）：基于最终数据复测 I3 / I4 是否仍稳定；若需调参小补丁即地修；为 Plan B（I2 + I5 + I6）提供交接面（含最终数据版本、当前 Tech Spec / Design Spec diff 点、待 I2 总表的参数入口）。 "
     status: pending
 isProject: false
 ---
@@ -53,7 +56,8 @@ flowchart TD
     Fix["P6.2 I4 深度修复 (M1 alphaTest) + P6.3 I3 threshold 修复 (可并行实施)"]
     Fix --> P621["P6.2.1 I4 深度预通补丁 (M1 未根治→双 pass depth prepass)"]
     P621 --> P622["P6.2.2 宏观层简化 (supersedes P6.2/P6.2.1: 圆点+OKLCH，删 Bloom/halo/动画)"]
-    P622 --> Smoke["前端本地复测 (当前数据)"]
+    P622 --> P631["P6.3.1 hover 圆盘拾取 (supersedes P6.3: 屏幕空间圆盘 1:1)"]
+    P631 --> Smoke["前端本地复测 (当前数据)"]
     Smoke --> Retrain["P6.4 · I1 最终重训 (768d + DensMAP + n=100, CPU)"]
     Retrain --> Regress["P6.5 · 重训后 I3/I4 回归复测"]
     Regress --> HandoffB["交接 Plan B (I2 + I5 + I6)"]
@@ -172,6 +176,50 @@ flowchart TD
   - 路径 1 → 在 `export_galaxy_json.py` 强制从实际坐标重算 `xy_range`，并输出单测/校验
   - 路径 2 → `interaction.ts` threshold 从"slab 均值"改为"点视觉半径 × 世界尺度"或局部 kNN 估计；至少把 `0.75` 系数收紧到诊断推导的合理值
 
+### I3 · P6.3.1 hover 圆盘拾取（supersedes P6.3）
+
+> 用户在 P6.3 落地后复测：从 P6.1 的"难触发"变成了"鼠标不在视觉圆盘内也被 hover/click 命中"。根因：`Raycaster.params.Points.threshold` 是**世界空间**的均匀圆柱半径，与片元着色器实际画出的**屏幕空间圆盘**（`gl_PointSize = size * uPixelRatio * (500/dist) * uSizeScale * mix(uBgSizeMul, uFocusSizeMul, inFocus)`，`r ≤ 1.0` 硬切）没有闭式对应——P6.3 把密度估计从"全局均匀 Z"改成 slab 实际人数只是校准系数，未解决"维度不匹配"，必然在"太松/太紧"之间摆动。
+
+- **总原则**
+  - 抛弃 `Raycaster.params.Points` 路径，改用 **CPU 屏幕空间圆盘命中**——CPU 侧镜像 `point.vert.glsl` 的 `gl_PointSize` 公式，视觉可见圆盘与交互几何 1:1 对齐
+  - 背景 slab（`uBgSizeMul = 0.4`）小圆点**不**可 hover（Phase 5.1.7 约束不变，避免扩张 scope）
+  - 不引入 InstancedMesh / GPU pick——当前 59K 点、密集 slab ≤ 5K，CPU 遍历每次 `pointermove` << 1ms
+- **用户定稿（本轮对话）**
+  - ① 边缘判定阈值 `r ≤ 1.0`（与 shader `discard` 完全对齐，含 ~2.5% 抗锯齿半透明边带）
+  - ② 多点重叠命中策略：**front-most**（`distCam` 最小者胜），与 `depthTest:true / depthWrite:true` 的视觉压顶一致
+  - ③ Z-slab 过滤保留（只有 `z ∈ [zCurrent, zCurrent+zVisWindow]` 可拾），背景 slab 点即使屏幕上能看见也不可 hover/click
+- **方案与实现路径**
+  - **命中公式（CSS 像素，DPR 自相抵消）**：
+    - `mvPos = modelViewMatrix * vec4(m.x, m.y, m.z, 1)`；`distCam = max(0.001, -mvPos.z)`
+    - `diameterDevicePx = size * uPixelRatio * (500 / distCam) * uSizeScale * uFocusSizeMul`
+    - `radiusCssPx = diameterDevicePx / (2 * uPixelRatio) = size * (500 / distCam) * uSizeScale * uFocusSizeMul / 2`
+    - 把 `(m.x, m.y, m.z)` 投影到 CSS 像素 `(sx, sy)`（已有 `movieToScreenCss` 工具可复用）
+    - 命中：`(mouseCssX - sx)² + (mouseCssY - sy)² ≤ radiusCssPx²`
+  - **遍历策略**：只对 focus slab 内的点遍历（沿用 `movieInZFocusSlab`）；无空间索引；命中多颗时选 `distCam` 最小（front-most）
+  - **`uFocusSizeMul` 读取**：从 `material.uniforms` 运行时读，保证 `window.__galaxyPointScale.focusSizeMul / scale` debug hook 改动后 hover 半径**即时**同步
+  - **封装**：新增 `computePointScreenRadiusCss(movie, camera, uniforms, inFocus)` 辅助函数，文件头注释强约束"必须与 `point.vert.glsl` 的 `gl_PointSize` 公式同步；改 shader 时须同步改这里"
+- **改动面清单**
+  - 改 [`frontend/src/three/interaction.ts`](frontend/src/three/interaction.ts)：
+    - 删 `computeFocusSlabPointsThreshold` / `countMoviesInFocusSlab` / `syncPickThreshold` / `raycaster.params.Points = {...}` / `raycaster.intersectObject(points)` 调用链
+    - 新 `computePointScreenRadiusCss()` + 新 `pickIndex()`：slab 遍历 + 屏幕距离平方比较 + 取 `distCam` 最小
+    - `attachGalaxyPointsInteraction(options)` 入参新增 `material: THREE.ShaderMaterial`
+    - `Raycaster` 实例可删（或保留空壳，不再设 `params.Points`）——倾向全删，减少误导
+  - 改 [`frontend/src/three/scene.ts`](frontend/src/three/scene.ts)：`attachGalaxyPointsInteraction(...)` 调用新增 `material: galaxy.material`
+  - 新增实施报告：[`docs/reports/Phase 6.3.1 hover 圆盘拾取 实施报告.md`](docs/reports/Phase%206.3.1%20hover%20%E5%9C%86%E7%9B%98%E6%8B%BE%E5%8F%96%20%E5%AE%9E%E6%96%BD%E6%8A%A5%E5%91%8A.md)
+  - 归档 banner：[`docs/reports/Phase 6.3 P6.3 I3 hover 拾取阈值 实施报告.md`](docs/reports/Phase%206.3%20P6.3%20I3%20hover%20%E6%8B%BE%E5%8F%96%E9%98%88%E5%80%BC%20%E5%AE%9E%E6%96%BD%E6%8A%A5%E5%91%8A.md) 顶部加 `**SUPERSEDED by P6.3.1**`
+  - 改 [`.cursor/rules/frontend-threejs.mdc`](.cursor/rules/frontend-threejs.mdc) 交互段：一句话强约束"hover/click 用屏幕空间圆盘命中，公式见 `interaction.ts::computePointScreenRadiusCss`，与 `point.vert.glsl` 的 `gl_PointSize` 公式强耦合——改 shader 时须同步"
+- **验收**
+  - ① 鼠标**严格进入视觉圆盘**才触发 hover / click；圆盘外（哪怕 1 px）不再误拾
+  - ② focus slab 内高密度年份稳定命中前景点（front-most）
+  - ③ 背景 slab 小圆点不可 hover（与 Phase 5.1.7 约束一致）
+  - ④ `window.__galaxyPointScale.scale / focusSizeMul` 运行时改动后，hover 命中半径**即时**同步（无需重 mount）
+  - ⑤ `pointermove` 下 Performance 面板无明显新增抖动；59K 数据 / 密集 slab ≤ 5K 下 CPU 遍历开销 << 1ms
+  - ⑥ 拖拽（超过 `CLICK_MAX_MOVE_PX`）不触发 click、Tooltip 锚点（`hoverAnchorCss`）与原先一致
+- **风险与回退**
+  - Shader 公式未来再改（比如加 hover highlight 放大、新增视距衰减）→ CPU 命中不同步 → 集中辅助函数 + 文件头注释 + rules 强约束缓解；进一步保险可把 `gl_PointSize` 的常量（`500.0` 视距基准）抽成 TS/GLSL 共享常量
+  - 数据膨胀到 >> 59K、密集 slab >> 10K → 遍历可见 → 按年份预切片 slab 索引 / 屏幕格点 bucket（本 plan 范围外）
+  - 边缘 2.5% 抗锯齿带仍可 hover（`r ≤ 1.0`）若用户体感"幽灵命中"→ 切 `r ≤ 0.95` 即可（一行常量变更）
+
 ## I1 最终重训（P6.4）
 
 > 触发时机：I3 / I4 修复完成且前端本地复测通过后，再做最后一次。
@@ -191,18 +239,21 @@ flowchart TD
 ## 验收
 
 - **I4**（P6.2.2 定稿口径）：近星不再被远星遮挡（单 pass `transparent:false + depthWrite:true` 天然写深度）；OKLCH 颜色在焦点内外一致，仅 size 随 `vInFocus` 变化；`window.__bloom.enable()` 可热恢复 Bloom revive 通道。原"三层 shader / Bloom 不退化"的 P6.2 / P6.2.1 验收口径随 supersede 作废。
-- **I3**：鼠标悬停命中率在高密度星团内肉眼一致；诊断日志撤除/改为 dev-only
+- **I3**（P6.3.1 定稿口径）：鼠标**严格进入视觉圆盘**才触发 hover/click，圆盘外不再误拾；密集 slab 内取 front-most；背景 slab 不可拾；运行时改 `window.__galaxyPointScale` 命中半径即时同步。原 P6.3 的"`Raycaster.params.Points.threshold` × slab 密度"口径随 supersede 作废。
 - **I1**：重训后 `galaxy_data.json` 加载正常；肉眼对比旧主数据，局部高密度星团由"糖浆"转为"可辨别星云"；`meta.umap_params` 与文件一致
 
 ## 风险
 
-| 风险                                                       | 对策                                                                                                     |
-| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| I4 诊断后 M1 `alphaTest` 边缘硬边不可接受                  | 本 plan 最多做到 M2 CPU 排序；若仍不行→升 Phase 6.1                                                      |
-| P6.2.1 `GALAXY_DEPTH_PREPASS_RADIUS` 取值与 Bloom 视觉冲突 | 0.55–0.70 范围内人工调参；实在不行→升级 M2（CPU 排序），两者可叠加                                       |
-| I3 路径 2 局部 kNN 估计在 59K 上过慢                       | fallback 为"点视觉半径 × 世界尺度系数"静态策略                                                           |
-| I1 最终 CPU 重训耗时/内存不可接受（59K × 890d + DensMAP）  | 先子样本 smoke；必要时 PCA 前处理到 128/256d 再 UMAP                                                     |
-| `run_pipeline.py` 未透传 `--model-id` 到 Phase 2.1         | P6.4 内补丁，属小改动但需与现有 CLI 兼容                                                                 |
-| I3 / I4 指向 Points → InstancedSprites 级重构              | 立即停手、出 Phase 6.1 独立 plan，不在本 plan 内扩张                                                     |
-| P6.2.2 OKLCH 暴露 genre palette H 重合（"同色 genre"）     | 用户已同意"未来再解决"；临时可调低 `uChroma` 弱化色相差异或重排 palette，归入后续 polish plan            |
-| P6.2.2 删 Bloom 后视觉过于扁平                             | `window.__bloom.enable()` 热开关为 revive 通道；后续 polish plan 可永久重启 Bloom 并重调 `uChroma/uLMax` |
+| 风险                                                               | 对策                                                                                                                                                   |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| I4 诊断后 M1 `alphaTest` 边缘硬边不可接受                          | 本 plan 最多做到 M2 CPU 排序；若仍不行→升 Phase 6.1                                                                                                    |
+| P6.2.1 `GALAXY_DEPTH_PREPASS_RADIUS` 取值与 Bloom 视觉冲突         | 0.55–0.70 范围内人工调参；实在不行→升级 M2（CPU 排序），两者可叠加                                                                                     |
+| I3 路径 2 局部 kNN 估计在 59K 上过慢                               | fallback 为"点视觉半径 × 世界尺度系数"静态策略                                                                                                         |
+| I1 最终 CPU 重训耗时/内存不可接受（59K × 890d + DensMAP）          | 先子样本 smoke；必要时 PCA 前处理到 128/256d 再 UMAP                                                                                                   |
+| `run_pipeline.py` 未透传 `--model-id` 到 Phase 2.1                 | P6.4 内补丁，属小改动但需与现有 CLI 兼容                                                                                                               |
+| I3 / I4 指向 Points → InstancedSprites 级重构                      | 立即停手、出 Phase 6.1 独立 plan，不在本 plan 内扩张                                                                                                   |
+| P6.2.2 OKLCH 暴露 genre palette H 重合（"同色 genre"）             | 用户已同意"未来再解决"；临时可调低 `uChroma` 弱化色相差异或重排 palette，归入后续 polish plan                                                          |
+| P6.2.2 删 Bloom 后视觉过于扁平                                     | `window.__bloom.enable()` 热开关为 revive 通道；后续 polish plan 可永久重启 Bloom 并重调 `uChroma/uLMax`                                               |
+| P6.3.1 CPU 屏幕命中公式与 `point.vert.glsl` 的 `gl_PointSize` 脱耦 | 集中 `computePointScreenRadiusCss()` 辅助函数 + 文件头强约束注释 + `.cursor/rules/frontend-threejs.mdc` 明文要求"改 shader 时须同步"；必要时抽共享常量 |
+| P6.3.1 数据膨胀至 >> 59K / 密集 slab >> 10K 后 CPU 遍历变慢        | 按年份预切片 slab 索引 / 屏幕格点 bucket；本 plan 范围外，归入后续 perf polish                                                                         |
+| P6.3.1 边缘 2.5% 抗锯齿半透明带仍可 hover（"幽灵命中"）            | 一行常量从 `r ≤ 1.0` 切到 `r ≤ 0.95` 即可（用户默认 1.0，如后续复测体感不佳再切）                                                                      |

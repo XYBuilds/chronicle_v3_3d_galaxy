@@ -4,7 +4,7 @@ overview: Phase 7：承接 Phase 6 Plan A 定稿后的数据与渲染，完成 I
 todos:
   - id: p7-1-visual-param-sheet
     content: P7.1（I2 参数清单化 / agent）：扫 `frontend/src/three/`、`shaders/*.glsl`、`galaxy.ts`、`store/galaxyInteractionStore.ts`、Bloom 相关文件，产出 `docs/project_docs/视觉参数总表.md`，每项含当前值 / 文件:行号 / 作用 / 取值范围 / 依赖关系；末尾给出 uniform 级条目数与『是否建议引入 dev-only GUI』判断，交付用户验收。
-    status: pending
+    status: completed
   - id: p7-2-i6-docs
     content: P7.2（I6 对外化文档 / agent，可与 P7.1 并行）：新增 `docs/project_docs/DATA.md`（TMDB 出处 + 抓取时间 + CC-BY Attribution 文案）、`docs/project_docs/架构总览.md`（mermaid：Python 管线 → UMAP → JSON → Three.js 三层 → HUD）、`galaxy_data.json` 对外 schema 文档（可嵌 Tech Spec §4 或独立文件）；根 `README.md` 补『数据来源 / 许可』小节指向 DATA.md；交付用户审阅文案与归属条款。
     status: pending

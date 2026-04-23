@@ -7,7 +7,7 @@ todos:
     status: completed
   - id: p7-2-i6-docs
     content: P7.2（I6 对外化文档 / agent，可与 P7.1 并行）：新增 `docs/project_docs/DATA.md`（TMDB 出处 + 抓取时间 + CC-BY Attribution 文案）、`docs/project_docs/架构总览.md`（mermaid：Python 管线 → UMAP → JSON → Three.js 三层 → HUD）、`galaxy_data.json` 对外 schema 文档（可嵌 Tech Spec §4 或独立文件）；根 `README.md` 补『数据来源 / 许可』小节指向 DATA.md；交付用户审阅文案与归属条款。
-    status: pending
+    status: completed
   - id: p7-3-i2-tune
     content: P7.3（I2 人工扫参，依赖 P7.1 + Plan A 的 I1 最终数据）：先按 P7.1 判断是否引入 leva / lil-gui dev-only 面板（`import.meta.env.DEV` 守卫，不入生产）；用户在 `localhost:5173` / Storybook `GalaxyThreeLayerLab` 场景下逐组调节 → 截图比对；agent 把最终值回写源码（shader uniforms / Three.js 常量 / HUD 样式），并同步 Tech Spec / Design Spec 相关小节；交付用户前端肉眼复测。
     status: pending

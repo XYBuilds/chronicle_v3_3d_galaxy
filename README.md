@@ -26,3 +26,9 @@ Monorepo：Python 数据管线（清洗 → 特征工程 → UMAP → `galaxy_da
 ### 前端
 
 在**仓库根目录**执行 `npm install` 与 `npm run dev`（见 [frontend/README.md](frontend/README.md)）。将管线产出的 `galaxy_data.json`（及可选 `.gz`）放在 `frontend/public/data/` 供 Vite 加载。
+
+## 数据来源与许可
+
+- 数据来源与 Attribution：见 [docs/project_docs/DATA.md](docs/project_docs/DATA.md)
+- `galaxy_data.json` 对外字段契约：见 [docs/project_docs/galaxy_data_schema.md](docs/project_docs/galaxy_data_schema.md)
+- 架构流程总览（数据管线 → 渲染/HUD）：见 [docs/project_docs/架构总览.md](docs/project_docs/%E6%9E%B6%E6%9E%84%E6%80%BB%E8%A7%88.md)

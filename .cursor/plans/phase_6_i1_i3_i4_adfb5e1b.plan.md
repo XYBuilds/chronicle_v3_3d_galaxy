@@ -22,7 +22,7 @@ todos:
     status: completed
   - id: p6-4-i1-final-retrain
     content: "P6.4（I1 最终重训）：备份旧主数据 → （如需）`run_pipeline.py` 补上 `--text-model` 透传 → WSL 下 `--through-phase-2 --text-model mpnet --umap-backend umap --densmap --n-neighbors 100 --min-dist 0.4` 跑完整 Phase 2.1–2.5；`meta.version` bump；`validate_galaxy_json.py` 通过；回写 `frontend/public/data/galaxy_data.json(.gz)`。 "
-    status: pending
+    status: completed
   - id: p6-5-regression-handoff
     content: "P6.5（回归 + Plan A 交接）：基于最终数据复测 I3 / I4 是否仍稳定；若需调参小补丁即地修；为 Plan B（I2 + I5 + I6）提供交接面（含最终数据版本、当前 Tech Spec / Design Spec diff 点、待 I2 总表的参数入口）。 "
     status: pending

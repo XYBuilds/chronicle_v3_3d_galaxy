@@ -27,6 +27,16 @@ _DEFAULT_GALAXY_JSON = REPO_ROOT / "frontend" / "public" / "data" / "galaxy_data
 # Dev plan Phase 2.6: this subsample path triggers full Phase 1+2 without extra flags.
 _SUBSAMPLE_SMOKE_CSV = (REPO_ROOT / "data" / "subsample" / "tmdb2025_random20.csv").resolve()
 
+_DEFAULT_ST_MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+
+
+def _embedding_meta_label(model_id: str) -> str:
+    """Strip HuggingFace org prefix so meta.embedding_model matches existing galaxy_data.json style."""
+    s = str(model_id).strip()
+    if s.startswith("sentence-transformers/"):
+        return s[len("sentence-transformers/") :]
+    return s
+
 
 def _run_python_script(rel_script: Path, extra_args: list[str]) -> None:
     script_path = (REPO_ROOT / rel_script).resolve()
@@ -43,6 +53,7 @@ def run_phase2_through_export(
     cleaned_csv: Path,
     galaxy_json: Path,
     embedding_device: str,
+    model_id: str,
     umap_backend: str,
     densmap: bool,
     n_neighbors: int,
@@ -55,7 +66,7 @@ def run_phase2_through_export(
     c = str(cleaned_csv)
     _run_python_script(
         Path("scripts") / "feature_engineering" / "text_embedding.py",
-        ["--input", c, "--device", embedding_device],
+        ["--input", c, "--device", embedding_device, "--model-id", str(model_id)],
     )
     _run_python_script(Path("scripts") / "feature_engineering" / "genre_encoding.py", ["--input", c])
     _run_python_script(Path("scripts") / "feature_engineering" / "language_encoding.py", ["--input", c])
@@ -96,6 +107,7 @@ def run_phase2_through_export(
     ]
     if densmap:
         export_args.append("--densmap")
+    export_args.extend(["--embedding-model", _embedding_meta_label(model_id)])
     _run_python_script(Path("scripts") / "export" / "export_galaxy_json.py", export_args)
 
 
@@ -152,6 +164,19 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default="cuda",
         choices=("cuda", "cpu", "auto"),
         help="Phase 2.1 sentence-transformers device (default: cuda). Use cpu or auto without a CUDA-capable GPU.",
+    )
+    p.add_argument(
+        "--model-id",
+        "--text-model",
+        type=str,
+        default=_DEFAULT_ST_MODEL,
+        dest="model_id",
+        metavar="MODEL_ID",
+        help=(
+            "Phase 2.1 sentence-transformers --model-id (default: MiniLM 384d). "
+            "P6.4 example: sentence-transformers/paraphrase-multilingual-mpnet-base-v2. "
+            "--text-model is an alias."
+        ),
     )
     p.add_argument(
         "--phase-1-only",
@@ -296,6 +321,7 @@ def main(argv: list[str] | None = None) -> int:
             cleaned_csv=args.output,
             galaxy_json=args.galaxy_json,
             embedding_device=args.embedding_device,
+            model_id=str(args.model_id),
             umap_backend=str(args.umap_backend),
             densmap=bool(args.densmap),
             n_neighbors=int(args.n_neighbors),

@@ -23,29 +23,34 @@
 | `npm run build`（`frontend/`，含 `tsc -b` + `vite build`） | 通过 |
 | `npm run lint` | 通过 |
 
-## 3. I3 / I4 人工复测清单（建议在最终数据上再做一轮）
+### 2.1 人工目检签收
 
-以下需在浏览器（`npm run dev` 或 Storybook `GalaxyThreeLayerLab`）中目检；本次 agent 未替代主观验收。
+- **结论**：**通过**（用户目测确认，2026-04-24）。
+- **范围**：下列 §3 中 I3 / I4 / I1 主项；Bloom revive 为可选项，未单独记录时可按需补测。
+
+## 3. I3 / I4 人工复测清单
+
+在浏览器（`npm run dev` 或 Storybook `GalaxyThreeLayerLab`）中目检；**2026-04-24 已签收通过**（见 §2.1）。
 
 ### I3（P6.3.1 屏幕空间圆盘）
 
-- [ ] 鼠标仅在**可见圆盘内**触发 hover / tooltip；盘外 1px 级不误拾。
-- [ ] 同屏多星重叠处稳定命中 **front-most**（视觉上最近的星）。
-- [ ] **仅焦点 Z slab** 可 hover/click；时间轴滚到背景层时，背景小点不可点（Phase 5.1.7）。
-- [ ] 控制台调节 `window.__galaxyPointScale`（`scale` / `focusSizeMul`）后，hover 半径与视觉**立即一致**（uniform 同源）。
+- [x] 鼠标仅在**可见圆盘内**触发 hover / tooltip；盘外 1px 级不误拾。
+- [x] 同屏多星重叠处稳定命中 **front-most**（视觉上最近的星）。
+- [x] **仅焦点 Z slab** 可 hover/click；时间轴滚到背景层时，背景小点不可点（Phase 5.1.7）。
+- [x] 控制台调节 `window.__galaxyPointScale`（`scale` / `focusSizeMul`）后，hover 半径与视觉**立即一致**（uniform 同源）。
 
 ### I4（P6.2.2 单 pass 不透明）
 
-- [ ] 近处星遮挡远处星符合直觉（`depthWrite: true` + 圆盘 discard）。
-- [ ] 选中飞入/飞出（600–800ms）无透明度闪烁；`visible` 硬切与 [Phase 6.3.1](Phase%206.3.1%20hover%20%E5%9C%86%E7%9B%98%E6%8B%BE%E5%8F%96%20%E5%AE%9E%E6%96%BD%E6%8A%A5%E5%91%8A.md) 所述方案 X 一致。
+- [x] 近处星遮挡远处星符合直觉（`depthWrite: true` + 圆盘 discard）。
+- [x] 选中飞入/飞出（600–800ms）无透明度闪烁；`visible` 硬切与 [Phase 6.3.1](Phase%206.3.1%20hover%20%E5%9C%86%E7%9B%98%E6%8B%BE%E5%8F%96%20%E5%AE%9E%E6%96%BD%E6%8A%A5%E5%91%8A.md) 所述方案 X 一致。
 
 ### I1（坐标分布）
 
-- [ ] 加载无报错；高密度区域相对旧 384d 主数据更易辨认（主观对比 `densmap384` 归档）。
+- [x] 加载无报错；高密度区域相对旧 384d 主数据更易辨认（主观对比 `densmap384` 归档）。
 
 ### 可选
 
-- [ ] `window.__bloom.enable()` / `disable()`：Bloom revive 与当前默认直渲切换无报错。
+- [ ] `window.__bloom.enable()` / `disable()`：Bloom revive 与当前默认直渲切换无报错。（按需补测）
 
 ## 4. Tech Spec / Design Spec 与实现差异（Phase 7 文档回写待办）
 

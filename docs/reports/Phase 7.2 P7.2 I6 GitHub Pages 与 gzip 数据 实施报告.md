@@ -9,25 +9,36 @@
 | **Git 分支** | 在 `phase7/p7-2-gh-pages-gzip` 上实现并提交（示例提交：`2bfae4c`，消息含 `feat(i6): GitHub Pages base, gzip-only galaxy data, deploy workflow`）。合并到默认分支后 workflow 才会随 `push` 触发。 |
 | **Vite `base`** | [`frontend/vite.config.ts`](../../frontend/vite.config.ts) 设置 `base: '/chronicle_v3_3d_galaxy/'`，与 GitHub 仓库名对齐，保证生产与 GH Pages 子路径下 JS/CSS 引用正确。 |
 | **运行时数据路径** | 默认加载 URL 由 `import.meta.env.BASE_URL` 与相对路径拼接为 **`…/data/galaxy_data.json.gz`**（见 [`frontend/src/utils/loadGalaxyData.ts`](../../frontend/src/utils/loadGalaxyData.ts) 中 `GALAXY_DATA_DEFAULT_URL` / `galaxyDataDefaultUrl()`）。 |
-| **方案 B 解压** | 新增 [`frontend/src/data/loadGalaxyGzip.ts`](../../frontend/src/data/loadGalaxyGzip.ts)：`fetch` 后按 `Content-Length` 计量将 **body 完整读入** `Uint8Array`，再按 **gzip 魔数 `0x1f 0x8b`** 分支：仍为 gzip 则 `DecompressionStream('gzip')` 解压后 `JSON.parse`；否则视为 HTTP 已透明解压的 JSON（UTF-8 解码后解析）。细节与首版问题见 **§2**。仅在需手动解压分支要求 `DecompressionStream`（Safari 16.4+ / Chrome 80+ / Firefox 113+）。 |
+| **方案 B 解压** | 新增 [`frontend/src/data/loadGalaxyGzip.ts`](../../frontend/src/data/loadGalaxyGzip.ts)：`fetch` 后按 `Content-Length` 计量将 **body 完整读入** `Uint8Array`，再按 **gzip 魔数 `0x1f 0x8b`** 分支：仍为 gzip 则 `DecompressionStream('gzip')` 解压后 `JSON.parse`；否则视为 HTTP 已透明解压的 JSON（UTF-8 解码后解析）。行为说明见 **§2**。仅在需手动解压分支要求 `DecompressionStream`（Safari 16.4+ / Chrome 80+ / Firefox 113+）。 |
 | **校验与类型** | [`loadGalaxyData.ts`](../../frontend/src/utils/loadGalaxyData.ts) 仍对根对象执行原有 `parseAndValidate`；[`galaxyPublicJson.typecheck.ts`](../../frontend/src/types/galaxyPublicJson.typecheck.ts) 改为依赖 [`galaxyMinimalFixture.ts`](../../frontend/src/types/galaxyMinimalFixture.ts)，避免编译期 `import` 多 MB 的 `public/*.json`。 |
 | **Store / UI** | [`galaxyDataStore.ts`](../../frontend/src/store/galaxyDataStore.ts) 增加 `loadProgress`，在 `loadGalaxyData` 的 `onProgress` 中更新；[`Loading.tsx`](../../frontend/src/components/Loading.tsx) 展示「下载 / 解压 / 解析」三阶段标签、下载阶段条形进度与文案；[`App.tsx`](../../frontend/src/App.tsx) 错误态增加**重试**按钮，并说明本地管线生成 `.json`（被 ignore）与导出 `.gz` 的关系。 |
 | **仓库内数据资产** | **仅保留** [`frontend/public/data/galaxy_data.json.gz`](../../frontend/public/data/galaxy_data.json.gz) 跟踪；从 Git 移除：`galaxy_data.json`、`galaxy_data.densmap384.json(.gz)`、`galaxy_data_gpu768_n100.json(.gz)`。 |
 | **`.gitignore`** | 根目录与 [`frontend/.gitignore`](../../frontend/.gitignore)：`public/data` 下忽略 `*.json` 与 `*.json.gz`，**白名单** `!frontend/public/data/galaxy_data.json.gz`（及 frontend 目录内等价规则），便于本地保留未压缩 JSON 做校验而不误提交。 |
-| **GitHub Actions** | 新增 [`.github/workflows/deploy-pages.yml`](../../.github/workflows/deploy-pages.yml)：`actions/checkout@v4` → `actions/setup-node@v4`（Node **20**，`npm` cache 指向 `frontend/package-lock.json`）→ `cd frontend && npm ci && npm run build` → `actions/upload-pages-artifact@v3`（`path: frontend/dist`）→ `deploy` job 使用 `actions/deploy-pages@v4`；触发条件为 **`push` 到 `main`** 与 **`workflow_dispatch`**；顶层 `permissions`：`contents: read`、`pages: write`、`id-token: write`。 |
+| **GitHub Actions** | 新增 [`.github/workflows/deploy-pages.yml`](../../.github/workflows/deploy-pages.yml)：`actions/checkout@v4` → `actions/setup-node@v4`（Node **20**，**不设** `cache: npm`）→ 全局 **`npm i -g npm@10.8.3`** → 在 runner 上删除根 **`package-lock.json`** 与 **`node_modules` / `frontend/node_modules`** → **`npm install --include=optional`** → **`npm run build -w frontend`** → `actions/upload-pages-artifact@v3`（`path: frontend/dist`）→ `deploy` job 使用 `actions/deploy-pages@v4`；触发 **`push` 到 `main`** 与 **`workflow_dispatch`**；`permissions`：`contents: read`、`pages: write`、`id-token: write`。依赖安装策略理由见 **§3**。 |
 | **Storybook** | [`frontend/.storybook/main.ts`](../../frontend/.storybook/main.ts) 通过 `viteFinal` + `mergeConfig` 将 **`base` 覆写为 `'/'`**，避免 Storybook 继承应用子路径导致资源 404。 |
 | **管线 gzip** | Python 侧 [`scripts/export/export_galaxy_json.py`](../../scripts/export/export_galaxy_json.py) 已支持默认写出 `.json.gz`（`compresslevel=9`），本次**未改**导出脚本；本地开发可在 `frontend/public/data/` 生成被 ignore 的 `galaxy_data.json` 后由同一脚本或手工生成与线上同内容的 `.gz`。 |
 
-## 2. 发布后修正：Vite preview 与 HTTP 透明 gzip（`2d0c422`）
+## 2. `galaxy_data.json.gz`：HTTP 透明 gzip 与客户端解压
 
 | 项目 | 说明 |
 |------|------|
-| **根因** | `vite preview` 使用的静态服务对 `galaxy_data.json.gz` 响应携带 **`Content-Encoding: gzip`**（`curl -I` 可见）。按 Fetch 语义，浏览器会对 body **透明解压**后再暴露给 JS；此时 `response.body` 中已是 **JSON 原文**（首字节通常为 `{`），**并非**磁盘上的 gzip 压缩流。首版实现将 `body` 直接 `pipeThrough(new DecompressionStream('gzip'))`，等价于对已解压 JSON 再次当 gzip 解压，流读取失败；部分环境下控制台报 **`TypeError: Failed to fetch`**，易误判为网络或缺文件。 |
-| **修复** | 同一文件 [`loadGalaxyGzip.ts`](../../frontend/src/data/loadGalaxyGzip.ts)：先 **`ReadableStreamDefaultReader` 聚合**整段 body（保留下载阶段进度回调），再检测 **`0x1f 0x8b`**：有魔数则走 `DecompressionStream`；否则 **`TextDecoder` + `JSON.parse`**。无魔数分支不依赖 `DecompressionStream`。 |
+| **约定** | 静态宿主可能对 `*.json.gz` 附带 **`Content-Encoding: gzip`**（`curl -I` 可见）。按 Fetch 语义，浏览器可对 body **透明解压**后再暴露给 JS，此时流内已是 **JSON 原文**（首字节常为 `{`），与磁盘上的 gzip 压缩流不同。 |
+| **实现** | [`loadGalaxyGzip.ts`](../../frontend/src/data/loadGalaxyGzip.ts)：先把 body **完整读入** `Uint8Array`（保留下载进度），再检测 **`0x1f 0x8b`**：有 gzip 魔数则 `DecompressionStream('gzip')` 解压后 `JSON.parse`；否则按 **UTF-8 已解压 JSON** `TextDecoder` + `JSON.parse`。无魔数分支不依赖 `DecompressionStream`。 |
 | **兼容性** | 对 **未**声明 `Content-Encoding`、直接返回 gzip 裸字节的源站（或 `npm run dev` 等未加透明编码的场景），仍走魔数分支，与 P7.2 原「客户端 gunzip」设计一致。 |
 | **其他** | 控制台 **`message channel closed`** 类报错多为 **Chrome 扩展**注入脚本引起，与本应用无关；排障可用无痕窗口。 |
 
-## 3. 构建与静态检查
+## 3. GitHub Actions：Linux 上的依赖安装（Pages 构建）
+
+本仓库为 **npm workspaces**（根 `package.json` + 单一根目录 [`package-lock.json`](../../package-lock.json)），日常在 Windows 上开发、在 **ubuntu-latest** 上跑 Pages 构建。为在 CI 上稳定安装带 **原生 optional 绑定** 的依赖链（Vite / Rolldown、`lightningcss`、`@tailwindcss/oxide` 等），采用以下**定稿**做法：
+
+| 项目 | 说明 |
+|------|------|
+| **做法** | 在 workflow 的 **Linux runner** 上删除根 `package-lock.json` 与两处 `node_modules`，执行 **`npm install --include=optional`**，再 **`npm run build -w frontend`**。全局将 npm 升到 **10.8.3**（与 `vite-plugin-glsl` 等声明的 `npm` 下限对齐）。 |
+| **原因** | [npm/cli#4828](https://github.com/npm/cli/issues/4828)：在部分环境下仅对已有 lockfile 执行 **`npm ci`** 时，**平台相关 optional 包**可能未正确落盘，表现为构建期 **`Cannot find native binding`** / 缺 `*.linux-x64-gnu.node`。在 Linux 上**重新解析并安装**可一次性拉齐当前平台所需 optional。 |
+| **与仓库的关系** | CI **不**把 runner 上新生成的 `package-lock.json` 回写 Git；**仓库内仍以 Windows/本地生成的根 lockfile 为唯一事实来源**。Pages 流水线只消费安装结果与 `frontend/dist`。 |
+| **缓存** | 不在该 job 使用 `actions/setup-node` 的 **`cache: npm`**，避免缓存到「缺 optional」的旧 `node_modules` 状态。 |
+
+## 4. 构建与静态检查
 
 | 检查 | 结果（实施时） |
 |------|----------------|
@@ -36,7 +47,7 @@
 
 **补充**：`loadGalaxyGzip` 行为在提交 **`2d0c422`**（§2）之后已再次执行 `npm run build`，通过。
 
-## 4. 仍需你（维护者）在 GitHub 上完成的一次性步骤
+## 5. 仍需你（维护者）在 GitHub 上完成的一次性步骤
 
 以下属于 plan 中 **④** 的仓库设置，agent 无法在远端代点：
 
@@ -44,25 +55,25 @@
 2. 将本分支 **merge 到 `main`** 并推送，或手动 **Run workflow**，观察 **Actions** 中 Pages 部署是否成功。  
 3. 自用验收 URL（与 plan 一致，**请勿在未补齐 attribution 的收尾阶段前对外传播**）：`https://xybuilds.github.io/chronicle_v3_3d_galaxy/`。
 
-## 5. 本地开发注意
+## 6. 本地开发注意
 
 应用带 `base` 时，开发服务器入口应为 **`http://127.0.0.1:<port>/chronicle_v3_3d_galaxy/`**（端口以 [`frontend/vite.config.ts`](../../frontend/vite.config.ts) 中 `server.port` 为准，当前为 **4173**），否则根路径可能无法正确加载入口与数据。全量冒烟可用 `npm run preview` 在同一子路径下验证。
 
-## 6. 未纳入本次的范围（按 plan 边界）
+## 7. 未纳入本次的范围（按 plan 边界）
 
 - **P7.4 / P7.5**：INFO 按键 UI、Phase 7 收尾汇总。  
 - **对外文案**：根 README、TMDB attribution、INFO 正文等仍延至后续「对外收尾」阶段。  
 - **历史大文件 Git 瘦身**：若需从**整个 Git 历史**中剔除曾跟踪的 90MB 级 JSON，需单独评估 `git filter-repo` 等改写历史方案（plan 风险表已提及），本次仅做**当前树**上的移除与 ignore。
 
-## 7. 验收对照（计划 P7.2 技术条目）
+## 8. 验收对照（计划 P7.2 技术条目）
 
 - [x] ① Vite `base: '/chronicle_v3_3d_galaxy/'`，构建通过。  
 - [x] ② 仓库仅保留主 `galaxy_data.json.gz`；ignore 规则覆盖未压缩与多余 gzip；前端 **`fetch` + 魔数检测 +（必要时）`DecompressionStream`** + 进度 UI + 错误重试；不支持 `DecompressionStream` 时仅在需解压分支提示（见 §2）。  
-- [x] ③ `deploy-pages.yml` 与计划中的 Action 链、触发器、权限一致（Node 20）。  
+- [x] ③ `deploy-pages.yml`：`checkout` → `setup-node`（Node 20）→ **Linux 上 fresh `npm install`** → `build -w frontend` → `upload-pages-artifact` → `deploy-pages`；触发器与权限与计划一致（见 §3）。  
 - [ ] ④ GitHub Pages **Source = Actions** + 首次线上加载与交互 — **依赖你在远端完成配置与推送后的实机验收**。  
 - [x] ⑤ 未新增根 README、未写对外 attribution 文案。
 
-## 8. 相关链接
+## 9. 相关链接
 
 - Plan：[`.cursor/plans/phase_7_i2_i5_i6_05eeb9b1.plan.md`](../../.cursor/plans/phase_7_i2_i5_i6_05eeb9b1.plan.md)  
 - 后续依赖 P7.2 的条目：**P7.4**（INFO 按键，依赖线上可访问）、**P7.5**（阶段收尾）。

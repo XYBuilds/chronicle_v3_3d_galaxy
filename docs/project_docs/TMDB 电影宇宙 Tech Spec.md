@@ -134,9 +134,9 @@ Output
 
 #### **1.4.7 首屏加载体验**
 
-* 显示**全屏居中 Spinner**（极简旋转动效），不做确定性进度条。  
-* 前端必须**全量解析** `galaxy_data.json` 完毕后，才初始化 Three.js 场景并移除 Loading 覆盖层。  
-* 当前阶段**不做**加载失败重试 / 错误提示页。
+* 显示**全屏 Loading**（Spinner + 可选进度：gzip 下载 / 解压或透明解码 / JSON 解析阶段文案）。  
+* 前端必须**全量解析**宇宙数据（默认 **`galaxy_data.json.gz`**，见 §5.1）完毕后，才初始化 Three.js 场景并移除 Loading 覆盖层。  
+* 加载失败时提供**错误提示与重试**（Phase 7 自用验收路径）。
 
 ### **1.5 交互拾取（Raycaster · Phase 5.1.7）**
 
@@ -354,9 +354,9 @@ galaxy_data.json (gzip)    ← §4 定义的 Schema
 Vercel / Netlify / GitHub Pages（静态托管）
 ```
 
-* Python 管线在**本地手动执行**（清洗 → embedding → UMAP → 导出 JSON），产物提交到仓库或上传至 CDN。  
-* 前端 `fetch('/data/galaxy_data.json')` 一次性加载，Loading 页等待完成后初始化 Three.js 场景。  
-* **推荐托管**：**Vercel**（零配置、自动 gzip/brotli、全球 CDN、免费额度足够个人项目）。
+* Python 管线在**本地手动执行**（清洗 → embedding → UMAP → 导出 JSON + gzip），大体积 **`galaxy_data.json.gz`** 可提交到 `frontend/public/data/` 或由 CDN 提供。  
+* 前端默认 **`fetch(BASE_URL + 'data/galaxy_data.json.gz')`** 一次性加载；按 **gzip 魔数**与 **HTTP 透明 gzip** 分支处理后再 `JSON.parse`；Loading 完成后初始化 Three.js 场景（实现见 `frontend/src/data/loadGalaxyGzip.ts`、`frontend/src/utils/loadGalaxyData.ts`）。  
+* **静态托管**：**GitHub Pages**（本仓库已配 Actions 构建部署）或 **Vercel / Netlify** 等；注意子路径部署时 Vite `base` 与资源 URL 一致。
 
 ### **5.2 未来阶段（自动化数据管线）**
 
@@ -432,7 +432,7 @@ chronicle_v3_3d_galaxy/
 * **代码风格**：ESLint + Prettier，采用默认推荐规则集即可，不必自定义过多规则。  
 * **Git**：  
   * `data/raw/` 下的大文件加入 `.gitignore`（或 Git LFS）。  
-  * `frontend/public/data/galaxy_data.json` 可选：若 <50 MB 可直接提交；若过大则 gitignore 并通过管线产出。  
+  * `frontend/public/data/`：推荐 Git **仅跟踪** `galaxy_data.json.gz`；未压缩 `galaxy_data.json` 由管线本地生成并 **gitignore**（见仓库根 `.gitignore`）。  
   * Commit message 无强制格式，保持简洁可读即可。
 
 ## **7\. 浏览器兼容性**

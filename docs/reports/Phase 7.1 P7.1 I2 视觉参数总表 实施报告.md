@@ -29,4 +29,4 @@
 
 - Plan：[`.cursor/plans/phase_7_i2_i5_i6_05eeb9b1.plan.md`](../../.cursor/plans/phase_7_i2_i5_i6_05eeb9b1.plan.md)  
 - 总表：`docs/project_docs/视觉参数总表.md`  
-- 后续：P7.3（I2 人工扫参）、P7.2（I6 文档）可与本报告并行查阅 plan 依赖图。
+- 后续：P7.3（I2 人工扫参）、P7.2（I6 GitHub Pages + gzip 数据）可与本报告并行查阅 plan 依赖图。

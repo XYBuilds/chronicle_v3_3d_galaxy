@@ -40,5 +40,5 @@ alwaysApply: false
 
 ## Data Loading
 
-- Single `galaxy_data.json` fetched at startup; full-screen spinner until parsed
+- Default: `galaxy_data.json.gz` fetched at startup (`import.meta.env.BASE_URL` + `data/...`); gzip magic vs HTTP-transparent gzip handled in `frontend/src/data/loadGalaxyGzip.ts`; full-screen loading + optional progress until parsed
 - Split into GPU BufferAttributes + DOM HUD data after parse

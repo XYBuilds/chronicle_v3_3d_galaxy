@@ -3,28 +3,27 @@
 本文是本项目的实操版上线手册，目标是把当前仓库部署到 GitHub Pages，并可稳定访问：
 
 - 目标地址：`https://xybuilds.github.io/chronicle_v3_3d_galaxy/`
-- 构建入口：`frontend`（Vite）
+- 构建入口：`frontend`（Vite，npm workspace 子包）
 - 部署方式：GitHub Actions（非 branch 直出）
 
 ---
 
 ## 1. 上线前提（先对齐）
 
-先确认以下文件已在你的分支中：
+先确认以下已在你的分支中：
 
-- `frontend/vite.config.ts` 中有：
-  - `base: '/chronicle_v3_3d_galaxy/'`
-- `.github/workflows/deploy-pages.yml` 存在，且包含：
-  - `on.push.branches: [main]`
-  - `workflow_dispatch`
-  - `actions/setup-node@v4`（Node 20）
-  - `cd frontend && npm ci && npm run build`
-  - `actions/upload-pages-artifact@v3`（`path: frontend/dist`）
-  - `actions/deploy-pages@v4`
-  - `permissions.pages: write` + `permissions.id-token: write`
-- `frontend/public/data/galaxy_data.json.gz` 存在（约 31MB）
+- `frontend/vite.config.ts`：`base: '/chronicle_v3_3d_galaxy/'`
+- `.github/workflows/deploy-pages.yml` 存在，且与仓库内实现一致（摘要）：
+  - `on.push.branches: [main]`、`workflow_dispatch`
+  - `actions/checkout@v4`、`actions/setup-node@v4`（Node **20**，**不要**对该 job 配置 `cache: npm`）
+  - `npm i -g npm@10.8.3`
+  - 删除根 `package-lock.json` 与 `node_modules`、`frontend/node_modules` 后执行 **`npm install --include=optional`**
+  - **`npm run build -w frontend`**
+  - `actions/upload-pages-artifact@v3`（`path: frontend/dist`）、`actions/deploy-pages@v4`
+  - `permissions`：`contents: read`、`pages: write`、`id-token: write`
+- `frontend/public/data/galaxy_data.json.gz` 存在并已纳入构建（会复制到 `frontend/dist/data/`）
 
-本地先做一次构建检查（仓库根目录）：
+本地构建（仓库根目录）：
 
 ```powershell
 npm run build
@@ -34,87 +33,86 @@ npm run build
 
 ---
 
-## 2. 第一次开启 GitHub Pages（一次性设置）
+## 2. 为什么 CI 里要「删 lock + 重装」？
 
-在 GitHub 网页端操作：
+本仓库锁文件在**根目录** [`package-lock.json`](../../package-lock.json)（npm workspaces），开发机多为 **Windows**；GitHub Actions 使用 **Linux**。部分依赖（Vite / Rolldown、`lightningcss`、`@tailwindcss/oxide` 等）带有 **平台相关 optional 原生绑定**。
 
-1. 打开仓库 `XYBuilds/chronicle_v3_3d_galaxy`
-2. 进入 `Settings` → `Pages`
-3. 在 `Build and deployment` 中将 `Source` 设为 `GitHub Actions`
+在 Linux 上对**已有** lockfile 仅执行 `npm ci` 时，可能触发 [npm/cli#4828](https://github.com/npm/cli/issues/4828) 一类行为：**optional 包未正确安装**，构建报错 `Cannot find native binding` / 缺 `*.linux-x64-gnu.node`。
+
+**定稿做法**：在 **ubuntu-latest** runner 上删除根 `package-lock.json` 与两处 `node_modules`，执行 `npm install --include=optional`，再 `npm run build -w frontend`。  
+**不把** runner 上新产生的 `package-lock.json` 提交回仓库；本地仍以你机器上的根 lockfile 为准。
+
+详细说明见：`docs/reports/Phase 7.2 P7.2 I6 GitHub Pages 与 gzip 数据 实施报告.md` §3。
+
+---
+
+## 3. 第一次开启 GitHub Pages（一次性设置）
+
+在 GitHub 网页端：
+
+1. 打开仓库 `XYBuilds/chronicle_v3_3d_galaxy`（或你的 fork 对应路径）
+2. `Settings` → `Pages`
+3. `Build and deployment` → **Source** 选 **GitHub Actions**
 4. 保存
 
-说明：这一步只需做一次，后续由 workflow 自动部署。
+说明：只需配置一次，之后由 workflow 自动部署。
 
 ---
 
-## 3. 触发部署（标准流程）
+## 4. 触发部署（标准流程）
 
-建议流程：
+1. 在功能分支完成改动，本地 `npm run build` 通过  
+2. PR 合并到 **`main`**  
+3. `push` 到 `main` 会自动触发 `.github/workflows/deploy-pages.yml`
 
-1. 在功能分支完成改动并通过本地构建
-2. 发起 PR 并合并到 `main`
-3. 合并后 `push` 到 `main` 会自动触发 `.github/workflows/deploy-pages.yml`
+手动补跑：
 
-也可手动触发（用于补跑）：
-
-1. GitHub → `Actions`
-2. 选择 `Deploy GitHub Pages`
-3. 点击 `Run workflow`，选择 `main`
+1. GitHub → `Actions` → `Deploy GitHub Pages`  
+2. `Run workflow`，分支选 `main`
 
 ---
 
-## 4. 验证是否部署成功
+## 5. 验证是否部署成功
 
-### 4.1 看 Actions
+### 5.1 Actions
 
-`Deploy GitHub Pages` 应出现两个 job：
+应看到两个 job 均成功：
 
-- `build`：安装依赖并构建 `frontend/dist`
-- `deploy`：发布 artifact 到 `github-pages` 环境
+- `build`：安装依赖并产出 `frontend/dist`
+- `deploy`：发布到 `github-pages` 环境
 
-两个 job 都是绿色即为部署成功。
+### 5.2 浏览器
 
-### 4.2 看 URL
+打开：`https://xybuilds.github.io/chronicle_v3_3d_galaxy/`
 
-打开：
+验收要点：
 
-- `https://xybuilds.github.io/chronicle_v3_3d_galaxy/`
-
-验收点：
-
-- 页面可加载，不是空白/404
-- 能成功加载银河数据（`galaxy_data.json.gz`）
-- Timeline / Drawer / 三层渲染交互正常
+- 非空白、非 404；静态资源路径带 `/chronicle_v3_3d_galaxy/`
+- 能加载 `…/data/galaxy_data.json.gz`（经 [`loadGalaxyGzip.ts`](../../frontend/src/data/loadGalaxyGzip.ts) 处理透明 gzip 与裸 gzip 两种情形）
+- Timeline / Drawer / 三层交互正常
 
 ---
 
-## 5. 常见问题排查
+## 6. 常见问题排查
 
-### 问题 A：页面 404 或静态资源 404
+### 6.1 页面或静态资源 404
 
-优先检查：
+- `frontend/vite.config.ts` 的 `base` 是否为 `'/chronicle_v3_3d_galaxy/'`
+- 仓库名与 `base` 路径是否一致
+- artifact 是否来自 `frontend/dist`
 
-- `frontend/vite.config.ts` 的 `base` 是否是 `'/chronicle_v3_3d_galaxy/'`
-- 仓库名是否仍是 `chronicle_v3_3d_galaxy`
-- 是否确实部署的是 `frontend/dist`
+### 6.2 页面能开但数据 `Failed to fetch`
 
----
+1. `frontend/public/data/galaxy_data.json.gz` 是否在构建时进入 `dist/data/`  
+2. 浏览器 Network 里该 URL 的 HTTP 状态  
+3. 无痕窗口排除扩展拦截（控制台偶发 `message channel` 类报错多来自扩展）
 
-### 问题 B：页面打开但报 `Failed to fetch`（数据加载失败）
+### 6.3 Workflow：`Cannot find native binding` / 缺 `*.linux-x64-gnu.node`
 
-按顺序检查：
+- 确认 workflow 仍为 **删 lock + `npm install --include=optional`** 的定稿步骤，且 **未**对 `setup-node` 开启会固化坏树的 **`cache: npm`**
+- 参考 [npm/cli#4828](https://github.com/npm/cli/issues/4828) 与实施报告 §3
 
-1. `frontend/public/data/galaxy_data.json.gz` 是否存在并被打进 `dist/data/`
-2. 浏览器 Network 中 `.../data/galaxy_data.json.gz` 请求状态
-3. 是否命中已修复场景：HTTP 透明 gzip（见 `frontend/src/data/loadGalaxyGzip.ts`）
-
-补充：控制台的 `message channel closed` 常见于浏览器扩展注入脚本，建议用无痕窗口复测。
-
----
-
-### 问题 C：Workflow 权限报错（Pages / id-token）
-
-检查 `.github/workflows/deploy-pages.yml` 顶层：
+### 6.4 `permissions` 报错
 
 ```yaml
 permissions:
@@ -125,28 +123,24 @@ permissions:
 
 ---
 
-## 6. 发布节奏建议
+## 7. 发布节奏建议
 
-建议每次上线都走以下最小闭环：
-
-1. 本地 `npm run build`
-2. PR 合并到 `main`
-3. 等 Actions 绿灯
-4. 打开 Pages URL 做一次肉眼验收
-
-这样可以把“能构建”和“线上可用”两个问题分开，排障更快。
+1. 本地 `npm run build`  
+2. 合并到 `main`  
+3. Actions 全绿  
+4. 打开 Pages URL 做一次肉眼验收  
 
 ---
 
-## 7. 本项目约束提醒（当前阶段）
+## 8. 本项目约束提醒（当前阶段）
 
-- 当前 Phase 7 约束：只做自用验收，不主动公开 URL
-- 暂不补对外文案（README / attribution 等）
-- 对外收尾内容留到后续独立阶段统一处理
+- Phase 7：线上 URL **仅自用验收**，不主动公开  
+- 不补根 README / 对外 attribution（延至收尾阶段）
 
 ---
 
-## 8. 相关文档
+## 9. 相关文档
 
-- 实施报告：`docs/reports/Phase 7.2 P7.2 I6 GitHub Pages 与 gzip 数据 实施报告.md`
-- 计划文件：`.cursor/plans/phase_7_i2_i5_i6_05eeb9b1.plan.md`
+- 实施报告：`docs/reports/Phase 7.2 P7.2 I6 GitHub Pages 与 gzip 数据 实施报告.md`  
+- Workspaces 与根锁文件：`docs/reports/Phase 3.7.2 根目录 npm workspaces 与 monorepo DX 实施报告.md`  
+- 计划：`.cursor/plans/phase_7_i2_i5_i6_05eeb9b1.plan.md`

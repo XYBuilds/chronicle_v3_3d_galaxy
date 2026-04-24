@@ -6,7 +6,7 @@ todos:
     content: P7.1（I2 参数清单化 / agent）：扫 `frontend/src/three/`、`shaders/*.glsl`、`galaxy.ts`、`store/galaxyInteractionStore.ts`、Bloom 相关文件，产出 `docs/project_docs/视觉参数总表.md`，每项含当前值 / 文件:行号 / 作用 / 取值范围 / 依赖关系；末尾给出 uniform 级条目数与『是否建议引入 dev-only GUI』判断，交付用户验收。
     status: completed
   - id: p7-2-gh-pages-deploy
-    content: P7.2（I6 GitHub Pages 上线 / agent，可与 P7.1 并行）：① Vite 配置 `base: '/chronicle_v3_3d_galaxy/'` 并校验构建产物静态资源路径；② 大数据资产采用**方案 B 压缩版直传**——只保留 `frontend/public/data/galaxy_data.json.gz`（~31 MB）进仓库，`.gitignore` 排除未压缩 JSON，新增数据加载模块用 `fetch + DecompressionStream('gzip')` 解流（含加载进度 UI 与失败兜底），source 侧全面切换到 .gz 路径；③ 新增 `.github/workflows/deploy-pages.yml`（checkout → setup-node@20 → `cd frontend && npm ci && npm run build` → `actions/upload-pages-artifact@v3 path=frontend/dist` → `actions/deploy-pages@v4`，触发：`push` 到默认分支 + `workflow_dispatch`，权限 `pages: write` / `id-token: write`）；④ 在 GitHub Settings → Pages 配置 Source = GitHub Actions，首次部署后拿到 `https://xybuilds.github.io/chronicle_v3_3d_galaxy/`（本阶段**不主动公开**此 URL，仅自用验收）；⑤ 本阶段**不新增根 README，不写任何对外 attribution / 简介文案**，所有对外文案留到后续收尾阶段一并补齐；交付用户实机访问线上 URL 并肉眼验收加载与交互。
+    content: P7.2（I6 GitHub Pages 上线 / agent，可与 P7.1 并行）：① Vite 配置 `base: '/chronicle_v3_3d_galaxy/'` 并校验构建产物静态资源路径；② 大数据资产采用**方案 B 压缩版直传**——只保留 `frontend/public/data/galaxy_data.json.gz`（~31 MB）进仓库，`.gitignore` 排除未压缩 JSON，数据加载支持 gzip 魔数分支 +（必要时）`DecompressionStream`、HTTP 透明 gzip 与加载进度 UI / 失败重试，source 默认 `.gz`；③ 新增 `.github/workflows/deploy-pages.yml`（checkout → setup-node Node 20 → 全局 npm 10.8.3 → Linux runner 上删根 lock + node_modules 后 `npm install --include=optional` → `npm run build -w frontend` → `upload-pages-artifact`（frontend/dist）→ `deploy-pages@v4`；`push` 默认分支 + `workflow_dispatch`；`pages: write` / `id-token: write`）；④ Settings → Pages，Source = GitHub Actions；自用 URL `https://xybuilds.github.io/chronicle_v3_3d_galaxy/`（本阶段不主动公开）；⑤ 不新增根 README / 对外 attribution；交付实机验收。
     status: completed
   - id: p7-3-i2-tune
     content: P7.3（I2 人工扫参，依赖 P7.1 + Plan A 的 I1 最终数据）：先按 P7.1 判断是否引入 leva / lil-gui dev-only 面板（`import.meta.env.DEV` 守卫，不入生产）；用户在 `localhost:5173` / Storybook `GalaxyThreeLayerLab` 场景下逐组调节 → 截图比对；agent 把最终值回写源码（shader uniforms / Three.js 常量 / HUD 样式），并同步 Tech Spec / Design Spec 相关小节；交付用户前端肉眼复测。
@@ -71,12 +71,12 @@ flowchart TD
 
 ### I6 GitHub Pages 上线
 - `frontend/vite.config.ts`：新增 `base: '/chronicle_v3_3d_galaxy/'`（与远端仓库名对齐：`XYBuilds/chronicle_v3_3d_galaxy`）
-- 新增 `.github/workflows/deploy-pages.yml`：`actions/checkout@v4` → `actions/setup-node@v4`（Node 20）→ `cd frontend && npm ci && npm run build` → `actions/upload-pages-artifact@v3`（`path: frontend/dist`）→ `actions/deploy-pages@v4`；触发 `push` 到默认分支 + `workflow_dispatch`；权限 `pages: write` / `id-token: write`
+- 新增 `.github/workflows/deploy-pages.yml`：`actions/checkout@v4` → `actions/setup-node@v4`（Node 20）→ 全局 npm 10.8.3 → **Linux runner 上**删根 `package-lock.json` + `node_modules` 后 `npm install --include=optional` → `npm run build -w frontend` → `actions/upload-pages-artifact@v3`（`path: frontend/dist`）→ `actions/deploy-pages@v4`；触发 `push` 到默认分支 + `workflow_dispatch`；权限 `pages: write` / `id-token: write`（规避 [npm/cli#4828](https://github.com/npm/cli/issues/4828) optional 原生绑定）
 - GitHub 仓库一次性配置：Settings → Pages → Source = GitHub Actions；首次成功后记录线上 URL = `https://xybuilds.github.io/chronicle_v3_3d_galaxy/`（**本阶段仅自用验收，不主动公开**）
 - 大数据资产策略 = **方案 B（压缩版直传 + `DecompressionStream`）**，具体落地：
   - 仓库只保留 `frontend/public/data/galaxy_data.json.gz`（~31 MB）；其余历史 JSON 变体（`galaxy_data.densmap384.json(.gz)` / `galaxy_data_gpu768_n100.json(.gz)`）与未压缩 `galaxy_data.json` 一并从仓库移除
   - 根 `.gitignore` 与 `frontend/.gitignore` 新增规则：忽略 `frontend/public/data/*.json`（只收 `.gz`），并为实验变体加白名单例外（如需保留本地）
-  - 新增 `frontend/src/data/loadGalaxy.ts`（或同名位置）：封装 `fetch(url) → res.body.pipeThrough(new DecompressionStream('gzip')) → new Response(stream).json()`，含下载进度回调（读 `Content-Length` 并在 `ReadableStream` 中累加 chunk bytes）
+  - 实现为 [`frontend/src/data/loadGalaxyGzip.ts`](../../frontend/src/data/loadGalaxyGzip.ts)：`fetch` → 整段 body 读入 → **gzip 魔数**分支（必要时 `DecompressionStream('gzip')`）或 UTF-8 JSON 直解析；下载进度与 UI 见 `loadGalaxyData` / `Loading`
   - 加载 UI：接入现有 HUD / 首屏 loading 容器，显示"下载 x / 31 MB → 解压 → 解析"三阶段进度条；错误态兜底（网络失败 / 解压失败 / JSON parse 失败）给 retry 按钮
   - Pipeline 侧配套：`scripts/` 或 Python 导出链末端确保 `.gz` 与 `.json` 同步产出（若当前是手工 gzip，补一条 `gzip -k -9 galaxy_data.json` 在导出脚本里）；`meta.version` 字段保持跨格式一致
   - 开发环境：Vite dev server 静态服务 `public/data/*.gz` 与生产行为一致；不保留未压缩 JSON 的 dev 分支路径，避免双路径漂移

@@ -28,7 +28,7 @@ const meta = {
     docs: {
       description: {
         component:
-          'Mounts the production `mountGalaxyScene` with a single subsample point. Use Controls for Z slab size split, OKLCH macro color, optional Bloom (revive), and Perlin planet uniforms. Selection uses the real fly-to + visibility hard-cuts (P6.2.2).',
+          'Mounts the production `mountGalaxyScene` with a single subsample point. In **dev** (`npm run storybook`), a **Leva** panel (P7.3 I2) drives the same uniforms; Storybook Controls still push initial/sync values when you change args. Production `build-storybook` uses args only (no Leva bundle path). Selection uses the real fly-to + visibility hard-cuts (P6.2.2).',
       },
     },
   },

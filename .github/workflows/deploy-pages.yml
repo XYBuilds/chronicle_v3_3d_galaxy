@@ -30,7 +30,7 @@ jobs:
         run: npm i -g npm@10.8.3
 
       - name: Install and build
-        run: npm ci --include=optional && npm i -w frontend @rolldown/binding-linux-x64-gnu --no-save && npm run build -w frontend
+        run: npm ci --include=optional && npm i -w frontend @rolldown/binding-linux-x64-gnu lightningcss-linux-x64-gnu --no-save && npm run build -w frontend
 
       - uses: actions/upload-pages-artifact@v3
         with:

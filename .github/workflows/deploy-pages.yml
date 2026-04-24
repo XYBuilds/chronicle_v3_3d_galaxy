@@ -29,8 +29,12 @@ jobs:
       - name: Install and build
         run: |
           npm ci --include=optional
-          npm i --no-save @rolldown/binding-linux-x64-gnu -w frontend
-          npm i --no-save lightningcss-linux-x64-gnu -w frontend
+          cd frontend
+          ROLLDOWN_VER=$(node -p "require('./node_modules/rolldown/package.json').version")
+          LIGHTNINGCSS_VER=$(node -p "require('./node_modules/lightningcss/package.json').version")
+          npm i --no-save "@rolldown/binding-linux-x64-gnu@${ROLLDOWN_VER}"
+          npm i --no-save "lightningcss-linux-x64-gnu@${LIGHTNINGCSS_VER}"
+          cd ..
           npm run build -w frontend
 
       - uses: actions/upload-pages-artifact@v3

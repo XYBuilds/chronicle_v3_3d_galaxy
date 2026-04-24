@@ -7,7 +7,7 @@ todos:
     status: completed
   - id: p7-2-gh-pages-deploy
     content: P7.2（I6 GitHub Pages 上线 / agent，可与 P7.1 并行）：① Vite 配置 `base: '/chronicle_v3_3d_galaxy/'` 并校验构建产物静态资源路径；② 大数据资产采用**方案 B 压缩版直传**——只保留 `frontend/public/data/galaxy_data.json.gz`（~31 MB）进仓库，`.gitignore` 排除未压缩 JSON，新增数据加载模块用 `fetch + DecompressionStream('gzip')` 解流（含加载进度 UI 与失败兜底），source 侧全面切换到 .gz 路径；③ 新增 `.github/workflows/deploy-pages.yml`（checkout → setup-node@20 → `cd frontend && npm ci && npm run build` → `actions/upload-pages-artifact@v3 path=frontend/dist` → `actions/deploy-pages@v4`，触发：`push` 到默认分支 + `workflow_dispatch`，权限 `pages: write` / `id-token: write`）；④ 在 GitHub Settings → Pages 配置 Source = GitHub Actions，首次部署后拿到 `https://xybuilds.github.io/chronicle_v3_3d_galaxy/`（本阶段**不主动公开**此 URL，仅自用验收）；⑤ 本阶段**不新增根 README，不写任何对外 attribution / 简介文案**，所有对外文案留到后续收尾阶段一并补齐；交付用户实机访问线上 URL 并肉眼验收加载与交互。
-    status: pending
+    status: completed
   - id: p7-3-i2-tune
     content: P7.3（I2 人工扫参，依赖 P7.1 + Plan A 的 I1 最终数据）：先按 P7.1 判断是否引入 leva / lil-gui dev-only 面板（`import.meta.env.DEV` 守卫，不入生产）；用户在 `localhost:5173` / Storybook `GalaxyThreeLayerLab` 场景下逐组调节 → 截图比对；agent 把最终值回写源码（shader uniforms / Three.js 常量 / HUD 样式），并同步 Tech Spec / Design Spec 相关小节；交付用户前端肉眼复测。
     status: pending

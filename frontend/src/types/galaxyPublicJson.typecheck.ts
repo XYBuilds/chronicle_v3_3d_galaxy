@@ -1,8 +1,8 @@
 /**
- * Compile-only check: subsample `public/data/galaxy_data.json` matches §4 types.
- * Not imported by the app bundle (Phase 3.3 loader will fetch at runtime).
+ * Compile-only check: minimal fixture matches §4 types.
+ * Runtime load uses gzip from `public/data` (see `loadGalaxyData.ts`).
  */
-import galaxyDataJson from '../../public/data/galaxy_data.json'
 import type { GalaxyData } from './galaxy'
+import { galaxyMinimalFixture } from './galaxyMinimalFixture'
 
-export const _galaxyDataJsonMatchesSpec = galaxyDataJson satisfies GalaxyData
+export const _galaxyDataJsonMatchesSpec = galaxyMinimalFixture satisfies GalaxyData

@@ -31,7 +31,10 @@ frontend/dist/
 frontend/storybook-static/
 frontend/.vite/
 frontend/.cache/
-# galaxy_data.json / .json.gz are tracked (full pipeline export; see code review follow-up plan).
+# P7.2: only galaxy_data.json.gz is tracked; pipeline writes .json locally (ignored).
+frontend/public/data/*.json
+frontend/public/data/*.json.gz
+!frontend/public/data/galaxy_data.json.gz
 
 # ============================================================
 # IDE / OS

@@ -15,20 +15,64 @@ function emit(onProgress: ((p: GalaxyGzipProgress) => void) | undefined, p: Gala
   onProgress?.(p)
 }
 
+function isGzipPayload(u8: Uint8Array): boolean {
+  return u8.byteLength >= 2 && u8[0] === 0x1f && u8[1] === 0x8b
+}
+
+async function readBodyWithProgress(
+  body: ReadableStream<Uint8Array>,
+  totalBytes: number | null,
+  onProgress?: (p: GalaxyGzipProgress) => void,
+): Promise<Uint8Array> {
+  const reader = body.getReader()
+  const chunks: Uint8Array[] = []
+  let downloadedBytes = 0
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    if (value) {
+      chunks.push(value)
+      downloadedBytes += value.byteLength
+      const message =
+        totalBytes !== null ? `下载 ${mb(downloadedBytes)} / ${mb(totalBytes)}` : `已下载 ${mb(downloadedBytes)}`
+      emit(onProgress, { phase: 'download', downloadedBytes, totalBytes, message })
+    }
+  }
+  const out = new Uint8Array(downloadedBytes)
+  let offset = 0
+  for (const c of chunks) {
+    out.set(c, offset)
+    offset += c.byteLength
+  }
+  return out
+}
+
+async function gunzipBuffer(u8: Uint8Array): Promise<string> {
+  if (typeof DecompressionStream === 'undefined') {
+    throw new Error(
+      '[GalaxyData] 当前浏览器不支持 gzip 解压（DecompressionStream）。请使用 Safari 16.4+、Chrome 80+ 或 Firefox 113+。',
+    )
+  }
+  const gzipStream = new DecompressionStream('gzip') as TransformStream<Uint8Array, Uint8Array>
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(u8)
+      controller.close()
+    },
+  }).pipeThrough(gzipStream)
+  return new Response(stream).text()
+}
+
 /**
- * Fetch gzip-compressed JSON from `public/data` (or CDN), gunzip via DecompressionStream, return parsed JSON.
- * Safari ≥ 16.4 / Chrome ≥ 80 / Firefox ≥ 113.
+ * Fetch `galaxy_data.json.gz` from CDN / static host.
+ *
+ * **双路径**：若 HTTP 层已对 `Content-Encoding: gzip` 做透明解压（Vite preview / 常见 CDN），body 首字节为 `{`；
+ * 若仍收到磁盘上的 gzip 原始字节（首两字节为 gzip 魔数），则用 `DecompressionStream` 解压后再解析。
  */
 export async function fetchGunzippedJson(
   url: string,
   onProgress?: (p: GalaxyGzipProgress) => void,
 ): Promise<unknown> {
-  if (typeof DecompressionStream === 'undefined') {
-    throw new Error(
-      '[GalaxyData] 当前浏览器不支持 gzip 流式解压（DecompressionStream）。请使用 Safari 16.4+、Chrome 80+ 或 Firefox 113+。',
-    )
-  }
-
   let res: Response
   try {
     res = await fetch(url)
@@ -50,38 +94,30 @@ export async function fetchGunzippedJson(
   const totalBytes = Number.isFinite(parsedLen) ? parsedLen : null
   const body = res.body
   if (!body) {
-    throw new Error('[GalaxyData] 响应无 body，无法流式读取')
+    throw new Error('[GalaxyData] 响应无 body，无法读取')
   }
 
-  let downloadedBytes = 0
-  const meter = new TransformStream<Uint8Array, Uint8Array>({
-    transform(chunk, controller) {
-      downloadedBytes += chunk.byteLength
-      const message =
-        totalBytes !== null ? `下载 ${mb(downloadedBytes)} / ${mb(totalBytes)}` : `已下载 ${mb(downloadedBytes)}`
-      emit(onProgress, { phase: 'download', downloadedBytes, totalBytes, message })
-      controller.enqueue(chunk)
-    },
-  })
+  const bytes = await readBodyWithProgress(body, totalBytes, onProgress)
 
-  emit(onProgress, {
-    phase: 'decompress',
-    downloadedBytes,
-    totalBytes,
-    message: '解压 gzip…',
-  })
-
-  const gzipStream = new DecompressionStream('gzip') as TransformStream<Uint8Array, Uint8Array>
-  const inflated = body.pipeThrough(meter).pipeThrough(gzipStream)
+  let text: string
+  if (isGzipPayload(bytes)) {
+    emit(onProgress, {
+      phase: 'decompress',
+      downloadedBytes: bytes.byteLength,
+      totalBytes,
+      message: '解压 gzip…',
+    })
+    text = await gunzipBuffer(bytes)
+  } else {
+    text = new TextDecoder('utf-8', { fatal: false }).decode(bytes)
+  }
 
   emit(onProgress, {
     phase: 'parse',
-    downloadedBytes,
+    downloadedBytes: bytes.byteLength,
     totalBytes,
     message: '解析 JSON…',
   })
-
-  const text = await new Response(inflated).text()
 
   try {
     return JSON.parse(text) as unknown

@@ -27,7 +27,10 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Install and build
-        run: npm ci --include=optional && npm run build -w frontend
+        run: |
+          npm ci --include=optional
+          npm i --no-save @rolldown/binding-linux-x64-gnu -w frontend
+          npm run build -w frontend
 
       - uses: actions/upload-pages-artifact@v3
         with:

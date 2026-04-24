@@ -1,5 +1,5 @@
 /**
- * galaxy_data.json — Tech Spec §4 (Python → frontend contract).
+ * Galaxy universe JSON (Tech Spec §4). Shipped as `galaxy_data.json.gz`; pipeline writes `.json` locally then gzip.
  */
 
 /** Normalized sRGB in [0, 1] for GPU / Three.js (§4.3A `genre_color`). */

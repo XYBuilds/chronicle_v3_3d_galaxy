@@ -13,6 +13,7 @@ function App() {
   const status = useGalaxyDataStore((s) => s.status)
   const data = useGalaxyDataStore((s) => s.data)
   const errorMessage = useGalaxyDataStore((s) => s.errorMessage)
+  const loadProgress = useGalaxyDataStore((s) => s.loadProgress)
   const fetchGalaxyData = useGalaxyDataStore((s) => s.fetchGalaxyData)
   const canvasHostRef = useRef<HTMLDivElement>(null)
 
@@ -29,7 +30,7 @@ function App() {
   }, [status, data])
 
   if (status === 'loading' || status === 'idle') {
-    return <Loading />
+    return <Loading progress={loadProgress} />
   }
 
   if (status === 'error') {
@@ -38,9 +39,19 @@ function App() {
         <h1 className="text-lg font-medium">Could not load galaxy data</h1>
         <p className="max-w-lg text-sm text-muted-foreground whitespace-pre-wrap">{errorMessage}</p>
         <p className="text-xs text-muted-foreground">
-          Run the Python pipeline to produce{' '}
+          本地开发：运行 Python 管线生成{' '}
           <code className="rounded bg-muted px-1 py-0.5">frontend/public/data/galaxy_data.json</code>
+          （gitignore）；导出脚本会同步写入{' '}
+          <code className="rounded bg-muted px-1 py-0.5">galaxy_data.json.gz</code>
+          供前端加载。
         </p>
+        <button
+          type="button"
+          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
+          onClick={() => void fetchGalaxyData()}
+        >
+          重试
+        </button>
       </div>
     )
   }

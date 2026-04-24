@@ -1,6 +1,23 @@
+import { fetchGunzippedJson, type GalaxyGzipProgress } from '@/data/loadGalaxyGzip'
 import type { GalaxyData, Meta, Movie } from '@/types/galaxy'
 
-const DEFAULT_URL = '/data/galaxy_data.json'
+export type { GalaxyGzipProgress } from '@/data/loadGalaxyGzip'
+
+const DEFAULT_PATH = 'data/galaxy_data.json.gz'
+
+/** Vite `base`-aware URL for the gzip asset (dev + GH Pages). */
+function galaxyDataDefaultUrl(): string {
+  const base = import.meta.env.BASE_URL
+  const prefix = base.endsWith('/') ? base : `${base}/`
+  return `${prefix}${DEFAULT_PATH}`
+}
+
+export const GALAXY_DATA_DEFAULT_URL = galaxyDataDefaultUrl()
+
+export interface LoadGalaxyDataOptions {
+  url?: string
+  onProgress?: (p: GalaxyGzipProgress) => void
+}
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v)
@@ -115,32 +132,13 @@ function parseAndValidate(raw: unknown): GalaxyData {
 }
 
 /**
- * Fetch `galaxy_data.json`, parse JSON, and run runtime validation (Tech Spec §4).
+ * Fetch `galaxy_data.json.gz`, gunzip, parse JSON, and run runtime validation (Tech Spec §4).
  */
-export async function loadGalaxyData(url: string = DEFAULT_URL): Promise<GalaxyData> {
-  let res: Response
-  try {
-    res = await fetch(url)
-  } catch (e) {
-    const hint =
-      e instanceof TypeError
-        ? ' (network error — is the dev server running and is the file under public/data/?)'
-        : ''
-    throw new Error(`[GalaxyData] fetch failed for ${url}${hint}: ${e instanceof Error ? e.message : String(e)}`)
-  }
-  if (!res.ok) {
-    throw new Error(
-      `[GalaxyData] HTTP ${res.status} ${res.statusText} for ${url} — place pipeline output at frontend/public/data/galaxy_data.json`,
-    )
-  }
-  let raw: unknown
-  try {
-    raw = await res.json()
-  } catch (e) {
-    throw new Error(
-      `[GalaxyData] JSON parse error for ${url}: ${e instanceof Error ? e.message : String(e)}`,
-    )
-  }
+export async function loadGalaxyData(options?: string | LoadGalaxyDataOptions): Promise<GalaxyData> {
+  const url = typeof options === 'string' ? options : (options?.url ?? galaxyDataDefaultUrl())
+  const onProgress = typeof options === 'string' ? undefined : options?.onProgress
+
+  const raw = await fetchGunzippedJson(url, onProgress)
   const data = parseAndValidate(raw)
   const n = data.movies.length
   console.log(`[GalaxyData] Loaded ${n} movies, meta.version=${data.meta.version}`)
@@ -151,5 +149,3 @@ export async function loadGalaxyData(url: string = DEFAULT_URL): Promise<GalaxyD
   }
   return data
 }
-
-export { DEFAULT_URL as GALAXY_DATA_DEFAULT_URL }

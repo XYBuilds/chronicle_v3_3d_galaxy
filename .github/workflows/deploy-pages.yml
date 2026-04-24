@@ -23,14 +23,21 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: npm
-          cache-dependency-path: package-lock.json
 
       - name: Upgrade npm (optional deps bugfix)
         run: npm i -g npm@10.8.3
 
-      - name: Install and build
-        run: npm ci --include=optional && npm i -w frontend @rolldown/binding-linux-x64-gnu lightningcss-linux-x64-gnu --no-save && npm run build -w frontend
+      # Workaround for https://github.com/npm/cli/issues/4828:
+      # `npm ci` on Linux can skip platform-specific optional native deps
+      # (rolldown, lightningcss, @tailwindcss/oxide, ...). Regenerate lockfile
+      # + node_modules on the Linux runner so all linux-x64-gnu bindings land.
+      - name: Install (fresh, no stale lockfile)
+        run: |
+          rm -rf node_modules frontend/node_modules package-lock.json
+          npm install --include=optional --no-audit --no-fund
+
+      - name: Build
+        run: npm run build -w frontend
 
       - uses: actions/upload-pages-artifact@v3
         with:

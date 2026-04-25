@@ -28,8 +28,8 @@
 
 | 层 | 定义 | 视觉 | 交互 |
 | :---- | :---- | :---- | :---- |
-| **A（背景层）** | **`z ∉ [zCurrent, zCurrent + zVisWindow]`** | 固定极小 `gl_PointSize`（shader uniform **`uBgPointSizePx`**，默认 ≈ **2.25** CSS 像素）、`genres[0]` 单色、圆盘 + 低亮度 | **不可** hover / click |
-| **B（焦点层）** | **`z ∈ [zCurrent, zCurrent + zVisWindow]`** | 真实 `size` × 透视 × **`uSizeScale`**、`genres[0]` 色相、径向辉光、emissive 驱动 HDR | 可 hover / click |
+| **A（背景层）** | **`z ∉ [zCurrent, zCurrent + zVisWindow]`** | `gl_PointSize` 经 **`uBgSizeMul`** 缩放（**P7.3 定稿 `0.001`**，见 `galaxy.ts`）、`genres[0]` 单色、圆盘 + 低亮度 | **不可** hover / click |
+| **B（焦点层）** | **`z ∈ [zCurrent, zCurrent + zVisWindow]`** | 真实 `size` × 透视 × **`uSizeScale` × `uFocusSizeMul`**（**P7.3 定稿 `0.2`**）、`genres[0]` 色相、径向辉光、emissive 驱动 HDR | 可 hover / click |
 | **C（选中层）** | 用户点击 B 层中某颗星球后生成 | IcoSphere + Perlin 面积比例分区 | 选中态焦点，抽屉同步 |
 
 实现要点：  
@@ -81,7 +81,7 @@ Output
 | :---- | :---- | :---- |
 | **`zCurrent`** | 用户当前关注的发行年（世界 Z，与 `movies[i].z` 同轴，含小数年） | 挂载时写入 **`z_range` 排序后的较早端 `zLo`**（计划 Rev 4；从时间轴起点开始漫游） |
 | **`zVisWindow`** | 可观测 Z 窗口宽度（年），定义 **`[zCurrent, zCurrent + zVisWindow]`** 闭区间 | 默认 **1 年**（非常聚焦），供 §1.1 粒子分层与 §1.5 拾取共用 |
-| **`zCamDistance`** | 相机沿 −Z 相对 `zCurrent` 的后退距离 | `max(2, zSpan × 0.045 + 1.2)`，随数据集 `z_range` 跨度微调 |
+| **`zCamDistance`** | 相机沿 −Z 相对 `zCurrent` 的后退距离 | **定稿（Phase 7.3）**：常量 **`30`** 世界单位；Zustand 默认与 `mountGalaxyScene` 挂载写入一致，**不再**按 `zSpan` 公式计算（见 `galaxyInteractionStore.ts`、`scene.ts`） |
 
 **相机世界 Z 关系（宏观 idle 态）**：
 

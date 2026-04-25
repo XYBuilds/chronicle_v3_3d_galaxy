@@ -1,9 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
-import { Info } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react'
 
-import { Button } from '@/components/ui/button'
 import { getGalaxyCameraZ, setGalaxyCameraZ, subscribeGalaxyCameraZ } from '@/lib/galaxyCameraZBridge'
-import { InfoModal } from '@/hud/InfoModal'
 import { useGalaxyDataStore } from '@/store/galaxyDataStore'
 import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
 import { cn } from '@/lib/utils'
@@ -66,7 +63,6 @@ export interface TimelineHudProps {
  * For Storybook use {@link TimelineHud}; in the app use {@link Timeline}.
  */
 export function TimelineHud({ zRange, cameraZ, onZCurrentChange, className }: TimelineHudProps) {
-  const [infoOpen, setInfoOpen] = useState(false)
   const [zMinRaw, zMaxRaw] = zRange
   const zMin = Math.min(zMinRaw, zMaxRaw)
   const zMax = Math.max(zMinRaw, zMaxRaw)
@@ -124,28 +120,9 @@ export function TimelineHud({ zRange, cameraZ, onZCurrentChange, className }: Ti
         'pointer-events-none fixed left-2 top-[10vh] z-30 flex h-[80vh] w-[4.5rem] select-none flex-col sm:left-4',
         className,
       )}
-      role="group"
+      role={interactive ? 'presentation' : 'img'}
+      aria-label={`Release-year axis from ${Math.round(zMin)} to ${Math.round(zMax)}, view focus near ${labelYear}`}
     >
-      <div className="pointer-events-auto mb-1.5 flex shrink-0 justify-end pr-0.5">
-        <Button
-          type="button"
-          variant="secondary"
-          size="icon-sm"
-          className={cn(
-            'border border-white/10 bg-black/45 text-white/85 shadow-sm backdrop-blur-sm',
-            'motion-safe:transition-[background-color,border-color] motion-safe:duration-200',
-            'hover:bg-black/55 hover:text-white focus-visible:ring-2 focus-visible:ring-white/30',
-          )}
-          aria-haspopup="dialog"
-          aria-expanded={infoOpen}
-          aria-controls="app-info-dialog"
-          onClick={() => setInfoOpen(true)}
-        >
-          <Info className="size-[1.05rem]" aria-hidden />
-          <span className="sr-only">打开关于本体验的说明（占位内容）</span>
-        </Button>
-      </div>
-      <InfoModal open={infoOpen} onOpenChange={setInfoOpen} />
       <div
         ref={trackRef}
         className={cn(
@@ -153,17 +130,13 @@ export function TimelineHud({ zRange, cameraZ, onZCurrentChange, className }: Ti
           interactive &&
             'pointer-events-auto cursor-grab touch-none active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25',
         )}
-        role={interactive ? 'slider' : 'img'}
+        role={interactive ? 'slider' : undefined}
         tabIndex={interactive ? 0 : undefined}
         aria-valuemin={interactive ? Math.round(zMin) : undefined}
         aria-valuemax={interactive ? Math.round(zMax) : undefined}
         aria-valuenow={interactive ? labelYear : undefined}
         aria-orientation={interactive ? 'vertical' : undefined}
-        aria-label={
-          interactive
-            ? 'Release-year focus'
-            : `Release-year axis from ${Math.round(zMin)} to ${Math.round(zMax)}, view focus near ${labelYear}`
-        }
+        aria-label={interactive ? 'Release-year focus' : undefined}
         onPointerDown={onTrackPointerDown}
         onPointerMove={onTrackPointerMove}
         onPointerUp={endTrackDrag}

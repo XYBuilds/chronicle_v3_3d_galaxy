@@ -12,8 +12,8 @@ todos:
     content: "P7.3（I2 人工扫参，依赖 P7.1 + Plan A 的 I1 最终数据）：先按 P7.1 判断是否引入 leva / lil-gui dev-only 面板（`import.meta.env.DEV` 守卫，不入生产）；用户在 `localhost:5173` / Storybook `GalaxyThreeLayerLab` 场景下逐组调节 → 截图比对；agent 把最终值回写源码（shader uniforms / Three.js 常量 / HUD 样式），并同步 Tech Spec / Design Spec 相关小节；交付用户前端肉眼复测。 "
     status: completed
   - id: p7-4-i5-info-button
-    content: "P7.4（I5 HUD INFO 按键，仅 UI / 交互骨架，依赖 P7.2 线上可访问）：与用户确认放置点（右上角独立 / Timeline 侧边），新增 `frontend/src/hud/InfoButton.tsx` + `frontend/src/hud/InfoSheet.tsx`（复用 shadcn Sheet 或 Dialog）；**文案全部 placeholder**——在 `frontend/src/hud/infoCopy.ts` 里以 `TODO: fill at project wrap-up` 标注各分区占位文本（项目简介 / 数据来源 / 技术栈 / 链接），不引入任何 TMDB attribution 正式文案、不链 README、不对 `docs/project_docs/*` 做 runtime 引用；交付用户验收 UI 布局、动效、打开关闭、键盘可达性等交互层完整度。 "
-    status: pending
+    content: "P7.4（I5 HUD INFO 按键，仅 UI / 交互骨架，依赖 P7.2 线上可访问）：定稿右上角 `InfoButton` + 居中 `InfoModal`（`dialog.tsx` / Base UI Dialog）；`infoCopy.ts` 分区 placeholder + `TODO: fill at project wrap-up`；无 TMDB attribution / README / runtime `docs/project_docs`；实施报告 `docs/reports/Phase 7.4 P7.4 I5 HUD INFO 按键 实施报告.md`。 "
+    status: completed
   - id: p7-5-phase7-handoff
     content: "P7.5（Phase 7 收尾汇总）：确认 I2 定稿 / I5 UI 可用 / I6 GH Pages 线上可自用验收；对照 Phase 6.0 回顾报告 §0 的维度表更新项目成熟度自评；显式标注『对外文案（README / INFO 实际内容 / TMDB attribution / 线上 URL 公开）延至后续收尾阶段』作为已知遗留项；向用户汇总本阶段落地变更清单（含线上 URL 但仅限自用、CI/CD 状态、数据资产投放方式）与后续候选（Phase 5 pending / Phase 6.1 升级项若触发 / 对外收尾 Phase）。 "
     status: pending
@@ -84,12 +84,12 @@ flowchart TD
 - **不新增**：`docs/project_docs/DATA.md`、`docs/project_docs/架构总览.md`、`docs/project_docs/galaxy_data_schema.md`（本阶段已取消；如未来有外部引用需求再起独立 plan）
 - Tech Spec / Design Spec 中三层视觉参数小节，仍由 P7.3 扫参定稿后回写（与本项解耦，属于内部文档维护）
 
-### I5 HUD INFO 按键
-- 新增 `frontend/src/hud/InfoButton.tsx` + `frontend/src/hud/InfoSheet.tsx`（复用 shadcn `Sheet` 或 `Dialog`，看位置选型）
-- 放置点候选：右上角独立按钮 / Timeline 侧边 `i` 图标 → P7.4 内与用户确认
-- 新增 `frontend/src/hud/infoCopy.ts` **仅作为占位常量模块**：各分区（项目简介 / 数据来源 / 技术栈 / 链接）字段均为 `TODO: fill at project wrap-up` + 可视 placeholder 文本（例如"项目简介：待补"）；后续对外收尾阶段唯一需要改的文件就是这个模块
+### I5 HUD INFO 按键（P7.4 已落地）
+- 新增 `frontend/src/hud/InfoButton.tsx`（右上角入口）+ `frontend/src/hud/InfoModal.tsx`（居中 Modal）+ `frontend/src/components/ui/dialog.tsx`（Base UI Dialog 封装，与 `sheet.tsx` 同源）
+- 放置点：**定稿为右上角**；Timeline 侧边曾实现后按用户反馈撤回
+- 新增 `frontend/src/hud/infoCopy.ts` **仅作为占位常量模块**：各分区（项目简介 / 数据来源 / 技术栈 / 链接）字段均为 `TODO: fill at project wrap-up` + 可视 placeholder 文本；后续对外收尾阶段主要改此模块
 - **不做**：runtime 引用 `docs/project_docs/*` 片段 / 预埋 attribution 字符串 / 链外部 README / 链 GitHub 仓库真实地址——全部留空或占位
-- 验收聚焦 UI / 交互层：打开关闭动效、键盘可达性（ESC 关闭、焦点陷阱）、内容区滚动、与 Timeline / Drawer 的 z-index 和手势不打架
+- 验收聚焦 UI / 交互层：打开关闭动效、键盘可达性（ESC 关闭、焦点陷阱）、内容区滚动、与 Timeline / Drawer 的 z-index 和手势不打架；实施报告见 `docs/reports/Phase 7.4 P7.4 I5 HUD INFO 按键 实施报告.md`
 
 ## I2 人工扫参节奏（P7.3）
 

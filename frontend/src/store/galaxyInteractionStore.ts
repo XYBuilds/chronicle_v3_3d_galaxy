@@ -21,5 +21,5 @@ export const useGalaxyInteractionStore = create<GalaxyInteractionState>(() => ({
   hoverAnchorCss: null,
   zCurrent: 0,
   zVisWindow: 1,
-  zCamDistance: 2,
+  zCamDistance: 30,
 }))

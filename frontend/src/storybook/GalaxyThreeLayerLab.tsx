@@ -1,128 +1,31 @@
-import { useEffect, useRef } from 'react'
+import { lazy, Suspense } from 'react'
 
-import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
-import { mountGalaxyScene } from '@/three/scene'
-import type { Meta, Movie } from '@/types/galaxy'
+import { GalaxyThreeLayerLabCore, type GalaxyThreeLayerLabProps } from './GalaxyThreeLayerLabCore'
 
-export interface GalaxyThreeLayerLabProps {
-  meta: Pick<Meta, 'z_range' | 'xy_range' | 'count' | 'genre_palette'>
-  movies: Movie[]
-  /** Macro Z focus (decimal year); drives store + galaxy `uZCurrent` each frame. */
-  zCurrent: number
-  /** Visible slab width along Z (world years). */
-  zVisWindow: number
-  /** In-focus slab point size multiplier (`uFocusSizeMul`). */
-  uFocusSizeMul: number
-  /** Background slab point size multiplier (`uBgSizeMul`). */
-  uBgSizeMul: number
-  /** OKLCH lightness floor (`uLMin`). */
-  uLMin: number
-  /** OKLCH lightness ceiling (`uLMax`). */
-  uLMax: number
-  /** OKLCH chroma (`uChroma`). */
-  uChroma: number
-  /** Multiplier on in-focus point size (`uSizeScale`). */
-  uSizeScale: number
-  /** When true, attaches `UnrealBloomPass` and uses composer rendering (revive path). */
-  postProcessBloom: boolean
-  bloomStrength: number
-  bloomRadius: number
-  bloomThreshold: number
-  /** When set, runs the same selection path as the app (fly-to + planet). */
-  selectedMovieId: number | null
-  planetUScale: number
-  planetOctaves: number
-  planetPersistence: number
-  planetThreshold: number
-}
+export type { GalaxyThreeLayerLabProps } from './GalaxyThreeLayerLabCore'
+
+const GalaxyThreeLayerLabLevaHost = import.meta.env.DEV
+  ? lazy(() =>
+      import('./GalaxyThreeLayerLabLevaHost').then((m) => ({ default: m.GalaxyThreeLayerLabLevaHost })),
+    )
+  : null
 
 /**
- * Storybook-only host: mounts the real galaxy WebGL scene and mirrors Controls into uniforms / store.
+ * Storybook lab: production scene mount. In Vite/Storybook **dev**, a Leva panel (`import.meta.env.DEV`) drives the same knobs as the former Controls; production `build-storybook` uses Story args only.
  */
 export function GalaxyThreeLayerLab(props: GalaxyThreeLayerLabProps) {
-  const rootRef = useRef<HTMLDivElement | null>(null)
-  const mountHandle = useRef<ReturnType<typeof mountGalaxyScene> | null>(null)
-
-  const {
-    meta,
-    movies,
-    zCurrent,
-    zVisWindow,
-    uFocusSizeMul,
-    uBgSizeMul,
-    uLMin,
-    uLMax,
-    uChroma,
-    uSizeScale,
-    postProcessBloom,
-    bloomStrength,
-    bloomRadius,
-    bloomThreshold,
-    selectedMovieId,
-    planetUScale,
-    planetOctaves,
-    planetPersistence,
-    planetThreshold,
-  } = props
-
-  useEffect(() => {
-    const el = rootRef.current
-    if (!el) return
-    const m = mountGalaxyScene(el, meta, movies)
-    mountHandle.current = m
-    return () => {
-      mountHandle.current = null
-      m.dispose()
-    }
-  }, [meta, movies])
-
-  useEffect(() => {
-    const m = mountHandle.current
-    if (!m) return
-
-    useGalaxyInteractionStore.setState({ zCurrent, zVisWindow, selectedMovieId })
-
-    const gm = m.galaxyMaterial
-    gm.uniforms.uFocusSizeMul.value = uFocusSizeMul
-    gm.uniforms.uBgSizeMul.value = uBgSizeMul
-    gm.uniforms.uLMin.value = uLMin
-    gm.uniforms.uLMax.value = uLMax
-    gm.uniforms.uChroma.value = uChroma
-    gm.uniforms.uSizeScale.value = uSizeScale
-
-    const b = window.__bloom
-    if (b) {
-      if (postProcessBloom) b.enable()
-      else b.disable()
-      b.strength = bloomStrength
-      b.radius = bloomRadius
-      b.threshold = bloomThreshold
-    }
-
-    const pu = m.selectionPlanet.material.uniforms
-    pu.uScale.value = planetUScale
-    pu.uOctaves.value = planetOctaves
-    pu.uPersistence.value = planetPersistence
-    pu.uThreshold.value = planetThreshold
-  }, [
-    zCurrent,
-    zVisWindow,
-    uFocusSizeMul,
-    uBgSizeMul,
-    uLMin,
-    uLMax,
-    uChroma,
-    uSizeScale,
-    postProcessBloom,
-    bloomStrength,
-    bloomRadius,
-    bloomThreshold,
-    selectedMovieId,
-    planetUScale,
-    planetOctaves,
-    planetPersistence,
-    planetThreshold,
-  ])
-
-  return <div ref={rootRef} className="h-full min-h-[480px] w-full bg-black" />
+  if (import.meta.env.DEV && GalaxyThreeLayerLabLevaHost) {
+    return (
+      <Suspense
+        fallback={
+          <div className="relative h-full w-full">
+            <GalaxyThreeLayerLabCore {...props} />
+          </div>
+        }
+      >
+        <GalaxyThreeLayerLabLevaHost {...props} />
+      </Suspense>
+    )
+  }
+  return <GalaxyThreeLayerLabCore {...props} />
 }

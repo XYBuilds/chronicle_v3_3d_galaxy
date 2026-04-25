@@ -28,7 +28,7 @@ const meta = {
     docs: {
       description: {
         component:
-          'Mounts the production `mountGalaxyScene` with a single subsample point. Use Controls for Z slab size split, OKLCH macro color, optional Bloom (revive), and Perlin planet uniforms. Selection uses the real fly-to + visibility hard-cuts (P6.2.2).',
+          'Mounts the production `mountGalaxyScene` with a single subsample point. In **dev** (`npm run storybook`), a **Leva** panel (P7.3 I2) drives the same uniforms; Storybook Controls still push initial/sync values when you change args. Production `build-storybook` uses args only (no Leva bundle path). Selection uses the real fly-to + visibility hard-cuts (P6.2.2).',
       },
     },
   },
@@ -36,7 +36,7 @@ const meta = {
     zCurrent: { control: { type: 'range', min: Z_CONTROL_LO, max: Z_CONTROL_HI, step: 0.02 } },
     zVisWindow: { control: { type: 'range', min: 0.05, max: 8, step: 0.05 } },
     uFocusSizeMul: { control: { type: 'range', min: 0.2, max: 2, step: 0.02 } },
-    uBgSizeMul: { control: { type: 'range', min: 0.1, max: 1.5, step: 0.02 } },
+    uBgSizeMul: { control: { type: 'range', min: 0.0001, max: 1.5, step: 0.0001 } },
     uLMin: { control: { type: 'range', min: 0.05, max: 0.6, step: 0.01 } },
     uLMax: { control: { type: 'range', min: 0.4, max: 0.99, step: 0.01 } },
     uChroma: { control: { type: 'range', min: 0.02, max: 0.35, step: 0.01 } },
@@ -56,8 +56,8 @@ const meta = {
     movies: SUBSAMPLE_LAB_MOVIES,
     zCurrent: zCurrentDefault,
     zVisWindow: 1,
-    uFocusSizeMul: 1.0,
-    uBgSizeMul: 0.4,
+    uFocusSizeMul: 0.2,
+    uBgSizeMul: 0.001,
     uLMin: 0.4,
     uLMax: 0.85,
     uChroma: 0.15,

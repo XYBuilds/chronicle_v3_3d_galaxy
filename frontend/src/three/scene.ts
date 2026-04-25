@@ -40,11 +40,22 @@ interface GalaxyColorDebug {
   log: () => void
 }
 
+/** Dev console: `window.__galaxyInteraction` — Phase 5.1.5 time-axis & camera standoff. */
+interface GalaxyInteractionDebug {
+  /** Same Zustand store as the app: `getState` / `setState` / `subscribe`. */
+  readonly store: typeof useGalaxyInteractionStore
+  zCurrent: number
+  zVisWindow: number
+  zCamDistance: number
+  log: () => void
+}
+
 declare global {
   interface Window {
     __bloom?: BloomDebugControls
     __galaxyPointScale?: GalaxyPointScaleDebug
     __galaxyColor?: GalaxyColorDebug
+    __galaxyInteraction?: GalaxyInteractionDebug
   }
 }
 
@@ -96,10 +107,8 @@ export function mountGalaxyScene(
     throw new Error('[Scene] meta.z_range must be [z_min, z_max]')
   }
   const zLo = Math.min(zRange[0], zRange[1])
-  const zHi = Math.max(zRange[0], zRange[1])
-  const zSpan = zHi - zLo
-  /** Phase 5.1.5 — macro standoff along Z; tuned with dataset span so framing stays stable. */
-  const zCamDistance = Math.max(2, zSpan * 0.045 + 1.2)
+  /** Macro camera standoff along Z (absolute world units; not derived from `z_range` span). */
+  const zCamDistance = 30
   const zVisWindow = 1
   /** Rev 4 plan: start at the earliest year in `z_range` so the first screen is the time origin. */
   const zCurrent = zLo
@@ -368,6 +377,37 @@ export function mountGalaxyScene(
   window.__galaxyColor = galaxyColorDebug
   galaxyColorDebug.log()
 
+  /** Phase 5.1.5 — e.g. `__galaxyInteraction.zCamDistance = 30` or `__galaxyInteraction.store.setState({ zCurrent: 2000 })`. */
+  const interactionDebug: GalaxyInteractionDebug = {
+    store: useGalaxyInteractionStore,
+    get zCurrent() {
+      return useGalaxyInteractionStore.getState().zCurrent
+    },
+    set zCurrent(value: number) {
+      useGalaxyInteractionStore.setState({ zCurrent: value })
+    },
+    get zVisWindow() {
+      return useGalaxyInteractionStore.getState().zVisWindow
+    },
+    set zVisWindow(value: number) {
+      useGalaxyInteractionStore.setState({ zVisWindow: value })
+    },
+    get zCamDistance() {
+      return useGalaxyInteractionStore.getState().zCamDistance
+    },
+    set zCamDistance(value: number) {
+      useGalaxyInteractionStore.setState({ zCamDistance: value })
+    },
+    log() {
+      const s = useGalaxyInteractionStore.getState()
+      console.log(
+        `[Galaxy] zCurrent=${s.zCurrent.toFixed(4)} zVisWindow=${s.zVisWindow.toFixed(4)} zCamDistance=${s.zCamDistance.toFixed(4)} (macro idle: camera.z = zCurrent - zCamDistance)`,
+      )
+    },
+  }
+  window.__galaxyInteraction = interactionDebug
+  interactionDebug.log()
+
   const resize = () => {
     const w = Math.max(1, container.clientWidth)
     const h = Math.max(1, container.clientHeight)
@@ -463,6 +503,9 @@ export function mountGalaxyScene(
     }
     if (window.__galaxyColor === galaxyColorDebug) {
       delete window.__galaxyColor
+    }
+    if (window.__galaxyInteraction === interactionDebug) {
+      delete window.__galaxyInteraction
     }
     if (postFxBloomEnabled) {
       composer.removePass(bloomPass)

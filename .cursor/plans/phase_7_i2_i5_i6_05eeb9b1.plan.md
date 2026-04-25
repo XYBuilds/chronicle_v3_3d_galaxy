@@ -10,7 +10,7 @@ todos:
     status: completed
   - id: p7-3-i2-tune
     content: "P7.3（I2 人工扫参，依赖 P7.1 + Plan A 的 I1 最终数据）：先按 P7.1 判断是否引入 leva / lil-gui dev-only 面板（`import.meta.env.DEV` 守卫，不入生产）；用户在 `localhost:5173` / Storybook `GalaxyThreeLayerLab` 场景下逐组调节 → 截图比对；agent 把最终值回写源码（shader uniforms / Three.js 常量 / HUD 样式），并同步 Tech Spec / Design Spec 相关小节；交付用户前端肉眼复测。 "
-    status: pending
+    status: completed
   - id: p7-4-i5-info-button
     content: "P7.4（I5 HUD INFO 按键，仅 UI / 交互骨架，依赖 P7.2 线上可访问）：定稿右上角 `InfoButton` + 居中 `InfoModal`（`dialog.tsx` / Base UI Dialog）；`infoCopy.ts` 分区 placeholder + `TODO: fill at project wrap-up`；无 TMDB attribution / README / runtime `docs/project_docs`；实施报告 `docs/reports/Phase 7.4 P7.4 I5 HUD INFO 按键 实施报告.md`。 "
     status: completed

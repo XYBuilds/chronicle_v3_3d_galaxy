@@ -6,7 +6,7 @@
  */
 
 /** TODO: fill at project wrap-up */
-export const INFO_SHEET_TITLE = '关于本体验'
+export const INFO_MODAL_TITLE = '关于本体验'
 
 /** TODO: fill at project wrap-up */
 export const INFO_INTRO_HEADING = '项目简介'

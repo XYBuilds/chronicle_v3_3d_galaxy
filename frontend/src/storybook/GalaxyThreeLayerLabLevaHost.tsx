@@ -34,7 +34,7 @@ export function GalaxyThreeLayerLabLevaHost(props: GalaxyThreeLayerLabProps) {
       zCurrent: { value: props.zCurrent, label: '宏观 · zCurrent', min: zLo, max: zHi, step: 0.02 },
       zVisWindow: { value: props.zVisWindow, label: '宏观 · zVisWindow', min: 0.05, max: 8, step: 0.05 },
       uFocusSizeMul: { value: props.uFocusSizeMul, label: '宏观 · uFocusSizeMul', min: 0.2, max: 2, step: 0.02 },
-      uBgSizeMul: { value: props.uBgSizeMul, label: '宏观 · uBgSizeMul', min: 0.1, max: 1.5, step: 0.02 },
+      uBgSizeMul: { value: props.uBgSizeMul, label: '宏观 · uBgSizeMul', min: 0.0001, max: 1.5, step: 0.0001 },
       uLMin: { value: props.uLMin, label: '宏观 · uLMin', min: 0.05, max: 0.6, step: 0.01 },
       uLMax: { value: props.uLMax, label: '宏观 · uLMax', min: 0.4, max: 0.99, step: 0.01 },
       uChroma: { value: props.uChroma, label: '宏观 · uChroma', min: 0.02, max: 0.35, step: 0.01 },

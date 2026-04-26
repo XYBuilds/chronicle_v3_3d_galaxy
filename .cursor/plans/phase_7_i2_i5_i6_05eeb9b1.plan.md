@@ -16,7 +16,7 @@ todos:
     status: completed
   - id: p7-5-phase7-handoff
     content: "P7.5（Phase 7 收尾汇总）：确认 I2 定稿 / I5 UI 可用 / I6 GH Pages 线上可自用验收；对照 Phase 6.0 回顾报告 §0 的维度表更新项目成熟度自评；显式标注『对外文案（README / INFO 实际内容 / TMDB attribution / 线上 URL 公开）延至后续收尾阶段』作为已知遗留项；向用户汇总本阶段落地变更清单（含线上 URL 但仅限自用、CI/CD 状态、数据资产投放方式）与后续候选（Phase 5 pending / Phase 6.1 升级项若触发 / 对外收尾 Phase）。 "
-    status: pending
+    status: cancelled
 isProject: false
 ---
 

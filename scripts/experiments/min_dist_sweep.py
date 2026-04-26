@@ -207,11 +207,46 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Keep intermediate umap_xy_*.npy under out-dir (default: delete after each export)",
     )
+    p.add_argument(
+        "--one-off",
+        action="store_true",
+        help="Single UMAP + export instead of the default min_dist 0.5/0.7/0.9 sweep.",
+    )
+    p.add_argument(
+        "--one-off-min-dist",
+        type=float,
+        default=None,
+        help="With --one-off: UMAP min_dist (e.g. 0.4).",
+    )
+    p.add_argument(
+        "--one-off-n-neighbors",
+        type=int,
+        default=None,
+        help="With --one-off: UMAP n_neighbors (e.g. 300). Capped to n_samples-1.",
+    )
+    p.add_argument(
+        "--one-off-tag",
+        type=str,
+        default=None,
+        help="With --one-off: slug for galaxy_data.<tag>.json.gz and ?dataset=<tag> (alphanumeric + underscore).",
+    )
     return p.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    if bool(args.one_off):
+        if args.one_off_min_dist is None or args.one_off_n_neighbors is None or not args.one_off_tag:
+            print(
+                "Error: --one-off requires --one-off-min-dist, --one-off-n-neighbors, and --one-off-tag",
+                file=sys.stderr,
+            )
+            return 1
+        tag = str(args.one_off_tag).strip()
+        if not tag or not tag.replace("_", "").isalnum():
+            print("Error: --one-off-tag must be non-empty alphanumeric/underscore only", file=sys.stderr)
+            return 1
+
     text_path = args.text_input.expanduser().resolve()
     genre_path = args.genre_input.expanduser().resolve()
     lang_path = args.lang_input.expanduser().resolve()
@@ -247,6 +282,56 @@ def main(argv: list[str] | None = None) -> int:
     assert combined.shape[0] == n_text and combined.shape[1] > 0
 
     out_dir.mkdir(parents=True, exist_ok=True)
+
+    if bool(args.one_off):
+        md = float(args.one_off_min_dist)
+        nn_one = int(args.one_off_n_neighbors)
+        tag = str(args.one_off_tag).strip()
+        xy = _fit_umap_for_min_dist(
+            combined,
+            min_dist=md,
+            n_neighbors=nn_one,
+            metric=str(args.metric),
+            random_state=int(args.random_state),
+            densmap=bool(args.densmap),
+            backend=str(args.backend),
+            umap_verbose=bool(args.umap_verbose),
+        )
+        xmin, xmax = float(xy[:, 0].min()), float(xy[:, 0].max())
+        ymin, ymax = float(xy[:, 1].min()), float(xy[:, 1].max())
+        print(
+            f"[P8.2 one-off tag={tag}] min_dist={md} n_neighbors={nn_one} "
+            f"UMAP xy X[{xmin:.4f},{xmax:.4f}] Y[{ymin:.4f},{ymax:.4f}]"
+        )
+
+        xy_npy = out_dir / f"_umap_xy_{tag}.npy"
+        np.save(xy_npy, xy)
+        out_gz = out_dir / f"galaxy_data.{tag}.json.gz"
+
+        _run_export_subprocess(
+            xy_npy=xy_npy,
+            min_dist=md,
+            out_gz=out_gz,
+            csv_path=csv_path,
+            n_neighbors=nn_one,
+            w_text=float(args.w_text),
+            w_genre=float(args.w_genre),
+            w_lang=float(args.w_lang),
+            metric=str(args.metric),
+            random_state=int(args.random_state),
+            densmap=bool(args.densmap),
+            embedding_model=str(args.embedding_model),
+            genre_weight_ratio=float(args.genre_weight_ratio),
+            z_min_inclusive=float(args.subset_z_min_inclusive),
+            z_max_exclusive=float(args.subset_z_max_exclusive),
+        )
+
+        gz_bytes = out_gz.stat().st_size
+        print(f"[P8.2 one-off] wrote {out_gz} ({gz_bytes:,} bytes). Dev: ?dataset={tag}")
+        if not args.keep_xy_npy:
+            xy_npy.unlink(missing_ok=True)
+        print("[P8.2 one-off] Done.")
+        return 0
 
     for md in _MIN_DISTS:
         tag = _TAG_BY_MIN_DIST[md]

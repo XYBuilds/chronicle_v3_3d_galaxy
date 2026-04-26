@@ -10,6 +10,8 @@ const DATASET_PATHS: Record<string, string> = {
   mindist05: 'data/experiments/galaxy_data.mindist05.json.gz',
   mindist07: 'data/experiments/galaxy_data.mindist07.json.gz',
   mindist09: 'data/experiments/galaxy_data.mindist09.json.gz',
+  /** One-off: n_neighbors=300, min_dist=0.4, z subset 2020–2025 (see min_dist_sweep.py --one-off). */
+  n300md04: 'data/experiments/galaxy_data.n300md04.json.gz',
 }
 
 function withBase(relativePath: string): string {

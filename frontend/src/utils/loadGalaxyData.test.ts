@@ -35,4 +35,10 @@ describe('galaxyRuntimeUrlFromSearch (P8.2 dataset=)', () => {
     expect(galaxyRuntimeUrlFromSearch('')).toContain('data/galaxy_data.json.gz')
     expect(galaxyRuntimeUrlFromSearch('?dataset=unknown')).toContain('data/galaxy_data.json.gz')
   })
+
+  it('maps n300md04 one-off experiment path', () => {
+    expect(galaxyRuntimeUrlFromSearch('?dataset=n300md04')).toContain(
+      'data/experiments/galaxy_data.n300md04.json.gz',
+    )
+  })
 })

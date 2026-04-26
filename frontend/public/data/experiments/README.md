@@ -12,6 +12,17 @@ python scripts/experiments/min_dist_sweep.py
 
 Optional: `--backend umap` (CPU-only), `--keep-xy-npy`, `--subset-z-min-inclusive` / `--subset-z-max-exclusive`.
 
+### One-off UMAP (custom `n_neighbors` / `min_dist`)
+
+Example: `n_neighbors=300`, `min_dist=0.4`, same z band as the sweep → file `galaxy_data.n300md04.json.gz`, dev query `?dataset=n300md04`:
+
+```bash
+python scripts/experiments/min_dist_sweep.py --one-off --backend umap ^
+  --one-off-min-dist 0.4 --one-off-n-neighbors 300 --one-off-tag n300md04
+```
+
+(On Unix shells omit `^` and use line continuation or one line.)
+
 Each run **re-fits UMAP on the full fused matrix** for `min_dist ∈ {0.5, 0.7, 0.9}`, then exports only movies with **decimal-year z ∈ [2020, 2026)** (calendar 2020–2025). `meta.subset_z_filter` and `meta.umap_fit_row_count` document the band and full-row UMAP fit (see `export_galaxy_json.py`).
 
 ## Compare in the app

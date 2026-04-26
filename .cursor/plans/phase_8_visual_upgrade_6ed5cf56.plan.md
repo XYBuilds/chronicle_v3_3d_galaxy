@@ -80,7 +80,7 @@ flowchart TD
 
 ### 现状性能录制
 - 用 Chrome DevTools Performance 录三个 5 秒片段：idle (z 远离窗口) / timeline 拖动跨 0–100 年 / focus 一颗高 vote_count 电影；记 GPU time、JS time、长任务、fps 中位数
-- 在 [`docs/project_docs/Phase 8 基线 P8.0 性能与 P8.4 准入.md`](../../docs/project_docs/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md) 记录 Phase 8 基线数值（`视觉参数总表.md` 已 gitignore，仅本地 Phase 7 清单）
+- 在 [`docs/project_docs/Phase 8 基线 P8.0 性能与 P8.4 准入.md`](../../docs/project_docs/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md) 记录 Phase 8 基线数值（`视觉参数总表.md` 仍 Git 跟踪，见 `.cursorignore`）
 
 ### 双 mesh VS 开销基准（为 P8.4 准入定门槛）
 - 临时新建 `frontend/src/storybook/InstancedMeshBench.tsx`（一次性 story，本 P 验收后可保留也可删）：**同屏**两个 InstancedMesh——MeshA 60K×detail=0（12 verts）+ MeshB 60K×detail=1（42 verts），shader 最小负载（纯色或跳过 OKLab 亦可），模拟 P8.4 最坏 steady-state
@@ -319,7 +319,7 @@ if (isFocused) { sIdle = 0.0; sActive = 0.0; }
 ## 文档同步
 
 每个 P 完成后（且用户验收后）需要回写：
-- [`docs/project_docs/Phase 8 基线 P8.0 性能与 P8.4 准入.md`](../../docs/project_docs/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md) + 本地 `视觉参数总表.md`（uniform/常量，gitignored）
+- [`docs/project_docs/Phase 8 基线 P8.0 性能与 P8.4 准入.md`](../../docs/project_docs/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md) + [`视觉参数总表.md`](../../docs/project_docs/%E8%A7%86%E8%A7%89%E5%8F%82%E6%95%B0%E6%80%BB%E8%A1%A8.md)（uniform/常量；`.cursorignore`）
 - [docs/project_docs/TMDB 电影宇宙 Tech Spec.md](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md)（数据契约 / 渲染管线）
 - [docs/project_docs/TMDB 电影宇宙 Design Spec.md](docs/project_docs/TMDB%20电影宇宙%20Design%20Spec.md)（视觉层级 / 状态机）
 - [docs/project_docs/TMDB 数据特征工程与 3D 映射总表.md](docs/project_docs/TMDB%20数据特征工程与%203D%20映射总表.md)（H 计算公式）

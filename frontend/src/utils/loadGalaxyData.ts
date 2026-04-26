@@ -5,13 +5,44 @@ export type { GalaxyGzipProgress } from '@/data/loadGalaxyGzip'
 
 const DEFAULT_PATH = 'data/galaxy_data.json.gz'
 
-/** Vite `base`-aware URL for the gzip asset (dev + GH Pages). */
-function galaxyDataDefaultUrl(): string {
-  const base = import.meta.env.BASE_URL
-  const prefix = base.endsWith('/') ? base : `${base}/`
-  return `${prefix}${DEFAULT_PATH}`
+/** P8.2 min_dist sweep artifacts (see `scripts/experiments/min_dist_sweep.py`). */
+const DATASET_PATHS: Record<string, string> = {
+  mindist05: 'data/experiments/galaxy_data.mindist05.json.gz',
+  mindist07: 'data/experiments/galaxy_data.mindist07.json.gz',
+  mindist09: 'data/experiments/galaxy_data.mindist09.json.gz',
 }
 
+function withBase(relativePath: string): string {
+  const base = import.meta.env.BASE_URL
+  const prefix = base.endsWith('/') ? base : `${base}/`
+  const trimmed = relativePath.startsWith('/') ? relativePath.slice(1) : relativePath
+  return `${prefix}${trimmed}`
+}
+
+/**
+ * Resolve gzip URL from a query string (e.g. `?dataset=mindist07`). Used by tests; dev uses
+ * `galaxyDataDefaultUrl()` which reads `window.location.search`.
+ */
+export function galaxyRuntimeUrlFromSearch(search: string): string {
+  const ds = new URLSearchParams(search).get('dataset')
+  const rel = ds !== null && ds in DATASET_PATHS ? DATASET_PATHS[ds]! : DEFAULT_PATH
+  return withBase(rel)
+}
+
+/** Vite `base`-aware URL for the gzip asset (dev + GH Pages). Honors `?dataset=` when present. */
+function galaxyDataDefaultUrl(): string {
+  if (typeof window !== 'undefined') {
+    const url = galaxyRuntimeUrlFromSearch(window.location.search)
+    const ds = new URLSearchParams(window.location.search).get('dataset')
+    if (ds !== null && ds in DATASET_PATHS) {
+      console.log(`[GalaxyData] ?dataset=${ds} resolved url=${url}`)
+    }
+    return url
+  }
+  return withBase(DEFAULT_PATH)
+}
+
+/** Snapshot at module load (no `window`); prefer calling `galaxyDataDefaultUrl()` at runtime for `?dataset=`. */
 export const GALAXY_DATA_DEFAULT_URL = galaxyDataDefaultUrl()
 
 export interface LoadGalaxyDataOptions {

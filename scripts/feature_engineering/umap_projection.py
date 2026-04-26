@@ -210,8 +210,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument(
         "--n-neighbors",
         type=int,
-        default=15,
-        help="UMAP n_neighbors (capped to n_samples-1 automatically)",
+        default=300,
+        help="UMAP n_neighbors (capped to n_samples-1 automatically; Phase 8 full-data default 300)",
     )
     p.add_argument(
         "--min-dist",

@@ -201,7 +201,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--w-text", type=float, default=1.0)
     p.add_argument("--w-genre", type=float, default=1.0)
     p.add_argument("--w-lang", type=float, default=1.0)
-    p.add_argument("--n-neighbors", type=int, default=15, help="UMAP hyperparameter echoed in meta (match Phase 2.4 run)")
+    p.add_argument(
+        "--n-neighbors",
+        type=int,
+        default=300,
+        help="UMAP hyperparameter echoed in meta (match Phase 8 default umap_projection run)",
+    )
     p.add_argument(
         "--min-dist",
         type=float,
@@ -413,8 +418,8 @@ def main(argv: list[str] | None = None) -> int:
         assert len(movies) > 0, "z subset produced zero movies — check CSV / z band"
 
     now = datetime.now(timezone.utc)
-    # P8.1: minor data-contract bump (dual field `genre_hue` + `has_genre_hue`).
-    version = f"{now.strftime('%Y.%m.%d')}.h1"
+    # P8.1 `genre_hue`; P8 UMAP 定稿: n_neighbors=300, min_dist=0.4 (meta.umap_params).
+    version = f"{now.strftime('%Y.%m.%d')}.h2"
     generated_at = now.isoformat()
 
     if subset_z_active:

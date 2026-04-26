@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 
 import type { Movie } from '@/types/galaxy'
+import { hueFromGenreColor } from '@/utils/genreHue'
 
 import pointFragmentShader from './shaders/point.frag.glsl'
 import pointVertexShader from './shaders/point.vert.glsl'
@@ -18,9 +19,9 @@ function fillMovieBuffers(movies: Movie[]): THREE.BufferGeometry {
   const n = movies.length
   console.assert(n >= 0, '[Galaxy] movies length must be non-negative')
   const positions = new Float32Array(n * 3)
-  const colors = new Float32Array(n * 3)
   const sizes = new Float32Array(n)
   const voteNorms = new Float32Array(n)
+  const hues = new Float32Array(n)
 
   for (let i = 0; i < n; i++) {
     const m = movies[i]
@@ -29,9 +30,10 @@ function fillMovieBuffers(movies: Movie[]): THREE.BufferGeometry {
     positions[o + 1] = m.y
     positions[o + 2] = m.z
 
-    colors[o] = m.genre_color[0]
-    colors[o + 1] = m.genre_color[1]
-    colors[o + 2] = m.genre_color[2]
+    const hue =
+      m.genre_hue ??
+      hueFromGenreColor([m.genre_color[0], m.genre_color[1], m.genre_color[2]] as [number, number, number])
+    hues[i] = hue
 
     sizes[i] = m.size
     voteNorms[i] = THREE.MathUtils.clamp(m.vote_average / 10, 0, 1)
@@ -39,11 +41,24 @@ function fillMovieBuffers(movies: Movie[]): THREE.BufferGeometry {
 
   const geometry = new THREE.BufferGeometry()
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
-  geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3))
+  geometry.setAttribute('hue', new THREE.BufferAttribute(hues, 1))
   geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1))
   geometry.setAttribute('voteNorm', new THREE.BufferAttribute(voteNorms, 1))
 
-  console.log(`[Galaxy] Points count: ${n} | draw calls: 1 (opaque macro layer)`)
+  console.assert(hues.length === n, '[Galaxy] hue buffer length must match movie count')
+  let hMin = 0
+  let hMax = 0
+  if (n > 0) {
+    hMin = hMax = hues[0]!
+    for (let i = 1; i < n; i++) {
+      const v = hues[i]!
+      if (v < hMin) hMin = v
+      if (v > hMax) hMax = v
+    }
+  }
+  console.log(
+    `[Galaxy] Points count: ${n} | draw calls: 1 (opaque macro layer) | hueAttr min=${hMin.toFixed(4)} max=${hMax.toFixed(4)} rad`,
+  )
 
   return geometry
 }

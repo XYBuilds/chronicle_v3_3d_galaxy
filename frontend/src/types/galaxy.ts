@@ -33,6 +33,8 @@ export interface XyRange {
 export interface Meta {
   version: string
   generated_at: string
+  /** P8.1+: when true, every movie must include `genre_hue` (radians ∈ [0, 2π)). */
+  has_genre_hue?: boolean
   count: number
   embedding_model: string
   umap_params: UmapParams
@@ -55,6 +57,8 @@ export interface Movie {
   size: number
   emissive: number
   genre_color: GenreColorRgb
+  /** Primary-genre hue in radians (pipeline `2π·i/N`); optional during dual-field transition. */
+  genre_hue?: number
 
   title: string
   original_title: string

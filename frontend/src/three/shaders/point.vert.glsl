@@ -9,7 +9,7 @@ uniform float uLMax;
 uniform float uChroma;
 
 attribute float size;
-attribute vec3 color;
+attribute float hue;
 attribute float voteNorm;
 
 varying vec3 vColor;
@@ -24,20 +24,6 @@ vec3 linear_to_srgb(vec3 rgb) {
   vec3 low = rgb * 12.92;
   vec3 high = 1.055 * pow(rgb, vec3(1.0 / 2.4)) - 0.055;
   return mix(low, high, step(vec3(0.0031308), rgb));
-}
-
-vec3 linear_srgb_to_oklab(vec3 c) {
-  float l = dot(c, vec3(0.4122214708, 0.5363325363, 0.0514459929));
-  float m = dot(c, vec3(0.2119034982, 0.6806995451, 0.1073969566));
-  float s = dot(c, vec3(0.0883024619, 0.2817188376, 0.6299787005));
-  l = pow(max(l, 1e-12), 1.0 / 3.0);
-  m = pow(max(m, 1e-12), 1.0 / 3.0);
-  s = pow(max(s, 1e-12), 1.0 / 3.0);
-  return vec3(
-    dot(vec3(l, m, s), vec3(0.2104542553, 0.7936177850, -0.0040720468)),
-    dot(vec3(l, m, s), vec3(1.9779984951, -2.4285922050, 0.4505937099)),
-    dot(vec3(l, m, s), vec3(0.0259040371, 0.7827717662, -0.8086757660))
-  );
 }
 
 vec3 oklab_to_linear_srgb(vec3 lab) {
@@ -59,13 +45,10 @@ void main() {
   float zHi = uZCurrent + uZVisWindow;
   float inFocus = step(uZCurrent, z) * step(z, zHi);
 
-  vec3 lab = linear_srgb_to_oklab(srgb_to_linear(color));
-  float chromaPlane = abs(lab.y) + abs(lab.z);
-  float hue = chromaPlane > 1e-5 ? atan(lab.z, lab.y) : 0.0;
   float L = mix(uLMin, uLMax, clamp(voteNorm, 0.0, 1.0));
   float a = uChroma * cos(hue);
-  float b = uChroma * sin(hue);
-  vColor = linear_to_srgb(oklab_to_linear_srgb(vec3(L, a, b)));
+  float labB = uChroma * sin(hue);
+  vColor = linear_to_srgb(oklab_to_linear_srgb(vec3(L, a, labB)));
 
   vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
   gl_Position = projectionMatrix * mvPosition;

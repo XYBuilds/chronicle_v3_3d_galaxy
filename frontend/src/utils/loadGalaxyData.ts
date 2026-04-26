@@ -38,6 +38,9 @@ function validateMeta(meta: unknown): asserts meta is Meta {
   if (typeof meta.version !== 'string' || meta.version.length === 0) {
     throw new Error('[GalaxyData] meta.version must be a non-empty string')
   }
+  if ('has_genre_hue' in meta && meta.has_genre_hue !== undefined && typeof meta.has_genre_hue !== 'boolean') {
+    throw new Error('[GalaxyData] meta.has_genre_hue must be a boolean when present')
+  }
   if (typeof meta.count !== 'number' || !Number.isInteger(meta.count) || meta.count < 0) {
     throw new Error(`[GalaxyData] meta.count must be a non-negative integer, got ${String(meta.count)}`)
   }
@@ -71,7 +74,7 @@ function validateMeta(meta: unknown): asserts meta is Meta {
   }
 }
 
-function validateMovie(m: unknown, index: number): asserts m is Movie {
+function validateMovie(m: unknown, index: number, requireGenreHue: boolean): asserts m is Movie {
   if (!isRecord(m)) {
     throw new Error(`[GalaxyData] movies[${index}] must be an object`)
   }
@@ -102,6 +105,18 @@ function validateMovie(m: unknown, index: number): asserts m is Movie {
       )
     }
   }
+  if (requireGenreHue) {
+    const gh = (m as Record<string, unknown>).genre_hue
+    if (typeof gh !== 'number' || !Number.isFinite(gh)) {
+      throw new Error(`[GalaxyData] movies[${index}].genre_hue must be a finite number when meta.has_genre_hue`)
+    }
+    const twoPi = 2 * Math.PI
+    if (gh < 0 || gh >= twoPi) {
+      throw new Error(
+        `[GalaxyData] movies[${index}].genre_hue must be in [0, 2π), got ${String(gh)}`,
+      )
+    }
+  }
 }
 
 function parseAndValidate(raw: unknown): GalaxyData {
@@ -123,12 +138,18 @@ function parseAndValidate(raw: unknown): GalaxyData {
       `[GalaxyData] meta.count (${meta.count}) !== movies.length (${moviesUnknown.length})`,
     )
   }
+  const requireGenreHue = meta.has_genre_hue === true
   for (let i = 0; i < moviesUnknown.length; i++) {
-    validateMovie(moviesUnknown[i], i)
+    validateMovie(moviesUnknown[i], i, requireGenreHue)
   }
   const data: GalaxyData = { meta, movies: moviesUnknown as Movie[] }
   console.assert(data.meta.count === data.movies.length, 'GalaxyData count invariant')
   return data
+}
+
+/** Parse and validate already-fetched JSON (used by Vitest + tools). */
+export function parseGalaxyJsonPayload(raw: unknown): GalaxyData {
+  return parseAndValidate(raw)
 }
 
 /**

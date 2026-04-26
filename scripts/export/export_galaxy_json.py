@@ -136,20 +136,28 @@ def oklch_to_srgb_hex(L: float, C: float, h_deg: float) -> tuple[str, tuple[floa
     return hx, (r8, g8, b8)
 
 
-def build_genre_palette(genre_order: list[str]) -> tuple[dict[str, str], dict[str, tuple[float, float, float]]]:
-    """Equal hue spacing on OKLCH ring (Design Spec §1.1 + dev plan Phase 2.5)."""
+def build_genre_palette(
+    genre_order: list[str],
+) -> tuple[dict[str, str], dict[str, tuple[float, float, float]], dict[str, float]]:
+    """Equal hue spacing on OKLCH ring (Design Spec §1.1 + dev plan Phase 2.5 + P8.1 `genre_hue` rad)."""
     n = len(genre_order)
     if n == 0:
-        return {}, {}
+        return {}, {}, {}
     step = 360.0 / float(n)
+    two_pi = 2.0 * math.pi
     palette: dict[str, str] = {}
     rgb_norm: dict[str, tuple[float, float, float]] = {}
+    hue_by_genre: dict[str, float] = {}
     for i, g in enumerate(genre_order):
-        h = step * float(i)
-        hx, rgb = oklch_to_srgb_hex(_OKLCH_L, _OKLCH_C, h)
+        h_deg = step * float(i)
+        hx, rgb = oklch_to_srgb_hex(_OKLCH_L, _OKLCH_C, h_deg)
         palette[g] = hx
         rgb_norm[g] = rgb
-    return palette, rgb_norm
+        hue_rad = two_pi * float(i) / float(n)
+        if not (0.0 <= hue_rad < two_pi):
+            raise AssertionError(f"genre_hue out of [0, 2π) for {g!r}: {hue_rad!r}")
+        hue_by_genre[g] = float(hue_rad)
+    return palette, rgb_norm, hue_by_genre
 
 
 def linear_map_array(values: np.ndarray, out_min: float, out_max: float) -> np.ndarray:
@@ -206,6 +214,7 @@ def _movie_row(
     size: float,
     emissive: float,
     genre_color: list[float],
+    genre_hue: float,
 ) -> dict[str, Any]:
     genres = parse_genre_list(row.get("genres"))
     tagline_raw = row["tagline"] if "tagline" in row.index else ""
@@ -235,6 +244,7 @@ def _movie_row(
         "size": size,
         "emissive": emissive,
         "genre_color": genre_color,
+        "genre_hue": float(genre_hue),
         "title": str(row.get("title", "")).strip(),
         "original_title": str(row.get("original_title", "")).strip(),
         "overview": str(row.get("overview", "")).strip(),
@@ -291,7 +301,11 @@ def main(argv: list[str] | None = None) -> int:
         raise KeyError("CSV must include id and release_date")
 
     genre_order = collect_sorted_genres(df["genres"])
-    genre_palette, genre_rgb = build_genre_palette(genre_order)
+    genre_palette, genre_rgb, genre_hue_by_name = build_genre_palette(genre_order)
+    print(f"[Genre hue] {len(genre_order)} genres (index, name, hue_deg, hex):")
+    for i, g in enumerate(genre_order):
+        hr = genre_hue_by_name[g]
+        print(f"  {i:3d}  {g!r:24s}  {math.degrees(hr):8.3f}°  {genre_palette[g]}")
 
     zs: list[float] = []
     jitter_count = 0
@@ -328,6 +342,10 @@ def main(argv: list[str] | None = None) -> int:
         if primary not in genre_rgb:
             raise KeyError(f"Primary genre {primary!r} not in palette (row {i})")
         r, g, b = genre_rgb[primary]
+        gh = float(genre_hue_by_name[primary])
+        if not (0.0 <= gh < 2.0 * math.pi):
+            _mid = int(_to_float(row["id"]))
+            raise AssertionError(f"genre_hue out of [0, 2π) for movie id={_mid}: {gh!r}")
         m = _movie_row(
             row,
             x=float(xy64[i, 0]),
@@ -336,6 +354,7 @@ def main(argv: list[str] | None = None) -> int:
             size=float(sizes[i]),
             emissive=float(emissive[i]),
             genre_color=[r, g, b],
+            genre_hue=gh,
         )
         movies.append(m)
 
@@ -344,12 +363,14 @@ def main(argv: list[str] | None = None) -> int:
         print(f"[genre_color] sample: movies[0].genre_color = [{c0[0]:.3f}, {c0[1]:.3f}, {c0[2]:.3f}] (all in 0–1?)")
 
     now = datetime.now(timezone.utc)
-    version = now.strftime("%Y.%m.%d")
+    # P8.1: minor data-contract bump (dual field `genre_hue` + `has_genre_hue`).
+    version = f"{now.strftime('%Y.%m.%d')}.h1"
     generated_at = now.isoformat()
 
     meta: dict[str, Any] = {
         "version": version,
         "generated_at": generated_at,
+        "has_genre_hue": True,
         "count": len(movies),
         "embedding_model": str(args.embedding_model),
         "umap_params": {
@@ -380,6 +401,9 @@ def main(argv: list[str] | None = None) -> int:
         for c in m["genre_color"]:
             if not (0.0 <= float(c) <= 1.0):
                 raise AssertionError(f"genre_color out of [0,1] for id={m.get('id')}: {m['genre_color']}")
+        gh = float(m["genre_hue"])
+        if not (0.0 <= gh < 2.0 * math.pi):
+            raise AssertionError(f"genre_hue out of [0, 2π) for id={m.get('id')}: {gh!r}")
 
     raw = json.dumps(payload_obj, ensure_ascii=False, separators=(",", ":"), allow_nan=False).encode("utf-8")
     out_json.parent.mkdir(parents=True, exist_ok=True)

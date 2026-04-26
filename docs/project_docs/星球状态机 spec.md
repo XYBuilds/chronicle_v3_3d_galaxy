@@ -1,6 +1,6 @@
 # 星球状态机 spec（Phase 8.0 草案）
 
-> 与 [Phase 8 计划](../../.cursor/plans/phase_8_visual_upgrade_6ed5cf56.plan.md) 对齐；后续 P8.1–P8.5 实现与回写以本文件为单一事实源（SSOT），与《视觉参数总表》《Tech Spec》《Design Spec》交叉引用。
+> 与 [Phase 8 计划](../../.cursor/plans/phase_8_visual_upgrade_6ed5cf56.plan.md) 对齐；后续 P8.1–P8.5 实现与回写以本文件为单一事实源（SSOT），与 [`Phase 8 基线 P8.0 性能与 P8.4 准入.md`](Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md)、本地《视觉参数总表》、《Tech Spec》、《Design Spec》交叉引用。
 
 ## 1. 范围与命名
 
@@ -25,7 +25,7 @@ inFocus = smoothstep(zLo - W, zLo, aZ) × (1 - smoothstep(zHi, zHi + W, aZ))
 - **idle / active 尺度（P8.4 双 mesh，无 focus 时）**  
   - `sIdle = (1 - inFocus) × uIdleScale × aSize`  
   - `sActive = inFocus × uActiveScale × aSize`  
-  - 具体 `uIdleScale` / `uActiveScale` 初值在《视觉参数总表》P8 段落表维护。
+  - 具体 `uIdleScale` / `uActiveScale` 初值在《Phase 8 基线 P8.0 性能与 P8.4 准入》及本地《视觉参数总表》中维护。
 
 - **focus 覆盖**：当 `uFocusedInstanceId >= 0` 且 `gl_InstanceID == uFocusedInstanceId` 时，**强制** `sIdle = 0`、`sActive = 0`；该电影仅由 Perlin `IcosahedronGeometry(1, 6)` 呈现。
 
@@ -69,7 +69,7 @@ inFocus = smoothstep(zLo - W, zLo, aZ) × (1 - smoothstep(zHi, zHi + W, aZ))
 | **大小** | 双 mesh 上该 instance **零尺度**；Perlin 球 **detail = 6**（P8.3） |
 | **色彩** | Perlin 四阈值分区 + hue/L/C；**vote_count 在 focus 态保留视觉权重**；**小 vote 片 focus 后视觉偏小为 intended**（产品接受） |
 | **可交互性** | 抽屉/详情；ESC 或 UI 取消选中 |
-| **进入/退出** | 相机动画时长沿用现 `SELECT_MS` / `DESELECT_MS`（数值以《视觉参数总表》为准）；P8.4 起 `flyToFocus` 使用**物理距离常数** `FOCUS_CAM_DIST` |
+| **进入/退出** | 相机动画时长沿用现 `SELECT_MS` / `DESELECT_MS`（数值以本地《视觉参数总表》为准）；P8.4 起 `flyToFocus` 使用**物理距离常数** `FOCUS_CAM_DIST` |
 
 ### 3.5 select（延后）
 

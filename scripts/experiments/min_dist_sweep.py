@@ -194,13 +194,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--subset-z-min-inclusive",
         type=float,
         default=2020.0,
-        help="Decimal-year lower bound (inclusive), default 2020.0",
+        help="Decimal-year lower bound (inclusive); default 2020.0",
     )
     p.add_argument(
         "--subset-z-max-exclusive",
         type=float,
         default=2026.0,
-        help="Decimal-year upper bound (exclusive), default 2026.0 → calendar years 2020–2025",
+        help="Decimal-year upper bound (exclusive); default 2026.0 keeps calendar years 2020-2025",
     )
     p.add_argument(
         "--keep-xy-npy",

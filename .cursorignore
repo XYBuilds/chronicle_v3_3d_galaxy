@@ -16,3 +16,7 @@ frontend/storybook-static/
 
 # Git internals
 .git/
+
+# Phase 7 全量参数表：Git 仍跟踪；排除 Cursor 索引/默认上下文
+docs/project_docs/视觉参数总表.md
+

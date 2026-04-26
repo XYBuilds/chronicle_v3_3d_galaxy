@@ -23,6 +23,7 @@ A 2.5D immersive movie-history archive: ~60K TMDB films rendered as a particle g
 - `docs/project_docs/TMDB 数据处理规则.md` — data filtering rules
 - `docs/project_docs/TMDB 数据特征工程与 3D 映射总表.md` — feature → rendering mapping
 - `docs/project_docs/TMDB 电影宇宙 PRD.md` — product requirements
+- `docs/project_docs/Phase 8 基线 P8.0 性能与 P8.4 准入.md` — Phase 8.0 performance baseline & P8.4 GPU gate (tracked)
 
 ## Critical Constraints
 

@@ -95,10 +95,6 @@ flowchart TD
 - 显式标注 "vote_count 在 focus 态保留视觉权重，小星球 focus 后偏小是 intended"
 - 后续 P8.1–P8.5 都按这份 spec 回写
 
-### 实施报告（P8.0 已关闭）
-
-- [`docs/reports/Phase 8.0 P8.0 性能基线与状态机 spec 实施报告.md`](../../docs/reports/Phase%208.0%20P8.0%20%E6%80%A7%E8%83%BD%E5%9F%BA%E7%BA%BF%E4%B8%8E%E7%8A%B6%E6%80%81%E6%9C%BA%20spec%20%E5%AE%9E%E6%96%BD%E6%8A%A5%E5%91%8A.md)（2026-04-27）；frontmatter **`p80-baseline`** 状态为 **`completed`**
-
 ## P8.1 · 数据 H-only 迁移（你的 ③）
 
 **目标**：把 L/C 从数据资产变成视觉 uniform，为未来交互式 L/C 铺路；同时还掉 5.4.1 Vitest 这条债。

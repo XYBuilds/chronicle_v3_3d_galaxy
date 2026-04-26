@@ -7,7 +7,7 @@ todos:
     status: completed
   - id: p81-h-only-migration
     content: P8.1 · H-only 数据迁移 (③) + Vitest 第一批 (5.4.1)：产出双字段 galaxy_data.json.gz（genre_color + genre_hue） + meta.version bump；先在现有 point.vert.glsl 上去 OKLab 解码（P8.4 会再换 mesh shader，本 P 只动 attribute 与色彩重组）；planet.ts 改走 hue；HUD swatch 仍用 hex fallback；配 Vitest 三条用例（schema / round-trip / OKLab CPU 复刻）
-    status: pending
+    status: completed
   - id: p82-min-dist-sweep
     content: P8.2 · UMAP min_dist 扫参 (④)：scripts/experiments/min_dist_sweep.py 扫 [0.1, 0.3, 0.5, 0.7, 0.9]；产 5 份 .gz 到 frontend/public/data/experiments/；loader 实现 ?dataset 旁路；Storybook 五份并排截图；同时跨变量 A/B uZVisWindow / hover 命中半径 / 第二近邻兜底
     status: pending

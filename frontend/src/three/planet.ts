@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 
 import type { Meta, Movie } from '@/types/galaxy'
+import { hueFromGenreColor, pipelineRingSrgb01 } from '@/utils/genreHue'
 
 import perlinFragmentShader from './shaders/perlin.frag.glsl'
 import perlinVertexShader from './shaders/perlin.vert.glsl'
@@ -19,20 +20,19 @@ function genreDisplayWeights(genres: string[], maxSlots: number): { genres: stri
   return { genres: list, weights }
 }
 
-function hexToRgb01(hex: string): THREE.Vector3 {
-  const c = new THREE.Color()
-  c.set(hex)
-  return new THREE.Vector3(c.r, c.g, c.b)
+/** Sorted-vocabulary hue (P8.1); matches pipeline `2π·i/N`. */
+function resolveGenreHue(name: string, palette: Meta['genre_palette'], fallbackHue: number): number {
+  const hex = palette[name]
+  if (!hex || typeof hex !== 'string') return fallbackHue
+  const order = Object.keys(palette).sort((a, b) => a.localeCompare(b))
+  const idx = order.indexOf(name)
+  if (idx < 0) return fallbackHue
+  return (2 * Math.PI * idx) / order.length
 }
 
-function resolveGenreColor(name: string, palette: Meta['genre_palette'], fallback: THREE.Vector3): THREE.Vector3 {
-  const hex = palette[name]
-  if (!hex || typeof hex !== 'string') return fallback.clone()
-  try {
-    return hexToRgb01(hex)
-  } catch {
-    return fallback.clone()
-  }
+function vec3FromHue(hue: number, target: THREE.Vector3): THREE.Vector3 {
+  const [r, g, b] = pipelineRingSrgb01(hue)
+  return target.set(r, g, b)
 }
 
 export interface SelectionPlanetHandle {
@@ -93,10 +93,16 @@ export function createSelectionPlanet(): SelectionPlanetHandle {
   const setFromMovie = (movie: Movie, palette: Meta['genre_palette'], worldRadius: number) => {
     handle.lastRadius = worldRadius
     const { genres, weights } = genreDisplayWeights(movie.genres, 4)
-    const fb = new THREE.Vector3(movie.genre_color[0], movie.genre_color[1], movie.genre_color[2])
+    const fbHue =
+      movie.genre_hue ??
+      hueFromGenreColor([movie.genre_color[0], movie.genre_color[1], movie.genre_color[2]] as [
+        number,
+        number,
+        number,
+      ])
     const fbColor = new THREE.Color(movie.genre_color[0], movie.genre_color[1], movie.genre_color[2])
-    const cols = genres.map((g) => resolveGenreColor(g, palette, fb))
-    while (cols.length < 4) cols.push(fb.clone())
+    const cols = genres.map((g) => vec3FromHue(resolveGenreHue(g, palette, fbHue), new THREE.Vector3()))
+    while (cols.length < 4) cols.push(vec3FromHue(fbHue, new THREE.Vector3()))
     while (weights.length < 4) weights.push(0)
 
     const u = material.uniforms

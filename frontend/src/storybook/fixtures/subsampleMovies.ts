@@ -1,9 +1,29 @@
 /**
  * HUD / Storybook fixtures built from `data/subsample/tmdb2025_random20.csv`
  * (TMDB id 657018, 77223, 8223, 489533). Galaxy fields (x, y, z, size, emissive for JSON,
- * genre_color) are synthetic placeholders; the live scene fills GPU `voteNorm` from `vote_average`.
+ * `genre_color` / `genre_hue` for primary genre follow `pipelineRingSrgb01` + palette order (P8.1).
+ * Other fields remain fixture placeholders; the live scene fills GPU `voteNorm` from `vote_average`.
  */
 import type { Meta, Movie } from '@/types/galaxy'
+import { genreHueForGenreName, pipelineRingSrgb01 } from '@/utils/genreHue'
+
+/** Shared palette for subsample fixtures (sorted-key hue must match `genreHueForGenreName`). */
+export const SUBSAMPLE_GENRE_PALETTE: Record<string, string> = {
+  Unknown: '#888888',
+  Mystery: '#7c3aed',
+  Drama: '#2563eb',
+  'TV Movie': '#64748b',
+  War: '#dc2626',
+  History: '#ca8a04',
+  Comedy: '#16a34a',
+  Animation: '#db2777',
+}
+
+function primaryGenreHueFields(primary: string): Pick<Movie, 'genre_hue' | 'genre_color'> {
+  const hue = genreHueForGenreName(primary, SUBSAMPLE_GENRE_PALETTE)
+  const [r, g, b] = pipelineRingSrgb01(hue)
+  return { genre_hue: hue, genre_color: [r, g, b] }
+}
 
 export function releaseDateToDecimalYear(iso: string): number {
   const parts = iso.split('-').map(Number)
@@ -54,6 +74,7 @@ function galaxyPlaceholders(seed: number, voteAverage: number): Pick<Movie, 'x' 
 
 export const subsampleMovieMarthasVineyard: Movie = {
   ...galaxyPlaceholders(657018, 7.4),
+  ...primaryGenreHueFields('Mystery'),
   z: releaseDateToDecimalYear('2020-01-12'),
   title: "A Beautiful Place to Die: A Martha's Vineyard Mystery",
   original_title: "A Beautiful Place to Die: A Martha's Vineyard Mystery",
@@ -87,6 +108,7 @@ export const subsampleMovieMarthasVineyard: Movie = {
 
 export const subsampleMovieParadiseRoad: Movie = {
   ...galaxyPlaceholders(77223, 6.4),
+  ...primaryGenreHueFields('War'),
   z: releaseDateToDecimalYear('1997-02-11'),
   title: 'Paradise Road',
   original_title: 'Paradise Road',
@@ -126,6 +148,7 @@ export const subsampleMovieParadiseRoad: Movie = {
 
 export const subsampleMovieKika: Movie = {
   ...galaxyPlaceholders(8223, 6.4),
+  ...primaryGenreHueFields('Comedy'),
   z: releaseDateToDecimalYear('1993-10-29'),
   title: 'Kika',
   original_title: 'Kika',
@@ -160,6 +183,7 @@ export const subsampleMovieKika: Movie = {
 /** Short film from subsample with empty `cast` in CSV — useful for drawer edge cases. */
 export const subsampleMovieHappiness: Movie = {
   ...galaxyPlaceholders(489533, 7.123),
+  ...primaryGenreHueFields('Animation'),
   z: releaseDateToDecimalYear('2017-06-12'),
   title: 'Happiness',
   original_title: 'Happiness',
@@ -213,7 +237,7 @@ export const SUBSAMPLE_LAB_MOVIES: Movie[] = [subsampleMovieMarthasVineyard]
  * `z_range` matches Storybook `zCurrent` lab slider (2018–2021) so wheel clamp stays consistent.
  * XY envelope from the lab movie’s `x` / `y`.
  */
-export const SUBSAMPLE_GALAXY_META: Pick<Meta, 'z_range' | 'xy_range' | 'count' | 'genre_palette'> = {
+export const SUBSAMPLE_GALAXY_META: Pick<Meta, 'z_range' | 'xy_range' | 'count' | 'genre_palette' | 'has_genre_hue'> = {
   z_range: [2018, 2021],
   xy_range: {
     x: padRange1d(
@@ -226,14 +250,6 @@ export const SUBSAMPLE_GALAXY_META: Pick<Meta, 'z_range' | 'xy_range' | 'count' 
     ),
   },
   count: SUBSAMPLE_LAB_MOVIES.length,
-  genre_palette: {
-    Unknown: '#888888',
-    Mystery: '#7c3aed',
-    Drama: '#2563eb',
-    'TV Movie': '#64748b',
-    War: '#dc2626',
-    History: '#ca8a04',
-    Comedy: '#16a34a',
-    Animation: '#db2777',
-  },
+  has_genre_hue: true,
+  genre_palette: SUBSAMPLE_GENRE_PALETTE,
 }

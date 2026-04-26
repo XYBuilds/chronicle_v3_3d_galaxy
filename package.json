@@ -10,6 +10,7 @@
     "lint": "npm run lint -w frontend",
     "preview": "npm run preview -w frontend",
     "storybook": "npm run storybook -w frontend",
-    "build-storybook": "npm run build-storybook -w frontend"
+    "build-storybook": "npm run build-storybook -w frontend",
+    "test": "npm run test -w frontend"
   }
 }

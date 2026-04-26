@@ -69,7 +69,6 @@ Output
 | JS 堆内存 | ≤ 300 MB | 60K 条 JSON ≈ 30–50 MB；余量留给 Three.js 对象与海报纹理缓存 |
 | GPU 显存 | ≤ 500 MB | Points buffer 极小；主要开销来自 Bloom 多 pass render target 与动态海报纹理 |
 | 首屏（白屏→可交互） | ≤ 5 秒 | 已有 Loading 页，用户预期在"加载一个世界" |
-| 坐标数据体积 | ≤ 15 MB（gzip 后） | 原始 JSON 约 40–60 MB；gzip 通常压至 8–15 MB |
 
 ### **1.4 相机初始配置与首屏加载**
 
@@ -331,11 +330,11 @@ Python 管线的最终产物为**一个 JSON 文件**，前端一次性加载后
 | `id` | int | TMDB ID，作为 Raycaster 拾取与数据绑定的唯一键 |
 | `imdb_id` | string \| null | 用于拼接 IMDb 外链 (`https://www.imdb.com/title/{imdb_id}/`) |
 
-### **4.4 体积估算**
+### **4.4 体积与加载说明**
 
-以 ~60K 条为例：纯 JSON 原始 ≈ 50–70 MB；gzip 后 ≈ **8–15 MB**。若未来体积膨胀超过参考基线 (15 MB gzip)，可考虑：  
+以 ~60K 条为例：纯 JSON 原始常见量级为**数十 MB**；经 gzip 后的体积随字段丰富度、字符串长度与压缩级别变化。**不对 `galaxy_data.json.gz` 设体积硬性上限**；首包与托管成本以实际网络环境与 `meta.count` 为准。若需减轻传输或解析压力，可考虑：  
 * **拆分**：GPU 字段抽为独立 binary buffer（Float32Array dump），HUD 字段按需懒加载。  
-* **裁剪 cast**：截取前 10 人（而非 20）可省 ~15% 体积。  
+* **裁剪 cast**：截取前 10 人（而非 20）可减轻一部分文本体积。  
 * **当前阶段不做此优化**，优先跑通。
 
 ## **5\. 部署架构**

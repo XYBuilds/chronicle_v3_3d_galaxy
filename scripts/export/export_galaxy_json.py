@@ -179,12 +179,34 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--output-json", type=Path, default=_DEFAULT_JSON, help="Output galaxy_data.json")
     p.add_argument("--output-gzip", type=Path, default=_DEFAULT_GZ, help="Output galaxy_data.json.gz")
     p.add_argument("--skip-gzip", action="store_true", help="Do not write .json.gz")
+    p.add_argument(
+        "--gzip-only",
+        action="store_true",
+        help="Write only .json.gz (skip plain .json). Serialized JSON is still built in memory.",
+    )
+    p.add_argument(
+        "--subset-z-min-inclusive",
+        type=float,
+        default=None,
+        help="If set together with --subset-z-max-exclusive, export only movies with z in [min, max).",
+    )
+    p.add_argument(
+        "--subset-z-max-exclusive",
+        type=float,
+        default=None,
+        help="Upper bound (exclusive) for decimal-year z filter; use 2026 to keep calendar years 2020–2025.",
+    )
     p.add_argument("--embedding-model", type=str, default=EMBEDDING_MODEL_ID, help="meta.embedding_model")
     p.add_argument("--genre-weight-ratio", type=float, default=DEFAULT_GENRE_WEIGHT_RATIO, help="meta.genre_weight_ratio")
     p.add_argument("--w-text", type=float, default=1.0)
     p.add_argument("--w-genre", type=float, default=1.0)
     p.add_argument("--w-lang", type=float, default=1.0)
-    p.add_argument("--n-neighbors", type=int, default=15, help="UMAP hyperparameter echoed in meta (match Phase 2.4 run)")
+    p.add_argument(
+        "--n-neighbors",
+        type=int,
+        default=300,
+        help="UMAP hyperparameter echoed in meta (match Phase 8 default umap_projection run)",
+    )
     p.add_argument(
         "--min-dist",
         type=float,
@@ -282,6 +304,29 @@ def main(argv: list[str] | None = None) -> int:
     out_json = args.output_json.expanduser().resolve()
     out_gz = args.output_gzip.expanduser().resolve()
 
+    if bool(args.gzip_only) and bool(args.skip_gzip):
+        print("Error: --gzip-only and --skip-gzip are mutually exclusive", file=sys.stderr)
+        return 1
+
+    z_sub_lo = args.subset_z_min_inclusive
+    z_sub_hi_ex = args.subset_z_max_exclusive
+    subset_z_active = z_sub_lo is not None or z_sub_hi_ex is not None
+    if subset_z_active:
+        if z_sub_lo is None or z_sub_hi_ex is None:
+            print(
+                "Error: z subset export requires both --subset-z-min-inclusive and --subset-z-max-exclusive",
+                file=sys.stderr,
+            )
+            return 1
+        z_sub_lo_f = float(z_sub_lo)
+        z_sub_hi_ex_f = float(z_sub_hi_ex)
+        if not (z_sub_lo_f < z_sub_hi_ex_f):
+            print("Error: subset z band must satisfy min_inclusive < max_exclusive", file=sys.stderr)
+            return 1
+    else:
+        z_sub_lo_f = 0.0
+        z_sub_hi_ex_f = 0.0
+
     if not csv_path.is_file():
         print(f"Error: input CSV not found: {csv_path}", file=sys.stderr)
         return 1
@@ -336,6 +381,9 @@ def main(argv: list[str] | None = None) -> int:
     xy64 = xy.astype(np.float64, copy=False)
     movies: list[dict[str, Any]] = []
     for i in range(n):
+        zi = float(z_arr[i])
+        if subset_z_active and not (z_sub_lo_f <= zi < z_sub_hi_ex_f):
+            continue
         row = df.iloc[i]
         genres = parse_genre_list(row.get("genres"))
         primary = genres[0] if genres else ""
@@ -350,7 +398,7 @@ def main(argv: list[str] | None = None) -> int:
             row,
             x=float(xy64[i, 0]),
             y=float(xy64[i, 1]),
-            z=float(z_arr[i]),
+            z=zi,
             size=float(sizes[i]),
             emissive=float(emissive[i]),
             genre_color=[r, g, b],
@@ -362,10 +410,34 @@ def main(argv: list[str] | None = None) -> int:
         c0 = movies[0]["genre_color"]
         print(f"[genre_color] sample: movies[0].genre_color = [{c0[0]:.3f}, {c0[1]:.3f}, {c0[2]:.3f}] (all in 0–1?)")
 
+    if subset_z_active:
+        print(
+            f"[Subset z] source_rows={n} exported={len(movies)} "
+            f"band=[{z_sub_lo_f}, {z_sub_hi_ex_f}) (decimal year, max exclusive)"
+        )
+        assert len(movies) > 0, "z subset produced zero movies — check CSV / z band"
+
     now = datetime.now(timezone.utc)
-    # P8.1: minor data-contract bump (dual field `genre_hue` + `has_genre_hue`).
-    version = f"{now.strftime('%Y.%m.%d')}.h1"
+    # P8.1 `genre_hue`; P8 UMAP 定稿: n_neighbors=300, min_dist=0.4 (meta.umap_params).
+    version = f"{now.strftime('%Y.%m.%d')}.h2"
     generated_at = now.isoformat()
+
+    if subset_z_active:
+        zs_out = np.asarray([float(m["z"]) for m in movies], dtype=np.float64)
+        z_min_out, z_max_out = float(zs_out.min()), float(zs_out.max())
+        xs_out = np.asarray([float(m["x"]) for m in movies], dtype=np.float64)
+        ys_out = np.asarray([float(m["y"]) for m in movies], dtype=np.float64)
+        xy_range_out = {
+            "x": [float(xs_out.min()), float(xs_out.max())],
+            "y": [float(ys_out.min()), float(ys_out.max())],
+        }
+        z_range_out = [z_min_out, z_max_out]
+    else:
+        xy_range_out = {
+            "x": [float(xy64[:, 0].min()), float(xy64[:, 0].max())],
+            "y": [float(xy64[:, 1].min()), float(xy64[:, 1].max())],
+        }
+        z_range_out = [z_min, z_max]
 
     meta: dict[str, Any] = {
         "version": version,
@@ -383,12 +455,15 @@ def main(argv: list[str] | None = None) -> int:
         "genre_weight_ratio": float(args.genre_weight_ratio),
         "genre_palette": genre_palette,
         "feature_weights": {"text": float(args.w_text), "genre": float(args.w_genre), "lang": float(args.w_lang)},
-        "z_range": [z_min, z_max],
-        "xy_range": {
-            "x": [float(xy64[:, 0].min()), float(xy64[:, 0].max())],
-            "y": [float(xy64[:, 1].min()), float(xy64[:, 1].max())],
-        },
+        "z_range": z_range_out,
+        "xy_range": xy_range_out,
     }
+    if subset_z_active:
+        meta["subset_z_filter"] = {
+            "min_inclusive": z_sub_lo_f,
+            "max_exclusive": z_sub_hi_ex_f,
+        }
+        meta["umap_fit_row_count"] = int(n)
 
     payload_obj = {"meta": meta, "movies": movies}
     assert meta["count"] == len(movies)
@@ -407,9 +482,12 @@ def main(argv: list[str] | None = None) -> int:
 
     raw = json.dumps(payload_obj, ensure_ascii=False, separators=(",", ":"), allow_nan=False).encode("utf-8")
     out_json.parent.mkdir(parents=True, exist_ok=True)
-    out_json.write_bytes(raw)
     raw_mb = len(raw) / (1024 * 1024)
-    print(f"[Export] Wrote {out_json} ({raw_mb:.2f} MB)")
+    if not bool(args.gzip_only):
+        out_json.write_bytes(raw)
+        print(f"[Export] Wrote {out_json} ({raw_mb:.2f} MB)")
+    else:
+        print(f"[Export] Skipped plain JSON (--gzip-only); payload size {raw_mb:.2f} MB in memory")
 
     if not args.skip_gzip:
         with gzip.open(out_gz, "wb", compresslevel=9) as gz:

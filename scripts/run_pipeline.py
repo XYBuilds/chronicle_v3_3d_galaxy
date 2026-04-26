@@ -204,8 +204,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument(
         "--n-neighbors",
         type=int,
-        default=15,
-        help="UMAP n_neighbors (forwarded to umap_projection.py and export_galaxy_json.py meta)",
+        default=300,
+        help="UMAP n_neighbors (forwarded to umap_projection.py and export_galaxy_json.py meta; Phase 8 default 300)",
     )
     p.add_argument(
         "--min-dist",

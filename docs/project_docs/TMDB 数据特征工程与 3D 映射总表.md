@@ -13,6 +13,10 @@
 * **拼接与截断**：`Tagline:` / `Overview:` 前缀两行式拼接；无 tagline 则仅 `Overview:`；整段**从尾部截断**至默认 **3000 字符**；**L2 归一化**后进入后续特征融合与 UMAP。  
 * **完整条款**（批大小建议、**PyTorch CUDA / CPU 轮子安装**、`requirements` 锁定、版本语义）：见《TMDB 电影宇宙 Tech Spec》**§2.1.1**。
 
+### **UMAP 主数据定稿（Phase 8）**
+
+* **当前 shipped `galaxy_data` 与脚本默认一致**：`n_neighbors=300`，`min_dist=0.4`，`metric=cosine`，`random_state=42`，**不**启用 DensMAP（`umap_projection.py` / `export_galaxy_json.py` / `run_pipeline.py` 默认 CLI）。
+
 ### **核心映射矩阵规则表**
 
 | 字段名 (Field) | 原数据类型 \-\> 处理后数据类型 | UMAP 算法状态 | 3D 坐标 | 3D 材质 | HUD 2D | 隐藏/逻辑 | 3D 映射与前端渲染策略 | 严谨性标注 / 工程归因 (Rationale) |

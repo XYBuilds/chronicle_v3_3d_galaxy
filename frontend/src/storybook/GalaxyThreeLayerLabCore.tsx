@@ -33,7 +33,8 @@ export interface GalaxyThreeLayerLabProps {
   planetUScale: number
   planetOctaves: number
   planetPersistence: number
-  planetThreshold: number
+  /** P8.3 — geometric area ratio x in weights [1,x,x²,x³]; default 1/φ. */
+  planetAreaRatio: number
 }
 
 /**
@@ -62,7 +63,7 @@ export function GalaxyThreeLayerLabCore(props: GalaxyThreeLayerLabProps) {
     planetUScale,
     planetOctaves,
     planetPersistence,
-    planetThreshold,
+    planetAreaRatio,
   } = props
 
   useEffect(() => {
@@ -98,12 +99,6 @@ export function GalaxyThreeLayerLabCore(props: GalaxyThreeLayerLabProps) {
       b.radius = bloomRadius
       b.threshold = bloomThreshold
     }
-
-    const pu = m.selectionPlanet.material.uniforms
-    pu.uScale.value = planetUScale
-    pu.uOctaves.value = planetOctaves
-    pu.uPersistence.value = planetPersistence
-    pu.uThreshold.value = planetThreshold
   }, [
     zCurrent,
     zVisWindow,
@@ -118,11 +113,19 @@ export function GalaxyThreeLayerLabCore(props: GalaxyThreeLayerLabProps) {
     bloomRadius,
     bloomThreshold,
     selectedMovieId,
-    planetUScale,
-    planetOctaves,
-    planetPersistence,
-    planetThreshold,
   ])
+
+  /** P8.3 CPU Perlin — only recompute when planet tuning knobs change (not every zCurrent tick). */
+  useEffect(() => {
+    const m = mountHandle.current
+    if (!m) return
+    const pu = m.selectionPlanet.material.uniforms
+    pu.uScale.value = planetUScale
+    pu.uOctaves.value = planetOctaves
+    pu.uPersistence.value = planetPersistence
+    pu.uAreaRatio.value = planetAreaRatio
+    m.selectionPlanet.syncCpuNoiseFromUniforms()
+  }, [planetUScale, planetOctaves, planetPersistence, planetAreaRatio])
 
   return <div ref={rootRef} className="h-full min-h-[480px] w-full bg-black" />
 }

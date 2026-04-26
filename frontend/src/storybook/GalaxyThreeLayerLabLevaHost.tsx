@@ -57,12 +57,12 @@ export function GalaxyThreeLayerLabLevaHost(props: GalaxyThreeLayerLabProps) {
         max: 0.98,
         step: 0.01,
       },
-      planetThreshold: {
-        value: props.planetThreshold,
-        label: 'Perlin · threshold',
-        min: 0.002,
-        max: 0.2,
-        step: 0.002,
+      planetAreaRatio: {
+        value: props.planetAreaRatio,
+        label: 'Perlin · uAreaRatio (1,x,x²,x³)',
+        min: 0.15,
+        max: 1.2,
+        step: 0.005,
       },
     }),
     { collapsed: false },
@@ -92,7 +92,7 @@ export function GalaxyThreeLayerLabLevaHost(props: GalaxyThreeLayerLabProps) {
       planetUScale: props.planetUScale,
       planetOctaves: props.planetOctaves,
       planetPersistence: props.planetPersistence,
-      planetThreshold: props.planetThreshold,
+      planetAreaRatio: props.planetAreaRatio,
     })
   }, [
     props.zCurrent,
@@ -111,7 +111,7 @@ export function GalaxyThreeLayerLabLevaHost(props: GalaxyThreeLayerLabProps) {
     props.planetUScale,
     props.planetOctaves,
     props.planetPersistence,
-    props.planetThreshold,
+    props.planetAreaRatio,
   ])
 
   const merged: GalaxyThreeLayerLabProps = {
@@ -132,7 +132,7 @@ export function GalaxyThreeLayerLabLevaHost(props: GalaxyThreeLayerLabProps) {
     planetUScale: v.planetUScale,
     planetOctaves: Math.round(v.planetOctaves),
     planetPersistence: v.planetPersistence,
-    planetThreshold: v.planetThreshold,
+    planetAreaRatio: v.planetAreaRatio,
   }
 
   return (

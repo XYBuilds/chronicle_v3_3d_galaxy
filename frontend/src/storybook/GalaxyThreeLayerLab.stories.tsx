@@ -49,7 +49,7 @@ const meta = {
     planetUScale: { control: { type: 'range', min: 0.5, max: 6, step: 0.05 } },
     planetOctaves: { control: { type: 'range', min: 1, max: 8, step: 1 } },
     planetPersistence: { control: { type: 'range', min: 0.08, max: 0.98, step: 0.01 } },
-    planetThreshold: { control: { type: 'range', min: 0.002, max: 0.2, step: 0.002 } },
+    planetAreaRatio: { control: { type: 'range', min: 0.15, max: 1.2, step: 0.005 } },
   },
   args: {
     meta: SUBSAMPLE_GALAXY_META,
@@ -70,7 +70,7 @@ const meta = {
     planetUScale: 2.35,
     planetOctaves: 4,
     planetPersistence: 0.52,
-    planetThreshold: 0.048,
+    planetAreaRatio: 1 / ((1 + Math.sqrt(5)) / 2),
   },
 } satisfies Meta<typeof GalaxyThreeLayerLab>
 

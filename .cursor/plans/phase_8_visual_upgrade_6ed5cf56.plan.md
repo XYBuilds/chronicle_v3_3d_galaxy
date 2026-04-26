@@ -9,7 +9,7 @@ todos:
     content: P8.1 · H-only 数据迁移 (③) + Vitest 第一批 (5.4.1)：产出双字段 galaxy_data.json.gz（genre_color + genre_hue） + meta.version bump；先在现有 point.vert.glsl 上去 OKLab 解码（P8.4 会再换 mesh shader，本 P 只动 attribute 与色彩重组）；planet.ts 改走 hue；HUD swatch 仍用 hex fallback；配 Vitest 三条用例（schema / round-trip / OKLab CPU 复刻）
     status: completed
   - id: p82-min-dist-sweep
-    content: P8.2 · UMAP min_dist 扫参 (④)：scripts/experiments/min_dist_sweep.py 扫 [0.1, 0.3, 0.5, 0.7, 0.9]；产 5 份 .gz 到 frontend/public/data/experiments/；loader 实现 ?dataset 旁路；Storybook 五份并排截图；同时跨变量 A/B uZVisWindow / hover 命中半径 / 第二近邻兜底
+    content: P8.2 · UMAP min_dist 扫参 (④)：当前主数据 min_dist=0.4 已判过小，仅扫 min_dist ∈ [0.5, 0.7, 0.9]；为缩短单次生成时间，实验集仅含 z∈[2020,2025] 的电影子集（全量 UMAP 仍跑同一套特征与参数，导出时按 z 过滤）；产出 3 份 .gz 到 frontend/public/data/experiments/；loader ?dataset= 旁路；用户在 npm run dev 下切换比对（不用 Storybook GalaxyThreeLayerLab）；本阶段只调 min_dist，不测 uZVisWindow / hover；用户选定最优 min_dist 后**另起一步**全量重训+导出并替换当前 galaxy_data（不在 P8.2 验收 closure 内）
     status: pending
   - id: p83-perlin-redo
     content: P8.3 · Perlin focus 球重做 (②修正版)：IcosahedronGeometry(1, 6)；xmur3+mulberry32 以 movie.id 为 seed；CPU 端排序百分位算 4 阈值 uThresh1..4；perlin.frag.glsl 用 step+smoothstep 固定 4 颜色分支；uAreaRatio uniform 挂 leva；面积占比误差 < 0.5%
@@ -44,6 +44,7 @@ isProject: false
 - **WebGL2 / `gl_InstanceID`**：启动时 `assert renderer.capabilities.isWebGL2`，不通过直接抛错并提示升级浏览器（与 Phase 7.2 浏览器红线一致）；**不**维护 `aInstanceId` fallback
 - **材质分工**：idle mesh — `transparent: true`、`depthWrite: false`，fragment 以 alpha 衰减治亚像素 aliasing；active mesh — `alphaTest: 0.01`、`depthWrite: true`，fragment 做 Lambert（+ 可选 rim），与 idle 的透明路径分离，避免单 shader 内 opaque/transparent 冲突
 - **hover ring**：HTML/CSS overlay，**与 tooltip 一致即时显隐**，本阶段不做淡入淡出
+- **P8.2 min_dist 扫参（④，范围收窄）**：主数据 `min_dist=0.4` 已确认过小，实验仅对比 **0.5 / 0.7 / 0.9**；为控制单次生成耗时，实验产物仅为 **z ∈ [2020, 2025]** 的电影子集（同一套 embedding/UMAP 设定，导出阶段过滤）；验收用 **`npm run dev`** 切换 `?dataset=` 肉眼比选，**不用** Storybook `GalaxyThreeLayerLab`；本阶段 **只** 关注 min_dist，不测 `uZVisWindow` 与 hover 命中；用户选定最优值后 **单独执行一次全量** 重训/导出并替换当前 `galaxy_data.json.gz`（该全量替换写入计划收尾说明，**不**作为 P8.2 子任务 closure）
 
 ## 执行顺序与依赖
 
@@ -68,7 +69,7 @@ flowchart TD
 
 依赖说明：
 - P8.1 阻塞 P8.3（Perlin 球用新 H 配色）与 P8.4（双 mesh shader 直接消费 hue attribute）
-- P8.2 阻塞 P8.3（min_dist 改了坐标，meta 版本要同时 bump，避免 Perlin 调参作废一次）
+- P8.2：产出 **z∈[2020,2025] 子集** 的 3 份实验 `.gz` 供比选；**不**在 P8.2 内替换主全量数据。用户选定 `min_dist` 并完成 **一次全量** 重训/导出后，再 bump `meta.version` 并替换 `frontend/public/data/galaxy_data.json.gz`；P8.3 **定稿前**须在该全量坐标上回归（P8.3 可与 P8.2 并行开发，但以全量替换后的坐标为最终验收依据）
 - P8.5 是 P8.4 的硬准入：idle mesh 亚像素无闪烁、过渡区无双影、active mesh 低 chroma 仍有可读明暗；不通过则 **idle 回退 `THREE.Points`** + active mesh 保留（plan 写明为显式降级，非默认）
 - P8.6 放最后：`select` 态会消费 P8.4 的最终 draw-call / bloom 分层形态
 
@@ -129,22 +130,28 @@ flowchart TD
 
 ## P8.2 · UMAP min_dist 扫参（你的 ④）
 
-**目标**：用受控扫参解决"邻近电影难分辨"的数据侧成因，避免单点 0.9 误判。
+**目标**：在「邻近电影难分辨」问题上，**仅** 对比更大 `min_dist` 对 XY 疏密的影响；当前主数据 **`min_dist=0.4` 已确认过小**，故本阶段 **只扫 `min_dist ∈ {0.5, 0.7, 0.9}`**（共 3 档）。
 
-- 在 `scripts/` 下新建 `experiments/min_dist_sweep.py`：固定 `random_state=42`、`n_neighbors=100`、`densmap=true`、768d embedding；扫 `min_dist ∈ [0.1, 0.3, 0.5, 0.7, 0.9]`；输出 5 份 `galaxy_data.mindist{V}.json.gz` 到 `frontend/public/data/experiments/`（`.gitignore` 已忽略 `*.json`，`.gz` 加白名单）
-- 加载切换：在 [frontend/src/data/loadGalaxyGzip.ts](frontend/src/data/loadGalaxyGzip.ts) 加 `?dataset=mindist0.5` 查询参数旁路；不改默认源
-- 用 [Storybook GalaxyThreeLayerLab](frontend/src/storybook/GalaxyThreeLayerLabCore.tsx) 五份并排截图，固定相机参数与同一个 z 切片
-- 用户在截图上下结论；agent 把胜出值写回 [scripts/](scripts/) 主导出脚本 + meta version bump
-- **同时实测**：把"邻近难分辨"分解到三个变量上各做一组 A/B
-  - UMAP min_dist
-  - `uZVisWindow` 厚度
-  - hover 命中（P8.4 后为 Raycaster + active mesh；可保留第二近邻兜底 ~3px）
-  - 用户决定哪几个变量值得改，哪些是数据/交互的本质共因
+### 数据范围（为缩短单次生成时间）
 
-### 验收
-- 主 `galaxy_data.json.gz` 切换到胜出 `min_dist`，meta.version bump
-- experiments 目录保留 5 份 .gz 供未来回看
-- 报告里写明各变量的边际收益，决定 P8.4 hover 兜底是否要做
+- **实验集 JSON**：最终文件里**只含** `z ∈ [2020, 2025]`（按项目既有 `release_date → z` 规则过滤）的电影行；用于 dev 加载与肉眼比「邻近疏密」。
+- **控时策略（推荐顺序，实施时在脚本/README 写死其一）**：
+  1. **首选**：在全量电影上已得到的 **768d embedding（或与当前主数据同源的矩阵）** 上，**仅重跑 UMAP** 三次（`min_dist` = 0.5 / 0.7 / 0.9），再对输出按 z 过滤 —— 与全量替换后的坐标定义一致，仅省 embedding 与无关行的写出。
+  2. **若仍过长**：与用户书面确认后，方可采用「仅 z 子集参与 UMAP」的捷径；须在 `meta` 标明 `subset_umap=true` 且文档说明**与全量流形不可逐点对比**，全量替换后必须再主观验收一次。
+- **全量替换**：不在 P8.2 验收内完成。用户根据 dev 比选确定最优 `min_dist` 后，**单独执行一次全量** 重训/导出，生成新的 `galaxy_data.json.gz` 替换当前主数据，并 bump `meta.version`；该步完成后 P8.3 等后续 P 以全量坐标做最终回归。
+
+### 实施要点
+
+- 在 `scripts/` 下实现（新建或扩展 `experiments/min_dist_sweep.py`）：对三个 `min_dist` 各产一份 **`galaxy_data.mindist{05|07|09}.json.gz`**（命名可自定但须稳定），落 `frontend/public/data/experiments/`；`print` 每份子集的 `n`、`z` min/max、`meta.min_dist`（或等价字段）做状态可见性。
+- [frontend/src/data/loadGalaxyGzip.ts](frontend/src/data/loadGalaxyGzip.ts)：`?dataset=mindist05` 等查询参数旁路加载实验 `.gz`；**默认**仍指向主 `galaxy_data.json.gz`，避免误提交切换。
+- **验收方式**：用户使用 **`npm run dev`**（Vite dev）切换 query 肉眼对比三档在 **z=2020–2025 切片** 下的疏密与「邻近可辨」主观感受；**不使用** Storybook `GalaxyThreeLayerLab` 并排截图流程。
+- **本阶段不测**：`uZVisWindow` 厚度、hover 命中 / Raycaster 容差等交互变量；若需再扫，另起后续 plan 或并入 P8.4 后调试。
+
+### 验收（P8.2 closure）
+
+- 3 份实验 `.gz` 可加载、meta 标明 `min_dist` 与 **子集 z 范围**；控制台/文档记录每份 `n` 与 z 极值。
+- 用户在 dev 下完成三档比选并**书面记录**胜出 `min_dist`（可记入 `docs/project_docs/` 或 Phase 8 报告草稿）。
+- **不要求**本 P 内替换主全量 `galaxy_data.json.gz`；全量替换为用户决策后的**独立一步**，并在替换后更新主导出脚本默认 `min_dist` 与文档。
 
 ## P8.3 · Perlin focus 球重做（你的 ②，修正版）
 
@@ -244,7 +251,7 @@ if (isFocused) { sIdle = 0.0; sActive = 0.0; }
 
 - [frontend/src/three/interaction.ts](frontend/src/three/interaction.ts)：优先 `raycaster.intersectObject(galaxyActive, false)`；`instanceId` 即电影下标（`assert count === movies.length`）
 - 仅当 CPU 侧 `inFocus > 0.5`（与 P8.0 spec 阈值一致）时接受命中；否则视为未命中（背景层不可点）
-- 可选：active 极小时第二近邻 + 数 px 容差（P8.2 结论驱动）
+- 可选：active 极小时第二近邻 + 数 px 容差（**不在 P8.2** 内决定；交互专项或 P8.4 后迭代）
 - 删除原 `computePointScreenRadiusCss` **圆盘命中**逻辑；若需对照调试可暂时保留在 dev-only 分支
 
 ### Tooltip 防遮挡
@@ -331,7 +338,7 @@ if (isFocused) { sIdle = 0.0; sActive = 0.0; }
 | 风险                                                        | 对策                                                                                                                       |
 | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
 | P8.1 双字段过渡期被遗忘成永久遗留                           | 在 P8.6 草案末尾显式标"P8.1 双字段移除"待办，纳入下一阶段验收清单                                                          |
-| P8.2 扫参出来"无明显胜者"，引发新一轮决策                   | 接受现状不切换 `min_dist`，把交互层兜底（hover 容差）当主治标手段                                                          |
+| P8.2 三档主观仍难区分                                       | 用户暂定中间档（如 0.7）或补一档实验；**不**在本阶段用 uZVisWindow/hover 拆因；全量替换后再主观复验一次                    |
 | P8.3 detail=6 在低端 GPU 卡顿                               | fallback 到 detail=5（20K 顶点），统计精度仍可接受；阈值偏差容忍调到 1%                                                    |
 | P8.4 物理距离一致导致小星球 focus 后过小                    | spec 文档里显式标"intended"；可选在 HUD 底部加 vote_count 数值显示，让信息不在视觉里也能读出                               |
 | **P8.4 双 mesh（3.24M vert VS）在集成显卡 / 移动端卡顿**    | P8.0 双 mesh 基准准入；先调 Bloom/post；**不**以牺牲 active detail=1 为首选；实在不行用户书面接受 30fps 或降分辨率缩放实验 |

@@ -38,7 +38,7 @@ export function GalaxyThreeLayerLabLevaHost(props: GalaxyThreeLayerLabProps) {
       uLMin: { value: props.uLMin, label: '宏观 · uLMin', min: 0.05, max: 0.6, step: 0.01 },
       uLMax: { value: props.uLMax, label: '宏观 · uLMax', min: 0.4, max: 0.99, step: 0.01 },
       uChroma: { value: props.uChroma, label: '宏观 · uChroma', min: 0.02, max: 0.35, step: 0.01 },
-      uSizeScale: { value: props.uSizeScale, label: '宏观 · uSizeScale', min: 0.05, max: 1.2, step: 0.01 },
+      uSizeScale: { value: props.uSizeScale, label: '宏观 · uSizeScale', min: 1, max: 60, step: 0.5 },
       postProcessBloom: { value: props.postProcessBloom, label: 'Bloom · enabled' },
       bloomStrength: { value: props.bloomStrength, label: 'Bloom · strength', min: 0, max: 2.5, step: 0.02 },
       bloomRadius: { value: props.bloomRadius, label: 'Bloom · radius', min: 0, max: 1.5, step: 0.01 },

@@ -21,7 +21,7 @@ export interface GalaxyThreeLayerLabProps {
   uLMax: number
   /** OKLCH chroma (`uChroma`). */
   uChroma: number
-  /** Multiplier on in-focus point size (`uSizeScale`). */
+  /** Global world scale for dual mesh (`uSizeScale`; former Points scale × mesh calib). */
   uSizeScale: number
   /** When true, attaches `UnrealBloomPass` and uses composer rendering (revive path). */
   postProcessBloom: boolean

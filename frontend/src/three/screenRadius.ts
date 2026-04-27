@@ -41,8 +41,7 @@ export function computeActiveMeshScreenRadiusCss(options: {
   const u = activeMaterial.uniforms
   const uSizeScale = (u.uSizeScale as THREE.Uniform<number>).value
   const uFocusSizeMul = (u.uFocusSizeMul as THREE.Uniform<number>).value
-  const uMeshCalib = (u.uMeshCalib as THREE.Uniform<number>).value
-  const rWorld = inF * uSizeScale * uFocusSizeMul * uMeshCalib * movie.size * 1.0
+  const rWorld = inF * uSizeScale * uFocusSizeMul * movie.size * 1.0
 
   const rect = domElement.getBoundingClientRect()
   const h = Math.max(1, rect.height)

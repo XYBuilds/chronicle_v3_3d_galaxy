@@ -8,8 +8,11 @@ import galaxyActiveVertexShader from './shaders/galaxyActive.vert.glsl'
 import galaxyIdleFragmentShader from './shaders/galaxyIdle.frag.glsl'
 import galaxyIdleVertexShader from './shaders/galaxyIdle.vert.glsl'
 
-/** World-space scale calibration vs former Points path (tune with `window.__galaxyPointScale`). */
-export const DEFAULT_GALAXY_MESH_CALIB = 38
+/**
+ * Default `uSizeScale` for dual InstancedMesh (= former `0.3 × uMeshCalib` with mesh calib **38** baked in).
+ * Tune live via `window.__galaxyPointScale.scale` or Storybook / Leva.
+ */
+export const DEFAULT_GALAXY_U_SIZE_SCALE = 0.3 * 38
 
 const _dummy = new THREE.Object3D()
 
@@ -52,10 +55,9 @@ function makeSharedUniforms(pixelRatio: number): { [uniform: string]: THREE.IUni
     uPixelRatio: { value: pixelRatio },
     uZCurrent: { value: 0 },
     uZVisWindow: { value: 1 },
-    uSizeScale: { value: 0.3 },
+    uSizeScale: { value: DEFAULT_GALAXY_U_SIZE_SCALE },
     uFocusSizeMul: { value: 0.2 },
     uBgSizeMul: { value: 0.001 },
-    uMeshCalib: { value: DEFAULT_GALAXY_MESH_CALIB },
     uLMin: { value: 0.4 },
     uLMax: { value: 0.85 },
     uChroma: { value: 0.15 },

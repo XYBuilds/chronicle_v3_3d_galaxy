@@ -24,7 +24,7 @@ interface BloomDebugControls {
 }
 
 interface GalaxyPointScaleDebug {
-  /** Multiplier on screen point diameter (JSON `size` × perspective × this). */
+  /** Dual mesh: world `uSizeScale` (JSON `size` × this × focus/bg mul); Points path: screen diameter scale. */
   scale: number
   /** In-focus slab size multiplier (see `uFocusSizeMul`). */
   focusSizeMul: number

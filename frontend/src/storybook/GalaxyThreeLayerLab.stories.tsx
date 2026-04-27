@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 
 import { SUBSAMPLE_GALAXY_META, SUBSAMPLE_LAB_MOVIES, subsampleMovieMarthasVineyard } from '@/storybook/fixtures/subsampleMovies'
+import { DEFAULT_GALAXY_U_SIZE_SCALE } from '@/three/galaxyMeshes'
 
 import { GalaxyThreeLayerLab } from './GalaxyThreeLayerLab'
 
@@ -40,7 +41,7 @@ const meta = {
     uLMin: { control: { type: 'range', min: 0.05, max: 0.6, step: 0.01 } },
     uLMax: { control: { type: 'range', min: 0.4, max: 0.99, step: 0.01 } },
     uChroma: { control: { type: 'range', min: 0.02, max: 0.35, step: 0.01 } },
-    uSizeScale: { control: { type: 'range', min: 0.05, max: 1.2, step: 0.01 } },
+    uSizeScale: { control: { type: 'range', min: 1, max: 60, step: 0.5 } },
     postProcessBloom: { control: 'boolean' },
     bloomStrength: { control: { type: 'range', min: 0, max: 2.5, step: 0.02 } },
     bloomRadius: { control: { type: 'range', min: 0, max: 1.5, step: 0.01 } },
@@ -61,7 +62,7 @@ const meta = {
     uLMin: 0.4,
     uLMax: 0.85,
     uChroma: 0.15,
-    uSizeScale: 0.3,
+    uSizeScale: DEFAULT_GALAXY_U_SIZE_SCALE,
     postProcessBloom: false,
     bloomStrength: 0.95,
     bloomRadius: 0.52,

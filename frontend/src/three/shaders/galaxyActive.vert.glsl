@@ -6,7 +6,6 @@ uniform float uZVisWindow;
 uniform float uSizeScale;
 uniform float uFocusSizeMul;
 uniform float uBgSizeMul;
-uniform float uMeshCalib;
 uniform float uLMin;
 uniform float uLMax;
 uniform float uChroma;
@@ -27,7 +26,7 @@ void main() {
     (1.0 - smoothstep(zHi, zHi + W, aZ));
 
   bool isFocused = (uFocusedInstanceId >= 0) && (gl_InstanceID == uFocusedInstanceId);
-  float sActive = inFocus * uSizeScale * uFocusSizeMul * uMeshCalib * aSize;
+  float sActive = inFocus * uSizeScale * uFocusSizeMul * aSize;
   if (isFocused) {
     sActive = 0.0;
   }

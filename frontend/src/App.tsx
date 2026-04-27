@@ -4,6 +4,7 @@ import { MovieDetailDrawer } from '@/components/Drawer'
 import { Loading } from '@/components/Loading'
 import { MovieTooltip } from '@/components/MovieTooltip'
 import { Timeline } from '@/components/Timeline'
+import { HoverRing } from '@/hud/HoverRing'
 import { InfoButton } from '@/hud/InfoButton'
 import { useGalaxyDataStore } from '@/store/galaxyDataStore'
 import { mountGalaxyScene } from '@/three/scene'
@@ -64,6 +65,7 @@ function App() {
         className="fixed inset-0 h-dvh w-full bg-black"
         aria-label="Galaxy WebGL canvas host"
       />
+      <HoverRing />
       <MovieTooltip />
       <InfoButton />
       <Timeline />

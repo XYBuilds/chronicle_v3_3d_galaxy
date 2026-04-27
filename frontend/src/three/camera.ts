@@ -1,7 +1,19 @@
 import * as THREE from 'three'
 
 import type { XyRange } from '@/types/galaxy'
+import type { Movie } from '@/types/galaxy'
 import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
+
+/**
+ * Perlin focus: world-space |Δz| from movie center to camera (camera at `movie.z - standoff`, axis-parallel +Z).
+ * Absolute — tune here only (no `worldSpan` scaling).
+ */
+export const FOCUS_PERLIN_CAMERA_STANDOFF = 1
+
+/** Writes world-space camera position for Perlin focus. */
+export function setFocusCameraPosition(out: THREE.Vector3, movie: Pick<Movie, 'x' | 'y' | 'z'>): THREE.Vector3 {
+  return out.set(movie.x, movie.y, movie.z - FOCUS_PERLIN_CAMERA_STANDOFF)
+}
 
 /** Fixed orientation: parallel to Z, facing +world Z (no tilt / orbit). */
 export const GALAXY_CAMERA_EULER = new THREE.Euler(0, Math.PI, 0, 'YXZ')

@@ -22,7 +22,7 @@ alwaysApply: false
 
 - **Macro layer**: `THREE.Points` + custom ShaderMaterial (1 draw call for ~60K particles)
   - **P6.2.2**: Single opaque pass (`transparent: false`, `depthWrite: true`) — circular points with a one-line `smoothstep` edge only (no halo / Bloom in the default path).
-  - Vertex: position, size (log vote_count), `color` (genres[0] palette sRGB), `voteNorm` (`vote_average / 10`); Z-slab drives **size only** via `uFocusSizeMul` / `uBgSizeMul`. Color is recomputed in the vertex shader from palette hue in OKLab + lightness from `voteNorm` + fixed chroma (`uLMin` / `uLMax` / `uChroma`).
+  - Vertex: position, size (log vote_count), `color` (genres[0] palette sRGB), `voteNorm` (`vote_average / 10`); Z-slab drives **size only** via `uActiveSizeMul` / `uBgSizeMul`. Color is recomputed in the vertex shader from palette hue in OKLab + lightness from `voteNorm` + fixed chroma (`uLMin` / `uLMax` / `uChroma`).
   - Fragment: flat `vColor` + circle discard + minimal AA.
 - **Selected layer**: IcoSphere + Perlin Noise ShaderMaterial (on-demand per click); visibility toggles with selection fly-to (no macro opacity ramp).
 - **Post-processing**: `EffectComposer` + `UnrealBloomPass` are **constructed but not attached** by default; the render loop uses `renderer.render(scene, camera)` with `renderer.outputColorSpace = THREE.SRGBColorSpace`. Call `window.__bloom.enable()` to attach the pass and switch to `composer.render()` (revive / polish).
@@ -36,7 +36,8 @@ alwaysApply: false
 
 ## Interaction (P6.3.1)
 
-- **Hover / click 拾取**不用 `Raycaster` / `params.Points.threshold`，而用 **屏幕空间圆盘**与 `point.vert.glsl` 的 `gl_PointSize` **1:1** 对齐：命中与半径见 `frontend/src/three/interaction.ts` 中 `computePointScreenRadiusCss` 与 `pickIndex`。若改顶点里的点大小、视距基准常数或 `uSizeScale` / `uFocusSizeMul` 语义，**须同步改**该 TS 端公式。
+- **Hover / click（Points 路径）**：**屏幕空间圆盘**与 `point.vert.glsl` 的 `gl_PointSize` **1:1** — `computePointScreenRadiusCss`；改点大小或 `uSizeScale` / `uActiveSizeMul` 须同步改 TS。
+- **Hover / click（P8.4 dual `InstancedMesh`）**：`interaction.ts` 用 **ray–world-sphere**（半径与 `galaxyActive.vert` 的 `sActive` 一致），不用 `Raycaster.intersectObject` 做主判定（引擎射线忽略顶点 `sActive` 缩放）。Click 仍带 `inFocus > 0.5` slab 门控。
 
 ## Data Loading
 

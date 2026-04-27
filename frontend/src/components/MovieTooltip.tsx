@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { hoverTooltipSideOffsetPx } from '@/hud/hoverRingLayout'
 import { useGalaxyDataStore } from '@/store/galaxyDataStore'
 import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
 
@@ -12,13 +13,21 @@ export interface MovieTooltipHudProps {
   title: string
   /** `genres[0]` when present. */
   primaryGenreLabel: string | null
+  /** Gap along `side` (top/bottom) from planet center to tooltip; clears ring + silhouette. */
+  sideOffsetPx?: number
 }
 
 /**
  * Hover HUD: shadcn (Base UI) Tooltip anchored at projected world position.
  * Use {@link MovieTooltip} in the app; use this in Storybook with mock props.
  */
-export function MovieTooltipHud({ open, anchor, title, primaryGenreLabel }: MovieTooltipHudProps) {
+export function MovieTooltipHud({
+  open,
+  anchor,
+  title,
+  primaryGenreLabel,
+  sideOffsetPx = 12,
+}: MovieTooltipHudProps) {
   return (
     <Tooltip open={open} onOpenChange={() => undefined}>
       <TooltipTrigger
@@ -31,7 +40,12 @@ export function MovieTooltipHud({ open, anchor, title, primaryGenreLabel }: Movi
           transform: 'translate(-50%, -50%)',
         }}
       />
-      <TooltipContent side="top" align="center" className="max-w-sm">
+      <TooltipContent
+        side="top"
+        align="center"
+        sideOffset={sideOffsetPx}
+        className="max-w-sm pointer-events-none"
+      >
         <div className="flex flex-col gap-0.5 text-left">
           <span className="font-medium leading-snug">{title}</span>
           {primaryGenreLabel ? (
@@ -49,6 +63,7 @@ export function MovieTooltipHud({ open, anchor, title, primaryGenreLabel }: Movi
 export function MovieTooltip() {
   const hoveredMovieId = useGalaxyInteractionStore((s) => s.hoveredMovieId)
   const hoverAnchorCss = useGalaxyInteractionStore((s) => s.hoverAnchorCss)
+  const hoverPlanetRadiusCss = useGalaxyInteractionStore((s) => s.hoverPlanetRadiusCss)
   const movies = useGalaxyDataStore((s) => s.data?.movies)
 
   const movie = useMemo(() => {
@@ -59,6 +74,10 @@ export function MovieTooltip() {
   const open = hoveredMovieId !== null && movie !== null && hoverAnchorCss !== null
   const title = movie?.title ?? ''
   const primaryGenreLabel = movie?.genres?.[0] ?? null
+  const sideOffsetPx =
+    hoverPlanetRadiusCss != null && hoverPlanetRadiusCss > 0
+      ? hoverTooltipSideOffsetPx(hoverPlanetRadiusCss)
+      : 12
 
   return (
     <MovieTooltipHud
@@ -66,6 +85,7 @@ export function MovieTooltip() {
       anchor={hoverAnchorCss}
       title={title}
       primaryGenreLabel={primaryGenreLabel}
+      sideOffsetPx={sideOffsetPx}
     />
   )
 }

@@ -20,7 +20,7 @@ describe('genreHue (P8.1)', () => {
     expect(angularDiffRad(recovered, h)).toBeLessThan(0.06)
   })
 
-  it('pointColorFromHueVote matches CPU gold (point.vert OKLab path)', () => {
+  it('pointColorFromHueVote matches CPU gold (OKLab path, same as galaxy vert)', () => {
     const out = pointColorFromHueVote(0.7, 0.5, 0.4, 0.85, 0.15)
     expect(out[0]).toBeCloseTo(0.8183484375234074, 6)
     expect(out[1]).toBeCloseTo(0.38652820698316337, 6)

@@ -11,8 +11,8 @@ export interface GalaxyThreeLayerLabProps {
   zCurrent: number
   /** Visible slab width along Z (world years). */
   zVisWindow: number
-  /** In-focus slab point size multiplier (`uFocusSizeMul`). */
-  uFocusSizeMul: number
+  /** Active (viz-window) mesh size multiplier — uniform `uActiveSizeMul`. */
+  uActiveSizeMul: number
   /** Background slab point size multiplier (`uBgSizeMul`). */
   uBgSizeMul: number
   /** OKLCH lightness floor (`uLMin`). */
@@ -21,7 +21,7 @@ export interface GalaxyThreeLayerLabProps {
   uLMax: number
   /** OKLCH chroma (`uChroma`). */
   uChroma: number
-  /** Multiplier on in-focus point size (`uSizeScale`). */
+  /** Global world scale for dual mesh (`uSizeScale`; former Points scale × mesh calib). */
   uSizeScale: number
   /** When true, attaches `UnrealBloomPass` and uses composer rendering (revive path). */
   postProcessBloom: boolean
@@ -49,7 +49,7 @@ export function GalaxyThreeLayerLabCore(props: GalaxyThreeLayerLabProps) {
     movies,
     zCurrent,
     zVisWindow,
-    uFocusSizeMul,
+    uActiveSizeMul,
     uBgSizeMul,
     uLMin,
     uLMax,
@@ -84,7 +84,7 @@ export function GalaxyThreeLayerLabCore(props: GalaxyThreeLayerLabProps) {
     useGalaxyInteractionStore.setState({ zCurrent, zVisWindow, selectedMovieId })
 
     const gm = m.galaxyMaterial
-    gm.uniforms.uFocusSizeMul.value = uFocusSizeMul
+    gm.uniforms.uActiveSizeMul.value = uActiveSizeMul
     gm.uniforms.uBgSizeMul.value = uBgSizeMul
     gm.uniforms.uLMin.value = uLMin
     gm.uniforms.uLMax.value = uLMax
@@ -102,7 +102,7 @@ export function GalaxyThreeLayerLabCore(props: GalaxyThreeLayerLabProps) {
   }, [
     zCurrent,
     zVisWindow,
-    uFocusSizeMul,
+    uActiveSizeMul,
     uBgSizeMul,
     uLMin,
     uLMax,

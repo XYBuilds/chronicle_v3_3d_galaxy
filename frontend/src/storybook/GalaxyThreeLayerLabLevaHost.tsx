@@ -33,7 +33,7 @@ export function GalaxyThreeLayerLabLevaHost(props: GalaxyThreeLayerLabProps) {
     () => ({
       zCurrent: { value: props.zCurrent, label: '宏观 · zCurrent', min: zLo, max: zHi, step: 0.02 },
       zVisWindow: { value: props.zVisWindow, label: '宏观 · zVisWindow', min: 0.05, max: 8, step: 0.05 },
-      uFocusSizeMul: { value: props.uFocusSizeMul, label: '宏观 · uFocusSizeMul', min: 0.2, max: 2, step: 0.02 },
+      uActiveSizeMul: { value: props.uActiveSizeMul, label: '宏观 · uActiveSizeMul', min: 0.01, max: 2, step: 0.01 },
       uBgSizeMul: { value: props.uBgSizeMul, label: '宏观 · uBgSizeMul', min: 0.0001, max: 1.5, step: 0.0001 },
       uLMin: { value: props.uLMin, label: '宏观 · uLMin', min: 0.05, max: 0.6, step: 0.01 },
       uLMax: { value: props.uLMax, label: '宏观 · uLMax', min: 0.4, max: 0.99, step: 0.01 },
@@ -78,7 +78,7 @@ export function GalaxyThreeLayerLabLevaHost(props: GalaxyThreeLayerLabProps) {
     setRef.current?.({
       zCurrent: props.zCurrent,
       zVisWindow: props.zVisWindow,
-      uFocusSizeMul: props.uFocusSizeMul,
+      uActiveSizeMul: props.uActiveSizeMul,
       uBgSizeMul: props.uBgSizeMul,
       uLMin: props.uLMin,
       uLMax: props.uLMax,
@@ -97,7 +97,7 @@ export function GalaxyThreeLayerLabLevaHost(props: GalaxyThreeLayerLabProps) {
   }, [
     props.zCurrent,
     props.zVisWindow,
-    props.uFocusSizeMul,
+    props.uActiveSizeMul,
     props.uBgSizeMul,
     props.uLMin,
     props.uLMax,
@@ -118,7 +118,7 @@ export function GalaxyThreeLayerLabLevaHost(props: GalaxyThreeLayerLabProps) {
     ...props,
     zCurrent: v.zCurrent,
     zVisWindow: v.zVisWindow,
-    uFocusSizeMul: v.uFocusSizeMul,
+    uActiveSizeMul: v.uActiveSizeMul,
     uBgSizeMul: v.uBgSizeMul,
     uLMin: v.uLMin,
     uLMax: v.uLMax,

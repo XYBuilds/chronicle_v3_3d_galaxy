@@ -2,7 +2,7 @@ uniform float uPixelRatio;
 uniform float uSizeScale;
 uniform float uZCurrent;
 uniform float uZVisWindow;
-uniform float uFocusSizeMul;
+uniform float uActiveSizeMul;
 uniform float uBgSizeMul;
 uniform float uLMin;
 uniform float uLMax;
@@ -55,5 +55,5 @@ void main() {
 
   float dist = max(0.001, -mvPosition.z);
   gl_PointSize =
-    size * uPixelRatio * (500.0 / dist) * uSizeScale * mix(uBgSizeMul, uFocusSizeMul, inFocus);
+    size * uPixelRatio * (500.0 / dist) * uSizeScale * mix(uBgSizeMul, uActiveSizeMul, inFocus);
 }

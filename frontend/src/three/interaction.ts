@@ -16,9 +16,9 @@ export function computePointScreenRadiusCss(
 ): number {
   const u = material.uniforms
   const uSizeScale = (u.uSizeScale as THREE.Uniform<number>).value
-  const uFocusSizeMul = (u.uFocusSizeMul as THREE.Uniform<number>).value
+  const uActiveSizeMul = (u.uActiveSizeMul as THREE.Uniform<number>).value
   const uBgSizeMul = (u.uBgSizeMul as THREE.Uniform<number>).value
-  const sizeMul = inFocus ? uFocusSizeMul : uBgSizeMul
+  const sizeMul = inFocus ? uActiveSizeMul : uBgSizeMul
   const d = Math.max(0.001, distCam)
   return (pointSizeAttr * (500.0 / d) * uSizeScale * sizeMul) * 0.5
 }

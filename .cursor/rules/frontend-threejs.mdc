@@ -22,7 +22,7 @@ alwaysApply: false
 
 - **Macro layer**: `THREE.Points` + custom ShaderMaterial (1 draw call for ~60K particles)
   - **P6.2.2**: Single opaque pass (`transparent: false`, `depthWrite: true`) — circular points with a one-line `smoothstep` edge only (no halo / Bloom in the default path).
-  - Vertex: position, size (log vote_count), `color` (genres[0] palette sRGB), `voteNorm` (`vote_average / 10`); Z-slab drives **size only** via `uFocusSizeMul` / `uBgSizeMul`. Color is recomputed in the vertex shader from palette hue in OKLab + lightness from `voteNorm` + fixed chroma (`uLMin` / `uLMax` / `uChroma`).
+  - Vertex: position, size (log vote_count), `color` (genres[0] palette sRGB), `voteNorm` (`vote_average / 10`); Z-slab drives **size only** via `uActiveSizeMul` / `uBgSizeMul`. Color is recomputed in the vertex shader from palette hue in OKLab + lightness from `voteNorm` + fixed chroma (`uLMin` / `uLMax` / `uChroma`).
   - Fragment: flat `vColor` + circle discard + minimal AA.
 - **Selected layer**: IcoSphere + Perlin Noise ShaderMaterial (on-demand per click); visibility toggles with selection fly-to (no macro opacity ramp).
 - **Post-processing**: `EffectComposer` + `UnrealBloomPass` are **constructed but not attached** by default; the render loop uses `renderer.render(scene, camera)` with `renderer.outputColorSpace = THREE.SRGBColorSpace`. Call `window.__bloom.enable()` to attach the pass and switch to `composer.render()` (revive / polish).

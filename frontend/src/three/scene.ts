@@ -24,10 +24,10 @@ interface BloomDebugControls {
 }
 
 interface GalaxyPointScaleDebug {
-  /** Dual mesh: world `uSizeScale` (JSON `size` × this × focus/bg mul); Points path: screen diameter scale. */
+  /** Dual mesh / Points: `uSizeScale` drives macro size (dual: × focus/bg mul × `aSize`; Points: screen diameter). */
   scale: number
-  /** In-focus slab size multiplier (see `uFocusSizeMul`). */
-  focusSizeMul: number
+  /** Active (viz-window) slab size multiplier — uniform `uActiveSizeMul`. */
+  activeSizeMul: number
   /** Background slab size multiplier (see `uBgSizeMul`). */
   bgSizeMul: number
   log: () => void
@@ -334,7 +334,7 @@ export function mountGalaxyScene(
   bloomDebug.log()
 
   const uSizeScale = galUniforms.uSizeScale as THREE.Uniform<number>
-  const uFocusSizeMul = galUniforms.uFocusSizeMul as THREE.Uniform<number>
+  const uActiveSizeMul = galUniforms.uActiveSizeMul as THREE.Uniform<number>
   const uBgSizeMul = galUniforms.uBgSizeMul as THREE.Uniform<number>
   const uLMin = galUniforms.uLMin as THREE.Uniform<number>
   const uLMax = galUniforms.uLMax as THREE.Uniform<number>
@@ -347,11 +347,11 @@ export function mountGalaxyScene(
     set scale(value: number) {
       uSizeScale.value = value
     },
-    get focusSizeMul() {
-      return uFocusSizeMul.value
+    get activeSizeMul() {
+      return uActiveSizeMul.value
     },
-    set focusSizeMul(value: number) {
-      uFocusSizeMul.value = value
+    set activeSizeMul(value: number) {
+      uActiveSizeMul.value = value
     },
     get bgSizeMul() {
       return uBgSizeMul.value
@@ -361,7 +361,7 @@ export function mountGalaxyScene(
     },
     log() {
       console.log(
-        `[Galaxy] uSizeScale=${uSizeScale.value} uFocusSizeMul=${uFocusSizeMul.value} uBgSizeMul=${uBgSizeMul.value}`,
+        `[Galaxy] uSizeScale=${uSizeScale.value} uActiveSizeMul=${uActiveSizeMul.value} uBgSizeMul=${uBgSizeMul.value}`,
       )
     },
   }

@@ -79,7 +79,7 @@ export function createGalaxyPoints(
       uSizeScale: { value: sizeScale },
       uZCurrent: { value: 0 },
       uZVisWindow: { value: 1 },
-      uFocusSizeMul: { value: 0.2 },
+      uActiveSizeMul: { value: 0.2 },
       uBgSizeMul: { value: 0.001 },
       uLMin: { value: 0.4 },
       uLMax: { value: 0.85 },

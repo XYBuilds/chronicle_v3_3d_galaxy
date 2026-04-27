@@ -4,7 +4,6 @@ uniform float uPixelRatio;
 uniform float uZCurrent;
 uniform float uZVisWindow;
 uniform float uSizeScale;
-uniform float uFocusSizeMul;
 uniform float uBgSizeMul;
 uniform float uLMin;
 uniform float uLMax;

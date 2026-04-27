@@ -4,7 +4,7 @@ uniform float uPixelRatio;
 uniform float uZCurrent;
 uniform float uZVisWindow;
 uniform float uSizeScale;
-uniform float uFocusSizeMul;
+uniform float uActiveSizeMul;
 uniform float uBgSizeMul;
 uniform float uLMin;
 uniform float uLMax;
@@ -26,7 +26,7 @@ void main() {
     (1.0 - smoothstep(zHi, zHi + W, aZ));
 
   bool isFocused = (uFocusedInstanceId >= 0) && (gl_InstanceID == uFocusedInstanceId);
-  float sActive = inFocus * uSizeScale * uFocusSizeMul * aSize;
+  float sActive = inFocus * uSizeScale * uActiveSizeMul * aSize;
   if (isFocused) {
     sActive = 0.0;
   }

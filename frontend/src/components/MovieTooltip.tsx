@@ -1,5 +1,6 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 
+import { GenreBadgesList } from '@/components/GenreBadgesList'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { hoverTooltipSideOffsetPx } from '@/hud/hoverRingLayout'
 import { useGalaxyDataStore } from '@/store/galaxyDataStore'
@@ -11,8 +12,9 @@ export interface MovieTooltipHudProps {
   open: boolean
   anchor: MovieTooltipAnchor | null
   title: string
-  /** `genres[0]` when present. */
-  primaryGenreLabel: string | null
+  genres: string[]
+  /** From `meta.genre_palette`; outline fallback when a name is missing from the map. */
+  genrePalette: Record<string, string> | null
   /** Gap along `side` (top/bottom) from planet center to tooltip; clears ring + silhouette. */
   sideOffsetPx?: number
 }
@@ -21,13 +23,7 @@ export interface MovieTooltipHudProps {
  * Hover HUD: shadcn (Base UI) Tooltip anchored at projected world position.
  * Use {@link MovieTooltip} in the app; use this in Storybook with mock props.
  */
-export function MovieTooltipHud({
-  open,
-  anchor,
-  title,
-  primaryGenreLabel,
-  sideOffsetPx = 12,
-}: MovieTooltipHudProps) {
+export function MovieTooltipHud({ open, anchor, title, genres, genrePalette, sideOffsetPx = 12 }: MovieTooltipHudProps) {
   return (
     <Tooltip open={open} onOpenChange={() => undefined}>
       <TooltipTrigger
@@ -46,13 +42,9 @@ export function MovieTooltipHud({
         sideOffset={sideOffsetPx}
         className="max-w-sm pointer-events-none"
       >
-        <div className="flex flex-col gap-0.5 text-left">
+        <div className="flex max-w-sm flex-col gap-1 text-left">
           <span className="font-medium leading-snug">{title}</span>
-          {primaryGenreLabel ? (
-            <span className="text-[0.7rem] font-normal uppercase tracking-wide opacity-90">
-              {primaryGenreLabel}
-            </span>
-          ) : null}
+          {genres.length > 0 ? <GenreBadgesList size="tooltip" genres={genres} genrePalette={genrePalette} /> : null}
         </div>
       </TooltipContent>
     </Tooltip>
@@ -73,18 +65,28 @@ export function MovieTooltip() {
 
   const open = hoveredMovieId !== null && movie !== null && hoverAnchorCss !== null
   const title = movie?.title ?? ''
-  const primaryGenreLabel = movie?.genres?.[0] ?? null
+  const genres = movie?.genres ?? []
+  const genrePalette = useGalaxyDataStore((s) => s.data?.meta.genre_palette) ?? null
   const sideOffsetPx =
     hoverPlanetRadiusCss != null && hoverPlanetRadiusCss > 0
       ? hoverTooltipSideOffsetPx(hoverPlanetRadiusCss)
       : 12
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) return
+    if (!open || !movie) return
+    console.log(
+      `[MovieTooltip] id=${movie.id} genres=${genres.length} paletteKeys=${genrePalette ? Object.keys(genrePalette).length : 0}`,
+    )
+  }, [open, movie, genres.length, genrePalette])
 
   return (
     <MovieTooltipHud
       open={open}
       anchor={hoverAnchorCss}
       title={title}
-      primaryGenreLabel={primaryGenreLabel}
+      genres={genres}
+      genrePalette={genrePalette}
       sideOffsetPx={sideOffsetPx}
     />
   )

@@ -2,7 +2,11 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 
 import { MovieTooltipHud } from './MovieTooltip'
 import { TooltipProvider } from '@/components/ui/tooltip'
-import { subsampleMovieHappiness, subsampleMovieMarthasVineyard } from '@/storybook/fixtures/subsampleMovies'
+import {
+  SUBSAMPLE_GENRE_PALETTE,
+  subsampleMovieHappiness,
+  subsampleMovieMarthasVineyard,
+} from '@/storybook/fixtures/subsampleMovies'
 
 const meta: Meta<typeof MovieTooltipHud> = {
   title: 'MovieTooltip',
@@ -27,7 +31,8 @@ export const Default: Story = {
     open: true,
     anchor: { x: 320, y: 240 },
     title: subsampleMovieHappiness.title,
-    primaryGenreLabel: subsampleMovieHappiness.genres[0] ?? null,
+    genres: subsampleMovieHappiness.genres,
+    genrePalette: SUBSAMPLE_GENRE_PALETTE,
   },
 }
 
@@ -37,16 +42,18 @@ export const LongTitle: Story = {
     open: true,
     anchor: { x: 320, y: 240 },
     title: subsampleMovieMarthasVineyard.title,
-    primaryGenreLabel: subsampleMovieMarthasVineyard.genres[0] ?? null,
+    genres: subsampleMovieMarthasVineyard.genres,
+    genrePalette: SUBSAMPLE_GENRE_PALETTE,
   },
 }
 
-export const NoPrimaryGenre: Story = {
+export const NoGenres: Story = {
   args: {
     open: true,
     anchor: { x: 80, y: 400 },
     title: subsampleMovieHappiness.title,
-    primaryGenreLabel: null,
+    genres: [],
+    genrePalette: SUBSAMPLE_GENRE_PALETTE,
   },
 }
 
@@ -55,6 +62,7 @@ export const CornerAnchor: Story = {
     open: true,
     anchor: { x: 620, y: 40 },
     title: subsampleMovieHappiness.title,
-    primaryGenreLabel: subsampleMovieHappiness.genres[0] ?? null,
+    genres: subsampleMovieHappiness.genres,
+    genrePalette: SUBSAMPLE_GENRE_PALETTE,
   },
 }

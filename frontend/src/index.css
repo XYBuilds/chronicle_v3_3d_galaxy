@@ -148,3 +148,15 @@ body {
     @apply font-sans;
   }
 }
+
+/**
+ * P9.2: Genre tag 三段式 — 背景 18% / 边 60% 混透明，字色用 `foreground`（Unlayered，压过 `border-transparent` 工具类）。
+ * `--genre-color` 由 meta.genre_palette 提供；`getGenreChipSurfaceStyle` 在不支持 color-mix 时内联 rgba（覆盖 background/borderColor）。
+ */
+.group\/badge.badge-genre {
+  color: var(--foreground);
+  background: color-mix(in oklch, var(--genre-color) 18%, transparent);
+  border-color: color-mix(in oklch, var(--genre-color) 60%, transparent);
+  border-style: solid;
+  border-width: 1px;
+}

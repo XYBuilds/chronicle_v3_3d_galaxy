@@ -19,6 +19,8 @@ const badgeVariants = cva(
         ghost:
           "hover:bg-muted hover:text-muted-foreground dark:hover:bg-muted/50",
         link: "text-primary underline-offset-4 hover:underline",
+        /** P9.2: surface via `.badge-genre` + `--genre-color` or `getGenreChipSurfaceStyle` rgba fallback. */
+        genre: "badge-genre border text-foreground",
       },
     },
     defaultVariants: {

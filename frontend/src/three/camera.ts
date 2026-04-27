@@ -5,21 +5,14 @@ import type { Movie } from '@/types/galaxy'
 import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
 
 /**
- * P8.4 — fixed world-space camera standoff for focus (same for every movie; planet radius still vote-weighted).
- * Camera ends at `(movie.x, movie.y, movie.z - standoff)` with axis-parallel +Z view.
+ * Perlin focus: world-space |Δz| from movie center to camera (camera at `movie.z - standoff`, axis-parallel +Z).
+ * Absolute — tune here only (no `worldSpan` scaling).
  */
-export function computeFocusCameraZStandoff(worldSpan: number): number {
-  return Math.max(worldSpan * 0.022, 0.35)
-}
+export const FOCUS_PERLIN_CAMERA_STANDOFF = 0.35
 
-/** Writes world-space camera position for Perlin focus (call after `worldSpan` known). */
-export function setFocusCameraPosition(
-  out: THREE.Vector3,
-  movie: Pick<Movie, 'x' | 'y' | 'z'>,
-  worldSpan: number,
-): THREE.Vector3 {
-  const standoff = computeFocusCameraZStandoff(worldSpan)
-  return out.set(movie.x, movie.y, movie.z - standoff)
+/** Writes world-space camera position for Perlin focus. */
+export function setFocusCameraPosition(out: THREE.Vector3, movie: Pick<Movie, 'x' | 'y' | 'z'>): THREE.Vector3 {
+  return out.set(movie.x, movie.y, movie.z - FOCUS_PERLIN_CAMERA_STANDOFF)
 }
 
 /** Fixed orientation: parallel to Z, facing +world Z (no tilt / orbit). */

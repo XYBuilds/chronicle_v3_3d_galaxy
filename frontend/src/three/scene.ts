@@ -11,6 +11,7 @@ import { attachGalaxyCameraControls, clampGalaxyCameraXY, GALAXY_CAMERA_EULER, s
 import { createGalaxyDualMeshes } from './galaxyMeshes'
 import { attachGalaxyActiveMeshInteraction } from './interaction'
 import { createSelectionPlanet, type SelectionPlanetHandle } from './planet'
+import { resolveSelectionWorldRadius } from './screenRadius'
 
 interface BloomDebugControls {
   strength: number
@@ -147,6 +148,7 @@ export function mountGalaxyScene(
 
   const pr = Math.min(window.devicePixelRatio, 2)
   const galaxy = createGalaxyDualMeshes(movies, pr)
+  const layoutWorldSpan = worldSpan(meta)
   const galUniforms = galaxy.idleMaterial.uniforms
   const uZ = galUniforms.uZCurrent as THREE.Uniform<number>
   const uZw = galUniforms.uZVisWindow as THREE.Uniform<number>
@@ -220,14 +222,31 @@ export function mountGalaxyScene(
     planet.material.uniforms.uAlpha.value = 1
   }
 
+  const syncSelectionPlanetWorldScale = () => {
+    if (selectionPhase !== 'selecting' && selectionPhase !== 'selected') return
+    if (!planet.mesh.visible) return
+    const idx = pendingSelectInstanceIndex
+    if (idx < 0 || idx >= movies.length) return
+    const m = movies[idx]!
+    const { r } = resolveSelectionWorldRadius(m, uZ.value, uZw.value, galaxy.activeMaterial, layoutWorldSpan)
+    planet.lastRadius = r
+    planet.mesh.scale.setScalar(r)
+    planet.mesh.updateMatrixWorld(true)
+  }
+
   const beginSelect = (movie: Movie) => {
     planet.mesh.visible = true
     planet.material.uniforms.uAlpha.value = 1
     pendingSelectInstanceIndex = movies.findIndex((m) => m.id === movie.id)
     console.assert(pendingSelectInstanceIndex >= 0, '[Selection] movie must exist in mounted list')
-    const span = worldSpan(meta)
-    const r = THREE.MathUtils.clamp(span * 0.014, 0.07, span * 0.05)
-    setFocusCameraPosition(toCam, movie, span)
+    const { r, rActive } = resolveSelectionWorldRadius(
+      movie,
+      uZ.value,
+      uZw.value,
+      galaxy.activeMaterial,
+      layoutWorldSpan,
+    )
+    setFocusCameraPosition(toCam, movie)
     planet.setFromMovie(movie, meta.genre_palette, r)
     uFocused.value = -1
     fromCam.copy(camera.position)
@@ -235,7 +254,7 @@ export function mountGalaxyScene(
     selectionPhase = 'selecting'
     const camDz = movie.z - toCam.z
     console.log(
-      `[Selection] phase=selecting | duration=${SELECT_MS}ms | focusCamΔz=${camDz.toFixed(4)} | planetR=${r.toFixed(4)}`,
+      `[Selection] phase=selecting | duration=${SELECT_MS}ms | focusCamΔz=${camDz.toFixed(4)} | planetR=${r.toFixed(4)} (activeWorld=${rActive.toFixed(4)})`,
     )
   }
 
@@ -346,12 +365,14 @@ export function mountGalaxyScene(
     },
     set scale(value: number) {
       uSizeScale.value = value
+      syncSelectionPlanetWorldScale()
     },
     get activeSizeMul() {
       return uActiveSizeMul.value
     },
     set activeSizeMul(value: number) {
       uActiveSizeMul.value = value
+      syncSelectionPlanetWorldScale()
     },
     get bgSizeMul() {
       return uBgSizeMul.value
@@ -483,6 +504,7 @@ export function mountGalaxyScene(
     const st = useGalaxyInteractionStore.getState()
     uZ.value = st.zCurrent
     uZw.value = st.zVisWindow
+    syncSelectionPlanetWorldScale()
     if (selectionPhase === 'idle') {
       camera.position.z = st.zCurrent - st.zCamDistance
     }

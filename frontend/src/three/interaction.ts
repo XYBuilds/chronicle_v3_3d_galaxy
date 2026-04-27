@@ -49,25 +49,22 @@ function worldToScreenCss(
   return { x, y }
 }
 
-type HoverEmitSnap = { id: number | null; ax: number; ay: number; ringR: number; tipX: number }
+type HoverEmitSnap = { id: number | null; ax: number; ay: number; planetR: number }
 
 function hoverEmitEqual(
   a: HoverEmitSnap,
   id: number | null,
   anchor: { x: number; y: number } | null,
-  ringOuter: number | null,
-  tipX: number | null,
+  planetRadiusCss: number | null,
 ): boolean {
   const ax = anchor?.x ?? Number.NaN
   const ay = anchor?.y ?? Number.NaN
-  const ro = ringOuter ?? Number.NaN
-  const tx = tipX ?? Number.NaN
+  const pr = planetRadiusCss ?? Number.NaN
   return (
     a.id === id &&
     Math.abs(a.ax - ax) < 0.25 &&
     Math.abs(a.ay - ay) < 0.25 &&
-    Math.abs(a.ringR - ro) < 0.25 &&
-    Math.abs(a.tipX - tx) < 0.25
+    Math.abs(a.planetR - pr) < 0.25
   )
 }
 
@@ -90,7 +87,7 @@ export function attachGalaxyActiveMeshInteraction(options: {
     `[Interaction] activeMesh.count ${activeMesh.count} must equal movies.length ${movies.length}`,
   )
 
-  let lastEmitted: HoverEmitSnap = { id: null, ax: Number.NaN, ay: Number.NaN, ringR: Number.NaN, tipX: Number.NaN }
+  let lastEmitted: HoverEmitSnap = { id: null, ax: Number.NaN, ay: Number.NaN, planetR: Number.NaN }
 
   let pressX = 0
   let pressY = 0
@@ -121,24 +118,20 @@ export function attachGalaxyActiveMeshInteraction(options: {
   const emitHover = (
     id: number | null,
     anchor: { x: number; y: number } | null,
-    ringOuter: number | null,
-    tipOffsetX: number | null,
+    planetRadiusCss: number | null,
   ) => {
-    const ro = ringOuter ?? Number.NaN
-    const tx = tipOffsetX ?? Number.NaN
-    if (hoverEmitEqual(lastEmitted, id, anchor, ringOuter, tipOffsetX)) return
+    const pr = planetRadiusCss ?? Number.NaN
+    if (hoverEmitEqual(lastEmitted, id, anchor, planetRadiusCss)) return
     lastEmitted = {
       id,
       ax: anchor?.x ?? Number.NaN,
       ay: anchor?.y ?? Number.NaN,
-      ringR: ro,
-      tipX: tx,
+      planetR: pr,
     }
     useGalaxyInteractionStore.setState({
       hoveredMovieId: id,
       hoverAnchorCss: anchor,
-      hoverRingRadiusCss: ringOuter,
-      hoverTooltipOffsetXPx: tipOffsetX,
+      hoverPlanetRadiusCss: planetRadiusCss,
     })
   }
 
@@ -146,11 +139,12 @@ export function attachGalaxyActiveMeshInteraction(options: {
     const st = useGalaxyInteractionStore.getState()
     const picked = pickAlongRay(clientX, clientY, false)
     if (picked === null) {
-      emitHover(null, null, null, null)
+      emitHover(null, null, null)
       return
     }
     const m = movies[picked.index]
-    const anchor = worldToScreenCss(picked.hitPoint, camera, domElement)
+    _worldProject.set(m.x, m.y, m.z)
+    const anchor = worldToScreenCss(_worldProject, camera, domElement)
     const rCss = computeActiveMeshScreenRadiusCss({
       movie: m,
       camera,
@@ -159,9 +153,8 @@ export function attachGalaxyActiveMeshInteraction(options: {
       zCurrent: st.zCurrent,
       zVisWindow: st.zVisWindow,
     })
-    const ringOuter = rCss > 0 ? rCss + 4 : null
-    const tipOffsetX = rCss > 0 ? rCss + 12 : null
-    emitHover(m.id, anchor, ringOuter, tipOffsetX)
+    const planetRadiusCss = rCss > 0 ? rCss : null
+    emitHover(m.id, anchor, planetRadiusCss)
   }
 
   const onPointerMove = (e: PointerEvent) => {
@@ -201,15 +194,19 @@ export function attachGalaxyActiveMeshInteraction(options: {
   }
 
   const onPointerLeave = () => {
-    lastEmitted = { id: null, ax: Number.NaN, ay: Number.NaN, ringR: Number.NaN, tipX: Number.NaN }
+    lastEmitted = { id: null, ax: Number.NaN, ay: Number.NaN, planetR: Number.NaN }
     useGalaxyInteractionStore.setState({
       hoveredMovieId: null,
       hoverAnchorCss: null,
-      hoverRingRadiusCss: null,
-      hoverTooltipOffsetXPx: null,
+      hoverPlanetRadiusCss: null,
     })
   }
 
+  const onPointerEnter = (e: PointerEvent) => {
+    setHoverFromClient(e.clientX, e.clientY)
+  }
+
+  domElement.addEventListener('pointerenter', onPointerEnter)
   domElement.addEventListener('pointermove', onPointerMove)
   domElement.addEventListener('pointerdown', onPointerDown)
   domElement.addEventListener('pointerleave', onPointerLeave)
@@ -218,16 +215,16 @@ export function attachGalaxyActiveMeshInteraction(options: {
     window.removeEventListener('pointerup', onWindowPointerUp, true)
     window.removeEventListener('pointercancel', onWindowPointerCancel, true)
     primaryPressActive = false
+    domElement.removeEventListener('pointerenter', onPointerEnter)
     domElement.removeEventListener('pointermove', onPointerMove)
     domElement.removeEventListener('pointerdown', onPointerDown)
     domElement.removeEventListener('pointerleave', onPointerLeave)
-    lastEmitted = { id: null, ax: Number.NaN, ay: Number.NaN, ringR: Number.NaN, tipX: Number.NaN }
+    lastEmitted = { id: null, ax: Number.NaN, ay: Number.NaN, planetR: Number.NaN }
     useGalaxyInteractionStore.setState({
       hoveredMovieId: null,
       selectedMovieId: null,
       hoverAnchorCss: null,
-      hoverRingRadiusCss: null,
-      hoverTooltipOffsetXPx: null,
+      hoverPlanetRadiusCss: null,
     })
   }
 }

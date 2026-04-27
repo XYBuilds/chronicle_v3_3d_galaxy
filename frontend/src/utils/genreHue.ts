@@ -1,5 +1,5 @@
 /**
- * Phase 8.1 — genre hue (radians on [0, 2π)) matches pipeline `H_i = 2π·i/N` and point.vert OKLab path.
+ * Phase 8.1 — genre hue (radians on [0, 2π)) matches pipeline `H_i = 2π·i/N` and galaxy shaders’ OKLab path.
  */
 
 /** OKLCH L/C for the export palette ring (`export_galaxy_json.py`). */
@@ -58,7 +58,7 @@ function oklabToLinearSrgb(lab: readonly [number, number, number]): [number, num
   const l_ = L + 0.3963377774 * a + 0.2158037573 * b
   const m_ = L - 0.1055613458 * a - 0.0638541728 * b
   const s_ = L - 0.0894841775 * a - 1.291485548 * b
-  // l_, m_, s_ are cube roots of LMS cones — inverse uses **cube** (must match point.vert.glsl + Python).
+  // l_, m_, s_ are cube roots of LMS cones — inverse uses **cube** (must match `oklab.glsl` + Python).
   const l = l_ * l_ * l_
   const m = m_ * m_ * m_
   const s = s_ * s_ * s_
@@ -79,7 +79,7 @@ function linearSrgbToSrgb(rgb: readonly [number, number, number]): [number, numb
 }
 
 /**
- * Mirrors `point.vert.glsl`: L from voteNorm, chroma plane from `hue`, OKLab → linear sRGB → encoded sRGB.
+ * Mirrors galaxy idle/active vertex shaders: L from voteNorm, chroma plane from `hue`, OKLab → linear sRGB → encoded sRGB.
  */
 export function pointColorFromHueVote(
   hue: number,

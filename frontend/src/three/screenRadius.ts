@@ -60,6 +60,27 @@ export function computeActiveWorldRadius(
   return inF * uSizeScale * uActiveSizeMul * movie.size
 }
 
+/**
+ * Single source of truth for Perlin selection planet world radius (must match `galaxyActive.vert` scale
+ * and `computeActiveWorldRadius`). Uses span-based fallback when the movie is outside the Z slab.
+ */
+export function resolveSelectionWorldRadius(
+  movie: Pick<Movie, 'z' | 'size'>,
+  zCurrent: number,
+  zVisWindow: number,
+  activeMaterial: THREE.ShaderMaterial,
+  worldSpan: number,
+): { r: number; rActive: number } {
+  const rActive = computeActiveWorldRadius(movie, zCurrent, zVisWindow, activeMaterial)
+  const rFallback = THREE.MathUtils.clamp(worldSpan * 0.014, 0.07, worldSpan * 0.05)
+  const r = rActive > 1e-6 ? rActive : rFallback
+  console.assert(
+    rActive <= 0 || Math.abs(r - rActive) < 1e-9,
+    '[Selection] Perlin radius must match active mesh when inFocus>0',
+  )
+  return { r, rActive }
+}
+
 export type ActiveRayPickResult = { index: number; hitPoint: THREE.Vector3; t: number }
 
 /**

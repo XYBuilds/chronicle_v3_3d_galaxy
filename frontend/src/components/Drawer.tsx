@@ -156,7 +156,7 @@ export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailD
 
               <div className="mt-4 flex flex-wrap items-center gap-2">
               {movie.genres.length > 0 ? (
-                <GenreBadgesList size="drawer" genres={movie.genres} genrePalette={genrePalette} />
+                <GenreBadgesList genres={movie.genres} genrePalette={genrePalette} />
               ) : null}
               <a
                 href={tmdbMovieUrl}

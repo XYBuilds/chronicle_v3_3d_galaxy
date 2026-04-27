@@ -2,7 +2,20 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 
 import { MovieTooltipHud } from './MovieTooltip'
 import { TooltipProvider } from '@/components/ui/tooltip'
-import { subsampleMovieHappiness, subsampleMovieMarthasVineyard } from '@/storybook/fixtures/subsampleMovies'
+import { normalizeGenreHex } from '@/lib/genreColor'
+import {
+  SUBSAMPLE_GENRE_PALETTE,
+  subsampleMovieHappiness,
+  subsampleMovieMarthasVineyard,
+} from '@/storybook/fixtures/subsampleMovies'
+
+function primaryGenreColorFromFixtures(genres: string[]): string | null {
+  const g0 = genres[0]
+  if (!g0) return null
+  const raw = SUBSAMPLE_GENRE_PALETTE[g0]?.trim()
+  if (!raw) return null
+  return normalizeGenreHex(raw)
+}
 
 const meta: Meta<typeof MovieTooltipHud> = {
   title: 'MovieTooltip',
@@ -28,6 +41,7 @@ export const Default: Story = {
     anchor: { x: 320, y: 240 },
     title: subsampleMovieHappiness.title,
     primaryGenreLabel: subsampleMovieHappiness.genres[0] ?? null,
+    primaryGenreColorHex: primaryGenreColorFromFixtures(subsampleMovieHappiness.genres),
   },
 }
 
@@ -38,6 +52,7 @@ export const LongTitle: Story = {
     anchor: { x: 320, y: 240 },
     title: subsampleMovieMarthasVineyard.title,
     primaryGenreLabel: subsampleMovieMarthasVineyard.genres[0] ?? null,
+    primaryGenreColorHex: primaryGenreColorFromFixtures(subsampleMovieMarthasVineyard.genres),
   },
 }
 
@@ -47,6 +62,7 @@ export const NoPrimaryGenre: Story = {
     anchor: { x: 80, y: 400 },
     title: subsampleMovieHappiness.title,
     primaryGenreLabel: null,
+    primaryGenreColorHex: null,
   },
 }
 
@@ -56,5 +72,6 @@ export const CornerAnchor: Story = {
     anchor: { x: 620, y: 40 },
     title: subsampleMovieHappiness.title,
     primaryGenreLabel: subsampleMovieHappiness.genres[0] ?? null,
+    primaryGenreColorHex: primaryGenreColorFromFixtures(subsampleMovieHappiness.genres),
   },
 }

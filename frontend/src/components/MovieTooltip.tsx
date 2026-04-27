@@ -1,9 +1,11 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { hoverTooltipSideOffsetPx } from '@/hud/hoverRingLayout'
+import { normalizeGenreHex } from '@/lib/genreColor'
 import { useGalaxyDataStore } from '@/store/galaxyDataStore'
 import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
+import { cn } from '@/lib/utils'
 
 export type MovieTooltipAnchor = { x: number; y: number }
 
@@ -11,8 +13,10 @@ export interface MovieTooltipHudProps {
   open: boolean
   anchor: MovieTooltipAnchor | null
   title: string
-  /** `genres[0]` when present. */
+  /** `genres[0]` only; plain text, no Badge (P9.2+). */
   primaryGenreLabel: string | null
+  /** sRGB hex from `meta.genre_palette[primary]`; `null` when unknown → muted text. */
+  primaryGenreColorHex: string | null
   /** Gap along `side` (top/bottom) from planet center to tooltip; clears ring + silhouette. */
   sideOffsetPx?: number
 }
@@ -26,6 +30,7 @@ export function MovieTooltipHud({
   anchor,
   title,
   primaryGenreLabel,
+  primaryGenreColorHex,
   sideOffsetPx = 12,
 }: MovieTooltipHudProps) {
   return (
@@ -46,10 +51,13 @@ export function MovieTooltipHud({
         sideOffset={sideOffsetPx}
         className="max-w-sm pointer-events-none"
       >
-        <div className="flex flex-col gap-0.5 text-left">
+        <div className="flex max-w-sm flex-col gap-0.5 text-left">
           <span className="font-medium leading-snug">{title}</span>
           {primaryGenreLabel ? (
-            <span className="text-[0.7rem] font-normal uppercase tracking-wide opacity-90">
+            <span
+              className={cn('text-[0.7rem] font-normal uppercase tracking-wide', !primaryGenreColorHex && 'text-muted-foreground')}
+              style={primaryGenreColorHex ? { color: primaryGenreColorHex } : undefined}
+            >
               {primaryGenreLabel}
             </span>
           ) : null}
@@ -73,11 +81,26 @@ export function MovieTooltip() {
 
   const open = hoveredMovieId !== null && movie !== null && hoverAnchorCss !== null
   const title = movie?.title ?? ''
+  const genrePalette = useGalaxyDataStore((s) => s.data?.meta.genre_palette) ?? null
   const primaryGenreLabel = movie?.genres?.[0] ?? null
+  const primaryGenreColorHex = useMemo(() => {
+    if (!primaryGenreLabel || !genrePalette) return null
+    const raw = genrePalette[primaryGenreLabel]?.trim()
+    if (!raw) return null
+    return normalizeGenreHex(raw)
+  }, [primaryGenreLabel, genrePalette])
   const sideOffsetPx =
     hoverPlanetRadiusCss != null && hoverPlanetRadiusCss > 0
       ? hoverTooltipSideOffsetPx(hoverPlanetRadiusCss)
       : 12
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) return
+    if (!open || !movie) return
+    console.log(
+      `[MovieTooltip] id=${movie.id} primaryGenre=${primaryGenreLabel ? JSON.stringify(primaryGenreLabel) : 'none'} color=${primaryGenreColorHex ?? 'muted'}`,
+    )
+  }, [open, movie, primaryGenreLabel, primaryGenreColorHex])
 
   return (
     <MovieTooltipHud
@@ -85,6 +108,7 @@ export function MovieTooltip() {
       anchor={hoverAnchorCss}
       title={title}
       primaryGenreLabel={primaryGenreLabel}
+      primaryGenreColorHex={primaryGenreColorHex}
       sideOffsetPx={sideOffsetPx}
     />
   )

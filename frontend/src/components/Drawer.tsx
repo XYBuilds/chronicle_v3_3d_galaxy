@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ExternalLink, Star, XIcon } from 'lucide-react'
 
+import { GenreBadgesList } from '@/components/GenreBadgesList'
 import { AspectRatio } from '@/components/ui/aspect-ratio'
-import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button-variants'
 import {
   Sheet,
@@ -84,6 +84,7 @@ const drawerBodyScrollClass =
  */
 export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailDrawerHudProps) {
   const title = movie?.title ?? 'Film'
+  const genrePalette = useGalaxyDataStore((s) => s.data?.meta.genre_palette) ?? null
 
   const budgetStr = movie ? formatUsdPresent(movie.budget) : null
   const revenueStr = movie ? formatUsdPresent(movie.revenue) : null
@@ -154,11 +155,9 @@ export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailD
               </div>
 
               <div className="mt-4 flex flex-wrap items-center gap-2">
-              {movie.genres.slice(0, 4).map((g) => (
-                <Badge key={g} variant="secondary" className="h-5 shrink-0 rounded-full px-3 text-[0.68rem] transition-colors duration-150">
-                  {g}
-                </Badge>
-              ))}
+              {movie.genres.length > 0 ? (
+                <GenreBadgesList genres={movie.genres} genrePalette={genrePalette} />
+              ) : null}
               <a
                 href={tmdbMovieUrl}
                 target="_blank"
@@ -352,7 +351,7 @@ export function MovieDetailDrawer() {
   useEffect(() => {
     if (open && movie) {
       console.log(
-        `[MovieDetailDrawer] open id=${movie.id} title=${JSON.stringify(movie.title)} | cast=${movie.cast.length} dop=${movie.director_of_photography.length} producers=${movie.producers.length} composer=${movie.music_composer.length} imdb=${movie.imdb_id ? 'yes' : 'no'}`,
+        `[MovieDetailDrawer] open id=${movie.id} title=${JSON.stringify(movie.title)} | genres=${movie.genres.length} cast=${movie.cast.length} dop=${movie.director_of_photography.length} producers=${movie.producers.length} composer=${movie.music_composer.length} imdb=${movie.imdb_id ? 'yes' : 'no'}`,
       )
     }
   }, [open, movie])

@@ -10,7 +10,7 @@ todos:
     status: completed
   - id: p92-genre-tag
     content: P9.2 Genre tag 染色：Badge variant=genre 三段式（background 18% / border 60% / fg 不变）；Drawer 全量 genres；Tooltip 同源
-    status: pending
+    status: completed
   - id: p93-tooltip-yyyy
     content: P9.3 Tooltip Title (YYYY)：MovieTooltip 包装层 release_date.slice(0,4) 拼接；缺日期回退纯标题
     status: pending

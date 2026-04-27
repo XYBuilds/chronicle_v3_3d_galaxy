@@ -19,7 +19,7 @@ todos:
     status: completed
   - id: p95-theme-switch
     content: P9.5 ?theme=light|dark 切换接口：App mount 时 URLSearchParams 写 <html> data-theme；默认仍 dark；不动 canvas
-    status: pending
+    status: completed
   - id: p96-doc-sync
     content: P9.6 文档同步：Design Spec HUD 节 + 视觉参数总表 genre tag 三段式 alpha 登记
     status: pending

@@ -19,13 +19,13 @@ todos:
     status: completed
   - id: p85-aliasing-and-alignment
     content: P8.5 · idle aliasing 收尾 + idle/active 视觉对齐（P8.4 硬准入）：idle mesh shader 完成 alpha = radius² 衰减、低端点保护 floor、tone mapping 校准；与 Phase 7 Points 路径星空感 A/B（亮度差 < 10%、无闪烁）；过渡区两 mesh 同时半透明叠加无双影；不通过则降级方案——idle mesh 回退 Points + active mesh 不变，作为已知遗留
-    status: pending
+    status: cancelled
   - id: p86-select-search-spec
-    content: P8.6 · select + 搜索联合 spec 草案 (5.3.3)：docs/project_docs/搜索与 select 态联合 spec 草案.md；列出单/多选 / 搜索框位置 / selective bloom 实装路径三个决策点；不实装代码，待 user review 后起 Phase 9
-    status: pending
+    content: P8.6 · 搜索 + select 曾计划独立 spec 草案；已取消独立文档，改由未来统一设计与计划
+    status: cancelled
   - id: p8-doc-sync
     content: Phase 8 文档同步：每个 P 验收后回写 视觉参数总表 / Tech Spec / Design Spec / 特征工程总表；延续 Phase 7 风格，实施报告仅在用户显式要求后补
-    status: pending
+    status: completed
 isProject: false
 ---
 
@@ -307,19 +307,9 @@ if (isFocused) { sIdle = 0.0; sActive = 0.0; }
 - 若 idle mesh 亚像素仍不可接受：**idle 回退 `THREE.Points`**（沿用 P8.1 后 `point.vert` hue 路径），active mesh + Perlin 保留；过渡区改为 Points 与 active mesh 的互补 scale（工程上重新接 `computePointScreenRadiusCss` 仅用于 Points 拾取对照或仅 active 拾取 — **实施时在 Tech Spec 写死一种**）
 - 不在本 plan 内默认触发；仅作为 P8.5 验收失败时的书面出口
 
-## P8.6 · select 态 + 搜索子计划起草
+## P8.6 · 搜索 + select（已改为未来统一规划）
 
-**目标**：起一份 `select` 态 + 搜索 (5.3.3) 的联合 spec 草案；不实装代码。
-
-- 草案文件：`docs/project_docs/搜索与 select 态联合 spec 草案.md`
-- 决策点（草案要列出，等用户拍板）：
-  - 单选 vs 多选 vs 导演/演员关联高亮（连线？同色？）
-  - 搜索框入口：HUD 顶部 vs 命令面板 vs 抽屉内
-  - selective bloom 实装路径：`UnrealBloomPass` 走两个 layer 还是 `Selection` 列表 mask
-  - 与现有 [Phase 5.0 评估报告](docs/reports/Phase%205.0%20项目全面评估与测试报告.md) 5.3.3 条目对齐
-
-### 验收
-- 草案 review 通过即结束本 P；实装独立起 Phase 9（或并入 Phase 9 对外收尾）
+**说明**：原「联合 spec 草案」独立文件已**不再维护**；搜索与 `select` 能力将**另起**统一的设计与排期，不在本 Phase 8 plan 内落子文档。与 [Phase 5.0 报告](docs/reports/Phase%205.0%20项目全面评估与测试报告.md) H6 / 5.3.3 的衔接以未来 PRD/计划为准。
 
 ---
 
@@ -337,7 +327,7 @@ if (isFocused) { sIdle = 0.0; sActive = 0.0; }
 
 | 风险                                                        | 对策                                                                                                                       |
 | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| P8.1 双字段过渡期被遗忘成永久遗留                           | 在 P8.6 草案末尾显式标"P8.1 双字段移除"待办，纳入下一阶段验收清单                                                          |
+| P8.1 双字段过渡期被遗忘成永久遗留                           | 在**未来**统一产品/数据计划或变更日志中显式标「P8.1 双字段移除」待办，纳入验收清单                                               |
 | P8.2 三档主观仍难区分                                       | 用户暂定中间档（如 0.7）或补一档实验；**不**在本阶段用 uZVisWindow/hover 拆因；全量替换后再主观复验一次                    |
 | P8.3 detail=6 在低端 GPU 卡顿                               | fallback 到 detail=5（20K 顶点），统计精度仍可接受；阈值偏差容忍调到 1%                                                    |
 | P8.4 物理距离一致导致小星球 focus 后过小                    | spec 文档里显式标"intended"；可选在 HUD 底部加 vote_count 数值显示，让信息不在视觉里也能读出                               |
@@ -358,5 +348,5 @@ if (isFocused) { sIdle = 0.0; sActive = 0.0; }
 - **交互**：HTML hover ring **即时**（无 CSS transition），tooltip 不遮挡；WebGL2 + `gl_InstanceID` 路径；Raycaster 以 active mesh 为主，抽样对齐旧圆盘（误差 ≤ 1px 或文档化放宽条件）
 - **性能**：每 P 后 fps ≥ P8.0 基线 95%；集成显卡 / 移动端 emulation 4× 下目标 ≥ 30fps（若书面接受 30fps 则在 Tech Spec 标注）
 - **视觉**：idle 无灾难性闪烁；过渡区无双影；active 低 chroma 仍有可读明暗
-- **文档**：四份 `docs/project_docs/*.md` 同步，状态机 spec 与 select/搜索草案落盘
+- **文档**：四份 `docs/project_docs/*.md` 同步，状态机 spec 随实现回写（搜索/select 另起规划时不强制独立草案）
 - **已知遗留**：P8.1 旧字段移除、P8.5 **idle→Points** 降级（若触发）、P8.6 实装 — 列入 Phase 9 候选

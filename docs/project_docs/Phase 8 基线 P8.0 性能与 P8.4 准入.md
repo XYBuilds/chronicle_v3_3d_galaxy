@@ -49,3 +49,4 @@
 ## P8.0.4 状态机 SSOT
 
 - 四态（idle / active / hover / focus）+ 延后 **select**：见 [`星球状态机 spec.md`](星球状态机%20spec.md)（`W = uZVisWindow×0.2`、`vote_count` focus 权重与「小片偏小」意图、draw 顺序、WebGL2）。
+- **Phase 8 文档回写（2026-04-27）**：《视觉参数总表》持续与源码对齐；《Tech Spec》/《Design Spec》/《数据特征工程与 3D 映射总表》已更新 P8.1–P8.4 双 mesh 与 `genre_hue`。搜索与 `select` 能力将**另行**统一设计与排期，不维护独立 spec 文件。

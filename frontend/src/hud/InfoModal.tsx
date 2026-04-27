@@ -23,10 +23,11 @@ export interface InfoModalProps {
   onOpenChange: (open: boolean) => void
 }
 
+/** Section typography matches Drawer body blocks (Overview / Details / Cast). */
 function Section({ title, body }: { title: string; body: string }) {
   return (
-    <section className="space-y-2 rounded-lg border border-border/60 bg-card/35 p-3 shadow-sm">
-      <h3 className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">{title}</h3>
+    <section className="space-y-3">
+      <h3 className="text-[0.65rem] font-bold uppercase tracking-wider text-muted-foreground">{title}</h3>
       <p className="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap">{body}</p>
     </section>
   )
@@ -37,15 +38,17 @@ export function InfoModal({ open, onOpenChange }: InfoModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent id="app-info-dialog" showCloseButton className="gap-0 p-0">
-        <DialogHeader className="shrink-0">
-          <DialogTitle>{INFO_MODAL_TITLE}</DialogTitle>
-          <DialogDescription className="text-left">
+        <DialogHeader className="relative z-20 shrink-0 gap-0 border-b border-border/70 bg-popover px-6 pb-5 pt-7 text-left shadow-[0_6px_18px_-10px_color-mix(in_oklch,var(--foreground)_10%,transparent)] sm:px-7">
+          <DialogTitle className="pr-10 text-2xl font-bold leading-tight tracking-tight text-foreground">
+            {INFO_MODAL_TITLE}
+          </DialogTitle>
+          <DialogDescription className="mt-2 text-sm font-medium leading-snug text-muted-foreground">
             占位面板：文案与链接将在项目收尾阶段统一补全。
           </DialogDescription>
         </DialogHeader>
 
         <ScrollArea className="min-h-0 max-h-[min(70dvh,28rem)] flex-1">
-          <div className="flex flex-col gap-4 p-4 pb-5 motion-safe:scroll-smooth">
+          <div className="flex flex-col gap-7 px-6 py-5 sm:px-7 pb-6 motion-safe:scroll-smooth">
             <Section title={INFO_INTRO_HEADING} body={INFO_INTRO_BODY} />
             <Section title={INFO_DATA_HEADING} body={INFO_DATA_BODY} />
             <Section title={INFO_STACK_HEADING} body={INFO_STACK_BODY} />

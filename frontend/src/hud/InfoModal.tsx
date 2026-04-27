@@ -33,11 +33,15 @@ function Section({ title, body }: { title: string; body: string }) {
   )
 }
 
-/** 居中 Modal：占位文案，收尾阶段只改 `infoCopy.ts`。 */
+/** 居中 Modal：占位文案收尾改 `infoCopy.ts`；壳体较 `dialog` 默认（32rem×42rem）放大一档。 */
 export function InfoModal({ open, onOpenChange }: InfoModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent id="app-info-dialog" showCloseButton className="gap-0 p-0">
+      <DialogContent
+        id="app-info-dialog"
+        showCloseButton
+        className="gap-0 p-0 w-[min(100vw-1.5rem,36rem)] max-h-[min(90dvh,48rem)]"
+      >
         <DialogHeader className="relative z-20 shrink-0 gap-0 border-b border-border/70 bg-popover px-6 pb-5 pt-7 text-left shadow-[0_6px_18px_-10px_color-mix(in_oklch,var(--foreground)_10%,transparent)] sm:px-7">
           <DialogTitle className="pr-10 text-2xl font-bold leading-tight tracking-tight text-foreground">
             {INFO_MODAL_TITLE}
@@ -47,7 +51,7 @@ export function InfoModal({ open, onOpenChange }: InfoModalProps) {
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="min-h-0 max-h-[min(70dvh,28rem)] flex-1">
+        <ScrollArea className="min-h-0 max-h-[min(78dvh,34rem)] flex-1">
           <div className="flex flex-col gap-7 px-6 py-5 sm:px-7 pb-6 motion-safe:scroll-smooth">
             <Section title={INFO_INTRO_HEADING} body={INFO_INTRO_BODY} />
             <Section title={INFO_DATA_HEADING} body={INFO_DATA_BODY} />

@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Clapperboard } from 'lucide-react'
+import { Clapperboard, ExternalLink } from 'lucide-react'
 
 import { AspectRatio } from '@/components/ui/aspect-ratio'
 import { Badge } from '@/components/ui/badge'
+import { buttonVariants } from '@/components/ui/button-variants'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Sheet,
@@ -79,8 +80,22 @@ export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailD
   const showLanguage = movie != null && Boolean(movie.original_language?.trim())
   const showDirector = movie != null && movie.director.length > 0
   const showWriters = movie != null && movie.writers.length > 0
+  const showDop = movie != null && movie.director_of_photography.length > 0
+  const showProducers = movie != null && movie.producers.length > 0
+  const showComposer = movie != null && movie.music_composer.length > 0
   const showMetaBlock =
-    movie != null && (showRuntime || showLanguage || showDirector || showWriters || budgetStr != null || revenueStr != null)
+    movie != null &&
+    (showRuntime ||
+      showLanguage ||
+      showDirector ||
+      showWriters ||
+      showDop ||
+      showProducers ||
+      showComposer ||
+      budgetStr != null ||
+      revenueStr != null)
+  const imdbIdTrimmed = movie?.imdb_id?.trim() ?? ''
+  const showImdbLink = imdbIdTrimmed.length > 0
   const overviewText = movie?.overview?.trim() ?? ''
   const showOverview = overviewText.length > 0
   const showCast = movie != null && movie.cast.length > 0
@@ -97,29 +112,40 @@ export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailD
         style={{ ['--sheet-ease' as string]: SHEET_OPEN_EASE }}
       >
         <SheetHeader className="gap-3 border-b border-border/80 bg-muted/25 p-4 text-left">
-          <SheetTitle className="pr-10 text-lg font-semibold leading-snug tracking-tight">{title}</SheetTitle>
+          <SheetTitle className="pr-10 text-2xl font-bold leading-tight tracking-tight text-foreground">{title}</SheetTitle>
           <SheetDescription className="sr-only">
             {movie ? `${movie.title}, released ${movie.release_date}.` : 'No film selected.'}
           </SheetDescription>
           {movie && movie.original_title && movie.original_title !== movie.title ? (
-            <p className="text-xs text-muted-foreground">{movie.original_title}</p>
+            <p className="mt-2 text-sm font-medium text-muted-foreground">{movie.original_title}</p>
           ) : null}
           {movie ? (
-            <div className="flex flex-wrap gap-2">
-              <Badge variant="secondary" className="font-mono tabular-nums transition-colors duration-150">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              <Badge variant="secondary" className="h-5 shrink-0 px-1.5 font-mono text-[0.7rem] tabular-nums transition-colors duration-150">
                 ★ {movie.vote_average.toFixed(1)}
               </Badge>
-              <Badge variant="outline" className="transition-colors duration-150">
+              <Badge variant="outline" className="h-5 shrink-0 px-1.5 text-[0.7rem] transition-colors duration-150">
                 {formatVoteCount(movie.vote_count)} votes
               </Badge>
-              <Badge variant="outline" className="transition-colors duration-150">
+              <Badge variant="outline" className="h-5 shrink-0 px-1.5 text-[0.7rem] transition-colors duration-150">
                 {formatReleaseDate(movie.release_date)}
               </Badge>
               {movie.genres.slice(0, 4).map((g) => (
-                <Badge key={g} variant="outline" className="transition-colors duration-150">
+                <Badge key={g} variant="outline" className="h-5 shrink-0 px-1.5 text-[0.7rem] transition-colors duration-150">
                   {g}
                 </Badge>
               ))}
+              {showImdbLink ? (
+                <a
+                  href={`https://www.imdb.com/title/${encodeURIComponent(imdbIdTrimmed)}/`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'h-7 gap-1.5 text-muted-foreground hover:text-foreground')}
+                >
+                  IMDb
+                  <ExternalLink className="size-3.5 opacity-80" aria-hidden />
+                </a>
+              ) : null}
             </div>
           ) : null}
         </SheetHeader>
@@ -134,10 +160,10 @@ export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailD
               <AspectRatio
                 ratio={2 / 3}
                 className={cn(
-                  'overflow-hidden rounded-lg border border-border/80 bg-muted shadow-sm',
+                  'overflow-hidden rounded-xl border border-border/80 bg-muted shadow-sm',
                   'w-[min(100%,max(8.875rem,min(56vw,15rem)))] sm:w-[min(100%,15rem)]',
                   'motion-safe:transition-[box-shadow,border-color,transform] motion-safe:duration-200',
-                  'motion-safe:hover:border-border motion-safe:hover:shadow-md',
+                  'motion-safe:hover:border-border motion-safe:hover:shadow-md motion-safe:hover:brightness-[1.02]',
                 )}
               >
                 <DrawerPoster key={`${movie.id}|${movie.poster_url}`} posterUrl={movie.poster_url} title={movie.title} />
@@ -145,73 +171,92 @@ export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailD
             </div>
 
             {movie.tagline ? (
-              <p className="border-l-2 border-primary/35 pl-3 text-sm italic leading-snug text-muted-foreground motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-left-2 motion-safe:duration-300">
+              <blockquote className="border-l-2 border-border pl-3 text-sm italic leading-relaxed text-muted-foreground motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-left-2 motion-safe:duration-300">
                 &ldquo;{movie.tagline}&rdquo;
-              </p>
+              </blockquote>
             ) : null}
 
             {showOverview ? (
               <section className="space-y-2 rounded-lg border border-border/60 bg-card/40 p-3 shadow-sm">
-                <h3 className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">Overview</h3>
-                <p className="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap">{overviewText}</p>
+                <h3 className="text-[0.65rem] font-bold uppercase tracking-wider text-muted-foreground">Overview</h3>
+                <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">{overviewText}</p>
               </section>
             ) : null}
 
             {showMetaBlock ? (
               <section className="rounded-lg border border-border/60 bg-muted/20 p-3 shadow-sm">
-                <h3 className="mb-2 text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">Details</h3>
-                <dl className="grid grid-cols-2 gap-x-3 gap-y-2.5 text-xs text-muted-foreground">
+                <h3 className="mb-3 text-[0.65rem] font-bold uppercase tracking-wider text-muted-foreground">Details</h3>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-5 text-sm">
                   {showRuntime ? (
-                    <div>
-                      <dt className="font-medium text-foreground/80">Runtime</dt>
-                      <dd>{runtimeMin} min</dd>
+                    <div className="min-w-0">
+                      <div className="font-semibold text-foreground">Runtime</div>
+                      <div className="text-muted-foreground">{runtimeMin} min</div>
                     </div>
                   ) : null}
                   {showLanguage ? (
-                    <div>
-                      <dt className="font-medium text-foreground/80">Language</dt>
-                      <dd className="uppercase">{movie.original_language}</dd>
+                    <div className="min-w-0">
+                      <div className="font-semibold text-foreground">Language</div>
+                      <div className="text-muted-foreground uppercase">{movie.original_language}</div>
                     </div>
                   ) : null}
                   {showDirector ? (
-                    <div className="col-span-2">
-                      <dt className="font-medium text-foreground/80">Director</dt>
-                      <dd>{movie.director.join(', ')}</dd>
+                    <div className="col-span-2 min-w-0">
+                      <div className="font-semibold text-foreground">Director</div>
+                      <div className="text-muted-foreground">{movie.director.join(', ')}</div>
                     </div>
                   ) : null}
                   {showWriters ? (
-                    <div className="col-span-2">
-                      <dt className="font-medium text-foreground/80">Writers</dt>
-                      <dd>{movie.writers.join(', ')}</dd>
+                    <div className="col-span-2 min-w-0">
+                      <div className="font-semibold text-foreground">Writers</div>
+                      <div className="text-muted-foreground">{movie.writers.join(', ')}</div>
+                    </div>
+                  ) : null}
+                  {showDop ? (
+                    <div className="col-span-2 min-w-0">
+                      <div className="font-semibold text-foreground">Director of photography</div>
+                      <div className="text-muted-foreground">{movie.director_of_photography.join(', ')}</div>
+                    </div>
+                  ) : null}
+                  {showProducers ? (
+                    <div className="col-span-2 min-w-0">
+                      <div className="font-semibold text-foreground">Producers</div>
+                      <div className="text-muted-foreground">{movie.producers.join(', ')}</div>
+                    </div>
+                  ) : null}
+                  {showComposer ? (
+                    <div className="col-span-2 min-w-0">
+                      <div className="font-semibold text-foreground">Composer</div>
+                      <div className="text-muted-foreground">{movie.music_composer.join(', ')}</div>
                     </div>
                   ) : null}
                   {budgetStr != null ? (
-                    <div>
-                      <dt className="font-medium text-foreground/80">Budget</dt>
-                      <dd>{budgetStr}</dd>
+                    <div className="min-w-0">
+                      <div className="font-semibold text-foreground">Budget</div>
+                      <div className="text-muted-foreground">{budgetStr}</div>
                     </div>
                   ) : null}
                   {revenueStr != null ? (
-                    <div>
-                      <dt className="font-medium text-foreground/80">Revenue</dt>
-                      <dd>{revenueStr}</dd>
+                    <div className="min-w-0">
+                      <div className="font-semibold text-foreground">Revenue</div>
+                      <div className="text-muted-foreground">{revenueStr}</div>
                     </div>
                   ) : null}
-                </dl>
+                </div>
               </section>
             ) : null}
 
             {showCast ? (
               <section className="min-h-0 flex-1 space-y-2">
-                <h3 className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">Cast</h3>
-                <ScrollArea className="h-48 rounded-lg border border-border/60 bg-card/30 pr-2 shadow-sm motion-safe:transition-shadow motion-safe:duration-200 motion-safe:hover:shadow-md">
-                  <ol className="list-decimal space-y-1.5 py-2 pl-5 text-sm leading-snug">
+                <h3 className="text-[0.65rem] font-bold uppercase tracking-wider text-muted-foreground">Cast</h3>
+                <ScrollArea className="h-40 rounded-lg border border-border/60 bg-card/30 pr-2 shadow-sm motion-safe:transition-shadow motion-safe:duration-200 motion-safe:hover:shadow-md sm:h-44">
+                  <div className="grid grid-cols-1 gap-x-4 gap-y-2.5 py-2 pl-1 sm:grid-cols-2">
                     {movie.cast.map((name, i) => (
-                      <li key={`${name}-${i}`} className="marker:text-muted-foreground">
-                        {name}
-                      </li>
+                      <div key={`${name}-${i}`} className="flex min-w-0 items-baseline gap-2">
+                        <span className="w-6 shrink-0 text-right text-xs tabular-nums text-muted-foreground">{i + 1}</span>
+                        <span className="min-w-0 flex-1 truncate text-sm leading-snug text-foreground">{name}</span>
+                      </div>
                     ))}
-                  </ol>
+                  </div>
                 </ScrollArea>
               </section>
             ) : null}
@@ -277,7 +322,7 @@ export function MovieDetailDrawer() {
   useEffect(() => {
     if (open && movie) {
       console.log(
-        `[MovieDetailDrawer] open id=${movie.id} title=${JSON.stringify(movie.title)} | cast=${movie.cast.length}`,
+        `[MovieDetailDrawer] open id=${movie.id} title=${JSON.stringify(movie.title)} | cast=${movie.cast.length} dop=${movie.director_of_photography.length} producers=${movie.producers.length} composer=${movie.music_composer.length} imdb=${movie.imdb_id ? 'yes' : 'no'}`,
       )
     }
   }, [open, movie])

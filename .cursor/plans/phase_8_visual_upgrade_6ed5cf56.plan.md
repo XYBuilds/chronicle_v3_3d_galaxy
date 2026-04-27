@@ -16,7 +16,7 @@ todos:
     status: completed
   - id: p84-dual-mesh
     content: P8.4 · 双 InstancedMesh 接管 idle/active + 状态机/相机/Tooltip (①完整版)：建 idle mesh (detail=0, 60K instance, transparent+depthWrite=false) 与 active mesh (detail=1, 60K instance, alphaTest=0.01 opaque) 共享 hue/voteNorm/aZ attribute；shader 内 inFocus = smoothstep(W=zVisWindow×0.2)，idle scale ∝ (1-inFocus)，active scale ∝ inFocus，互补叠加完成渐变；启动 assert isWebGL2 后用 gl_InstanceID；camera.ts 新 flyToFocus 物理距离一致替换渐隐+渐变；Raycaster 仅对 active mesh 拾取；hover ring 用 HTML overlay 即时切换（与 tooltip 一致）
-    status: pending
+    status: completed
   - id: p85-aliasing-and-alignment
     content: P8.5 · idle aliasing 收尾 + idle/active 视觉对齐（P8.4 硬准入）：idle mesh shader 完成 alpha = radius² 衰减、低端点保护 floor、tone mapping 校准；与 Phase 7 Points 路径星空感 A/B（亮度差 < 10%、无闪烁）；过渡区两 mesh 同时半透明叠加无双影；不通过则降级方案——idle mesh 回退 Points + active mesh 不变，作为已知遗留
     status: pending

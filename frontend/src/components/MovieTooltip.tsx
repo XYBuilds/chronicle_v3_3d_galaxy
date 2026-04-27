@@ -12,13 +12,17 @@ export interface MovieTooltipHudProps {
   title: string
   /** `genres[0]` when present. */
   primaryGenreLabel: string | null
+  /** P8.4 — shift trigger right (px) so tooltip clears the planet (`calc(-50% + offset), -50%)`). */
+  offsetRightPx?: number | null
 }
 
 /**
  * Hover HUD: shadcn (Base UI) Tooltip anchored at projected world position.
  * Use {@link MovieTooltip} in the app; use this in Storybook with mock props.
  */
-export function MovieTooltipHud({ open, anchor, title, primaryGenreLabel }: MovieTooltipHudProps) {
+export function MovieTooltipHud({ open, anchor, title, primaryGenreLabel, offsetRightPx }: MovieTooltipHudProps) {
+  const ox = offsetRightPx != null && offsetRightPx > 0 ? offsetRightPx : 0
+  const transform = ox > 0 ? `translate(calc(-50% + ${ox}px), -50%)` : 'translate(-50%, -50%)'
   return (
     <Tooltip open={open} onOpenChange={() => undefined}>
       <TooltipTrigger
@@ -28,7 +32,7 @@ export function MovieTooltipHud({ open, anchor, title, primaryGenreLabel }: Movi
         style={{
           left: anchor?.x ?? -9999,
           top: anchor?.y ?? -9999,
-          transform: 'translate(-50%, -50%)',
+          transform,
         }}
       />
       <TooltipContent side="top" align="center" className="max-w-sm">
@@ -49,6 +53,7 @@ export function MovieTooltipHud({ open, anchor, title, primaryGenreLabel }: Movi
 export function MovieTooltip() {
   const hoveredMovieId = useGalaxyInteractionStore((s) => s.hoveredMovieId)
   const hoverAnchorCss = useGalaxyInteractionStore((s) => s.hoverAnchorCss)
+  const hoverTooltipOffsetXPx = useGalaxyInteractionStore((s) => s.hoverTooltipOffsetXPx)
   const movies = useGalaxyDataStore((s) => s.data?.movies)
 
   const movie = useMemo(() => {
@@ -66,6 +71,7 @@ export function MovieTooltip() {
       anchor={hoverAnchorCss}
       title={title}
       primaryGenreLabel={primaryGenreLabel}
+      offsetRightPx={hoverTooltipOffsetXPx}
     />
   )
 }

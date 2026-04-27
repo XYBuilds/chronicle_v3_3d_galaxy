@@ -7,6 +7,10 @@ export interface GalaxyInteractionState {
   selectedMovieId: number | null
   /** Viewport CSS pixels for HUD anchor (world position of hovered point projected). */
   hoverAnchorCss: { x: number; y: number } | null
+  /** Active-mesh screen radius (px) + padding for HTML hover ring. */
+  hoverRingRadiusCss: number | null
+  /** Tooltip trigger `translate(calc(-50% + offset), -50%)` so content clears the planet (P8.4). */
+  hoverTooltipOffsetXPx: number | null
   /** User focus on the release-year axis (decimal year); camera uses `zCurrent - zCamDistance`. */
   zCurrent: number
   /** Observable Z span width in world years `[zCurrent, zCurrent + zVisWindow]`. */
@@ -19,6 +23,8 @@ export const useGalaxyInteractionStore = create<GalaxyInteractionState>(() => ({
   hoveredMovieId: null,
   selectedMovieId: null,
   hoverAnchorCss: null,
+  hoverRingRadiusCss: null,
+  hoverTooltipOffsetXPx: null,
   zCurrent: 0,
   zVisWindow: 1,
   zCamDistance: 30,

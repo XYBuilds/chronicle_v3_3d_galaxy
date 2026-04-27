@@ -3,12 +3,10 @@ import * as THREE from 'three'
 import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
 import type { Movie } from '@/types/galaxy'
 
+import { computeActiveMeshScreenRadiusCss, movieZInFocusFactor } from './screenRadius'
+
 /**
- * P6.3.1 — 屏幕空间圆盘拾取（CPU）必须与 `point.vert.glsl` 中 `gl_PointSize` 的公式**逐行同构**。
- * 若只改 GLSL 侧点大小/视距/尺寸系数，必须同步改 `computePointScreenRadiusCss`（及本文件中的命中判定）。
- *
- * 顶点里：`gl_PointSize = size * uPixelRatio * (500.0 / dist) * uSizeScale * mix(uBgSizeMul, uFocusSizeMul, inFocus);`
- * CSS 半径（与 uPixelRatio 相消）：`radiusCssPx = size * (500 / distCam) * uSizeScale * mix(...) / 2`
+ * Legacy Points path (P6.3.1) — kept for benchmarks / docs; production uses {@link attachGalaxyActiveMeshInteraction}.
  */
 export function computePointScreenRadiusCss(
   pointSizeAttr: number,
@@ -28,13 +26,9 @@ export function computePointScreenRadiusCss(
 /** Pixels of movement with primary button held before we treat the gesture as camera pan, not a pick click. */
 const CLICK_MAX_MOVE_PX = 6
 
-function movieInZFocusSlab(z: number, zCurrent: number, zVisWindow: number): boolean {
-  const zHi = zCurrent + zVisWindow
-  return z >= zCurrent && z <= zHi
-}
-
 const _worldProject = new THREE.Vector3()
-const _modelView = new THREE.Vector3()
+const _raycaster = new THREE.Raycaster()
+const _ndc = new THREE.Vector2()
 
 /** Project movie world (x,y,z) to viewport CSS pixels relative to the canvas element. */
 function movieToScreenCss(
@@ -52,89 +46,123 @@ function movieToScreenCss(
   return { x, y }
 }
 
-type HoverEmitSnap = { id: number | null; ax: number; ay: number }
+type HoverEmitSnap = { id: number | null; ax: number; ay: number; ringR: number; tipX: number }
 
-function hoverEmitEqual(a: HoverEmitSnap, id: number | null, anchor: { x: number; y: number } | null): boolean {
+function hoverEmitEqual(
+  a: HoverEmitSnap,
+  id: number | null,
+  anchor: { x: number; y: number } | null,
+  ringOuter: number | null,
+  tipX: number | null,
+): boolean {
   const ax = anchor?.x ?? Number.NaN
   const ay = anchor?.y ?? Number.NaN
-  return a.id === id && Math.abs(a.ax - ax) < 0.25 && Math.abs(a.ay - ay) < 0.25
+  const ro = ringOuter ?? Number.NaN
+  const tx = tipX ?? Number.NaN
+  return (
+    a.id === id &&
+    Math.abs(a.ax - ax) < 0.25 &&
+    Math.abs(a.ay - ay) < 0.25 &&
+    Math.abs(a.ringR - ro) < 0.25 &&
+    Math.abs(a.tipX - tx) < 0.25
+  )
 }
 
+const IN_FOCUS_PICK_THRESHOLD = 0.5
+
 /**
- * 屏幕空间圆盘拾取（P6.3.1），更新 `hoveredMovieId` / `selectedMovieId`。
- * Click 忽略被判定为相机动拖移的手势（超过 {@link CLICK_MAX_MOVE_PX} 的主键位移）。
- *
- * Phase 5.1.7 — 仅 `z ∈ [zCurrent, zCurrent+zVisWindow]` 的层可 hover/click；同一屏幕位置多颗星重叠时选 **front-most**（`distCam` 最小，与深度缓冲一致）。背景层点不参与拾取。
+ * P8.4 — Raycaster on **active** `InstancedMesh` only; accept hits with `movieZInFocusFactor > 0.5`.
+ * Updates hover ring radius + tooltip horizontal offset (store).
  */
-export function attachGalaxyPointsInteraction(options: {
+export function attachGalaxyActiveMeshInteraction(options: {
   camera: THREE.PerspectiveCamera
   domElement: HTMLElement
-  points: THREE.Points
+  activeMesh: THREE.InstancedMesh
   movies: Movie[]
-  material: THREE.ShaderMaterial
+  activeMaterial: THREE.ShaderMaterial
 }): () => void {
-  const { camera, domElement, points, movies, material } = options
-  const posAttr = points.geometry.getAttribute('position') as THREE.BufferAttribute | undefined
-  const sizeAttr = points.geometry.getAttribute('size') as THREE.BufferAttribute | undefined
-  console.assert(!!posAttr, '[Interaction] points.geometry must have position attribute')
-  console.assert(!!sizeAttr, '[Interaction] points.geometry must have size attribute')
+  const { camera, domElement, activeMesh, movies, activeMaterial } = options
+  const sizeAttr = activeMesh.geometry.getAttribute('aSize') as THREE.InstancedBufferAttribute | undefined
+  console.assert(!!sizeAttr, '[Interaction] active mesh must have aSize InstancedBufferAttribute')
   console.assert(
-    posAttr!.count === movies.length,
-    `[Interaction] position count ${posAttr?.count} must equal movies.length ${movies.length}`,
-  )
-  console.assert(
-    sizeAttr!.count === movies.length,
-    `[Interaction] size count ${sizeAttr?.count} must equal movies.length ${movies.length}`,
+    activeMesh.count === movies.length,
+    `[Interaction] activeMesh.count ${activeMesh.count} must equal movies.length ${movies.length}`,
   )
 
-  let lastEmitted: HoverEmitSnap = { id: null, ax: Number.NaN, ay: Number.NaN }
+  let lastEmitted: HoverEmitSnap = { id: null, ax: Number.NaN, ay: Number.NaN, ringR: Number.NaN, tipX: Number.NaN }
 
   let pressX = 0
   let pressY = 0
   let dragExceededDuringPress = false
   let primaryPressActive = false
 
-  const pickIndex = (clientX: number, clientY: number): number | null => {
-    const { zCurrent, zVisWindow } = useGalaxyInteractionStore.getState()
-    let bestIdx: number | null = null
-    let bestDistCam = Number.POSITIVE_INFINITY
-    for (let i = 0; i < movies.length; i++) {
-      const m = movies[i]
-      if (!movieInZFocusSlab(m.z, zCurrent, zVisWindow)) continue
-      _modelView.set(m.x, m.y, m.z)
-      _modelView.applyMatrix4(points.matrixWorld)
-      _modelView.applyMatrix4(camera.matrixWorldInverse)
-      if (_modelView.z >= 0) continue
-      const distCam = Math.max(0.001, -_modelView.z)
-      const pSize = sizeAttr!.getX(i)
-      const rCss = computePointScreenRadiusCss(pSize, distCam, material, true)
-      const { x: sx, y: sy } = movieToScreenCss(m, camera, domElement)
-      const dx = clientX - sx
-      const dy = clientY - sy
-      if (dx * dx + dy * dy > rCss * rCss) continue
-      if (distCam < bestDistCam) {
-        bestDistCam = distCam
-        bestIdx = i
-      }
-    }
-    return bestIdx
+  const ndcFromClient = (clientX: number, clientY: number, out: THREE.Vector2) => {
+    const rect = domElement.getBoundingClientRect()
+    const x = ((clientX - rect.left) / Math.max(1, rect.width)) * 2 - 1
+    const y = -(((clientY - rect.top) / Math.max(1, rect.height)) * 2 - 1)
+    out.set(x, y)
   }
 
-  const emitHover = (id: number | null, anchor: { x: number; y: number } | null) => {
-    if (hoverEmitEqual(lastEmitted, id, anchor)) return
+  const pickIndex = (clientX: number, clientY: number): number | null => {
+    const st = useGalaxyInteractionStore.getState()
+    ndcFromClient(clientX, clientY, _ndc)
+    _raycaster.setFromCamera(_ndc, camera)
+    const hits = _raycaster.intersectObject(activeMesh, false)
+    for (const hit of hits) {
+      const i = hit.instanceId
+      if (i === undefined || i < 0 || i >= movies.length) continue
+      const m = movies[i]
+      const inf = movieZInFocusFactor(m.z, st.zCurrent, st.zVisWindow)
+      if (inf <= IN_FOCUS_PICK_THRESHOLD) continue
+      return i
+    }
+    return null
+  }
+
+  const emitHover = (
+    id: number | null,
+    anchor: { x: number; y: number } | null,
+    ringOuter: number | null,
+    tipOffsetX: number | null,
+  ) => {
+    const ro = ringOuter ?? Number.NaN
+    const tx = tipOffsetX ?? Number.NaN
+    if (hoverEmitEqual(lastEmitted, id, anchor, ringOuter, tipOffsetX)) return
     lastEmitted = {
       id,
       ax: anchor?.x ?? Number.NaN,
       ay: anchor?.y ?? Number.NaN,
+      ringR: ro,
+      tipX: tx,
     }
-    useGalaxyInteractionStore.setState({ hoveredMovieId: id, hoverAnchorCss: anchor })
+    useGalaxyInteractionStore.setState({
+      hoveredMovieId: id,
+      hoverAnchorCss: anchor,
+      hoverRingRadiusCss: ringOuter,
+      hoverTooltipOffsetXPx: tipOffsetX,
+    })
   }
 
   const setHoverFromClient = (clientX: number, clientY: number) => {
     const idx = pickIndex(clientX, clientY)
-    const id = idx === null ? null : movies[idx].id
-    const anchor = idx === null ? null : movieToScreenCss(movies[idx], camera, domElement)
-    emitHover(id, anchor)
+    const st = useGalaxyInteractionStore.getState()
+    if (idx === null) {
+      emitHover(null, null, null, null)
+      return
+    }
+    const m = movies[idx]
+    const anchor = movieToScreenCss(m, camera, domElement)
+    const rCss = computeActiveMeshScreenRadiusCss({
+      movie: m,
+      camera,
+      domElement,
+      activeMaterial,
+      zCurrent: st.zCurrent,
+      zVisWindow: st.zVisWindow,
+    })
+    const ringOuter = rCss > 0 ? rCss + 4 : null
+    const tipOffsetX = rCss > 0 ? rCss + 12 : null
+    emitHover(m.id, anchor, ringOuter, tipOffsetX)
   }
 
   const onPointerMove = (e: PointerEvent) => {
@@ -143,27 +171,6 @@ export function attachGalaxyPointsInteraction(options: {
       if (d > CLICK_MAX_MOVE_PX) dragExceededDuringPress = true
     }
     setHoverFromClient(e.clientX, e.clientY)
-  }
-
-  const endPrimaryPressTracking = () => {
-    if (!primaryPressActive) return
-    primaryPressActive = false
-    window.removeEventListener('pointerup', onWindowPointerUp, true)
-    window.removeEventListener('pointercancel', onWindowPointerCancel, true)
-  }
-
-  const onWindowPointerCancel = () => {
-    endPrimaryPressTracking()
-  }
-
-  const onPointerDown = (e: PointerEvent) => {
-    if (e.button !== 0) return
-    pressX = e.clientX
-    pressY = e.clientY
-    dragExceededDuringPress = false
-    primaryPressActive = true
-    window.addEventListener('pointerup', onWindowPointerUp, true)
-    window.addEventListener('pointercancel', onWindowPointerCancel, true)
   }
 
   const onWindowPointerUp = (e: PointerEvent) => {
@@ -177,9 +184,31 @@ export function attachGalaxyPointsInteraction(options: {
     useGalaxyInteractionStore.setState({ selectedMovieId: id })
   }
 
+  const onWindowPointerCancel = () => {
+    if (!primaryPressActive) return
+    window.removeEventListener('pointerup', onWindowPointerUp, true)
+    window.removeEventListener('pointercancel', onWindowPointerCancel, true)
+    primaryPressActive = false
+  }
+
+  const onPointerDown = (e: PointerEvent) => {
+    if (e.button !== 0) return
+    pressX = e.clientX
+    pressY = e.clientY
+    dragExceededDuringPress = false
+    primaryPressActive = true
+    window.addEventListener('pointerup', onWindowPointerUp, true)
+    window.addEventListener('pointercancel', onWindowPointerCancel, true)
+  }
+
   const onPointerLeave = () => {
-    lastEmitted = { id: null, ax: Number.NaN, ay: Number.NaN }
-    useGalaxyInteractionStore.setState({ hoveredMovieId: null, hoverAnchorCss: null })
+    lastEmitted = { id: null, ax: Number.NaN, ay: Number.NaN, ringR: Number.NaN, tipX: Number.NaN }
+    useGalaxyInteractionStore.setState({
+      hoveredMovieId: null,
+      hoverAnchorCss: null,
+      hoverRingRadiusCss: null,
+      hoverTooltipOffsetXPx: null,
+    })
   }
 
   domElement.addEventListener('pointermove', onPointerMove)
@@ -193,11 +222,13 @@ export function attachGalaxyPointsInteraction(options: {
     domElement.removeEventListener('pointermove', onPointerMove)
     domElement.removeEventListener('pointerdown', onPointerDown)
     domElement.removeEventListener('pointerleave', onPointerLeave)
-    lastEmitted = { id: null, ax: Number.NaN, ay: Number.NaN }
+    lastEmitted = { id: null, ax: Number.NaN, ay: Number.NaN, ringR: Number.NaN, tipX: Number.NaN }
     useGalaxyInteractionStore.setState({
       hoveredMovieId: null,
       selectedMovieId: null,
       hoverAnchorCss: null,
+      hoverRingRadiusCss: null,
+      hoverTooltipOffsetXPx: null,
     })
   }
 }

@@ -7,9 +7,9 @@ import { setGalaxyCameraZ } from '@/lib/galaxyCameraZBridge'
 import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
 import type { Meta, Movie } from '@/types/galaxy'
 
-import { attachGalaxyCameraControls, clampGalaxyCameraXY, GALAXY_CAMERA_EULER } from './camera'
-import { createGalaxyPoints } from './galaxy'
-import { attachGalaxyPointsInteraction } from './interaction'
+import { attachGalaxyCameraControls, clampGalaxyCameraXY, GALAXY_CAMERA_EULER, setFocusCameraPosition } from './camera'
+import { createGalaxyDualMeshes } from './galaxyMeshes'
+import { attachGalaxyActiveMeshInteraction } from './interaction'
 import { createSelectionPlanet, type SelectionPlanetHandle } from './planet'
 
 interface BloomDebugControls {
@@ -64,8 +64,10 @@ export interface GalaxySceneMount {
   scene: THREE.Scene
   camera: THREE.PerspectiveCamera
   dispose: () => void
-  /** Same `ShaderMaterial` as the live galaxy `Points` (Storybook / dev tuning). */
+  /** Idle `InstancedMesh` shader (P8.4); shares `uniforms` with `galaxyActiveMaterial`. */
   galaxyMaterial: THREE.ShaderMaterial
+  /** Active mesh shader — same uniform bag as `galaxyMaterial` for `__galaxyPointScale` / Leva. */
+  galaxyActiveMaterial: THREE.ShaderMaterial
   /** Selection icosphere handle (Perlin uniforms + `setFromMovie` / `setOpacity`). */
   selectionPlanet: SelectionPlanetHandle
 }
@@ -133,18 +135,30 @@ export function mountGalaxyScene(
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
   renderer.outputColorSpace = THREE.SRGBColorSpace
 
+  if (!renderer.capabilities.isWebGL2) {
+    renderer.dispose()
+    throw new Error(
+      '[Scene] 需要 WebGL2（`gl_InstanceID` 与双 InstancedMesh 管线）。请升级浏览器或启用硬件加速；与 Phase 7.2 红线一致。',
+    )
+  }
+
   const gl = renderer.getContext()
   const webglLabel = gl instanceof WebGL2RenderingContext ? 'WebGL2' : 'WebGL1'
 
   const pr = Math.min(window.devicePixelRatio, 2)
-  const galaxy = createGalaxyPoints(movies, pr)
-  const uZ = galaxy.material.uniforms.uZCurrent as THREE.Uniform<number>
-  const uZw = galaxy.material.uniforms.uZVisWindow as THREE.Uniform<number>
+  const galaxy = createGalaxyDualMeshes(movies, pr)
+  const galUniforms = galaxy.idleMaterial.uniforms
+  const uZ = galUniforms.uZCurrent as THREE.Uniform<number>
+  const uZw = galUniforms.uZVisWindow as THREE.Uniform<number>
+  const uFocused = galUniforms.uFocusedInstanceId as THREE.Uniform<number>
   uZ.value = zCurrent
   uZw.value = zVisWindow
-  scene.add(galaxy.points)
+  uFocused.value = -1
+  scene.add(galaxy.idle)
+  scene.add(galaxy.active)
 
   const planet = createSelectionPlanet()
+  planet.mesh.renderOrder = 2
   scene.add(planet.mesh)
 
   type SelectionPhase = 'idle' | 'selecting' | 'selected' | 'deselecting'
@@ -156,9 +170,11 @@ export function mountGalaxyScene(
   const toCam = new THREE.Vector3()
   let inputLocked = false
 
+  let pendingSelectInstanceIndex = 0
+
   const applySelectionFrame = (nowMs: number) => {
     if (selectionPhase === 'idle') {
-      galaxy.points.visible = true
+      uFocused.value = -1
       planet.mesh.visible = false
       planet.material.uniforms.uAlpha.value = 0
       inputLocked = false
@@ -167,61 +183,64 @@ export function mountGalaxyScene(
 
     if (selectionPhase === 'selecting') {
       inputLocked = true
+      uFocused.value = -1
       const t = Math.min(1, (nowMs - animStartMs) / SELECT_MS)
       camera.position.lerpVectors(fromCam, toCam, easeOutCubic(t))
       camera.rotation.copy(GALAXY_CAMERA_EULER)
       if (t >= 1) {
         selectionPhase = 'selected'
-        galaxy.points.visible = false
+        uFocused.value = pendingSelectInstanceIndex
         planet.mesh.visible = true
         planet.material.uniforms.uAlpha.value = 1
         camera.position.copy(toCam)
-        console.log('[Selection] phase=selected | points hidden | planet visible')
+        console.log('[Selection] phase=selected | dual mesh instance hidden | planet visible')
       }
       return
     }
 
     if (selectionPhase === 'deselecting') {
       inputLocked = true
+      uFocused.value = -1
       const t = Math.min(1, (nowMs - animStartMs) / DESELECT_MS)
       camera.position.lerpVectors(fromCam, toCam, easeOutCubic(t))
       camera.rotation.copy(GALAXY_CAMERA_EULER)
       if (t >= 1) {
         selectionPhase = 'idle'
-        galaxy.points.visible = true
         planet.mesh.visible = false
         planet.material.uniforms.uAlpha.value = 0
-        console.log('[Selection] phase=idle | camera restored | points visible')
+        console.log('[Selection] phase=idle | camera restored | dual mesh full')
       }
       return
     }
 
-    // selected — user may truck/pedestal; macro points stay hidden
+    // selected — user may truck/pedestal; focused instance stays hidden on dual meshes
     inputLocked = false
-    galaxy.points.visible = false
+    uFocused.value = pendingSelectInstanceIndex
     planet.mesh.visible = true
     planet.material.uniforms.uAlpha.value = 1
   }
 
   const beginSelect = (movie: Movie) => {
-    galaxy.points.visible = true
     planet.mesh.visible = true
     planet.material.uniforms.uAlpha.value = 1
+    pendingSelectInstanceIndex = movies.findIndex((m) => m.id === movie.id)
+    console.assert(pendingSelectInstanceIndex >= 0, '[Selection] movie must exist in mounted list')
     const span = worldSpan(meta)
     const r = THREE.MathUtils.clamp(span * 0.014, 0.07, span * 0.05)
-    const standoff = Math.max(r * 4.2, span * 0.018)
-    toCam.set(movie.x, movie.y, movie.z - standoff)
+    setFocusCameraPosition(toCam, movie, span)
     planet.setFromMovie(movie, meta.genre_palette, r)
+    uFocused.value = -1
     fromCam.copy(camera.position)
     animStartMs = performance.now()
     selectionPhase = 'selecting'
+    const camDz = movie.z - toCam.z
     console.log(
-      `[Selection] phase=selecting | duration=${SELECT_MS}ms | standoff=${standoff.toFixed(4)} | planetR=${r.toFixed(4)}`,
+      `[Selection] phase=selecting | duration=${SELECT_MS}ms | focusCamΔz=${camDz.toFixed(4)} | planetR=${r.toFixed(4)}`,
     )
   }
 
   const beginDeselect = () => {
-    galaxy.points.visible = true
+    uFocused.value = -1
     fromCam.copy(camera.position)
     toCam.copy(restCam)
     animStartMs = performance.now()
@@ -314,12 +333,12 @@ export function mountGalaxyScene(
   window.__bloom = bloomDebug
   bloomDebug.log()
 
-  const uSizeScale = galaxy.material.uniforms.uSizeScale as THREE.Uniform<number>
-  const uFocusSizeMul = galaxy.material.uniforms.uFocusSizeMul as THREE.Uniform<number>
-  const uBgSizeMul = galaxy.material.uniforms.uBgSizeMul as THREE.Uniform<number>
-  const uLMin = galaxy.material.uniforms.uLMin as THREE.Uniform<number>
-  const uLMax = galaxy.material.uniforms.uLMax as THREE.Uniform<number>
-  const uChroma = galaxy.material.uniforms.uChroma as THREE.Uniform<number>
+  const uSizeScale = galUniforms.uSizeScale as THREE.Uniform<number>
+  const uFocusSizeMul = galUniforms.uFocusSizeMul as THREE.Uniform<number>
+  const uBgSizeMul = galUniforms.uBgSizeMul as THREE.Uniform<number>
+  const uLMin = galUniforms.uLMin as THREE.Uniform<number>
+  const uLMax = galUniforms.uLMax as THREE.Uniform<number>
+  const uChroma = galUniforms.uChroma as THREE.Uniform<number>
 
   const pointScaleDebug: GalaxyPointScaleDebug = {
     get scale() {
@@ -423,7 +442,7 @@ export function mountGalaxyScene(
     camera.aspect = w / h
     camera.updateProjectionMatrix()
 
-    galaxy.material.uniforms.uPixelRatio.value = pr
+    galUniforms.uPixelRatio.value = pr
   }
 
   resize()
@@ -443,12 +462,12 @@ export function mountGalaxyScene(
     getMacroZWheel: macroZWheel,
   })
 
-  const detachInteraction = attachGalaxyPointsInteraction({
+  const detachInteraction = attachGalaxyActiveMeshInteraction({
     camera,
     domElement: canvas,
-    points: galaxy.points,
+    activeMesh: galaxy.active,
     movies,
-    material: galaxy.material,
+    activeMaterial: galaxy.activeMaterial,
   })
 
   const w = renderer.domElement.width
@@ -491,7 +510,8 @@ export function mountGalaxyScene(
     detachInteraction()
     planet.mesh.removeFromParent()
     planet.dispose()
-    galaxy.points.removeFromParent()
+    galaxy.idle.removeFromParent()
+    galaxy.active.removeFromParent()
     galaxy.dispose()
     if (window.__bloom === bloomDebug) {
       delete window.__bloom
@@ -516,5 +536,13 @@ export function mountGalaxyScene(
     }
   }
 
-  return { renderer, scene, camera, dispose, galaxyMaterial: galaxy.material, selectionPlanet: planet }
+  return {
+    renderer,
+    scene,
+    camera,
+    dispose,
+    galaxyMaterial: galaxy.idleMaterial,
+    galaxyActiveMaterial: galaxy.activeMaterial,
+    selectionPlanet: planet,
+  }
 }

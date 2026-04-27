@@ -24,10 +24,8 @@
 | 性能与准入文档 | [`docs/project_docs/Phase 8 基线 P8.0 性能与 P8.4 准入.md`](../project_docs/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md) | P8.0.1 三场景表、P8.0.2 双 mesh 说明与 fps 表、P8.0.3 WebGL2、P8.0.4 指向状态机 spec |
 | 状态机 SSOT | [`docs/project_docs/星球状态机 spec.md`](../project_docs/星球状态机%20spec.md) | idle / active / hover / focus / 延后 select；`W = uZVisWindow×0.2`；双 mesh 互补 scale；WebGL2 / `gl_InstanceID` 约定 |
 | Storybook 基准 | [`frontend/src/storybook/InstancedMeshBench.tsx`](../../frontend/src/storybook/InstancedMeshBench.tsx)、[`InstancedMeshBench.stories.tsx`](../../frontend/src/storybook/InstancedMeshBench.stories.tsx) | 60k+60k `InstancedMesh`，`MeshBasicMaterial`，HUD fps 中位数、几何 `console.log` |
-| Cursor 索引说明 | [`docs/project_docs/视觉参数总表-本地维护说明.md`](../project_docs/视觉参数总表-本地维护说明.md) | `视觉参数总表.md` **Git 跟踪**、**`.cursorignore`** 排除 Cursor 默认索引 |
-| Phase 7 总表 | [`docs/project_docs/视觉参数总表.md`](../project_docs/视觉参数总表.md) | Phase 7 全文保留；文末指针链到 Phase 8 基线文档与上述说明 |
-| 规则更新 | [`.cursor/rules/project-overview.mdc`](../../.cursor/rules/project-overview.mdc) | Key Docs 增加 Phase 8 基线文档与总表 + `.cursorignore` 说明 |
-| 索引排除 | [`.cursorignore`](../../.cursorignore) | 追加 `docs/project_docs/视觉参数总表.md` |
+| Phase 7 总表 | [`docs/project_docs/视觉参数总表.md`](../project_docs/视觉参数总表.md) | Git 跟踪；文末指针链到 Phase 8 基线文档；文首注明非 Agent SSOT（**后续**：总表已从 `.cursorignore` 移除；原《视觉参数总表-本地维护说明》已删） |
+| 规则更新 | [`.cursor/rules/project-overview.mdc`](../../.cursor/rules/project-overview.mdc) | Key Docs 含 Phase 8 基线文档（以仓库内当前文件为准） |
 
 ---
 

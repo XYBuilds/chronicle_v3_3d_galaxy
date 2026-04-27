@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 
 import { MovieDetailDrawer } from '@/components/Drawer'
+import { useThemeFromQuery } from '@/hooks/useThemeFromQuery'
 import { Loading } from '@/components/Loading'
 import { MovieTooltip } from '@/components/MovieTooltip'
 import { Timeline } from '@/components/Timeline'
@@ -12,6 +13,7 @@ import { mountGalaxyScene } from '@/three/scene'
 import './App.css'
 
 function App() {
+  useThemeFromQuery()
   const status = useGalaxyDataStore((s) => s.status)
   const data = useGalaxyDataStore((s) => s.data)
   const errorMessage = useGalaxyDataStore((s) => s.errorMessage)

@@ -157,8 +157,6 @@ export function mountGalaxyScene(
   let inputLocked = false
 
   const applySelectionFrame = (nowMs: number) => {
-    planet.material.uniforms.uTime.value = nowMs * 0.001
-
     if (selectionPhase === 'idle') {
       galaxy.points.visible = true
       planet.mesh.visible = false

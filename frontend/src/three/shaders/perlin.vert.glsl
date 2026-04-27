@@ -1,10 +1,8 @@
-uniform float uTime;
+varying float vNoise;
 
-varying vec3 vObjPos;
-varying vec3 vNormal;
+attribute float aNoise;
 
 void main() {
-  vObjPos = position;
-  vNormal = normalize(normalMatrix * normal);
+  vNoise = aNoise;
   gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
 }

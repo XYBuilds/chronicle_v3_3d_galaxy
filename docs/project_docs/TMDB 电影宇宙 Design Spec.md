@@ -75,7 +75,8 @@
 
 ### **3.2 Tooltip (悬停层)**
 
-* 极简样式，无边框，紧跟鼠标，响应速度需极快。
+* 极简样式，紧跟鼠标，响应速度需极快。  
+* **内容**：第一行为影片 **标题**（纯文本）；第二行为 **`genres[0]`** 主类型标签——若 `meta.genre_palette` 中有对应 hex，则该行文字使用该色强调；否则使用 `muted-foreground`。**不**要求悬停层拼接发行年份（与抽屉内完整日期分工不同）。
 
 ### **3.3 档案详情抽屉 (点击层)**
 
@@ -84,3 +85,43 @@
   * 需确保能够有效区分 UI 与 3D 场景层次，防止完全遮挡底层宇宙。  
   * 信息层级分明：海报、标题/原名、日期、Tagline 等主次清晰。  
   * 滑出/收回动画遵循 §2.2 定义的时序与缓动函数。
+
+### **3.4 Phase 9 — HUD 排版、流派表面与 Dev 主题**
+
+以下规则为 **Phase 9** 在 React / shadcn 层的定稿，**不改变** `galaxy_data` 契约与 Three.js 渲染；画布背景仍为 §1 与《视觉参数总表》中的黑色输出，HUD 单独走 DOM token。
+
+#### **3.4.1 抽屉 typography 与结构（P9.1）**
+
+* **色彩**：一律使用 shadcn 语义类（如 `bg-popover`、`text-foreground`、`text-muted-foreground`、`border-border`），不在 HUD 写死 zinc 例图 hex。  
+* **主标题**：`text-2xl font-bold leading-tight`。  
+* **副标题**（`original_title`）：仅当存在且 **不等于** `title` 时显示。  
+* **评分行**：星标、分数、票数、发行日期同一视觉行，允许换行时使用 `gap-x-4 gap-y-2`。  
+* **海报**：`AspectRatio` 2:3；`rounded-xl`、`shadow-sm`；海报 URL 无效时的 **`DrawerPoster`** 占位与 fail 状态保留。  
+* **Tagline**：`blockquote` 风格，左侧 `border-l-2`，斜体、muted。  
+* **Overview**：区块标题 `text-[0.65rem] font-bold uppercase tracking-wider text-muted-foreground`；正文 `text-sm leading-relaxed`。  
+* **Details**：两列网格 `grid-cols-2`；字段名小标题与值层次区分（标签 `font-semibold` 档、值 `text-muted-foreground`）；实现细节以 `Drawer.tsx` 为准。  
+* **Cast**：`sm` 及以上双列编号列表（序号 + `truncate` 人名），窄屏单列。  
+* **Sheet 骨架**：保留 shadcn `Sheet` / `SheetContent` / `AspectRatio`；**`SHEET_OPEN_EASE`**（Phase 4.3）时序不改。  
+* **六人字段**：在 `director` / `writers` / `cast` 之外展示 **`director_of_photography`**、**`producers`**、**`music_composer`**；对应数组为空时 **整块不渲染**。  
+* **外链**：TMDB 影片页始终可链；**`imdb_id` 非空** 时额外提供 IMDb ghost 按钮（`https://www.imdb.com/title/{imdb_id}/`）。
+
+#### **3.4.2 流派标签表面（P9.2）**
+
+* **Badge `variant="genre"`**：以 `meta.genre_palette[g]` 的 sRGB hex 为 **`--genre-color`**，在 CSS 中做 **三段式** 表面：  
+  * **背景**：`color-mix(in oklch, var(--genre-color) 18%, transparent)`  
+  * **边框**：`color-mix(in oklch, var(--genre-color) 60%, transparent)`  
+  * **字色**：`foreground`（与流派色分离，保证对比度）  
+* **回退**：不支持 `color-mix` 的引擎使用 **`rgb(r g b / 0.18)`** 与 **`/ 0.6`** 内联（`frontend/src/lib/genreColor.ts`）。  
+* **hex 无效或缺失**：回退为现有 **outline** 等未染色样式。  
+* **抽屉**：渲染 **`movie.genres` 全量**（不再截断为前四条）。  
+* **Tooltip**：主类型与抽屉同源 **palette** 色规则（见 §3.2）；样式为紧凑文本行，与抽屉 Badge 可略有形态差异，但 **色源一致**。
+
+#### **3.4.3 Info 弹层（P9.4）**
+
+* **`InfoModal`** 内区块标题与正文排版与抽屉 **Overview 段** 同源：`text-[0.65rem] font-bold uppercase tracking-wider` + `text-sm leading-relaxed`；`infoCopy` 文案本身不在 Phase 9 替换。
+
+#### **3.4.4 URL `?theme=light|dark`（P9.5，Dev / 验收）**
+
+* **用途**：开发或验收时快速查看 HUD 在亮 / 暗 CSS 变量下的表现。  
+* **行为**：App 挂载时读取 `theme` query；命中 `light` 或 `dark` 时设置 **`document.documentElement.dataset.theme`**，并与 Tailwind **`dark` class** 联动（见 `useThemeFromQuery`）；无参数时维持默认暗色 HUD。  
+* **画布**：**不要求** Three.js 场景、星空或 Bloom 随浅色主题重算；画布可保持深色底，与浅色 HUD 并存仅作工程验收场景。

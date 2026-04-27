@@ -22,7 +22,7 @@ todos:
     status: completed
   - id: p96-doc-sync
     content: P9.6 文档同步：Design Spec HUD 节 + 视觉参数总表 genre tag 三段式 alpha 登记
-    status: pending
+    status: completed
 isProject: false
 ---
 
@@ -120,14 +120,15 @@ flowchart TD
 
 - [docs/project_docs/TMDB 电影宇宙 Design Spec.md](docs/project_docs/TMDB%20电影宇宙%20Design%20Spec.md)：HUD 节追加 Phase 9 视觉规则（typography、6 人字段策略、genre tag 三段式色规则）
 - [docs/project_docs/视觉参数总表.md](docs/project_docs/视觉参数总表.md)：登记 genre tag 三段式 alpha 18%/60%
+- 已取消的 **P9.3**（Tooltip 标题拼年份）**不**写入 Design Spec
 - 不要求实施报告（沿用 Phase 7/8 风格，由用户显式要求时再补）
 
 ## 验收（Phase 9 总）
 
 - Drawer 视觉与 [`docs/temp/drawer example.js`](docs/temp/drawer%20example.js) 神似
 - 6 人字段全展且空块隐藏
-- Genre tag 在 drawer + tooltip 染色一致
-- Tooltip 显示 `Title (YYYY)`
+- Genre tag 在 drawer + tooltip 色源一致（palette）；抽屉为 Badge 全量 genres
+- P9.3（Tooltip 标题拼年份）已取消，产品不强制
 - InfoModal 视觉与 Drawer 同款
 - `?theme=light` URL 切到亮 HUD（dev only）
 - 现有 raycaster / hover ring / focus 飞入 / Bloom 状态全部无回归

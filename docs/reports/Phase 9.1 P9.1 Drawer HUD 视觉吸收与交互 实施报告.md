@@ -2,7 +2,7 @@
 
 > **范围**：仅 Phase 9.1（电影详情抽屉 `MovieDetailDrawerHud` / `MovieDetailDrawer`）。不动 Three.js 管线、不改 `galaxy_data` 契约。  
 > **主文件**：`frontend/src/components/Drawer.tsx`  
-> **对照文档**：`docs/project_docs/HUD 视觉吸收对照清单 Phase9.md`、`.cursor/plans/phase_9_hud_polish_5e3d5977.plan.md`（P9.1 条目）  
+> **对照文档**：`docs/project_docs/TMDB 电影宇宙 Design Spec.md`（§3.4 Phase 9 HUD）、`.cursor/plans/phase_9_hud_polish_5e3d5977.plan.md`（P9.1 条目）  
 > **分支（实施时）**：`phase9/p9.1-drawer-visual`（与仓库实际分支名一致即可）
 
 ---
@@ -81,7 +81,7 @@
 
 | 操作 | 说明 |
 |------|------|
-| P9.0 | `docs/project_docs/HUD 视觉吸收对照清单 Phase9.md` 为吸收对照基线（无应用代码） |
+| P9.0 | 吸收对照已并入 **Design Spec §3.4**；原独立清单文件已移除 |
 | 本报告 | 记录 P9.1 **最终决策**与**已执行操作**，便于评审与 P9.2+ 引用 |
 
 ---

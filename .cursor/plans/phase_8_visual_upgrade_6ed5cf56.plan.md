@@ -10,10 +10,10 @@ todos:
     status: completed
   - id: p82-min-dist-sweep
     content: P8.2 · UMAP min_dist 扫参 (④)：当前主数据 min_dist=0.4 已判过小，仅扫 min_dist ∈ [0.5, 0.7, 0.9]；为缩短单次生成时间，实验集仅含 z∈[2020,2025] 的电影子集（全量 UMAP 仍跑同一套特征与参数，导出时按 z 过滤）；产出 3 份 .gz 到 frontend/public/data/experiments/；loader ?dataset= 旁路；用户在 npm run dev 下切换比对（不用 Storybook GalaxyThreeLayerLab）；本阶段只调 min_dist，不测 uZVisWindow / hover；用户选定最优 min_dist 后**另起一步**全量重训+导出并替换当前 galaxy_data（不在 P8.2 验收 closure 内）
-    status: pending
+    status: completed
   - id: p83-perlin-redo
     content: P8.3 · Perlin focus 球重做 (②修正版)：IcosahedronGeometry(1, 6)；xmur3+mulberry32 以 movie.id 为 seed；CPU 端排序百分位算 4 阈值 uThresh1..4；perlin.frag.glsl 用 step+smoothstep 固定 4 颜色分支；uAreaRatio uniform 挂 leva；面积占比误差 < 0.5%
-    status: pending
+    status: completed
   - id: p84-dual-mesh
     content: P8.4 · 双 InstancedMesh 接管 idle/active + 状态机/相机/Tooltip (①完整版)：建 idle mesh (detail=0, 60K instance, transparent+depthWrite=false) 与 active mesh (detail=1, 60K instance, alphaTest=0.01 opaque) 共享 hue/voteNorm/aZ attribute；shader 内 inFocus = smoothstep(W=zVisWindow×0.2)，idle scale ∝ (1-inFocus)，active scale ∝ inFocus，互补叠加完成渐变；启动 assert isWebGL2 后用 gl_InstanceID；camera.ts 新 flyToFocus 物理距离一致替换渐隐+渐变；Raycaster 仅对 active mesh 拾取；hover ring 用 HTML overlay 即时切换（与 tooltip 一致）
     status: pending

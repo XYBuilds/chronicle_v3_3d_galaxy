@@ -22,7 +22,7 @@ todos:
     status: completed
   - id: p96-doc-sync
     content: P9.6 文档同步：Design Spec HUD 节 + 视觉参数总表 genre tag 三段式 alpha 登记
-    status: pending
+    status: completed
 isProject: false
 ---
 
@@ -126,8 +126,7 @@ flowchart TD
 
 - Drawer 视觉与 [`docs/temp/drawer example.js`](docs/temp/drawer%20example.js) 神似
 - 6 人字段全展且空块隐藏
-- Genre tag 在 drawer + tooltip 染色一致
-- Tooltip 显示 `Title (YYYY)`
+- Genre tag 在 drawer + tooltip 色源一致（palette）；抽屉为 Badge 全量 genres
 - InfoModal 视觉与 Drawer 同款
 - `?theme=light` URL 切到亮 HUD（dev only）
 - 现有 raycaster / hover ring / focus 飞入 / Bloom 状态全部无回归

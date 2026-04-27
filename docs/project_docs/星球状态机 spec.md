@@ -10,7 +10,7 @@
 | **active** | 片元在 `uZCurrent … uZCurrent+uZVisWindow` 清晰条带内，且非 focus；可参与拾取 | 生产：仅对 **`galaxyActive`** 拾取（`interaction.ts`） |
 | **hover** | `hoveredMovieId` 命中；**不改变** mesh 尺度，仅 HUD（tooltip + HTML hover ring，**无 CSS transition**，即时显隐） | 已有 store 字段；P8.4 对齐 ring |
 | **focus** | 选中飞入完成：相机对准目标片、Perlin 球独占；双 galaxy mesh 上该 `instanceId` **scale 归零** | 现有 planet + 相机动画；P8.3/P8.4 调整 |
-| **select**（延后） | 多选 / 关联高亮等；本 Phase **仅占位**，见 P8.6 草案 | Phase 9 候选 |
+| **select**（延后） | 多选 / 关联高亮等；本 Phase **仅占位**；搜索与 select 产品方案未来统一规划 | Phase 9 候选 |
 
 ## 2. 共享数学：Z 条带与 smoothstep 过渡
 
@@ -73,7 +73,7 @@ inFocus = smoothstep(zLo - W, zLo, aZ) × (1 - smoothstep(zHi, zHi + W, aZ))
 
 ### 3.5 select（延后）
 
-- 仅列需求占位：多选集合、bloom 分层、搜索联动；**不实装**到本 Phase。见 [`搜索与 select 态联合 spec 草案.md`](搜索与%20select%20态联合%20spec%20草案.md)（P8.6 已落盘，待 review）。
+- 仅列需求占位：多选集合、bloom 分层、搜索联动；**不实装**到本 Phase。搜索与 **select** 产品方案将**未来**统一设计与计划（本仓库不维护独立搜索 spec 文件）。
 
 ## 4. 渲染与能力约定
 
@@ -86,4 +86,4 @@ inFocus = smoothstep(zLo - W, zLo, aZ) × (1 - smoothstep(zHi, zHi + W, aZ))
 | 日期 | 说明 |
 |------|------|
 | 2026-04-27 | Phase 8.0 初稿：四态 + select 延后、W 公式、双 mesh 互补、WebGL2、focus 意图声明 |
-| 2026-04-27 | 文档同步：idle/active 生产描述对齐 P8.4；P8.6 草案落盘；active 色彩行对齐当前片元 |
+| 2026-04-27 | 文档同步：idle/active 对齐 P8.4；active 片元说明；移除独立搜索/select 草案引用，改由未来统一规划 |

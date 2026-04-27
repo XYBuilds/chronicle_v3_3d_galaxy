@@ -263,7 +263,7 @@ Python 管线的最终产物为**一个 JSON 文件**，前端一次性加载后
 | `umap_params` | object | `{ n_neighbors, min_dist, metric, random_state, densmap, ... }` 实际使用的 UMAP 超参；**`random_state` 固定为 `42`**（见 §2.1）；**`densmap`** 为 **bool**（`true`/`false`），与 Phase 2.4 `umap_projection.py` 及导出入口是否传入 **`--densmap`** 一致，表示是否启用 DensMAP |
 | `genre_weight_ratio` | float | 流派权重公比（默认 ≈0.618） |
 | `genre_palette` | object | **genre 名 → sRGB hex 色值** 映射表，例如 `{ "Drama": "#E74C3C", ... }`。源色彩空间为 **OKLCH**（规则见 Design Spec §1.1），管线中转为 sRGB hex 后写入此处。**HUD swatch** 与兼容用途 |
-| `has_genre_hue` | bool \| undefined | **Phase 8.1**：为 **`true`** 时，每条 `movies[i]` **应**含 **`genre_hue`**（弧度 \([0, 2\pi)\)），GPU 宏观/focus 路径优先消费 hue + 均匀 L/C；与 `genre_color` **双字段共存**直至下一大版本移除旧字段（见《搜索与 select 态联合 spec 草案》末「待办」） |
+| `has_genre_hue` | bool \| undefined | **Phase 8.1**：为 **`true`** 时，每条 `movies[i]` **应**含 **`genre_hue`**（弧度 \([0, 2\pi)\)），GPU 宏观/focus 路径优先消费 hue + 均匀 L/C；与 `genre_color` **双字段共存**直至下一大版本移除旧字段（须 bump 版本并回归） |
 | `feature_weights` | object | `{ text: 1.0, genre: 1.0, lang: 1.0 }` §2.1.3 多模态融合的权重乘子 |
 | `z_range` | `[float, float]` | 数据集中 Z 轴（小数年份）的 `[min, max]`，供前端相机初始化与 clamp |
 | `xy_range` | `{ x: [min, max], y: [min, max] }` | UMAP 坐标的实际值域，供前端归一化或相机边界设置 |

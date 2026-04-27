@@ -13,10 +13,10 @@ todos:
     status: completed
   - id: p93-tooltip-yyyy
     content: P9.3 Tooltip Title (YYYY)：MovieTooltip 包装层 release_date.slice(0,4) 拼接；缺日期回退纯标题
-    status: pending
+    status: cancelled
   - id: p94-info-modal
     content: P9.4 InfoModal 同款样式：Section typography 对齐 Drawer；infoCopy 占位不动
-    status: pending
+    status: completed
   - id: p95-theme-switch
     content: P9.5 ?theme=light|dark 切换接口：App mount 时 URLSearchParams 写 <html> data-theme；默认仍 dark；不动 canvas
     status: pending

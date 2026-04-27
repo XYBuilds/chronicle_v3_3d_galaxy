@@ -18,7 +18,7 @@
 * **Lightness (L)** 与 **Chroma (C)**：所有 genre 使用统一的 L 与 C 值（具体数值由视觉调试确定；初始建议 **L ≈ 0.75**、**C ≈ 0.14**）。  
 * **Hue (H) 分配**：  
   * **步长**：`hueStep = 360 / N`（N = 数据集中实际出现的去重 genre 数量，由管线运行时从数据源算出，**不写死**），确保色相环等间距划分。  
-  * **Index → Hue**：`genreHue = hueStep × index`（index 从 0 开始）。  
+  * **Index → Hue**：`genreHue = hueStep × index`（index 从 0 开始）。**Phase 8.1**：管线同步导出 **`genre_hue`**（**弧度**，\(2\pi \times \mathrm{index}/N\) 或与 palette 序一致），GPU 与 `cos(hue)` / `sin(hue)` OKLab 构建一致；**hex `genre_palette`** 仍以 OKLCH→sRGB 供 HUD 色块。  
   * **Index 分配策略（目标态）**：按每个 genre 的电影数量分配 index，目标是使**宇宙内所有星球的加权平均色相矢量和趋近零**（即整体视觉色彩重心接近消色差 / 中性灰）。具体而言，寻找一个 genre → index 的排列，最小化 \(\bigl|\sum_k c_k \cdot e^{i \cdot H_{\sigma(k)}}\bigr|\)，其中 \(c_k\) 为该 genre 的影片数量。  
   * **现阶段简化**：若优化实现成本较高，先**随机分配** index（使用固定种子保证可复现），待全链路跑通后再迭代为按数量优化的版本。  
 * **sRGB 转换与 Gamut 安全**：管线中须将 OKLCH 转为 sRGB hex 后写入 `meta.genre_palette`。部分色相在高 Chroma 下可能溢出 sRGB gamut，转换时须做 **gamut clamp**（将 RGB 分量 clamp 到 \[0, 1\]）。若发现个别色相溢出严重，可将 C 全局微调至 **0.12** 保证全部 N 色 in-gamut。  
@@ -26,22 +26,20 @@
 
 ## **2\. 交互状态与视觉反馈 (Interaction States)**
 
-### **2.1 宏观漫游状态 (Default)**
+### **2.1 宏观漫游状态 (Default) — Phase 8 定稿**
 
-* 渲染层级：全部 ~60K 粒子通过**单 `THREE.Points`** + shader 分支渲染为**辉光圆点**（仍保持 1 次 draw call），减少视觉干扰，突出星系宏观轮廓。  
-* **视距窗口（Phase 5.1.5 · 方案 1）**：在时间轴 Z 上定义一个闭区间 **`[zCurrent, zCurrent + zVisWindow]`**，代表用户当前可观测的时间切片：  
-  * **`zCurrent`** — 用户关注的发行年（世界 Z，与影片 `z` 同轴），首屏从 `z_range` 最早端启动，**从时间轴起点开始漫游**。  
-  * **`zVisWindow`** — 可观测 Z 窗口宽度，初值 **1 年**（非常聚焦的视角；现代年份约 2000–3000 部/年，早期年份更少）。  
-  * **`zCamDistance`** — 相机沿 −Z 相对 `zCurrent` 的后退距离；**Phase 7.3 定稿**为常量 **`30`** 世界单位（与数据集 `z_range` 跨度解耦，见 Tech Spec §1.4.1）。  
-  * 参数在 Zustand store 中维护，Timeline / 相机 / 粒子 shader / Raycaster 共享同一份状态。  
-  * **粒子视觉分层（Phase 5.1.6 · 方案 2）**：按视距窗口将粒子分为 A / B 两个视觉层级（C 选中层见 §2.2）。**P7.3 定稿**：shader 尺寸倍率 **`uFocusSizeMul = 0.2`**（条带内）、**`uBgSizeMul = 0.001`**（条带外），与 `galaxy.ts` 一致——
+* 渲染层级：全部 ~60K 影片为**两份** **`InstancedMesh`**（**idle** `Icosahedron(1,0)` + **active** `Icosahedron(1,1)`），同实例矩阵与 hue / vote / size；条带内 **`inFocus`** 用 **smoothstep**（`W = zVisWindow × 0.2`）驱动 **互补尺度**（详见 [`星球状态机 spec.md`](星球状态机%20spec.md) 与 Tech Spec §1.1）。**非**单 `Points` 主路径。  
+* **视距窗口（Phase 5.1.5 · 方案 1）**：在时间轴 Z 上定义闭区间 **`[zCurrent, zCurrent + zVisWindow]`**：  
+  * **`zCurrent`**、**`zVisWindow`**、**`zCamDistance = 30`** 含义不变（见 Tech Spec §1.4.1）。  
+  * 状态在 Zustand 中维护；**拾取**以 **active mesh** + 世界球逻辑为准（Tech Spec §1.5）。  
+* **与旧 A/B「点大小」的对应（心智模型）**：条带外可见性主要由 **idle** 支路 + **`uBgSizeMul`** 体现；条带内由 **active** 支路 + **`uActiveSizeMul`** 体现；**初值** `uSizeScale=0.3`，`uActiveSizeMul=0.02`，`uBgSizeMul=0.002`（以《视觉参数总表》与 `galaxyMeshes.ts` 为准）。
 
 | 层 | 定义 | 视觉 | 交互 |
 | :---- | :---- | :---- | :---- |
-| **A — 背景层** | 窗口外（`z ∉ [zCurrent, zCurrent + zVisWindow]`） | 固定极小直径、`genres[0]` 单色、低亮度圆盘；提供星空氛围、不干扰焦点 | **不可** hover / click |
-| **B — 焦点层** | 窗口内 | 真实 `size`（`log10(vote_count)` 映射）× 透视、`genres[0]` 色相、径向辉光 + emissive 驱动 HDR | 可 hover / click（Raycaster 仅对 B 层生效） |
+| **A — 背景感** | 条带外 `inFocus` 低 | idle 支路为主、较淡较小 | 不作为主拾取层 |
+| **B — 条带内** | `inFocus` 高 | active 支路为主、可辨明暗 | **可** hover / click（实现上仅 **active**） |
 
-  * **A ↔ B 过渡**：当前采用**硬切**（顶点 shader 内 `step` 二值混合 `gl_PointSize`）；若在真实数据 / 多 DPR 场景下出现闪烁或边界突兀，再考虑改为 size / alpha 渐变。  
+  * **过渡**：**smoothstep**，非旧版 A/B `step` 硬切。  
 * 摄像机控制：  
   * **摄像机轴线始终与 Z 轴平行**（无旋转、无倾斜；参数永远为 `Euler(0, π, 0, 'YXZ')`）。  
   * **滚轮**：沿 Z 轴（release\_date 时间纵深）前后穿梭；**宏观 idle 态下实际写入的是 `zCurrent`**，相机位置由 `zCurrent - zCamDistance` 驱动（Phase 5.1.5）。  
@@ -51,19 +49,14 @@
 
 当用户明确**点击选中**某颗星球时，触发以下**分阶段过渡序列**：
 
-1. **相机推进**（**600 – 800 ms**，`easeOutCubic`）：摄像机从当前位置平滑飞向选中星球的近距离观测点；轴线仍保持与 Z 轴平行。  
-2. **材质溶解**（**300 – 500 ms**，与相机推进**并行**，在飞行中途启动、到达时完成）：  
-   * Points 层中对应粒子 alpha 渐出。  
-   * 在同一位置生成 **C 层 IcoSphere Mesh**（`IcosahedronGeometry(radius, detail=4)`，约 2.5K 三角形），表面挂 **Perlin Noise 着色器**（Phase 5.1.6 重写）。  
-   * **着色策略（面积比例分区）**：将该电影的流派权重 \(w_k\)（§1 黄金比等比衰减）转为累积阈值序列 \([0, w_1, w_1 + w_2, \ldots, 1]\)；**3D FBM 噪声**输出归一化到 \([0, 1]\)，按落入哪个阈值区间**选择对应 genre 颜色**，边界用 `smoothstep(uThreshold)` 柔和过渡。例：Comedy 60%、Drama 38% 时，球面上分别有约 60% / 38% 面积显示对应色，分界形态由噪声决定。  
-   * **可调 uniform**：**`uScale`** / **`uOctaves`** / **`uPersistence`** / **`uThreshold`**；默认值约 2.35 / 4 / 0.52 / 0.048，后续按美术口径迭代。  
-   * **变更记录**：Phase 5.1.6 之前的实现为"所有 genre 颜色**加权混合成单一颜色** × Perlin 明暗调制"——球面上只有亮度噪点，没有颜色分区；该实现已**整体替换**为上述面积分区方案。  
-3. **档案抽屉滑出**（**250 – 350 ms**，`easeOutCubic`，在材质溶解**完成后**触发）：侧边档案详情面板从屏幕边缘滑入。节奏意图：先看星球、再看资料。  
-4. **取消选中 / 回退**（**400 – 500 ms**，反向播放上述序列）：略快于选中过程，让"退出"感觉利落。
+1. **相机推进**（生产 **`700 ms` 选中** / **`450 ms` 取消**，`easeOutCubic`；以《视觉参数总表》为准）：飞向 **固定物距** 的 focus 机位；轴线与 Z 平行。  
+2. **双 mesh 与 Perlin 切换**：飞入过程中，该影片在 **idle + active** 两 mesh 上 **instance 尺度归零**（`uFocusedInstanceId`）；**C 层**为 **`IcosahedronGeometry(1, 6)`** + **Perlin**（**P8.3**）：CPU 上 noise 分位数定 **4 段**面积比，片元 **硬分带** + 色相来自 **genre_hue** + L/C。旧版 `detail=4` / 单一 `uThreshold` 已废弃。  
+3. **档案抽屉滑出**（`easeOutCubic`，在 Perlin 稳定后）：侧边详情滑入。  
+4. **取消选中 / 回退**：时长见上，相机与 mesh 显隐由 `scene.ts` 状态机驱动。  
 
 * **环境景深重构**：未被选中的背景星球（无论远近）依然保持极简单色渲染，作为视觉背景，凸显主体。在视距窗口视图下等价于 §2.1 的 A 背景层。
 
-> **注**：上述时长为初始设定值，将在开发阶段根据实际视觉效果迭代调整。
+> **注**：飞入/退出毫秒数以《视觉参数总表》与 `scene.ts` 常量为**当前定稿**；若改动画须双处同步。
 
 ## **3\. HUD 界面规范 (UI Layout & Styling)**
 

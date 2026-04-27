@@ -6,42 +6,30 @@
 
 * **后端/数据处理层 (Python)**：负责数据清洗、NLP 向量化及降维计算（UMAP），输出静态 JSON/Parquet 数据。  
 * **前端/渲染层**：  
-  * **3D 画布**：原生 **Three.js**（非 R3F / TresJS 等声明式封装），直接控制渲染循环、ShaderMaterial、BufferAttribute 与后处理管线。理由：项目涉及高度自定义的 Points ShaderMaterial、非标准相机控制和性能敏感的 60K 粒子管线，原生 Three.js 可避免中间层的抽象泄漏。  
+  * **3D 画布**：原生 **Three.js**（非 R3F / TresJS 等声明式封装），直接控制渲染循环、`InstancedMesh` + 自定义 ShaderMaterial、后处理与**非标准**轴平行相机。理由：~60K 实例双 mesh + focus 高模球体、性能敏感，原生 Three.js 可避免中间层抽象泄漏。  
   * **HUD / UI 层**：**React**（DOM 覆盖层），负责 Tooltip、档案详情抽屉、Loading 页面等。  
   * **状态桥接**：React ↔ Three.js 通过**轻量状态管理**（如 Zustand）通信——Three.js 写入选中/悬停状态，React 读取并渲染 UI；React 写入搜索/导航指令，Three.js 执行相机动画。  
 * **数据加载策略**：前端启动时**一次性加载**全量坐标与属性数据（静态 JSON 或等价格式），配合 **Loading 页面**等待加载完成后再初始化 3D 场景。
 
-### **1.1 前端渲染架构（混合 Points + Mesh）**
+### **1.1 前端渲染架构（Phase 8：双 `InstancedMesh` + focus Perlin 球）**
 
-采用**双层混合渲染**，宏观层高效渲染全部粒子，选中层按需生成高细节球体：
+**生产路径**已自 Phase 7 的**单 `THREE.Points` 宏观层**切换为**两份全量 `InstancedMesh`**（idle + active）+ **按需 focus Perlin 球**；`point.{vert,frag}.glsl` 仅保留供基准 / Vitest 等，**不**再挂载主场景。
 
-* **宏观层（始终存在）**：一套 **`THREE.Points`** \+ 自定义 **`ShaderMaterial`**。  
-  * 全部 ~60K 粒子在 **1 次 draw call** 内完成。每颗粒子通过 `BufferAttribute` 携带 position (x,y,z)、size (对数缩放后的 vote\_count)、color (genres\[0\] 映射色)、emissive (vote\_average 映射强度)。  
-  * **vertex shader**：根据 attribute 设置 `gl_PointSize`（考虑 camera distance 衰减）。  
-  * **fragment shader**：在 point 方形区域内绘制**圆形 + 径向辉光**（core/halo 指数曲线），`discard` 四角像素；emissive 强度决定 fragment RGB 峰值（允许 >1.0 HDR），为后处理 Bloom 提供亮度源。  
-* **选中层（按需生成）**：用户点击星球后，在该位置叠加一个 **`IcoSphereGeometry`**（**`detail = 4`**，约 2.5K 三角形；Phase 5.1.6 从 3 提升到 4 以匹配「高细分」观感），材质挂 **Perlin Noise ShaderMaterial**。  
-  * **面积比例分区着色（Phase 5.1.6 重写）**：将该电影的流派权重 \(w_k\)（§2.1.2 黄金比等比衰减）转为累积阈值序列 \([0, w_1, w_1+w_2, \ldots, 1]\)，**3D FBM 噪声**输出归一化到 \([0, 1]\)，按落入哪个阈值区间**选择对应 genre 颜色**；边界使用 `smoothstep(uThreshold)` 做柔和过渡。**不再采用**"所有 genre 颜色加权混合为单色 × 噪声明暗"的旧实现——此前实现球面上仅有一种混合色的亮度变化，违反"按面积比例分区"的设计意图。  
-  * **可调 uniform**：**`uScale`**（物体空间噪声缩放）、**`uOctaves`**（FBM 八度，上限 8 内 clamp）、**`uPersistence`**（八度振幅衰减）、**`uThreshold`**（流派边界 smoothstep 半宽）。实施时默认值约为 2.35 / 4 / 0.52 / 0.048。  
-  * 过渡效果：Points 层中对应粒子 alpha 渐出，球体 Mesh alpha 渐入——视觉上"光点凝聚成星球"。
+* **WebGL2 硬前置**：`WebGLRenderer` 创建后若 `!renderer.capabilities.isWebGL2` 则**抛错**并提示升级浏览器；宏观与 focus 使用 **`gl_InstanceID`** 与 per-instance 属性，**不**维护 WebGL1 或手动 `aInstanceId` 回退（与 Phase 7.2 浏览器红线一致）。  
+* **宏观双 mesh（各 ~60K instance，共享 `instanceMatrix` 与 hue / voteNorm / aSize）**（`frontend/src/three/galaxyMeshes.ts`）：  
+  * **idle**：`IcosahedronGeometry(1, 0)`；`ShaderMaterial` **`transparent: true`**、**`depthWrite: false`**、`depthTest: true`；`renderOrder = 0`。  
+  * **active**：`IcosahedronGeometry(1, 1)`；`alphaTest: 0.01`、`depthWrite: true`；`renderOrder = 1`。  
+  * **Z 条带与过渡**：与 [`星球状态机 spec.md`](星球状态机%20spec.md) 一致——`W = uZVisWindow × 0.2`，`inFocus = smoothstep(zLo−W, zLo, aZ) × (1 − smoothstep(zHi, zHi+W, aZ))`；**idle** 侧尺度 `sIdle = (1 − inFocus) × uSizeScale × uBgSizeMul × aSize`，**active** 侧 `sActive = inFocus × uSizeScale × uActiveSizeMul × aSize`；二者互补（初值 `uSizeScale=0.3`，`uActiveSizeMul=0.02`，`uBgSizeMul=0.002`，见《视觉参数总表》）。  
+  * 色彩：§4.3 **`genre_hue`（弧度）** + OKLab 均匀 **`uLMin` / `uLMax` / `uChroma`**（`galaxyIdle/Active` shader 与 P8.1 一致）。  
+* **Focus 态 Perlin 球（按需、单实例）**：`IcosahedronGeometry(1, 6)` + **CPU** 上按顶点 noise 分位数定 **4 个硬阈值**（`perlin.frag.glsl` 中 `step` 分色带）；`movie.id` 种子化 PRNG；面积比例由 `uAreaRatio` 等控制（P8.3 定稿）。当 `uFocusedInstanceId` 命中时，**idle + active** 上该 `gl_InstanceID` 的 scale 在 shader 中**置零**，仅由 Perlin 球呈现。  
+* **后处理顺序（建议）**：同帧先画 idle → active →（`UnrealBloomPass` 等）→ focus 时 Perlin 球 `visible=true`（`renderOrder` 以 `scene.ts` 实际挂载为准）。
 
-**粒子分层（Phase 5.1.6 · 方案 2）**：在**单 `THREE.Points` + shader 分支**（保持 1 次 draw call）基础上，按视距窗口将宏观粒子分为三个视觉层级：
-
-| 层 | 定义 | 视觉 | 交互 |
-| :---- | :---- | :---- | :---- |
-| **A（背景层）** | **`z ∉ [zCurrent, zCurrent + zVisWindow]`** | `gl_PointSize` 经 **`uBgSizeMul`** 缩放（**P7.3 定稿 `0.001`**，见 `galaxy.ts`）、`genres[0]` 单色、圆盘 + 低亮度 | **不可** hover / click |
-| **B（焦点层）** | **`z ∈ [zCurrent, zCurrent + zVisWindow]`** | 真实 `size` × 透视 × **`uSizeScale` × `uFocusSizeMul`**（**P7.3 定稿 `0.2`**）、`genres[0]` 色相、径向辉光、emissive 驱动 HDR | 可 hover / click |
-| **C（选中层）** | 用户点击 B 层中某颗星球后生成 | IcoSphere + Perlin 面积比例分区 | 选中态焦点，抽屉同步 |
-
-实现要点：  
-* 顶点 shader 新增 uniform **`uZCurrent`**、**`uZVisWindow`**，按 `step` 在 A / B 间二值混合 `gl_PointSize`（计划确认 A↔B **先硬切**，如后续需要再加宽边缘渐变）；输出 `vInFocus` 给片元做亮度差异。  
-* A / B 分层与 **§1.5 交互拾取** 中的 `movieInZFocusSlab` 判定**区间一致**（**闭区间**）。  
-* **每帧 tick** 从 Zustand **`useGalaxyInteractionStore`** 读取 `zCurrent` / `zVisWindow` 写入 uniform，避免与滚轮更新脱节。  
-* 点云 `ShaderMaterial.depthWrite = false`，减轻透明粒子与后处理叠画时的深度排序压力。
+**历史注记（Phase 5.1.6 · 已退役）**：旧版在**单 `THREE.Points`** 上用 `uBgSizeMul` / `uFocusSizeMul` 与 `gl_PointSize` 做 A/B 层；P8.4 起由双 mesh 的 `inFocus` 与双尺度取代。
 
 ### **1.2 后处理管线（Bloom）**
 
 ```
-Render Scene (Points + 可选 Mesh)
+Render Scene (galaxyIdle + galaxyActive + 可选 focus Perlin mesh)
     ↓
 UnrealBloomPass（简单路线）
     ↓
@@ -51,7 +39,7 @@ Output
 ```
 
 * **Bloom 方案**：Three.js 内置 **`UnrealBloomPass`**（`EffectComposer` 管线）。  
-* **选择性泛光策略**：采用**简单路线**——不对 Layers 做分离渲染。Points fragment shader 中直接将 vote\_average 映射为 HDR 亮度（高分 >1.0、低分 <threshold），`UnrealBloomPass` 的 `threshold` 自然只拾取高亮 fragment。  
+* **选择性泛光策略**：采用**简单路线**——不对 Layers 做分离渲染。Mesh 片元中 vote\_norm 等驱动亮度，高分 fragment 可高于 Bloom `threshold`；`UnrealBloomPass` 的 `threshold` 筛高亮。  
 * **初始参数（均为可调配置，将随视觉调试迭代）**：  
   * `strength`：**0.8 – 1.2**  
   * `radius`：**0.4 – 0.6**  
@@ -67,7 +55,7 @@ Output
 | :---- | :---- | :---- |
 | 帧率 | 60 fps（中端独显） / 30 fps（最低可接受） | 低于 30fps 时 3D 漫游体感明显卡顿 |
 | JS 堆内存 | ≤ 300 MB | 60K 条 JSON ≈ 30–50 MB；余量留给 Three.js 对象与海报纹理缓存 |
-| GPU 显存 | ≤ 500 MB | Points buffer 极小；主要开销来自 Bloom 多 pass render target 与动态海报纹理 |
+| GPU 显存 | ≤ 500 MB | 双 `InstancedMesh` + instance attribute；主要开销另含 Bloom 多 pass RT 与海报纹理 |
 | 首屏（白屏→可交互） | ≤ 5 秒 | 已有 Loading 页，用户预期在"加载一个世界" |
 
 ### **1.4 相机初始配置与首屏加载**
@@ -111,10 +99,12 @@ Output
 * **`zCurrent`** 限制在 **`[zLo, zHi] = sorted(meta.z_range)`** 内。  
 * **相机 XY** 限制在 **`meta.xy_range`** 加 **padding = 0.08 × 轴跨度**；`clampGalaxyCameraXY` 在拖拽回调与每帧 tick 均被调用，全相位一致。
 
-#### **1.4.5 近远裁面**
+#### **1.4.5 近远裁面（Phase 8 定稿）**
 
-* **near**：**0.1**  
-* **far**：**300**（Z 轴跨度 ~125 + 足够余量）；视距窗口实装后可按 `zVisWindow` 与后退距离进一步收窄（Phase 5.4.3 低优先）。
+* **near**：**0.05**  
+* **far**：**1e6**（大跨度 Z 与相机推拉余量；见 `scene.ts` `PerspectiveCamera` 构造）
+
+旧版文档曾记 **0.1 / 300**；以**源码**为准。
 
 #### **1.4.6 DPR 兼容性约束（Phase 5.1.4.7 · H-G）**
 
@@ -127,7 +117,7 @@ Output
 3. **CSS 尺寸交由 Three.js 维护**：`renderer.setSize(w, h, true)`（`updateStyle=true`）或等效手动 CSS 同步，避免 drawing buffer 与 canvas CSS 尺寸比例错位。  
 4. **DPR 变化兜底**：RAF `tick` 中比对 `renderer.getPixelRatio()` 与 `Math.min(window.devicePixelRatio, 2)`，不一致则重新调用 resize 流程（处理运行中跨显示器拖拽或 Windows 缩放变化）。  
 5. **pixelRatio 上限**：`Math.min(window.devicePixelRatio, 2)`，避免在 3x 高 DPI 下 Bloom 多 pass RT 爆显存。  
-6. `galaxy.material.uniforms.uPixelRatio.value` 同步使用**同一份** `pr`（以维持 `gl_PointSize` 的屏幕像素语义）。
+6. 星系材质（idle/active shader）的 **`uPixelRatio`** 与 `pr` 同步，保证屏幕空间尺度一致（若与 Points 测试路径并存，同规则）。
 
 **非目标 / 禁止**：任何将目测 `-15° / -7.5° / 0.26180 / 0.13090` 等旋转值写入 `GALAXY_CAMERA_EULER` 或相机常量的"症状掩盖"式修复。
 
@@ -137,19 +127,18 @@ Output
 * 前端必须**全量解析**宇宙数据（默认 **`galaxy_data.json.gz`**，见 §5.1）完毕后，才初始化 Three.js 场景并移除 Loading 覆盖层。  
 * 加载失败时提供**错误提示与重试**（Phase 7 自用验收路径）。
 
-### **1.5 交互拾取（Raycaster · Phase 5.1.7）**
+### **1.5 交互拾取（Phase 8.4：active `InstancedMesh` + 世界球）**
 
-`Raycaster` 继续对单 `THREE.Points` 执行 `intersectObject`，但拾取结果在**命中序列中按序过滤**，仅采纳 Z 落在焦点 slab 内的命中（A 背景层不可交互，与 §1.1 分层语义一致）。
+生产路径**不再**对 `THREE.Points` 主拾取；**仅**对 **`galaxyActive`** 使用 `Raycaster` 时，引擎给出的网格命中**不能**直接反映 `instanceMatrix` 的顶点缩放量，故实现采用 **`screenRadius.ts` 中的世界空间球/半径** 与 `pickClosestActiveMovieAlongRay`：**射线与每颗「active 尺度下」世界球求交**，取最近合法命中，并与 shader 的 `sActive` / `inFocus` **同构**。
 
 | 环节 | 规则 |
 | :---- | :---- |
-| **Slab 判定函数** | **`movieInZFocusSlab(z, zCurrent, zVisWindow) = zCurrent ≤ z ≤ zCurrent + zVisWindow`**（**闭区间**，与 `point.vert.glsl` 分支一致） |
-| **命中采纳** | 遍历 raycaster 返回的按射线距离排序的 `hits`，采纳**第一个** slab 内且索引合法的命中；其余（包括 A 层小点命中）**一律跳过** |
-| **`Points.threshold`（世界空间）** | 按当前 **`zVisWindow`** 估算焦点 slab 内期望点数 **`nSlab ≈ movieCount × zVisWindow / |z_span|`**，再由 `xy_range` 面积推导 **`avgXYSpacing = sqrt(xyArea / nSlab)`**，取 **`threshold = clamp(0.75 × avgXYSpacing, xyMin × 1e-4, xyMin × 0.08)`** |
-| **更新时机** | **`zVisWindow` 变化**时重算 threshold 并缓存；仅 `zCurrent` 滚动时 **O(1) 早退**，避免日志 / 计算刷屏 |
-| **双 Points 方案（备选）** | 当前保持**单 Points**；若 Bloom 或分层调参困难再拆为窗内 / 窗外两套 `THREE.Points`，拾取仅对窗内对象 `intersectObject`——计划 5.1.6 / 5.1.7 均列为后备路径 |
+| **主拾取对象** | `galaxyActive`（`InstancedMesh`）；**idle 不作为**可点目标 |
+| **Slab / inFocus 门控** | 与 §1.1 一致；采纳拾取时须 **`inFocus > 0.5`**（与《星球状态机 spec》及《视觉参数总表》一致），等同「只与条带内 active 可交互区」 |
+| **hover 环** | **HTML overlay**（`HoverRing`），**无 CSS transition**，与 Tooltip 同节奏显隐 |
+| **历史：Points** | 旧版对 `Points.threshold` 的估算与 A/B 层过滤见归档讨论；`interaction.ts` 中 `computePointScreenRadiusCss` 等**仅**供基准/遗留对照 |
 
-**假设与局限**：`nSlab` 假设发行年在 `z_range` 上**近似均匀**；在极密局部簇或非均匀年分布下拾取手感可能偏差，但 **Z 过滤** 保证窗外点**绝不会**成为交互目标。若后续 T6 仍有边缘案例，可按 z 分桶预计算或二分精修。
+**假设与局限**：active 在条带外趋近零尺度时极难点中，属预期；若 T6 类问题再现，可收紧容差或第二近邻（见《Phase 8 基线 P8.0 性能与 P8.4 准入》）。
 
 ## **2\. 核心坐标生成算法 (Coordinate Generation)**
 
@@ -273,7 +262,8 @@ Python 管线的最终产物为**一个 JSON 文件**，前端一次性加载后
 | `embedding_model` | string | 所用 sentence-transformers 模型 HF ID |
 | `umap_params` | object | `{ n_neighbors, min_dist, metric, random_state, densmap, ... }` 实际使用的 UMAP 超参；**`random_state` 固定为 `42`**（见 §2.1）；**`densmap`** 为 **bool**（`true`/`false`），与 Phase 2.4 `umap_projection.py` 及导出入口是否传入 **`--densmap`** 一致，表示是否启用 DensMAP |
 | `genre_weight_ratio` | float | 流派权重公比（默认 ≈0.618） |
-| `genre_palette` | object | **genre 名 → sRGB hex 色值** 映射表，例如 `{ "Drama": "#E74C3C", ... }`。源色彩空间为 **OKLCH**（规则见 Design Spec §1.1），管线中转为 sRGB hex 后写入此处。前端渲染与 Shader 共用此色板 |
+| `genre_palette` | object | **genre 名 → sRGB hex 色值** 映射表，例如 `{ "Drama": "#E74C3C", ... }`。源色彩空间为 **OKLCH**（规则见 Design Spec §1.1），管线中转为 sRGB hex 后写入此处。**HUD swatch** 与兼容用途 |
+| `has_genre_hue` | bool \| undefined | **Phase 8.1**：为 **`true`** 时，每条 `movies[i]` **应**含 **`genre_hue`**（弧度 \([0, 2\pi)\)），GPU 宏观/focus 路径优先消费 hue + 均匀 L/C；与 `genre_color` **双字段共存**直至下一大版本移除旧字段（见《搜索与 select 态联合 spec 草案》末「待办」） |
 | `feature_weights` | object | `{ text: 1.0, genre: 1.0, lang: 1.0 }` §2.1.3 多模态融合的权重乘子 |
 | `z_range` | `[float, float]` | 数据集中 Z 轴（小数年份）的 `[min, max]`，供前端相机初始化与 clamp |
 | `xy_range` | `{ x: [min, max], y: [min, max] }` | UMAP 坐标的实际值域，供前端归一化或相机边界设置 |
@@ -289,9 +279,10 @@ Python 管线的最终产物为**一个 JSON 文件**，前端一次性加载后
 | `x` | float | UMAP 输出坐标 | 语义平面 X |
 | `y` | float | UMAP 输出坐标 | 语义平面 Y |
 | `z` | float | `release_date` → 小数年份（含 Jitter） | 时间纵深 |
-| `size` | float | `log10(vote_count + 1)`，再线性映射到 `[size_min, size_max]` | 粒子半径。初始值 **`size_min = 2.0`**、**`size_max = 25.0`**（`gl_PointSize` 基准值，camera distance 衰减前）。数据经对数变换后的值域由管线从实际 `vote_count` 的 min/max 算出（**不写死**），再线性映射到此区间。**均为可调配置**，须随视觉效果迭代 |
-| `emissive` | float | `vote_average` 线性映射到 `[emissive_min, emissive_max]` | Bloom 源亮度。初始值 **`emissive_min = 0.1`**、**`emissive_max = 1.5`**。vote\_average 的输入值域由管线从实际数据的 min/max 算出（**不写死**）。以当前数据集为参考：P75 ≈ 6.8 时 emissive ≈ 1.0，恰好触及 Bloom threshold（§1.2 中 threshold 建议 **0.85**）。**均为可调配置** |
-| `genre_color` | `[float, float, float]` | `genres[0]` 查 `meta.genre_palette` → 转 RGB 归一化 `[0-1]` | 宏观层粒子颜色 |
+| `size` | float | `log10(vote_count + 1)`，再线性映射到 `[size_min, size_max]` | **InstancedMesh** 世界尺度链中的 **`aSize`** 来源（与 `uSizeScale`×`u*SizeMul` 相乘）；值域与管线映射同前（**可调**） |
+| `emissive` | float | `vote_average` 线性映射到 `[emissive_min, emissive_max]` | 资产中可保留；**P8.4 宏观 mesh** 片元主路径用 **`voteNorm = vote_average/10`** 与 OKLab **L** 混色（见 `galaxyMeshes.ts`）。Bloom 仍受 §1.2 阈值约束 |
+| `genre_hue` | float | Pipeline 按流派 index 分配等距色相，**弧度** \([0, 2\pi)\)（与导出 `build_genre_palette` 一致） | **P8.1+**：GPU `hue` attribute；缺省时前端 `hueFromGenreColor(genre_color)` |
+| `genre_color` | `[float, float, float]` | `genres[0]` 查 `meta.genre_palette` → 转 RGB 归一化 `[0-1]` | **兼容 / HUD**；无 `genre_hue` 时前端可用 `hueFromGenreColor` 回推 hue（见 Vitest） |
 
 #### **B. HUD / DOM 展示层**
 
@@ -397,16 +388,15 @@ chronicle_v3_3d_galaxy/
 │   ├── src/
 │   │   ├── components/             #   React 组件（HUD、Tooltip、Drawer、Loading）；各组件旁或子目录内放 *.stories.tsx
 │   │   ├── three/                  #   原生 Three.js 模块
-│   │   │   ├── scene.ts            #     场景初始化、renderer、postprocessing
-│   │   │   ├── galaxy.ts           #     Points 粒子系统 + BufferAttribute
-│   │   │   ├── planet.ts           #     选中态 IcoSphere + Perlin Noise Shader
-│   │   │   ├── camera.ts           #     自定义相机控制（truck/pedestal/z-scroll/fly-to）
-│   │   │   ├── interaction.ts      #     Raycaster + hover/click 事件
-│   │   │   └── shaders/            #     GLSL 文件
-│   │   │       ├── point.vert.glsl
-│   │   │       ├── point.frag.glsl
-│   │   │       ├── perlin.vert.glsl
-│   │   │       └── perlin.frag.glsl
+│   │   │   ├── scene.ts            #     场景、renderer、postprocessing、WebGL2 断言
+│   │   │   ├── galaxyMeshes.ts     #     P8.4 双 InstancedMesh（idle + active）
+│   │   │   ├── planet.ts           #     focus Perlin 球 `Icosahedron(1,6)` + 阈值
+│   │   │   ├── camera.ts           #     truck/pedestal、滚轮、`setFocusCameraPosition`
+│   │   │   ├── interaction.ts      #     active mesh 拾取、hover/click
+│   │   │   └── shaders/            #     GLSL
+│   │   │       ├── galaxyIdle.vert/frag.glsl, galaxyActive.vert/frag.glsl
+│   │   │       ├── perlin.vert/frag.glsl, oklab.glsl
+│   │   │       └── point.vert/frag.glsl   # 基准 / 测试，非主场景
 │   │   ├── store/                  #   Zustand store（React ↔ Three.js 桥）
 │   │   ├── hooks/                  #   React hooks
 │   │   ├── utils/                  #   数据解析、格式化等

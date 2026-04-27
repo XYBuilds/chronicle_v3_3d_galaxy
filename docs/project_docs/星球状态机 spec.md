@@ -6,8 +6,8 @@
 
 | 状态 | 含义（宏观 + 微观） | 本 Phase 是否实装 |
 |------|---------------------|-------------------|
-| **idle** | 时间轴当前条带外或弱可见；无 hover、无选中、无 focus | 现有 Points；P8.4 起 idle InstancedMesh |
-| **active** | 片元在 `uZCurrent … uZCurrent+uZVisWindow` 清晰条带内，且非 focus；可参与拾取（P8.4 起仅 active mesh） | 现有 `point.vert` inFocus；P8.4 起 active InstancedMesh |
+| **idle** | 时间轴当前条带外或弱可见；无 hover、无选中、无 focus | 生产：`galaxyIdle` `Icosahedron(1,0)`（`galaxyMeshes.ts`） |
+| **active** | 片元在 `uZCurrent … uZCurrent+uZVisWindow` 清晰条带内，且非 focus；可参与拾取 | 生产：仅对 **`galaxyActive`** 拾取（`interaction.ts`） |
 | **hover** | `hoveredMovieId` 命中；**不改变** mesh 尺度，仅 HUD（tooltip + HTML hover ring，**无 CSS transition**，即时显隐） | 已有 store 字段；P8.4 对齐 ring |
 | **focus** | 选中飞入完成：相机对准目标片、Perlin 球独占；双 galaxy mesh 上该 `instanceId` **scale 归零** | 现有 planet + 相机动画；P8.3/P8.4 调整 |
 | **select**（延后） | 多选 / 关联高亮等；本 Phase **仅占位**，见 P8.6 草案 | Phase 9 候选 |
@@ -47,7 +47,7 @@ inFocus = smoothstep(zLo - W, zLo, aZ) × (1 - smoothstep(zHi, zHi + W, aZ))
 |------|------|
 | **z 范围** | `inFocus > 0` 的条带及其 ±W 过渡区 |
 | **大小** | `sActive` 见上；mesh：`IcosahedronGeometry(1, 1)`，`alphaTest: 0.01`、`depthWrite: true` |
-| **色彩** | 与 idle 同源 hue/L/C；P8.5 在 active.frag 上 Lambert + 可选 rim |
+| **色彩** | 与 idle 同源 hue/L/C；当前 `galaxyActive.frag` 为 **vColor 直通**；Lambert + rim 为计划内增强（原 P8.5 范围，已改轨以源码为准） |
 | **可交互性** | 主拾取；可选 `inFocus > 0.5` 门控 + 第二近邻容差（由 P8.2 结论定） |
 | **进入/退出** | 连续，与 idle 互补叠加；**不得**在过渡区出现「双实心球」过曝（P8.5 硬验收） |
 
@@ -73,7 +73,7 @@ inFocus = smoothstep(zLo - W, zLo, aZ) × (1 - smoothstep(zHi, zHi + W, aZ))
 
 ### 3.5 select（延后）
 
-- 仅列需求占位：多选集合、bloom 分层、搜索联动；**不实装**到本 Phase。见 P8.6 `搜索与 select 态联合 spec 草案.md`（待 P8.6 起稿）。
+- 仅列需求占位：多选集合、bloom 分层、搜索联动；**不实装**到本 Phase。见 [`搜索与 select 态联合 spec 草案.md`](搜索与%20select%20态联合%20spec%20草案.md)（P8.6 已落盘，待 review）。
 
 ## 4. 渲染与能力约定
 
@@ -86,3 +86,4 @@ inFocus = smoothstep(zLo - W, zLo, aZ) × (1 - smoothstep(zHi, zHi + W, aZ))
 | 日期 | 说明 |
 |------|------|
 | 2026-04-27 | Phase 8.0 初稿：四态 + select 延后、W 公式、双 mesh 互补、WebGL2、focus 意图声明 |
+| 2026-04-27 | 文档同步：idle/active 生产描述对齐 P8.4；P8.6 草案落盘；active 色彩行对齐当前片元 |

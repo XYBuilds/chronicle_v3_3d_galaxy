@@ -8,7 +8,7 @@ import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
  * Perlin focus: world-space |Δz| from movie center to camera (camera at `movie.z - standoff`, axis-parallel +Z).
  * Absolute — tune here only (no `worldSpan` scaling).
  */
-export const FOCUS_PERLIN_CAMERA_STANDOFF = 0.35
+export const FOCUS_PERLIN_CAMERA_STANDOFF = 1
 
 /** Writes world-space camera position for Perlin focus. */
 export function setFocusCameraPosition(out: THREE.Vector3, movie: Pick<Movie, 'x' | 'y' | 'z'>): THREE.Vector3 {

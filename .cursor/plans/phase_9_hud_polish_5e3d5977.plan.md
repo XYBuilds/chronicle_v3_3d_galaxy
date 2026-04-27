@@ -4,7 +4,7 @@ overview: Phase 9 收口 HUD 与产品打磨：Drawer 视觉吸收示例、6 人
 todos:
   - id: p90-spec
     content: P9.0 视觉吸收对照清单（无代码）：列出从 drawer example 吸收项与保留项；?theme= 仅 dev 决策回写
-    status: pending
+    status: completed
   - id: p91-drawer-visual
     content: P9.1 Drawer 视觉吸收 + 6 人字段（保留 shadcn 骨架，吸收 typography；加 dop/producers/composer 字段块；空块隐藏；IMDb 外链按钮）
     status: pending

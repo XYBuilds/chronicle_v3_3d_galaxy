@@ -19,10 +19,10 @@ todos:
     status: completed
   - id: p85-aliasing-and-alignment
     content: P8.5 · idle aliasing 收尾 + idle/active 视觉对齐（P8.4 硬准入）：idle mesh shader 完成 alpha = radius² 衰减、低端点保护 floor、tone mapping 校准；与 Phase 7 Points 路径星空感 A/B（亮度差 < 10%、无闪烁）；过渡区两 mesh 同时半透明叠加无双影；不通过则降级方案——idle mesh 回退 Points + active mesh 不变，作为已知遗留
-    status: pending
+    status: cancelled
   - id: p86-select-search-spec
     content: P8.6 · select + 搜索联合 spec 草案 (5.3.3)：docs/project_docs/搜索与 select 态联合 spec 草案.md；列出单/多选 / 搜索框位置 / selective bloom 实装路径三个决策点；不实装代码，待 user review 后起 Phase 9
-    status: pending
+    status: cancelled
   - id: p8-doc-sync
     content: Phase 8 文档同步：每个 P 验收后回写 视觉参数总表 / Tech Spec / Design Spec / 特征工程总表；延续 Phase 7 风格，实施报告仅在用户显式要求后补
     status: completed

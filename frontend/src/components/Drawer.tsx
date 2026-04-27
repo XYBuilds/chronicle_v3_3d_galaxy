@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Clapperboard } from 'lucide-react'
+import { ExternalLink, Star, XIcon } from 'lucide-react'
 
 import { AspectRatio } from '@/components/ui/aspect-ratio'
 import { Badge } from '@/components/ui/badge'
-import { ScrollArea } from '@/components/ui/scroll-area'
+import { buttonVariants } from '@/components/ui/button-variants'
 import {
   Sheet,
+  SheetClose,
   SheetContent,
   SheetDescription,
   SheetHeader,
@@ -52,9 +53,10 @@ function DrawerPoster({ posterUrl, title }: { posterUrl: string; title: string }
       onError={() => setFailed(true)}
     />
   ) : (
-    <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-muted text-muted-foreground">
-      <Clapperboard className="size-10 opacity-60" aria-hidden />
-      <span className="text-xs">No poster</span>
+    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary/20 via-accent to-secondary text-muted-foreground">
+      <span className="rounded-md border border-border/60 bg-background/10 px-3 py-2 text-[0.65rem] font-bold uppercase tracking-wider backdrop-blur-sm">
+        Poster image
+      </span>
     </div>
   )
 }
@@ -65,8 +67,19 @@ export interface MovieDetailDrawerHudProps {
   movie: Movie | null
 }
 
+const externalHudLinkClass = cn(
+  buttonVariants({ variant: 'ghost', size: 'sm' }),
+  'h-6 rounded-full px-2 text-[0.68rem] text-muted-foreground hover:text-foreground',
+)
+
+const detailFieldLabelClass = 'text-xs font-semibold leading-snug text-foreground'
+
+/** Scrollable body: keep scroll affordance, hide native scrollbar (trackpad / wheel / touch still work). */
+const drawerBodyScrollClass =
+  'min-h-0 flex-1 overflow-y-auto overflow-x-hidden motion-safe:scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden'
+
 /**
- * Click HUD: shadcn Sheet with poster, scores, overview, scrollable cast.
+ * Click HUD: shadcn Sheet with poster, scores, overview, and cast list.
  * Use {@link MovieDetailDrawer} in the app; use this in Storybook with mock props.
  */
 export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailDrawerHudProps) {
@@ -79,8 +92,23 @@ export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailD
   const showLanguage = movie != null && Boolean(movie.original_language?.trim())
   const showDirector = movie != null && movie.director.length > 0
   const showWriters = movie != null && movie.writers.length > 0
+  const showDop = movie != null && movie.director_of_photography.length > 0
+  const showProducers = movie != null && movie.producers.length > 0
+  const showComposer = movie != null && movie.music_composer.length > 0
   const showMetaBlock =
-    movie != null && (showRuntime || showLanguage || showDirector || showWriters || budgetStr != null || revenueStr != null)
+    movie != null &&
+    (showRuntime ||
+      showLanguage ||
+      showDirector ||
+      showWriters ||
+      showDop ||
+      showProducers ||
+      showComposer ||
+      budgetStr != null ||
+      revenueStr != null)
+  const imdbIdTrimmed = movie?.imdb_id?.trim() ?? ''
+  const showImdbLink = imdbIdTrimmed.length > 0
+  const tmdbMovieUrl = movie != null ? `https://www.themoviedb.org/movie/${movie.id}` : ''
   const overviewText = movie?.overview?.trim() ?? ''
   const showOverview = overviewText.length > 0
   const showCast = movie != null && movie.cast.length > 0
@@ -89,55 +117,85 @@ export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailD
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        showCloseButton
+        showCloseButton={false}
         className={cn(
-          'w-full gap-0 border-l border-border bg-popover p-0 sm:max-w-lg',
+          /* Override `sheet` default `data-[side=right]:sm:max-w-sm` (plain `sm:max-w-*` loses merge/specificity). */
+          'min-h-0 max-h-[100dvh] gap-0 overflow-hidden border-l border-border bg-popover p-0 data-[side=right]:sm:max-w-lg',
           'transition-[transform,opacity] duration-[300ms] ease-[var(--sheet-ease)] data-ending-style:duration-[450ms]',
         )}
         style={{ ['--sheet-ease' as string]: SHEET_OPEN_EASE }}
       >
-        <SheetHeader className="gap-3 border-b border-border/80 bg-muted/25 p-4 text-left">
-          <SheetTitle className="pr-10 text-lg font-semibold leading-snug tracking-tight">{title}</SheetTitle>
+        <SheetClose
+          className={cn(
+            buttonVariants({ variant: 'ghost', size: 'icon-sm' }),
+            'absolute right-5 top-5 z-30 text-muted-foreground hover:text-foreground',
+          )}
+        >
+          <XIcon className="size-4" aria-hidden />
+          <span className="sr-only">Close</span>
+        </SheetClose>
+        <SheetHeader className="relative z-20 shrink-0 gap-0 border-b border-border/70 bg-popover px-6 pb-5 pt-7 text-left shadow-[0_6px_18px_-10px_color-mix(in_oklch,var(--foreground)_10%,transparent)] sm:px-7">
+          <SheetTitle className="pr-10 text-2xl font-bold leading-tight tracking-tight text-foreground">{title}</SheetTitle>
           <SheetDescription className="sr-only">
             {movie ? `${movie.title}, released ${movie.release_date}.` : 'No film selected.'}
           </SheetDescription>
           {movie && movie.original_title && movie.original_title !== movie.title ? (
-            <p className="text-xs text-muted-foreground">{movie.original_title}</p>
+            <p className="mt-2 text-sm font-medium leading-snug text-muted-foreground">{movie.original_title}</p>
           ) : null}
           {movie ? (
-            <div className="flex flex-wrap gap-2">
-              <Badge variant="secondary" className="font-mono tabular-nums transition-colors duration-150">
-                ★ {movie.vote_average.toFixed(1)}
-              </Badge>
-              <Badge variant="outline" className="transition-colors duration-150">
-                {formatVoteCount(movie.vote_count)} votes
-              </Badge>
-              <Badge variant="outline" className="transition-colors duration-150">
-                {formatReleaseDate(movie.release_date)}
-              </Badge>
+            <>
+              <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-medium text-muted-foreground">
+                <span className="inline-flex items-center gap-1 text-foreground">
+                  <Star className="size-3 fill-current" aria-hidden />
+                  <span className="tabular-nums">{movie.vote_average.toFixed(1)}</span>
+                </span>
+                <span>{formatVoteCount(movie.vote_count)} votes</span>
+                <span className="text-foreground">{formatReleaseDate(movie.release_date)}</span>
+              </div>
+
+              <div className="mt-4 flex flex-wrap items-center gap-2">
               {movie.genres.slice(0, 4).map((g) => (
-                <Badge key={g} variant="outline" className="transition-colors duration-150">
+                <Badge key={g} variant="secondary" className="h-5 shrink-0 rounded-full px-3 text-[0.68rem] transition-colors duration-150">
                   {g}
                 </Badge>
               ))}
-            </div>
+              <a
+                href={tmdbMovieUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={externalHudLinkClass}
+              >
+                TMDB
+                <ExternalLink className="size-3.5 opacity-80" aria-hidden />
+              </a>
+              {showImdbLink ? (
+                <a
+                  href={`https://www.imdb.com/title/${encodeURIComponent(imdbIdTrimmed)}/`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={externalHudLinkClass}
+                >
+                  IMDb
+                  <ExternalLink className="size-3.5 opacity-80" aria-hidden />
+                </a>
+              ) : null}
+              </div>
+            </>
           ) : null}
         </SheetHeader>
 
         {movie ? (
-          <div className="flex flex-1 flex-col gap-5 overflow-y-auto p-4 motion-safe:scroll-smooth">
+          <div className={cn('flex flex-col gap-7 px-6 py-5 sm:px-7', drawerBodyScrollClass)}>
             {/*
-              H3: width uses min/max against viewport so narrow sheets keep a readable poster;
-              height follows 2:3. Center on xs, align start from sm.
+              Header stays fixed; only this column scrolls; scrollbar visually hidden.
             */}
-            <div className="group/poster flex justify-center sm:justify-start">
+            <div className="group/poster">
               <AspectRatio
                 ratio={2 / 3}
                 className={cn(
-                  'overflow-hidden rounded-lg border border-border/80 bg-muted shadow-sm',
-                  'w-[min(100%,max(8.875rem,min(56vw,15rem)))] sm:w-[min(100%,15rem)]',
+                  'w-full overflow-hidden rounded-xl bg-muted shadow-sm',
                   'motion-safe:transition-[box-shadow,border-color,transform] motion-safe:duration-200',
-                  'motion-safe:hover:border-border motion-safe:hover:shadow-md',
+                  'motion-safe:hover:shadow-md motion-safe:hover:brightness-[1.02]',
                 )}
               >
                 <DrawerPoster key={`${movie.id}|${movie.poster_url}`} posterUrl={movie.poster_url} title={movie.title} />
@@ -145,74 +203,91 @@ export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailD
             </div>
 
             {movie.tagline ? (
-              <p className="border-l-2 border-primary/35 pl-3 text-sm italic leading-snug text-muted-foreground motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-left-2 motion-safe:duration-300">
+              <blockquote className="border-l-2 border-border pl-4 text-sm italic leading-relaxed text-muted-foreground motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-left-2 motion-safe:duration-300">
                 &ldquo;{movie.tagline}&rdquo;
-              </p>
+              </blockquote>
             ) : null}
 
             {showOverview ? (
-              <section className="space-y-2 rounded-lg border border-border/60 bg-card/40 p-3 shadow-sm">
-                <h3 className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">Overview</h3>
+              <section className="space-y-3">
+                <h3 className="text-[0.65rem] font-bold uppercase tracking-wider text-muted-foreground">Overview</h3>
                 <p className="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap">{overviewText}</p>
               </section>
             ) : null}
 
             {showMetaBlock ? (
-              <section className="rounded-lg border border-border/60 bg-muted/20 p-3 shadow-sm">
-                <h3 className="mb-2 text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">Details</h3>
-                <dl className="grid grid-cols-2 gap-x-3 gap-y-2.5 text-xs text-muted-foreground">
+              <section className="space-y-3">
+                <h3 className="text-[0.65rem] font-bold uppercase tracking-wider text-muted-foreground">Details</h3>
+                <div className="grid grid-cols-2 gap-x-8 gap-y-5 text-sm">
                   {showRuntime ? (
-                    <div>
-                      <dt className="font-medium text-foreground/80">Runtime</dt>
-                      <dd>{runtimeMin} min</dd>
+                    <div className="min-w-0">
+                      <div className={detailFieldLabelClass}>Runtime</div>
+                      <div className="text-muted-foreground">{runtimeMin} min</div>
                     </div>
                   ) : null}
                   {showLanguage ? (
-                    <div>
-                      <dt className="font-medium text-foreground/80">Language</dt>
-                      <dd className="uppercase">{movie.original_language}</dd>
+                    <div className="min-w-0">
+                      <div className={detailFieldLabelClass}>Language</div>
+                      <div className="text-muted-foreground uppercase">{movie.original_language}</div>
                     </div>
                   ) : null}
                   {showDirector ? (
-                    <div className="col-span-2">
-                      <dt className="font-medium text-foreground/80">Director</dt>
-                      <dd>{movie.director.join(', ')}</dd>
+                    <div className="min-w-0">
+                      <div className={detailFieldLabelClass}>Director</div>
+                      <div className="text-muted-foreground">{movie.director.join(', ')}</div>
                     </div>
                   ) : null}
                   {showWriters ? (
-                    <div className="col-span-2">
-                      <dt className="font-medium text-foreground/80">Writers</dt>
-                      <dd>{movie.writers.join(', ')}</dd>
+                    <div className="min-w-0">
+                      <div className={detailFieldLabelClass}>Writers</div>
+                      <div className="text-muted-foreground">{movie.writers.join(', ')}</div>
+                    </div>
+                  ) : null}
+                  {showDop ? (
+                    <div className="min-w-0">
+                      <div className={detailFieldLabelClass}>Director of photography</div>
+                      <div className="text-muted-foreground">{movie.director_of_photography.join(', ')}</div>
+                    </div>
+                  ) : null}
+                  {showProducers ? (
+                    <div className="min-w-0">
+                      <div className={detailFieldLabelClass}>Producers</div>
+                      <div className="text-muted-foreground">{movie.producers.join(', ')}</div>
+                    </div>
+                  ) : null}
+                  {showComposer ? (
+                    <div className="min-w-0">
+                      <div className={detailFieldLabelClass}>Composer</div>
+                      <div className="text-muted-foreground">{movie.music_composer.join(', ')}</div>
                     </div>
                   ) : null}
                   {budgetStr != null ? (
-                    <div>
-                      <dt className="font-medium text-foreground/80">Budget</dt>
-                      <dd>{budgetStr}</dd>
+                    <div className="min-w-0">
+                      <div className={detailFieldLabelClass}>Budget</div>
+                      <div className="text-muted-foreground">{budgetStr}</div>
                     </div>
                   ) : null}
                   {revenueStr != null ? (
-                    <div>
-                      <dt className="font-medium text-foreground/80">Revenue</dt>
-                      <dd>{revenueStr}</dd>
+                    <div className="min-w-0">
+                      <div className={detailFieldLabelClass}>Revenue</div>
+                      <div className="text-muted-foreground">{revenueStr}</div>
                     </div>
                   ) : null}
-                </dl>
+                </div>
               </section>
             ) : null}
 
             {showCast ? (
-              <section className="min-h-0 flex-1 space-y-2">
-                <h3 className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">Cast</h3>
-                <ScrollArea className="h-48 rounded-lg border border-border/60 bg-card/30 pr-2 shadow-sm motion-safe:transition-shadow motion-safe:duration-200 motion-safe:hover:shadow-md">
-                  <ol className="list-decimal space-y-1.5 py-2 pl-5 text-sm leading-snug">
-                    {movie.cast.map((name, i) => (
-                      <li key={`${name}-${i}`} className="marker:text-muted-foreground">
-                        {name}
-                      </li>
-                    ))}
-                  </ol>
-                </ScrollArea>
+              <section className="space-y-3">
+                <h3 className="text-[0.65rem] font-bold uppercase tracking-wider text-muted-foreground">Cast</h3>
+                <div className="grid grid-cols-1 gap-x-8 gap-y-2.5 sm:grid-cols-2">
+                  {movie.cast.map((name, i) => (
+                    <div key={`${name}-${i}`} className="flex min-w-0 items-baseline gap-2">
+                      <span className="w-6 shrink-0 text-right text-xs tabular-nums text-muted-foreground">{i + 1}.</span>
+                      <span className="min-w-0 flex-1 truncate text-xs leading-snug text-foreground">{name}</span>
+                    </div>
+                  ))}
+                </div>
               </section>
             ) : null}
           </div>
@@ -277,7 +352,7 @@ export function MovieDetailDrawer() {
   useEffect(() => {
     if (open && movie) {
       console.log(
-        `[MovieDetailDrawer] open id=${movie.id} title=${JSON.stringify(movie.title)} | cast=${movie.cast.length}`,
+        `[MovieDetailDrawer] open id=${movie.id} title=${JSON.stringify(movie.title)} | cast=${movie.cast.length} dop=${movie.director_of_photography.length} producers=${movie.producers.length} composer=${movie.music_composer.length} imdb=${movie.imdb_id ? 'yes' : 'no'}`,
       )
     }
   }, [open, movie])

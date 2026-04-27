@@ -7,7 +7,7 @@ todos:
     status: completed
   - id: p91-drawer-visual
     content: P9.1 Drawer 视觉吸收 + 6 人字段（保留 shadcn 骨架，吸收 typography；加 dop/producers/composer 字段块；空块隐藏；IMDb 外链按钮）
-    status: pending
+    status: completed
   - id: p92-genre-tag
     content: P9.2 Genre tag 染色：Badge variant=genre 三段式（background 18% / border 60% / fg 不变）；Drawer 全量 genres；Tooltip 同源
     status: pending

@@ -3,7 +3,10 @@ import * as THREE from 'three'
 import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
 import type { Movie } from '@/types/galaxy'
 
-import { computeActiveMeshScreenRadiusCss, movieZInFocusFactor } from './screenRadius'
+import {
+  computeActiveMeshScreenRadiusCss,
+  pickClosestActiveMovieAlongRay,
+} from './screenRadius'
 
 /**
  * Legacy Points path (P6.3.1) — kept for benchmarks / docs; production uses {@link attachGalaxyActiveMeshInteraction}.
@@ -30,13 +33,13 @@ const _worldProject = new THREE.Vector3()
 const _raycaster = new THREE.Raycaster()
 const _ndc = new THREE.Vector2()
 
-/** Project movie world (x,y,z) to viewport CSS pixels relative to the canvas element. */
-function movieToScreenCss(
-  movie: Pick<Movie, 'x' | 'y' | 'z'>,
+/** Project world position to viewport CSS pixels (client coordinates). */
+function worldToScreenCss(
+  world: THREE.Vector3,
   camera: THREE.PerspectiveCamera,
   domElement: HTMLElement,
 ): { x: number; y: number } {
-  _worldProject.set(movie.x, movie.y, movie.z)
+  _worldProject.copy(world)
   _worldProject.project(camera)
   const rect = domElement.getBoundingClientRect()
   const w = Math.max(1, rect.width)
@@ -68,11 +71,9 @@ function hoverEmitEqual(
   )
 }
 
-const IN_FOCUS_PICK_THRESHOLD = 0.5
-
 /**
- * P8.4 — Raycaster on **active** `InstancedMesh` only; accept hits with `movieZInFocusFactor > 0.5`.
- * Updates hover ring radius + tooltip horizontal offset (store).
+ * P8.4 — Hover / click use **ray–world-sphere** picks matching active shader `sActive` (InstancedMesh
+ * `Raycaster` ignores vertex scale). Hover: cursor on visible active sphere. Click: same + `inFocus > 0.5` slab gate.
  */
 export function attachGalaxyActiveMeshInteraction(options: {
   camera: THREE.PerspectiveCamera
@@ -103,20 +104,18 @@ export function attachGalaxyActiveMeshInteraction(options: {
     out.set(x, y)
   }
 
-  const pickIndex = (clientX: number, clientY: number): number | null => {
+  const pickAlongRay = (clientX: number, clientY: number, requireSlabInteraction: boolean) => {
     const st = useGalaxyInteractionStore.getState()
     ndcFromClient(clientX, clientY, _ndc)
     _raycaster.setFromCamera(_ndc, camera)
-    const hits = _raycaster.intersectObject(activeMesh, false)
-    for (const hit of hits) {
-      const i = hit.instanceId
-      if (i === undefined || i < 0 || i >= movies.length) continue
-      const m = movies[i]
-      const inf = movieZInFocusFactor(m.z, st.zCurrent, st.zVisWindow)
-      if (inf <= IN_FOCUS_PICK_THRESHOLD) continue
-      return i
-    }
-    return null
+    return pickClosestActiveMovieAlongRay({
+      ray: _raycaster.ray,
+      movies,
+      activeMaterial,
+      zCurrent: st.zCurrent,
+      zVisWindow: st.zVisWindow,
+      requireSlabInteraction,
+    })
   }
 
   const emitHover = (
@@ -144,14 +143,14 @@ export function attachGalaxyActiveMeshInteraction(options: {
   }
 
   const setHoverFromClient = (clientX: number, clientY: number) => {
-    const idx = pickIndex(clientX, clientY)
     const st = useGalaxyInteractionStore.getState()
-    if (idx === null) {
+    const picked = pickAlongRay(clientX, clientY, false)
+    if (picked === null) {
       emitHover(null, null, null, null)
       return
     }
-    const m = movies[idx]
-    const anchor = movieToScreenCss(m, camera, domElement)
+    const m = movies[picked.index]
+    const anchor = worldToScreenCss(picked.hitPoint, camera, domElement)
     const rCss = computeActiveMeshScreenRadiusCss({
       movie: m,
       camera,
@@ -179,8 +178,8 @@ export function attachGalaxyActiveMeshInteraction(options: {
     window.removeEventListener('pointercancel', onWindowPointerCancel, true)
     primaryPressActive = false
     if (dragExceededDuringPress) return
-    const idx = pickIndex(e.clientX, e.clientY)
-    const id = idx === null ? null : movies[idx].id
+    const picked = pickAlongRay(e.clientX, e.clientY, true)
+    const id = picked === null ? null : movies[picked.index].id
     useGalaxyInteractionStore.setState({ selectedMovieId: id })
   }
 

@@ -25,7 +25,7 @@ todos:
     status: pending
   - id: p8-doc-sync
     content: Phase 8 文档同步：每个 P 验收后回写 视觉参数总表 / Tech Spec / Design Spec / 特征工程总表；延续 Phase 7 风格，实施报告仅在用户显式要求后补
-    status: pending
+    status: completed
 isProject: false
 ---
 

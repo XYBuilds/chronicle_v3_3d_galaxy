@@ -6,8 +6,8 @@ todos:
     content: P11.0 状态机 spec 升级（无代码）：focus 视觉降级 / uFocusDimMode 双开关 / 遵挡剔除 / Perlin 阶梯地形 spec；Phase 8 基线加 P11.0 入口节
     status: completed
   - id: p111-occlusion-cull
-    content: P11.1 焦点近相机遵挡剔除：uFocusOcclusionRadius / uCameraWorldPos uniform；idle/active.vert 判 occluded 后 sIdle/sActive=0 走现有 NDC 外出口；leva 挂
-    status: pending
+    content: P11.1（定稿）非目标 active 透明度 + 与相机 easeOutCubic 同步；uFocusCameraBlend / uFocusTargetInstanceId / uFocusNonTargetActiveAlpha；原「近相机遮挡剔除」未实装，见 §P11.1 与实施报告
+    status: completed
   - id: p112-non-focus-dim
     content: P11.2 非焦点降 chroma/L：uFocusDimChroma / uFocusDimL / uFocusDimMode uniform；vert 色彩公式插入 dimMix；焦点星 isFocused 不受影响；mode=1 接口预留
     status: pending
@@ -54,7 +54,7 @@ isProject: false
 ```mermaid
 flowchart TD
     P110["P11.0 状态机 spec 升级（无代码）+ 入口 fps"]
-    P111["P11.1 焦点近相机遮挡剔除"]
+    P111["P11.1 非目标 active alpha + 相机同步"]
     P112["P11.2 非焦点降 chroma/L（双开关）"]
     P113["P11.3 Perlin 阶梯地形（vert）"]
     P114["P11.4 Perlin 法线重构（frag）+ vote_average→L"]
@@ -74,7 +74,7 @@ flowchart TD
 
 依赖说明：
 - P11.0 一次性把 spec 与双开关 uniform 命名定下，避免 P11.2 与未来 selection 路径互相踩
-- P11.1 与 P11.2 都改 idle/active.vert/.frag，建议同 commit 系列内连续完成
+- P11.1 仅改 **active** vert/frag + `scene.ts`；P11.2 若改 idle/active.vert，建议与 P11.1 同系列连续审阅
 - P11.3 → P11.5 是 Perlin 链，必须严格顺序（顶点位移 → 重构法线 → 关闭透明）
 
 ## P11.0 状态机 spec 升级（无代码）+ 入口 fps
@@ -86,34 +86,19 @@ flowchart TD
 - Perlin 球新增「阶梯地形」一节：`uStepHeight` 上限约束（≤ `1/(1+hMax)`）+ vert 计算流程
 - 在 [`Phase 8 基线`](docs/benchmarks/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md) 末尾新增 `## P11.0 入口` 节，重跑 P8.0.1 三片段（**重点录 focus 片段**作为 P11 主战场）
 
-## P11.1 焦点近相机遮挡剔除
+## P11.1（定稿）非目标 active 透明度 · 与相机飞入/飞出同步
 
-**目标**：focus 态相机距 `FOCUS_PERLIN_CAMERA_STANDOFF=1`（见 [camera.ts](frontend/src/three/camera.ts) line 11），任何 active/idle 实例若距相机过近会与 Perlin 球穿模/遮挡。直接把这些实例 alpha → 0 + `gl_Position` 推 NDC 外（复用现有 `< 1e-6` 出口），既消除遮挡又规避 bloom 甜甜圈光环。
+> **与计划初稿差异**：初稿为「近相机遮挡剔除 + NDC 外推」；**产品定稿**改为仅 **`galaxyActive`**：非目标实例片元 **alpha** 压至 **`uFocusNonTargetActiveAlpha`（默认 0.1）**，过渡曲线与 **`scene.ts`** 中 focus 相机 **`easeOutCubic`** 同一标量；飞入中**目标** active 保持 **alpha = 1**。**idle 不参与**。原遮挡剔除（`uFocusOcclusionRadius` / `uCameraWorldPos`）**未实装**，占位见 [`星球状态机 spec.md`](../docs/project_docs/星球状态机%20spec.md) §3.4.4。  
+> **实施报告**：[`docs/reports/Phase 11.1 P11.1 focus 态非目标 active 透明度与相机同步 实施报告.md`](../docs/reports/Phase%2011.1%20P11.1%20focus%20态非目标%20active%20透明度与相机同步%20实施报告.md)
 
-**实施**：
-- 共享 uniform 新增（在 [galaxyMeshes.ts](frontend/src/three/galaxyMeshes.ts) `makeSharedUniforms`）：
-  - `uFocusOcclusionRadius: float`（默认 `2.5`，含义为 world units，挂 leva）
-  - `uCameraWorldPos: vec3`（每帧 RAF 内由 [scene.ts](frontend/src/three/scene.ts) 写入 `camera.position`）
-- idle.vert / active.vert 在 `isFocused` 分支后追加：
-
-```glsl
-// instance world position from instanceMatrix translation column
-vec3 instWorldPos = vec3(instanceMatrix[3][0], instanceMatrix[3][1], instanceMatrix[3][2]);
-bool occluded = (uFocusedInstanceId >= 0)
-  && !isFocused
-  && distance(instWorldPos, uCameraWorldPos) < uFocusOcclusionRadius;
-if (occluded) {
-  sIdle = 0.0;   // active.vert 同名 sActive
-}
-// 后续保留现有 `if (sIdle < 1e-6) { gl_Position = vec4(2,2,2,1); return; }` 出口
-```
-
-- 注意：`instanceMatrix` 在 idle/active 各 InstancedMesh 内是 world 矩阵（非 modelMatrix 嵌套），现有 vert 已用 `instanceMatrix[3][2]` 取 `aZ`，参考即可
+**实施摘要**：
+- 共享 uniform（[galaxyMeshes.ts](frontend/src/three/galaxyMeshes.ts)）：`uFocusCameraBlend`、`uFocusTargetInstanceId`、`uFocusNonTargetActiveAlpha`。
+- [scene.ts](frontend/src/three/scene.ts) `applySelectionFrame`：`selecting` / `selected` / `deselecting` / `idle` 写入 blend 与 target id，与相机 lerp 同步。
+- [galaxyActive.vert.glsl](frontend/src/three/shaders/galaxyActive.vert.glsl) / [frag](frontend/src/three/shaders/galaxyActive.frag.glsl)：`vFocusAlphaMult` → 片元 alpha；active 材质 **`transparent: true`**、`depthWrite: false`。
+- 调试：`window.__galaxyColor.focusNonTargetActiveAlpha`。
 
 **验收**：
-- focus 一颗高 vote_count 电影后，相机周围 worldRadius < `uFocusOcclusionRadius` 范围内的 active/idle 实例**完全不可见**（不闪、不光环）
-- 退出 focus 后所有被剔除实例正常恢复
-- leva 调 `uFocusOcclusionRadius` 实时生效；过大时 Perlin 球四周可见空洞，过小时仍有遮挡
+- focus 飞入过程中目标 active 不透明，其余 active 随相机缓动变淡至约 0.1；`selected` 保持稳定；退出 focus 对称恢复。
 
 ## P11.2 非焦点降 chroma/L（双开关 uniform 接口）
 
@@ -341,7 +326,7 @@ void main() {
 
 ## 总验收清单（按用户笔记原始 4 条对照）
 
-- ① 临近遮挡：✅ P11.1
+- ① 临近遮挡 / 非目标压暗：**非目标 active alpha + 相机同步** ✅ P11.1；**近相机几何剔除** ⏸ 未实装（§3.4.4 占位）
 - ② focus 全场降 chroma/L、焦点除外：✅ P11.2
 - ③ focus 禁用 active 拾取（保留 Perlin 拾取）：✅ P11.6（实质是"分流 + 优先级"）
 - ④ Perlin 阶梯海拔（smoothstep 累加 + 法线位移 + dFdx/dFdy 重构）：✅ P11.3 + P11.4

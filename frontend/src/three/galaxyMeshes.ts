@@ -68,6 +68,12 @@ function makeSharedUniforms(pixelRatio: number): { [uniform: string]: THREE.IUni
     uDistanceFalloffMode: { value: 1 },
     uChroma: { value: 0.15 },
     uFocusedInstanceId: { value: -1 },
+    /** P11.1 — focus fly-in/out: same eased progress as camera lerp (scene.ts). */
+    uFocusCameraBlend: { value: 0 },
+    /** P11.1 — instance id of the movie being focused (-1 = no focus transition). */
+    uFocusTargetInstanceId: { value: -1 },
+    /** P11.1 — alpha for non-target active instances when blend=1 (default 0.1). */
+    uFocusNonTargetActiveAlpha: { value: 0.1 },
   }
 }
 
@@ -134,8 +140,9 @@ export function createGalaxyDualMeshes(movies: Movie[], pixelRatio: number): Gal
     uniforms: sharedUniforms,
     vertexShader: galaxyActiveVertexShader,
     fragmentShader: galaxyActiveFragmentShader,
-    transparent: false,
-    depthWrite: true,
+    /** P11.1 — non-target actives use alpha; depthWrite off avoids self-occlusion on overlap. */
+    transparent: true,
+    depthWrite: false,
     depthTest: true,
     alphaTest: 0.01,
     blending: THREE.NormalBlending,

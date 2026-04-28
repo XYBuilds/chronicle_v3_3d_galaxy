@@ -87,9 +87,19 @@ inFocus = smoothstep(zLo - W, zLo, aZ) × (1 - smoothstep(zHi, zHi + W, aZ))
 - **`uFocusDimMode = 0`**（本 Phase 默认）：凡处于 focus 会话且实例非焦点，即适用 §3.4.1 视觉降级。
 - **`uFocusDimMode = 1`**（接口预留）：仅在 **`selectionMask == 0`**（或非选中）时对非焦点实例暗化；selected 高亮路径与 `selectionMask` 数据通道留给后续 Phase（搜索 / 多选）。**Phase 11 代码侧仅保证 uniform 存在；未接入 `selectionMask` 前，行为与 mode=0 等价（条件中占位为假）。**
 
-#### 3.4.3 焦点近相机遮挡剔除（Phase 11.1）
+#### 3.4.3 focus 飞入/保持/飞出：非目标 **active** 透明度与相机同步（Phase 11.1 · **已实装**）
 
-当 **`uFocusedInstanceId >= 0`** 时启用：相机在 focus 态贴近 Perlin 球（`FOCUS_PERLIN_CAMERA_STANDOFF` 等量纲），若某 idle/active 实例的 **world 位置**与 **相机 world 位置**距离小于 **`uFocusOcclusionRadius`**（默认约 **2.5** world units，定稿见《视觉参数总表》），且该实例**不是**焦点实例，则该片元视为遮挡层：缩放因子置零并走既有「NDC 外」出口，避免与 Perlin 穿模及 bloom 伪影。**无 focus**（`uFocusedInstanceId === -1`）时不应用此剔除。
+**范围**：仅 **`galaxyActive`** 片元 alpha；**idle** 不参与本条。**原计划**「近相机距离剔除 + NDC 外推」（`uFocusOcclusionRadius` / `uCameraWorldPos`）**未**按原计划实装；若仍需防 Perlin 与近邻 active 穿模，可另开任务叠加。
+
+- **运行时 uniform**（与《视觉参数总表》§2、`scene.ts` 一致）：
+  - **`uFocusCameraBlend ∈ [0,1]`**：与选中相机动画**同一标量**——`selecting` 时等于 `easeOutCubic(t)`（与 `camera.position.lerpVectors(fromCam, toCam, ·)` 第三个参数一致）；`selected` 恒为 **1**；`deselecting` 为 **`1 - easeOutCubic(t)`**；`idle` 为 **0**。
+  - **`uFocusTargetInstanceId`**：`selecting` / `selected` / `deselecting` 为当前操作对应的 **`pendingSelectInstanceIndex`**；`idle` 为 **-1**。用于在 **`uFocusedInstanceId === -1`** 的飞入阶段仍能识别「目标」实例，使目标 active **alpha 恒为 1**（飞入中仍不透明）。
+  - **`uFocusNonTargetActiveAlpha`**：定稿默认 **0.1**；非目标 active 片元 `alpha = mix(1.0, uFocusNonTargetActiveAlpha, uFocusCameraBlend)`（在 vert 打包为 `vFocusAlphaMult` 传入片元）。
+- **焦点实例在 `selected` 后**仍在 vert 上 `sActive = 0`（双 mesh 隐藏），Perlin 为主视觉；本条主要压低**其余** slab 内 active，突出 focus。
+
+#### 3.4.4 焦点近相机遮挡剔除（原计划 P11.1 · **未实装**）
+
+**规格占位**（与 Phase 11 计划稿对齐，供未来如需启用时对照）：当 `uFocusedInstanceId >= 0` 且实例非焦点时，若实例 world 位置与相机距离 `< uFocusOcclusionRadius`（计划默认约 2.5 world），则 `sIdle/sActive → 0` 并走 NDC 外出口。**当前代码路径无此逻辑。**
 
 ### 3.5 Perlin 球 · 阶梯地形（Phase 11.3 起）
 
@@ -116,3 +126,4 @@ Perlin focus 球在片元侧保留 **四阈值分区** 的语义；顶点上将�
 | 2026-04-27 | Phase 8.0 初稿：四态 + select 延后、W 公式、双 mesh 互补、WebGL2、focus 意图声明 |
 | 2026-04-27 | 文档同步：idle/active 对齐 P8.4；active 片元说明；移除独立搜索/select 草案引用，改由未来统一规划 |
 | 2026-04-28 | Phase 11.0：§3.4 focus 视觉降级 / `uFocusDimMode` / 近相机遮挡剔除；§3.5 Perlin 阶梯地形与包围球约束；原 §3.5 select 顺延为 §3.6 |
+| 2026-04-28 | Phase 11.1：§3.4.3 改为「非目标 active alpha + 相机同步」实装说明；§3.4.4 为原遮挡剔除占位（未实装） |

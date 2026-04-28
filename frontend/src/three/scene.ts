@@ -48,6 +48,8 @@ interface GalaxyColorDebug {
   /** P10.2 — `0` off (P8.4 idle alpha), `1` on (color × falloff + high idle alpha vs bloom halo). */
   distanceFalloffMode: number
   chroma: number
+  /** P11.1 — alpha of non-target active stars when focus blend = 1 (default 0.1). */
+  focusNonTargetActiveAlpha: number
   log: () => void
 }
 
@@ -163,9 +165,14 @@ export function mountGalaxyScene(
   const uZ = galUniforms.uZCurrent as THREE.Uniform<number>
   const uZw = galUniforms.uZVisWindow as THREE.Uniform<number>
   const uFocused = galUniforms.uFocusedInstanceId as THREE.Uniform<number>
+  const uFocusCameraBlend = galUniforms.uFocusCameraBlend as THREE.Uniform<number>
+  const uFocusTargetInstanceId = galUniforms.uFocusTargetInstanceId as THREE.Uniform<number>
+  const uFocusNonTargetActiveAlpha = galUniforms.uFocusNonTargetActiveAlpha as THREE.Uniform<number>
   uZ.value = zCurrent
   uZw.value = zVisWindow
   uFocused.value = -1
+  uFocusCameraBlend.value = 0
+  uFocusTargetInstanceId.value = -1
   scene.add(galaxy.idle)
   scene.add(galaxy.active)
 
@@ -187,6 +194,8 @@ export function mountGalaxyScene(
   const applySelectionFrame = (nowMs: number) => {
     if (selectionPhase === 'idle') {
       uFocused.value = -1
+      uFocusTargetInstanceId.value = -1
+      uFocusCameraBlend.value = 0
       planet.mesh.visible = false
       planet.material.uniforms.uAlpha.value = 0
       inputLocked = false
@@ -197,11 +206,15 @@ export function mountGalaxyScene(
       inputLocked = true
       uFocused.value = -1
       const t = Math.min(1, (nowMs - animStartMs) / SELECT_MS)
-      camera.position.lerpVectors(fromCam, toCam, easeOutCubic(t))
+      const camEased = easeOutCubic(t)
+      camera.position.lerpVectors(fromCam, toCam, camEased)
       camera.rotation.copy(GALAXY_CAMERA_EULER)
+      uFocusTargetInstanceId.value = pendingSelectInstanceIndex
+      uFocusCameraBlend.value = camEased
       if (t >= 1) {
         selectionPhase = 'selected'
         uFocused.value = pendingSelectInstanceIndex
+        uFocusCameraBlend.value = 1
         planet.mesh.visible = true
         planet.material.uniforms.uAlpha.value = 1
         camera.position.copy(toCam)
@@ -214,10 +227,15 @@ export function mountGalaxyScene(
       inputLocked = true
       uFocused.value = -1
       const t = Math.min(1, (nowMs - animStartMs) / DESELECT_MS)
-      camera.position.lerpVectors(fromCam, toCam, easeOutCubic(t))
+      const camEased = easeOutCubic(t)
+      camera.position.lerpVectors(fromCam, toCam, camEased)
       camera.rotation.copy(GALAXY_CAMERA_EULER)
+      uFocusTargetInstanceId.value = pendingSelectInstanceIndex
+      uFocusCameraBlend.value = 1 - camEased
       if (t >= 1) {
         selectionPhase = 'idle'
+        uFocusTargetInstanceId.value = -1
+        uFocusCameraBlend.value = 0
         planet.mesh.visible = false
         planet.material.uniforms.uAlpha.value = 0
         console.log('[Selection] phase=idle | camera restored | dual mesh full')
@@ -228,6 +246,8 @@ export function mountGalaxyScene(
     // selected — user may truck/pedestal; focused instance stays hidden on dual meshes
     inputLocked = false
     uFocused.value = pendingSelectInstanceIndex
+    uFocusTargetInstanceId.value = pendingSelectInstanceIndex
+    uFocusCameraBlend.value = 1
     planet.mesh.visible = true
     planet.material.uniforms.uAlpha.value = 1
   }
@@ -454,9 +474,15 @@ export function mountGalaxyScene(
     set chroma(value: number) {
       uChroma.value = value
     },
+    get focusNonTargetActiveAlpha() {
+      return uFocusNonTargetActiveAlpha.value
+    },
+    set focusNonTargetActiveAlpha(value: number) {
+      uFocusNonTargetActiveAlpha.value = THREE.MathUtils.clamp(value, 0.02, 1)
+    },
     log() {
       console.log(
-        `[Galaxy] OKLCH+P10.1 uLMin=${uLMin.value} uLMax=${uLMax.value} uHighRatingT=${uHighRatingT.value} uHighTierTRangeScale=${uHighTierTRangeScale.value} uLightnessRatingExponent=${uLightnessRatingExponent.value} uChroma=${uChroma.value} | P10.2 uDistanceFalloffK=${uDistanceFalloffK.value} uDistanceFalloffMode=${uDistanceFalloffMode.value}`,
+        `[Galaxy] OKLCH+P10.1 uLMin=${uLMin.value} uLMax=${uLMax.value} uHighRatingT=${uHighRatingT.value} uHighTierTRangeScale=${uHighTierTRangeScale.value} uLightnessRatingExponent=${uLightnessRatingExponent.value} uChroma=${uChroma.value} | P10.2 uDistanceFalloffK=${uDistanceFalloffK.value} uDistanceFalloffMode=${uDistanceFalloffMode.value} | P11.1 uFocusNonTargetActiveAlpha=${uFocusNonTargetActiveAlpha.value}`,
       )
     },
   }

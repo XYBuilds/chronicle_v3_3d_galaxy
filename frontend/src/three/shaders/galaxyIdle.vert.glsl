@@ -10,6 +10,7 @@ uniform float uLMax;
 uniform float uHighRatingT;
 uniform float uHighTierTRangeScale;
 uniform float uLightnessRatingExponent;
+uniform float uDistanceFalloffK;
 uniform float uChroma;
 uniform int uFocusedInstanceId;
 
@@ -19,6 +20,7 @@ attribute float aSize;
 
 varying vec3 vColor;
 varying float vInFocus;
+varying float vDistFalloff;
 
 void main() {
   float aZ = instanceMatrix[3][2];
@@ -37,11 +39,14 @@ void main() {
   if (sIdle < 1e-6) {
     gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
     vInFocus = inFocus;
+    vDistFalloff = 1.0;
     return;
   }
 
   vec3 scaled = position * sIdle;
   vec4 mvPosition = modelViewMatrix * instanceMatrix * vec4(scaled, 1.0);
+  float d2 = dot(mvPosition.xyz, mvPosition.xyz);
+  vDistFalloff = 1.0 / (1.0 + uDistanceFalloffK * d2);
   gl_Position = projectionMatrix * mvPosition;
 
   float t = clamp(voteNorm, 0.0, 1.0);

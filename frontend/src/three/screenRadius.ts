@@ -16,6 +16,17 @@ export function movieZInFocusFactor(aZ: number, zCurrent: number, zVisWindow: nu
 }
 
 const _mv = new THREE.Vector3()
+/** Ray `origin + t * direction` vs sphere `(cx,cy,cz), R` — smallest positive `t`, or null (P11.6 focus Perlin pick). */
+export function rayPositiveSphereFirstT(
+  ray: THREE.Ray,
+  cx: number,
+  cy: number,
+  cz: number,
+  R: number,
+): number | null {
+  return rayFirstPositiveSphereT(ray, cx, cy, cz, R)
+}
+
 /** Ray `origin + t * direction` vs sphere `(cx,cy,cz), R` — smallest positive `t`, or null. */
 function rayFirstPositiveSphereT(
   ray: THREE.Ray,
@@ -147,6 +158,28 @@ export function computeActiveMeshScreenRadiusCss(options: {
   if (_mv.z >= 0) return 0
   const distCam = Math.max(0.001, -_mv.z)
 
+  const rect = domElement.getBoundingClientRect()
+  const h = Math.max(1, rect.height)
+  const vFov = THREE.MathUtils.degToRad(camera.fov)
+  const worldPerPx = (2 * Math.tan(vFov / 2) * distCam) / h
+  return rWorld / Math.max(1e-6, worldPerPx)
+}
+
+/** CSS px radius for an arbitrary world sphere (P11.6 focus Perlin `lastRadius` tooltip ring). */
+export function computeWorldSphereScreenRadiusCss(options: {
+  cx: number
+  cy: number
+  cz: number
+  rWorld: number
+  camera: THREE.PerspectiveCamera
+  domElement: HTMLElement
+}): number {
+  const { cx, cy, cz, rWorld, camera, domElement } = options
+  if (rWorld <= 1e-6) return 0
+  _mv.set(cx, cy, cz)
+  _mv.applyMatrix4(camera.matrixWorldInverse)
+  if (_mv.z >= 0) return 0
+  const distCam = Math.max(0.001, -_mv.z)
   const rect = domElement.getBoundingClientRect()
   const h = Math.max(1, rect.height)
   const vFov = THREE.MathUtils.degToRad(camera.fov)

@@ -3,9 +3,12 @@ import * as THREE from 'three'
 import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
 import type { Movie } from '@/types/galaxy'
 
+import type { SelectionPlanetHandle } from './planet'
 import {
   computeActiveMeshScreenRadiusCss,
+  computeWorldSphereScreenRadiusCss,
   pickClosestActiveMovieAlongRay,
+  rayPositiveSphereFirstT,
 } from './screenRadius'
 
 /**
@@ -78,8 +81,10 @@ export function attachGalaxyActiveMeshInteraction(options: {
   activeMesh: THREE.InstancedMesh
   movies: Movie[]
   activeMaterial: THREE.ShaderMaterial
+  /** P11.6 — focus 态优先用 `lastRadius` 包围球 vs active 射线球取最近命中；GPU 位移顶点不可靠故不用 mesh raycast。 */
+  selectionPlanet?: SelectionPlanetHandle
 }): () => void {
-  const { camera, domElement, activeMesh, movies, activeMaterial } = options
+  const { camera, domElement, activeMesh, movies, activeMaterial, selectionPlanet } = options
   const sizeAttr = activeMesh.geometry.getAttribute('aSize') as THREE.InstancedBufferAttribute | undefined
   console.assert(!!sizeAttr, '[Interaction] active mesh must have aSize InstancedBufferAttribute')
   console.assert(
@@ -101,12 +106,47 @@ export function attachGalaxyActiveMeshInteraction(options: {
     out.set(x, y)
   }
 
-  const pickAlongRay = (clientX: number, clientY: number, requireSlabInteraction: boolean) => {
-    const st = useGalaxyInteractionStore.getState()
+  const rayFromClient = (clientX: number, clientY: number) => {
     ndcFromClient(clientX, clientY, _ndc)
     _raycaster.setFromCamera(_ndc, camera)
+    return _raycaster.ray
+  }
+
+  /**
+   * P11.6 — `selectedMovieId != null` 且 Perlin 包围球沿射线近于 active 命中时，视为焦点星交互（tooltip / 点击保持 focus）。
+   */
+  const focusPlanetBeatsActiveAlongRay = (
+    clientX: number,
+    clientY: number,
+    requireSlabInteraction: boolean,
+  ): boolean => {
+    if (!selectionPlanet?.mesh.visible) return false
+    const st = useGalaxyInteractionStore.getState()
+    const selId = st.selectedMovieId
+    if (selId === null) return false
+    const mf = movies.find((m) => m.id === selId)
+    if (!mf) return false
+    const ray = rayFromClient(clientX, clientY)
+    const R = selectionPlanet.lastRadius
+    const tFocus = rayPositiveSphereFirstT(ray, mf.x, mf.y, mf.z, R)
+    if (tFocus === null) return false
+    const pickedActive = pickClosestActiveMovieAlongRay({
+      ray,
+      movies,
+      activeMaterial,
+      zCurrent: st.zCurrent,
+      zVisWindow: st.zVisWindow,
+      requireSlabInteraction,
+    })
+    if (pickedActive === null) return true
+    return tFocus < pickedActive.t
+  }
+
+  const pickAlongRay = (clientX: number, clientY: number, requireSlabInteraction: boolean) => {
+    const st = useGalaxyInteractionStore.getState()
+    const ray = rayFromClient(clientX, clientY)
     return pickClosestActiveMovieAlongRay({
-      ray: _raycaster.ray,
+      ray,
       movies,
       activeMaterial,
       zCurrent: st.zCurrent,
@@ -137,6 +177,26 @@ export function attachGalaxyActiveMeshInteraction(options: {
 
   const setHoverFromClient = (clientX: number, clientY: number) => {
     const st = useGalaxyInteractionStore.getState()
+    if (focusPlanetBeatsActiveAlongRay(clientX, clientY, false)) {
+      const selId = st.selectedMovieId
+      const sp = selectionPlanet
+      if (selId === null || !sp) return
+      const mf = movies.find((m) => m.id === selId)
+      if (!mf) return
+      _worldProject.set(mf.x, mf.y, mf.z)
+      const anchor = worldToScreenCss(_worldProject, camera, domElement)
+      const rCss = computeWorldSphereScreenRadiusCss({
+        cx: mf.x,
+        cy: mf.y,
+        cz: mf.z,
+        rWorld: sp.lastRadius,
+        camera,
+        domElement,
+      })
+      const planetRadiusCss = rCss > 0 ? rCss : null
+      emitHover(mf.id, anchor, planetRadiusCss)
+      return
+    }
     const picked = pickAlongRay(clientX, clientY, false)
     if (picked === null) {
       emitHover(null, null, null)
@@ -171,6 +231,9 @@ export function attachGalaxyActiveMeshInteraction(options: {
     window.removeEventListener('pointercancel', onWindowPointerCancel, true)
     primaryPressActive = false
     if (dragExceededDuringPress) return
+    if (focusPlanetBeatsActiveAlongRay(e.clientX, e.clientY, true)) {
+      return
+    }
     const picked = pickAlongRay(e.clientX, e.clientY, true)
     const id = picked === null ? null : movies[picked.index].id
     useGalaxyInteractionStore.setState({ selectedMovieId: id })

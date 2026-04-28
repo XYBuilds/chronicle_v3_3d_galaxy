@@ -84,8 +84,8 @@ const meta = {
     planetOctaves: 4,
     planetPersistence: 0.52,
     planetAreaRatio: 1 / ((1 + Math.sqrt(5)) / 2),
-    planetStepHeight: 0.06,
-    planetStepSmoothness: 0.02,
+    planetStepHeight: 0.03,
+    planetStepSmoothness: 0.01,
   },
 } satisfies Meta<typeof GalaxyThreeLayerLab>
 

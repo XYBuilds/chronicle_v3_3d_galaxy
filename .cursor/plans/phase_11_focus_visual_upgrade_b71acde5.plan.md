@@ -4,7 +4,7 @@ overview: Phase 11 focus 态视觉聚焦升级：focus 态非焦点星球降 chr
 todos:
   - id: p110-spec
     content: P11.0 状态机 spec 升级（无代码）：focus 视觉降级 / uFocusDimMode 双开关 / 遵挡剔除 / Perlin 阶梯地形 spec；Phase 8 基线加 P11.0 入口节
-    status: pending
+    status: completed
   - id: p111-occlusion-cull
     content: P11.1 焦点近相机遵挡剔除：uFocusOcclusionRadius / uCameraWorldPos uniform；idle/active.vert 判 occluded 后 sIdle/sActive=0 走现有 NDC 外出口；leva 挂
     status: pending

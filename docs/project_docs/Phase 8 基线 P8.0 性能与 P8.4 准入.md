@@ -50,3 +50,25 @@
 
 - 四态（idle / active / hover / focus）+ 延后 **select**：见 [`星球状态机 spec.md`](星球状态机%20spec.md)（`W = uZVisWindow×0.2`、`vote_count` focus 权重与「小片偏小」意图、draw 顺序、WebGL2）。
 - **Phase 8 文档回写（2026-04-27）**：《视觉参数总表》持续与源码对齐；《Tech Spec》/《Design Spec》/《数据特征工程与 3D 映射总表》已更新 P8.1–P8.4 双 mesh 与 `genre_hue`。搜索与 `select` 能力将**另行**统一设计与排期，不维护独立 spec 文件。
+
+---
+
+## P10.0 入口（Phase 10 全局重映射 · 实施前基线）
+
+> **目的**：在 P10.1（rating→L）、P10.2（距离衰减）、P10.3（Bloom 默认开）等**渲染与后处理**改动并入前，锁定一条与 §P8.0.1 **同口径**的入口表，供 §P10.4 出口复测时对照（fps 退化 > 5% 时按 Phase 10 计划回退 Bloom 等）。  
+> **Git 分支（登记时）**：`phase/p10-0-entry-baseline`（由 `main` 分出，**无** Phase 10 着色器 / Bloom 默认逻辑 diff）。
+
+**2026-04-28 复查（本仓库）**
+
+1. **构建**：`frontend` 下 `npm run build`（tsc + vite build）**通过**，与 Phase 10 启动时生产包一致。  
+2. **Chrome Performance 三线**：本环境无法在 Agent 会话内代出 DevTools **Summary → Scripting** 与 **Frames** 中位数；**下列三行数值与 §P8.0.1（2026-04-27）表逐项一致**——在「当前提交相对 4/27 无 idle/active shader、`scene.ts` Bloom 默认态等 Phase 10 差异」的前提下，视为 **P10.0 入口基线冻结**。若需日期与机器上独立重录，维护者请本地按 §P8.0.1「录制步骤」再录 idle / timeline 拖动 / focus 各约 5 s，并替换下行日期与备注。
+
+**环境（与 §P8.0.1 对齐）**：Windows；**`npm run build` + `vite preview`（4173）**；`devicePixelRatio` 以录制机为准。Chrome 精确版本 / GPU 型号仍见 §P8.0.1 环境行（待补）。
+
+| 片段 | 操作说明 | GPU time（ms / frame，中位数） | JS Main（ms / frame） | Long tasks（>50 ms，次数） | fps 中位数 | 备注 |
+|------|----------|--------------------------------|----------------------|-----------------------------|------------|------|
+| **idle** | 主应用加载默认数据；`zCurrent` 远离热点年份，无 hover；**整段录制约 7.1 s** | N/A（trace 未汇总 GPU ms） | **~0.6**（236 ms Scripting ÷ ~427 帧 @60fps） | **1**（开头 **Evaluate Script** Long Task） | **~60**（Frames 几乎全绿） | 含**冷启动首屏**；若只要稳态 idle 应「画面稳定后再 Record 5 s」另录一条对照 |
+| **timeline 拖动** | 拖动时间轴扫过可用跨度；Performance **选区 2.05–7.02 s**（Total **4 969 ms**） | N/A；选区内 **GPU 轨道持续高占用**（定性） | **~4.1**（1 224 ms Scripting ÷ ~298 帧） | **0**（以 Main 无 Long Task 为准） | **~60** | **INP 10 ms**（Insights）；纯交互段子选区，口径优于「整段 10 s 含拖前/拖后」 |
+| **focus** | 高 `vote_count` 片：飞入 + Perlin 出现至稳定；选区 **3.02–8.00 s**（Total **4 980 ms**） | N/A；GPU 全程有活（定性） | **~1.1**（324 ms Scripting ÷ ~299 帧） | **0** | **~60** | 选区含 **飞入（约 4.8–5.5 s 球体亮起）+ 稳态 focus**；**INP 19 ms**，**CLS 0**；稳态-only 可再框 **5.6–8.0 s** 子选区 |
+
+**录制步骤**：与 §P8.0.1 相同（DevTools → **Performance** → Record → 执行上表操作 → Stop → **Frames** / **GPU** / **Main** / Summary）。

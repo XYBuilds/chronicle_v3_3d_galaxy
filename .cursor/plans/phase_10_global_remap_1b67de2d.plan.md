@@ -4,7 +4,7 @@ overview: Phase 10 全局视觉重映射：rating→L 用全局常数 [0,10] 重
 todos:
   - id: p100-baseline
     content: P10.0 入口性能基线复查（无代码）：重跑 P8.0.1 三片段，在 Phase 8 基线文档末尾新增 P10.0 节
-    status: pending
+    status: completed
   - id: p101-rating-l-remap
     content: P10.1 rating→L 全局常数重映射：idle/active.vert 插入 t/HIGH_T/HIGH_SCALE/K_EXP 公式；galaxyMeshes 加三个 uniform；leva 挂调参；uLMin/uLMax 默认 0.2/1.0
     status: pending

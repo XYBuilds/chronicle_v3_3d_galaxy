@@ -19,6 +19,12 @@ export interface GalaxyThreeLayerLabProps {
   uLMin: number
   /** OKLCH lightness ceiling (`uLMax`). */
   uLMax: number
+  /** P10.1 — `uHighRatingT` (≈ vote 8.5 when `voteNorm` = rating/10). */
+  uHighRatingT: number
+  /** P10.1 — `uHighTierTRangeScale`. */
+  uHighTierTRangeScale: number
+  /** P10.1 — `uLightnessRatingExponent`. */
+  uLightnessRatingExponent: number
   /** OKLCH chroma (`uChroma`). */
   uChroma: number
   /** Global world scale for dual mesh (`uSizeScale`; former Points scale × mesh calib). */
@@ -53,6 +59,9 @@ export function GalaxyThreeLayerLabCore(props: GalaxyThreeLayerLabProps) {
     uBgSizeMul,
     uLMin,
     uLMax,
+    uHighRatingT,
+    uHighTierTRangeScale,
+    uLightnessRatingExponent,
     uChroma,
     uSizeScale,
     postProcessBloom,
@@ -88,6 +97,9 @@ export function GalaxyThreeLayerLabCore(props: GalaxyThreeLayerLabProps) {
     gm.uniforms.uBgSizeMul.value = uBgSizeMul
     gm.uniforms.uLMin.value = uLMin
     gm.uniforms.uLMax.value = uLMax
+    gm.uniforms.uHighRatingT.value = uHighRatingT
+    gm.uniforms.uHighTierTRangeScale.value = uHighTierTRangeScale
+    gm.uniforms.uLightnessRatingExponent.value = uLightnessRatingExponent
     gm.uniforms.uChroma.value = uChroma
     gm.uniforms.uSizeScale.value = uSizeScale
 
@@ -106,6 +118,9 @@ export function GalaxyThreeLayerLabCore(props: GalaxyThreeLayerLabProps) {
     uBgSizeMul,
     uLMin,
     uLMax,
+    uHighRatingT,
+    uHighTierTRangeScale,
+    uLightnessRatingExponent,
     uChroma,
     uSizeScale,
     postProcessBloom,

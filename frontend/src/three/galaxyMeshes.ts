@@ -58,8 +58,11 @@ function makeSharedUniforms(pixelRatio: number): { [uniform: string]: THREE.IUni
     uSizeScale: { value: DEFAULT_GALAXY_U_SIZE_SCALE },
     uActiveSizeMul: { value: 0.02 },
     uBgSizeMul: { value: 0.002 },
-    uLMin: { value: 0.4 },
-    uLMax: { value: 0.85 },
+    uLMin: { value: 0.2 },
+    uLMax: { value: 1.0 },
+    uHighRatingT: { value: 0.85 },
+    uHighTierTRangeScale: { value: 0.4 },
+    uLightnessRatingExponent: { value: 3.0 },
     uChroma: { value: 0.15 },
     uFocusedInstanceId: { value: -1 },
   }
@@ -98,6 +101,16 @@ export function createGalaxyDualMeshes(movies: Movie[], pixelRatio: number): Gal
 
   /** Single uniform bag — both materials read the same values each frame (P8.4). */
   const sharedUniforms = makeSharedUniforms(pixelRatio)
+  console.assert(
+    sharedUniforms.uHighRatingT.value > 0 &&
+      sharedUniforms.uHighRatingT.value < 1 &&
+      sharedUniforms.uHighTierTRangeScale.value > 0 &&
+      sharedUniforms.uLightnessRatingExponent.value > 0,
+    '[GalaxyMeshes] P10.1 rating→L remap uniforms must be positive / HIGH_T in (0,1)',
+  )
+  console.log(
+    `[GalaxyMeshes] P10.1 L-remap uLMin=${sharedUniforms.uLMin.value} uLMax=${sharedUniforms.uLMax.value} uHighRatingT=${sharedUniforms.uHighRatingT.value} uHighTierTRangeScale=${sharedUniforms.uHighTierTRangeScale.value} uLightnessRatingExponent=${sharedUniforms.uLightnessRatingExponent.value}`,
+  )
 
   const idleMaterial = new THREE.ShaderMaterial({
     uniforms: sharedUniforms,

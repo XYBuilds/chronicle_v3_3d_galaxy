@@ -13,7 +13,7 @@ todos:
     status: pending
   - id: p113-perlin-terrace-vert
     content: P11.3 Perlin 阶梯地形 vert：perlin.vert 重写 level 累加 smoothstep + normal 位移；uStepHeight / uStepSmoothness uniform；planet.ts lastRadius 包围球放宽
-    status: pending
+    status: completed
   - id: p114-perlin-normal-frag
     content: P11.4 Perlin 法线重构 frag + voteAverage→L：perlin.frag 重写 dFdx/dFdy cross；4 色走 hue + uPerlinL（mix(uLMin,uLMax,voteNorm)） + uPerlinChroma；Lambert；uFlatShadingMix 预留
     status: pending

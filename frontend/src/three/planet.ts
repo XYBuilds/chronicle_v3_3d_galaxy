@@ -189,6 +189,9 @@ export function createSelectionPlanet(): SelectionPlanetHandle {
       uThresh2: { value: 0.5 },
       uThresh3: { value: 0.75 },
       uThresh4: { value: 1 },
+      /** P11.3 — terrace extrusion in local units on unit sphere; world bump ≈ worldRadius × (3 × this). */
+      uStepHeight: { value: 0.06 },
+      uStepSmoothness: { value: 0.02 },
     },
     vertexShader: perlinVertexShader,
     fragmentShader: perlinFragmentShader,
@@ -302,7 +305,9 @@ export function createSelectionPlanet(): SelectionPlanetHandle {
   }
 
   const setFromMovie = (movie: Movie, palette: Meta['genre_palette'], worldRadius: number) => {
-    handle.lastRadius = worldRadius
+    const stepH = material.uniforms.uStepHeight.value as number
+    const radiusMul = 1 + 3 * stepH
+    handle.lastRadius = worldRadius * radiusMul
     lastMovie = movie
 
     const { genres } = genreDisplayWeights(movie.genres, 4)
@@ -330,7 +335,9 @@ export function createSelectionPlanet(): SelectionPlanetHandle {
     recomputeNoiseAndThresholds(movie.id)
 
     const hexList = genres.map((g) => palette[g] ?? `#${fbColor.getHexString()}`)
-    console.log(`[Planet] genres=${JSON.stringify(genres)} colors=${JSON.stringify(hexList)}`)
+    console.log(
+      `[Planet] genres=${JSON.stringify(genres)} colors=${JSON.stringify(hexList)} | P11.3 lastRadius=${handle.lastRadius.toFixed(4)} worldR=${worldRadius.toFixed(4)} stepH=${stepH.toFixed(3)} radiusMul=${radiusMul.toFixed(3)}`,
+    )
   }
 
   const syncCpuNoiseFromUniforms = () => {

@@ -11,6 +11,8 @@ uniform float uThresh3;
 uniform float uThresh4;
 
 varying float vNoise;
+varying vec3 vWorldPos;
+varying float vLevel;
 
 void main() {
   float n = vNoise;

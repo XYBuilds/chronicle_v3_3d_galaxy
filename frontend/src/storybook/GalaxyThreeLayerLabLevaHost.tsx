@@ -90,6 +90,20 @@ export function GalaxyThreeLayerLabLevaHost(props: GalaxyThreeLayerLabProps) {
         max: 1.2,
         step: 0.005,
       },
+      planetStepHeight: {
+        value: props.planetStepHeight,
+        label: 'P11.3 · uStepHeight',
+        min: 0,
+        max: 0.1,
+        step: 0.005,
+      },
+      planetStepSmoothness: {
+        value: props.planetStepSmoothness,
+        label: 'P11.3 · uStepSmoothness',
+        min: 0,
+        max: 0.12,
+        step: 0.005,
+      },
     }),
     { collapsed: false },
     [zLo, zHi, selectOptions],
@@ -124,6 +138,8 @@ export function GalaxyThreeLayerLabLevaHost(props: GalaxyThreeLayerLabProps) {
       planetOctaves: props.planetOctaves,
       planetPersistence: props.planetPersistence,
       planetAreaRatio: props.planetAreaRatio,
+      planetStepHeight: props.planetStepHeight,
+      planetStepSmoothness: props.planetStepSmoothness,
     })
   }, [
     props.zCurrent,
@@ -148,6 +164,8 @@ export function GalaxyThreeLayerLabLevaHost(props: GalaxyThreeLayerLabProps) {
     props.planetOctaves,
     props.planetPersistence,
     props.planetAreaRatio,
+    props.planetStepHeight,
+    props.planetStepSmoothness,
   ])
 
   const merged: GalaxyThreeLayerLabProps = {
@@ -174,6 +192,8 @@ export function GalaxyThreeLayerLabLevaHost(props: GalaxyThreeLayerLabProps) {
     planetOctaves: Math.round(v.planetOctaves),
     planetPersistence: v.planetPersistence,
     planetAreaRatio: v.planetAreaRatio,
+    planetStepHeight: v.planetStepHeight,
+    planetStepSmoothness: v.planetStepSmoothness,
   }
 
   return (

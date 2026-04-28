@@ -10,7 +10,7 @@ todos:
     status: completed
   - id: p102-distance-falloff
     content: P10.2 距离衰减 1/(1+k·d²) + 与透明衰减互斥：idle/active.vert 计算 vDistFalloff varying；.frag 乘到 vColor；新增 uDistanceFalloffK / uDistanceFalloffMode；mode=1 时 idle alpha 锁高区避免 bloom 泄漏
-    status: pending
+    status: completed
   - id: p103-bloom-default-on
     content: P10.3 Bloom 默认开：scene.ts postFxBloomEnabled = true 且初始化 addPass；保留 window.__bloom.disable() 调试接口；strength/radius/threshold 初值不动
     status: pending

@@ -7,6 +7,9 @@ uniform float uSizeScale;
 uniform float uBgSizeMul;
 uniform float uLMin;
 uniform float uLMax;
+uniform float uHighRatingT;
+uniform float uHighTierTRangeScale;
+uniform float uLightnessRatingExponent;
 uniform float uChroma;
 uniform int uFocusedInstanceId;
 
@@ -41,7 +44,12 @@ void main() {
   vec4 mvPosition = modelViewMatrix * instanceMatrix * vec4(scaled, 1.0);
   gl_Position = projectionMatrix * mvPosition;
 
-  float L = mix(uLMin, uLMax, clamp(voteNorm, 0.0, 1.0));
+  float t = clamp(voteNorm, 0.0, 1.0);
+  float tCompressed = t < uHighRatingT
+    ? t
+    : uHighRatingT + (t - uHighRatingT) * uHighTierTRangeScale;
+  float tPow = pow(tCompressed, uLightnessRatingExponent);
+  float L = mix(uLMin, uLMax, tPow);
   float a = uChroma * cos(hue);
   float labB = uChroma * sin(hue);
   vColor = linear_to_srgb(oklab_to_linear_srgb(vec3(L, a, labB)));

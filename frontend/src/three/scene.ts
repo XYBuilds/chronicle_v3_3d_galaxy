@@ -37,6 +37,12 @@ interface GalaxyPointScaleDebug {
 interface GalaxyColorDebug {
   lMin: number
   lMax: number
+  /** P10.1 — `voteNorm` threshold (~vote/10) where high-tier slope compression starts. */
+  highRatingT: number
+  /** P10.1 — multiplier on `(t - highRatingT)` above the threshold (smaller = more compression). */
+  highTierTRangeScale: number
+  /** P10.1 — exponent on compressed `t` before `mix(uLMin, uLMax, …)`. */
+  lightnessRatingExponent: number
   chroma: number
   log: () => void
 }
@@ -357,6 +363,9 @@ export function mountGalaxyScene(
   const uBgSizeMul = galUniforms.uBgSizeMul as THREE.Uniform<number>
   const uLMin = galUniforms.uLMin as THREE.Uniform<number>
   const uLMax = galUniforms.uLMax as THREE.Uniform<number>
+  const uHighRatingT = galUniforms.uHighRatingT as THREE.Uniform<number>
+  const uHighTierTRangeScale = galUniforms.uHighTierTRangeScale as THREE.Uniform<number>
+  const uLightnessRatingExponent = galUniforms.uLightnessRatingExponent as THREE.Uniform<number>
   const uChroma = galUniforms.uChroma as THREE.Uniform<number>
 
   const pointScaleDebug: GalaxyPointScaleDebug = {
@@ -402,6 +411,24 @@ export function mountGalaxyScene(
     set lMax(value: number) {
       uLMax.value = value
     },
+    get highRatingT() {
+      return uHighRatingT.value
+    },
+    set highRatingT(value: number) {
+      uHighRatingT.value = value
+    },
+    get highTierTRangeScale() {
+      return uHighTierTRangeScale.value
+    },
+    set highTierTRangeScale(value: number) {
+      uHighTierTRangeScale.value = value
+    },
+    get lightnessRatingExponent() {
+      return uLightnessRatingExponent.value
+    },
+    set lightnessRatingExponent(value: number) {
+      uLightnessRatingExponent.value = value
+    },
     get chroma() {
       return uChroma.value
     },
@@ -409,7 +436,9 @@ export function mountGalaxyScene(
       uChroma.value = value
     },
     log() {
-      console.log(`[Galaxy] OKLCH uLMin=${uLMin.value} uLMax=${uLMax.value} uChroma=${uChroma.value}`)
+      console.log(
+        `[Galaxy] OKLCH+P10.1 uLMin=${uLMin.value} uLMax=${uLMax.value} uHighRatingT=${uHighRatingT.value} uHighTierTRangeScale=${uHighTierTRangeScale.value} uLightnessRatingExponent=${uLightnessRatingExponent.value} uChroma=${uChroma.value}`,
+      )
     },
   }
   window.__galaxyColor = galaxyColorDebug

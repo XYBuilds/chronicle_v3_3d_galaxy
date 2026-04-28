@@ -314,7 +314,7 @@ export function mountGalaxyScene(
   const renderPass = new RenderPass(scene, camera)
   const bloomPass = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.95, 0.52, 0.82)
   composer.addPass(renderPass)
-  /** P6.2.2: Bloom off by default — `window.__bloom.enable()` attaches `bloomPass` and switches to `composer.render()`. */
+  /** P10.3 收尾：Bloom 生产默认关（验收未达标；未来不采用 Bloom）。`window.__bloom.enable()` 仍可加 pass 并切 `composer.render()`。见 `docs/reports/Phase 10.3 P10.3 Bloom 决策与收尾报告.md`。 */
   let postFxBloomEnabled = false
 
   const bloomDebug: BloomDebugControls = {

@@ -13,6 +13,9 @@ uniform float uLightnessRatingExponent;
 uniform float uDistanceFalloffK;
 uniform float uChroma;
 uniform int uFocusedInstanceId;
+uniform float uFocusDimChroma;
+uniform float uFocusDimL;
+uniform int uFocusDimMode;
 
 attribute float hue;
 attribute float voteNorm;
@@ -55,9 +58,16 @@ void main() {
     ? t
     : uHighRatingT + (t - uHighRatingT) * uHighTierTRangeScale;
   float tPow = pow(tCompressed, uLightnessRatingExponent);
-  float L = mix(uLMin, uLMax, tPow);
-  float a = uChroma * cos(hue);
-  float labB = uChroma * sin(hue);
+  float L_base = mix(uLMin, uLMax, tPow);
+  float C_base = uChroma;
+  // P11.2 — dim non-focused idle only: L× uFocusDimL, C× uFocusDimChroma. Active mesh unchanged (P11.1 alpha).
+  bool modeAllowsDim = (uFocusDimMode == 0) || (uFocusDimMode == 1);
+  bool dimEligible = modeAllowsDim && (uFocusedInstanceId >= 0) && !isFocused;
+  float dimMix = dimEligible ? 1.0 : 0.0;
+  float L = mix(L_base, L_base * uFocusDimL, dimMix);
+  float C = mix(C_base, C_base * uFocusDimChroma, dimMix);
+  float a = C * cos(hue);
+  float labB = C * sin(hue);
   vColor = linear_to_srgb(oklab_to_linear_srgb(vec3(L, a, labB)));
   vInFocus = inFocus;
 }

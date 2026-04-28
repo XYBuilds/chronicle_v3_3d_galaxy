@@ -49,6 +49,12 @@ export interface GalaxyThreeLayerLabProps {
   planetStepHeight: number
   /** P11.3 — smoothstep half-band width in noise space. */
   planetStepSmoothness: number
+  /** P11.2 — idle focus dim chroma factor (`uFocusDimChroma`). */
+  uFocusDimChroma: number
+  /** P11.2 — idle focus dim L multiplier (`uFocusDimL` × L_base). */
+  uFocusDimL: number
+  /** P11.2 — dim mode 0/1 (`uFocusDimMode`). */
+  uFocusDimMode: number
 }
 
 /**
@@ -85,6 +91,9 @@ export function GalaxyThreeLayerLabCore(props: GalaxyThreeLayerLabProps) {
     planetAreaRatio,
     planetStepHeight,
     planetStepSmoothness,
+    uFocusDimChroma,
+    uFocusDimL,
+    uFocusDimMode,
   } = props
 
   useEffect(() => {
@@ -116,6 +125,9 @@ export function GalaxyThreeLayerLabCore(props: GalaxyThreeLayerLabProps) {
     gm.uniforms.uDistanceFalloffMode.value = uDistanceFalloffMode === 0 ? 0 : 1
     gm.uniforms.uChroma.value = uChroma
     gm.uniforms.uSizeScale.value = uSizeScale
+    gm.uniforms.uFocusDimChroma.value = uFocusDimChroma
+    gm.uniforms.uFocusDimL.value = uFocusDimL
+    gm.uniforms.uFocusDimMode.value = uFocusDimMode === 1 ? 1 : 0
 
     const b = window.__bloom
     if (b) {
@@ -139,6 +151,9 @@ export function GalaxyThreeLayerLabCore(props: GalaxyThreeLayerLabProps) {
     uDistanceFalloffMode,
     uChroma,
     uSizeScale,
+    uFocusDimChroma,
+    uFocusDimL,
+    uFocusDimMode,
     postProcessBloom,
     bloomStrength,
     bloomRadius,

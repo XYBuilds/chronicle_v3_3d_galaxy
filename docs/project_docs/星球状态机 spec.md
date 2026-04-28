@@ -71,20 +71,25 @@ inFocus = smoothstep(zLo - W, zLo, aZ) × (1 - smoothstep(zHi, zHi + W, aZ))
 | **可交互性** | 抽屉/详情；ESC 或 UI 取消选中 |
 | **进入/退出** | 相机动画时长沿用现 `SELECT_MS` / `DESELECT_MS`（数值以《视觉参数总表》为准）；P8.4 起 `flyToFocus` 使用**物理距离常数** `FOCUS_CAM_DIST` |
 
-#### 3.4.1 focus 视觉降级（Phase 11）
+#### 3.4.1 focus 视觉降级（Phase 11.2 · **idle 层**）
 
-当 `uFocusedInstanceId >= 0` 且当前实例**不是**焦点实例时，idle/active 片元在现有 OKLab 色彩路径上叠加一次「降饱和 / 压亮度」混合；**焦点实例**（`gl_InstanceID == uFocusedInstanceId`）**不**参与降级，仍走原本的 `L_base`、`C_base`（与 idle/active vert 中由 `voteNorm` 与 `uLMin`/`uLMax`/`uChroma` 决定的基准一致）。
+**范围**：仅 **`galaxyIdle.vert.glsl`（背景 idle 球）**。**active** 层的 chroma/L **不因本条改变**；非目标 **active** 的视觉弱化由 **§3.4.3（P11.1）** 的片元 **alpha** 与 **`uFocusCameraBlend`** 负责。
 
-- 令 `dimEligible = (uFocusedInstanceId >= 0) && !isFocused`，`dimMix = dimEligible ? 1.0 : 0.0`（mode=0 下；mode=1 见下节）。
-- `L_base = mix(uLMin, uLMax, clamp(voteNorm, 0, 1))`（若 Phase 10 已对 `L_base` 做 rating / 层级修正，以届时 vert 最终式为准）。
-- `C_base = uChroma`。
-- **降级后**：`L = mix(L_base, uFocusDimL, dimMix)`，`C = mix(C_base, C_base * uFocusDimChroma, dimMix)`，再写入 hue→OKLab→sRGB。
+当 `uFocusedInstanceId >= 0` 且当前实例**不是**焦点实例时，在 idle 顶点着色器内对已有 **`L_base` / `C_base`** 做**乘子**混合（非焦点 idle「降饱和 / 可选压亮度」）；**焦点实例**在 idle 上 **`sIdle = 0`**（双 mesh 常规策略），本条主要针对**其余** idle。
 
-定稿默认（实现见 Phase 11.2 / Leva）：`uFocusDimChroma ≈ 0.3`（饱和度倍率）、`uFocusDimL ≈ 0.4`（目标 L）。退出 focus（`uFocusedInstanceId === -1`）后全场恢复无 `dimMix`。
+- 令 `dimEligible = (uFocusedInstanceId >= 0) && !isFocused`，`dimMix = dimEligible ? 1.0 : 0.0`（mode=0 下；mode=1 见下节；shader 内对 `uFocusDimMode` 0/1 暂与 0 等价至 `selectionMask` 落地）。
+- `L_base`：与 `galaxyIdle.vert.glsl` 中 **P10.1** 对 `voteNorm` 的压缩 + `pow` + `mix(uLMin, uLMax, ·)` 一致（**非**简单 `mix(voteNorm)`）。
+- `C_base = uChroma`（球体色度标量，与 a,b 的 `cos/sin(hue)` 相乘）。
+- **降级后（乘子，非绝对 L）**：
+  - `L = mix(L_base, L_base * uFocusDimL, dimMix)`
+  - `C = mix(C_base, C_base * uFocusDimChroma, dimMix)`
+  - 再 `a = C*cos(hue)`，`b = C*sin(hue)`，OKLab→sRGB。
+
+**定稿默认**（`galaxyMeshes.ts` / 实施报告）：`uFocusDimChroma = 0.7`（相对原 chroma 的倍率）、`uFocusDimL = 1`（相对 `L_base` 的倍率；为 **1** 时表示 focus 时仅靠饱和度弱化、**不压明度**）。退出 focus（`uFocusedInstanceId === -1`）后无 `dimMix`。
 
 #### 3.4.2 focus 暗化 vs selection 高亮（`uFocusDimMode` 双开关）
 
-- **`uFocusDimMode = 0`**（本 Phase 默认）：凡处于 focus 会话且实例非焦点，即适用 §3.4.1 视觉降级。
+- **`uFocusDimMode = 0`**（本 Phase 默认）：凡处于 focus 会话、在 **idle** 层上且实例非焦点，即适用 §3.4.1 乘子降级（**active** 见 §3.4.3）。
 - **`uFocusDimMode = 1`**（接口预留）：仅在 **`selectionMask == 0`**（或非选中）时对非焦点实例暗化；selected 高亮路径与 `selectionMask` 数据通道留给后续 Phase（搜索 / 多选）。**Phase 11 代码侧仅保证 uniform 存在；未接入 `selectionMask` 前，行为与 mode=0 等价（条件中占位为假）。**
 
 #### 3.4.3 focus 飞入/保持/飞出：非目标 **active** 透明度与相机同步（Phase 11.1 · **已实装**）
@@ -126,4 +131,5 @@ Perlin focus 球在片元侧保留 **四阈值分区** 的语义；顶点上将�
 | 2026-04-27 | Phase 8.0 初稿：四态 + select 延后、W 公式、双 mesh 互补、WebGL2、focus 意图声明 |
 | 2026-04-27 | 文档同步：idle/active 对齐 P8.4；active 片元说明；移除独立搜索/select 草案引用，改由未来统一规划 |
 | 2026-04-28 | Phase 11.0：§3.4 focus 视觉降级 / `uFocusDimMode` / 近相机遮挡剔除；§3.5 Perlin 阶梯地形与包围球约束；原 §3.5 select 顺延为 §3.6 |
+| 2026-04-28 | P11.2 定稿对齐：§3.4.1 仅 **idle** 乘子降 C/L；`uFocusDimChroma=0.7`、`uFocusDimL=1`；active 见 §3.4.3 |
 | 2026-04-28 | Phase 11.1：§3.4.3 改为「非目标 active alpha + 相机同步」实装说明；§3.4.4 为原遮挡剔除占位（未实装） |

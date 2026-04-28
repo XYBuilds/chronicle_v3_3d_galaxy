@@ -74,6 +74,12 @@ function makeSharedUniforms(pixelRatio: number): { [uniform: string]: THREE.IUni
     uFocusTargetInstanceId: { value: -1 },
     /** P11.1 — alpha for non-target active instances when blend=1 (default 0.1). */
     uFocusNonTargetActiveAlpha: { value: 0.1 },
+    /** P11.2 — idle focus dim: chroma × this when dim (OKLab a,b scale with C). */
+    uFocusDimChroma: { value: 0.7 },
+    /** P11.2 — idle focus dim: multiply OKLab L by this (with chroma mult below). */
+    uFocusDimL: { value: 1 },
+    /** P11.2 — 0 = focus-field dim; 1 = reserved (selectionMask); both behave identically until wired. */
+    uFocusDimMode: { value: 0 },
   }
 }
 
@@ -112,9 +118,9 @@ export function createGalaxyDualMeshes(movies: Movie[], pixelRatio: number): Gal
   const sharedUniforms = makeSharedUniforms(pixelRatio)
   console.assert(
     sharedUniforms.uHighRatingT.value > 0 &&
-      sharedUniforms.uHighRatingT.value < 1 &&
-      sharedUniforms.uHighTierTRangeScale.value > 0 &&
-      sharedUniforms.uLightnessRatingExponent.value > 0,
+    sharedUniforms.uHighRatingT.value < 1 &&
+    sharedUniforms.uHighTierTRangeScale.value > 0 &&
+    sharedUniforms.uLightnessRatingExponent.value > 0,
     '[GalaxyMeshes] P10.1 rating→L remap uniforms must be positive / HIGH_T in (0,1)',
   )
   console.assert(
@@ -124,7 +130,7 @@ export function createGalaxyDualMeshes(movies: Movie[], pixelRatio: number): Gal
   const dfm = sharedUniforms.uDistanceFalloffMode.value as number
   console.assert(dfm === 0 || dfm === 1, '[GalaxyMeshes] P10.2 uDistanceFalloffMode must be 0 or 1')
   console.log(
-    `[GalaxyMeshes] P10.1 L-remap uLMin=${sharedUniforms.uLMin.value} uLMax=${sharedUniforms.uLMax.value} uHighRatingT=${sharedUniforms.uHighRatingT.value} uHighTierTRangeScale=${sharedUniforms.uHighTierTRangeScale.value} uLightnessRatingExponent=${sharedUniforms.uLightnessRatingExponent.value} | P10.2 uDistanceFalloffK=${sharedUniforms.uDistanceFalloffK.value} uDistanceFalloffMode=${dfm}`,
+    `[GalaxyMeshes] P10.1 L-remap uLMin=${sharedUniforms.uLMin.value} uLMax=${sharedUniforms.uLMax.value} uHighRatingT=${sharedUniforms.uHighRatingT.value} uHighTierTRangeScale=${sharedUniforms.uHighTierTRangeScale.value} uLightnessRatingExponent=${sharedUniforms.uLightnessRatingExponent.value} | P10.2 uDistanceFalloffK=${sharedUniforms.uDistanceFalloffK.value} uDistanceFalloffMode=${dfm} | P11.2 uFocusDimChroma=${sharedUniforms.uFocusDimChroma.value} uFocusDimL=${sharedUniforms.uFocusDimL.value} uFocusDimMode=${sharedUniforms.uFocusDimMode.value}`,
   )
 
   const idleMaterial = new THREE.ShaderMaterial({

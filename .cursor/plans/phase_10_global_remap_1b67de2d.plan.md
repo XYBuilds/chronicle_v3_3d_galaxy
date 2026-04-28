@@ -13,7 +13,7 @@ todos:
     status: completed
   - id: p103-bloom-default-on
     content: P10.3 Bloom 默认开：scene.ts postFxBloomEnabled = true 且初始化 addPass；保留 window.__bloom.disable() 调试接口；strength/radius/threshold 初值不动
-    status: pending
+    status: completed
   - id: p104-perf-regression-doc
     content: P10.4 出口 fps 复测 + 文档同步：Phase 8 基线加 P10.4 出口节；视觉参数总表登记 7 个 uniform 定稿值；Tech Spec §1.2 Bloom 默认状态改 on
     status: pending

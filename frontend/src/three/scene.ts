@@ -314,8 +314,9 @@ export function mountGalaxyScene(
   const renderPass = new RenderPass(scene, camera)
   const bloomPass = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.95, 0.52, 0.82)
   composer.addPass(renderPass)
-  /** P6.2.2: Bloom off by default — `window.__bloom.enable()` attaches `bloomPass` and switches to `composer.render()`. */
-  let postFxBloomEnabled = false
+  composer.addPass(bloomPass)
+  /** P10.3: Bloom on by default (strength/radius/threshold unchanged). `window.__bloom.disable()` removes the pass for debugging. */
+  let postFxBloomEnabled = true
 
   const bloomDebug: BloomDebugControls = {
     get strength() {

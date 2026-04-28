@@ -63,6 +63,9 @@ function makeSharedUniforms(pixelRatio: number): { [uniform: string]: THREE.IUni
     uHighRatingT: { value: 0.85 },
     uHighTierTRangeScale: { value: 0.4 },
     uLightnessRatingExponent: { value: 3.0 },
+    /** P10.2 — falloff uses `(max(0, aZ - (uZCurrent+uZVisWindow)))^2` in world Z (decimal years). */
+    uDistanceFalloffK: { value: 0.0001 },
+    uDistanceFalloffMode: { value: 1 },
     uChroma: { value: 0.15 },
     uFocusedInstanceId: { value: -1 },
   }
@@ -108,8 +111,14 @@ export function createGalaxyDualMeshes(movies: Movie[], pixelRatio: number): Gal
       sharedUniforms.uLightnessRatingExponent.value > 0,
     '[GalaxyMeshes] P10.1 rating→L remap uniforms must be positive / HIGH_T in (0,1)',
   )
+  console.assert(
+    sharedUniforms.uDistanceFalloffK.value >= 0,
+    '[GalaxyMeshes] P10.2 uDistanceFalloffK must be non-negative',
+  )
+  const dfm = sharedUniforms.uDistanceFalloffMode.value as number
+  console.assert(dfm === 0 || dfm === 1, '[GalaxyMeshes] P10.2 uDistanceFalloffMode must be 0 or 1')
   console.log(
-    `[GalaxyMeshes] P10.1 L-remap uLMin=${sharedUniforms.uLMin.value} uLMax=${sharedUniforms.uLMax.value} uHighRatingT=${sharedUniforms.uHighRatingT.value} uHighTierTRangeScale=${sharedUniforms.uHighTierTRangeScale.value} uLightnessRatingExponent=${sharedUniforms.uLightnessRatingExponent.value}`,
+    `[GalaxyMeshes] P10.1 L-remap uLMin=${sharedUniforms.uLMin.value} uLMax=${sharedUniforms.uLMax.value} uHighRatingT=${sharedUniforms.uHighRatingT.value} uHighTierTRangeScale=${sharedUniforms.uHighTierTRangeScale.value} uLightnessRatingExponent=${sharedUniforms.uLightnessRatingExponent.value} | P10.2 uDistanceFalloffK=${sharedUniforms.uDistanceFalloffK.value} uDistanceFalloffMode=${dfm}`,
   )
 
   const idleMaterial = new THREE.ShaderMaterial({

@@ -25,6 +25,10 @@ export interface GalaxyThreeLayerLabProps {
   uHighTierTRangeScale: number
   /** P10.1 — `uLightnessRatingExponent`. */
   uLightnessRatingExponent: number
+  /** P10.2 — `1/(1+k·d²)` falloff (`uDistanceFalloffK`). */
+  uDistanceFalloffK: number
+  /** P10.2 — `0` off, `1` on (`uDistanceFalloffMode`). */
+  uDistanceFalloffMode: number
   /** OKLCH chroma (`uChroma`). */
   uChroma: number
   /** Global world scale for dual mesh (`uSizeScale`; former Points scale × mesh calib). */
@@ -62,6 +66,8 @@ export function GalaxyThreeLayerLabCore(props: GalaxyThreeLayerLabProps) {
     uHighRatingT,
     uHighTierTRangeScale,
     uLightnessRatingExponent,
+    uDistanceFalloffK,
+    uDistanceFalloffMode,
     uChroma,
     uSizeScale,
     postProcessBloom,
@@ -100,6 +106,8 @@ export function GalaxyThreeLayerLabCore(props: GalaxyThreeLayerLabProps) {
     gm.uniforms.uHighRatingT.value = uHighRatingT
     gm.uniforms.uHighTierTRangeScale.value = uHighTierTRangeScale
     gm.uniforms.uLightnessRatingExponent.value = uLightnessRatingExponent
+    gm.uniforms.uDistanceFalloffK.value = uDistanceFalloffK
+    gm.uniforms.uDistanceFalloffMode.value = uDistanceFalloffMode === 0 ? 0 : 1
     gm.uniforms.uChroma.value = uChroma
     gm.uniforms.uSizeScale.value = uSizeScale
 
@@ -121,6 +129,8 @@ export function GalaxyThreeLayerLabCore(props: GalaxyThreeLayerLabProps) {
     uHighRatingT,
     uHighTierTRangeScale,
     uLightnessRatingExponent,
+    uDistanceFalloffK,
+    uDistanceFalloffMode,
     uChroma,
     uSizeScale,
     postProcessBloom,

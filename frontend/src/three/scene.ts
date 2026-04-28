@@ -43,6 +43,10 @@ interface GalaxyColorDebug {
   highTierTRangeScale: number
   /** P10.1 — exponent on compressed `t` before `mix(uLMin, uLMax, …)`. */
   lightnessRatingExponent: number
+  /** P10.2 — `1/(1+k·dz²)` for `dz = max(0, aZ - (uZCurrent+uZVisWindow))` (world Z, decimal years). */
+  distanceFalloffK: number
+  /** P10.2 — `0` off (P8.4 idle alpha), `1` on (color × falloff + high idle alpha vs bloom halo). */
+  distanceFalloffMode: number
   chroma: number
   log: () => void
 }
@@ -366,6 +370,8 @@ export function mountGalaxyScene(
   const uHighRatingT = galUniforms.uHighRatingT as THREE.Uniform<number>
   const uHighTierTRangeScale = galUniforms.uHighTierTRangeScale as THREE.Uniform<number>
   const uLightnessRatingExponent = galUniforms.uLightnessRatingExponent as THREE.Uniform<number>
+  const uDistanceFalloffK = galUniforms.uDistanceFalloffK as THREE.Uniform<number>
+  const uDistanceFalloffMode = galUniforms.uDistanceFalloffMode as THREE.Uniform<number>
   const uChroma = galUniforms.uChroma as THREE.Uniform<number>
 
   const pointScaleDebug: GalaxyPointScaleDebug = {
@@ -429,6 +435,19 @@ export function mountGalaxyScene(
     set lightnessRatingExponent(value: number) {
       uLightnessRatingExponent.value = value
     },
+    get distanceFalloffK() {
+      return uDistanceFalloffK.value
+    },
+    set distanceFalloffK(value: number) {
+      uDistanceFalloffK.value = value
+    },
+    get distanceFalloffMode() {
+      return uDistanceFalloffMode.value
+    },
+    set distanceFalloffMode(value: number) {
+      const v = Math.round(value)
+      uDistanceFalloffMode.value = v === 0 ? 0 : 1
+    },
     get chroma() {
       return uChroma.value
     },
@@ -437,7 +456,7 @@ export function mountGalaxyScene(
     },
     log() {
       console.log(
-        `[Galaxy] OKLCH+P10.1 uLMin=${uLMin.value} uLMax=${uLMax.value} uHighRatingT=${uHighRatingT.value} uHighTierTRangeScale=${uHighTierTRangeScale.value} uLightnessRatingExponent=${uLightnessRatingExponent.value} uChroma=${uChroma.value}`,
+        `[Galaxy] OKLCH+P10.1 uLMin=${uLMin.value} uLMax=${uLMax.value} uHighRatingT=${uHighRatingT.value} uHighTierTRangeScale=${uHighTierTRangeScale.value} uLightnessRatingExponent=${uLightnessRatingExponent.value} uChroma=${uChroma.value} | P10.2 uDistanceFalloffK=${uDistanceFalloffK.value} uDistanceFalloffMode=${uDistanceFalloffMode.value}`,
       )
     },
   }

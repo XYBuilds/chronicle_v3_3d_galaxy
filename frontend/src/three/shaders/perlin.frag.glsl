@@ -22,7 +22,11 @@ varying vec3 vGeomNormalWorld;
 vec3 hueToOkSrgb(float hue, float L, float C) {
   float a = C * cos(hue);
   float b = C * sin(hue);
-  return linear_to_srgb(oklab_to_linear_srgb(vec3(L, a, b)));
+  // Low vote_average can drive L low while C stays high; some hue families then
+  // leave the displayable sRGB gamut. Clamp before gamma encoding so negative
+  // linear channels do not enter pow() and produce undefined/NaN colors.
+  vec3 lin = clamp(oklab_to_linear_srgb(vec3(L, a, b)), 0.0, 1.0);
+  return linear_to_srgb(lin);
 }
 
 void main() {
@@ -56,7 +60,6 @@ void main() {
     col6 * step(6.0, bandIdx) * (1.0 - step(7.0, bandIdx)) +
     col7 * step(7.0, bandIdx) * (1.0 - step(8.0, bandIdx));
 
-  vec3 nRadial = normalize(vWorldPos - uMeshWorldPos);
   vec3 nDeriv = cross(dFdx(vWorldPos), dFdy(vWorldPos));
   nDeriv = normalize(nDeriv);
   if (dot(nDeriv, vGeomNormalWorld) < 0.0) {

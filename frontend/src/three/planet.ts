@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import { createNoise3D, type NoiseFunction3D } from 'simplex-noise'
 
 import type { Meta, Movie } from '@/types/galaxy'
-import { hueFromGenreColor } from '@/utils/genreHue'
+import { genreHueForGenreName, hueFromGenreColor } from '@/utils/genreHue'
 
 import perlinFragmentShader from './shaders/perlin.frag.glsl'
 import perlinVertexShader from './shaders/perlin.vert.glsl'
@@ -144,15 +144,6 @@ function genreDisplayWeights(genres: string[], maxSlots: number): { genres: stri
   const s = raw.reduce((a, b) => a + b, 0)
   const weights = raw.map((w) => w / s)
   return { genres: list, weights }
-}
-
-function resolveGenreHue(name: string, palette: Meta['genre_palette'], fallbackHue: number): number {
-  const hex = palette[name]
-  if (!hex || typeof hex !== 'string') return fallbackHue
-  const order = Object.keys(palette).sort((a, b) => a.localeCompare(b))
-  const idx = order.indexOf(name)
-  if (idx < 0) return fallbackHue
-  return (2 * Math.PI * idx) / order.length
 }
 
 /** Snapshot of galaxy OKLCH uniforms at focus entry — matches `galaxyIdle.vert.glsl` P10.1 L remap. */
@@ -362,7 +353,7 @@ export function createSelectionPlanet(): SelectionPlanetHandle {
         number,
       ])
     const fbColor = new THREE.Color(movie.genre_color[0], movie.genre_color[1], movie.genre_color[2])
-    const hues = genres.map((g) => resolveGenreHue(g, palette, fbHue))
+    const hues = genres.map((g) => genreHueForGenreName(g, palette, fbHue))
     const padHue = hues.length > 0 ? hues[hues.length - 1]! : fbHue
 
     const u = material.uniforms

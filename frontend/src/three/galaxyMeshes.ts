@@ -63,6 +63,7 @@ function makeSharedUniforms(pixelRatio: number): { [uniform: string]: THREE.IUni
     uHighRatingT: { value: 0.85 },
     uHighTierTRangeScale: { value: 0.4 },
     uLightnessRatingExponent: { value: 3.0 },
+    /** P10.2 — falloff uses `(max(0, aZ - (uZCurrent+uZVisWindow)))^2` in world Z (decimal years). */
     uDistanceFalloffK: { value: 0.0001 },
     uDistanceFalloffMode: { value: 1 },
     uChroma: { value: 0.15 },

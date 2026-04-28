@@ -43,7 +43,7 @@ interface GalaxyColorDebug {
   highTierTRangeScale: number
   /** P10.1 — exponent on compressed `t` before `mix(uLMin, uLMax, …)`. */
   lightnessRatingExponent: number
-  /** P10.2 — `1/(1+k·d²)` camera-distance falloff strength (`mvPosition` view space). */
+  /** P10.2 — `1/(1+k·dz²)` for `dz = max(0, aZ - (uZCurrent+uZVisWindow))` (world Z, decimal years). */
   distanceFalloffK: number
   /** P10.2 — `0` off (P8.4 idle alpha), `1` on (color × falloff + high idle alpha vs bloom halo). */
   distanceFalloffMode: number

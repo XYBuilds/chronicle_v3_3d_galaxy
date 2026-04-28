@@ -45,8 +45,8 @@ void main() {
 
   vec3 scaled = position * sActive;
   vec4 mvPosition = modelViewMatrix * instanceMatrix * vec4(scaled, 1.0);
-  float d2 = dot(mvPosition.xyz, mvPosition.xyz);
-  vDistFalloff = 1.0 / (1.0 + uDistanceFalloffK * d2);
+  float dz = max(0.0, aZ - zHi);
+  vDistFalloff = 1.0 / (1.0 + uDistanceFalloffK * dz * dz);
   gl_Position = projectionMatrix * mvPosition;
 
   float t = clamp(voteNorm, 0.0, 1.0);

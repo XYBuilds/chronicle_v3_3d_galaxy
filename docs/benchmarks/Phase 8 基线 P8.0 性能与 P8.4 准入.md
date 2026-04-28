@@ -83,12 +83,13 @@
 
 > **目的**：在 P11.1–P11.7（遮挡剔除、非焦点降 chroma/L、Perlin 阶梯地形与法线重构、不透明化、focus 拾取分流等）并入前，锁定一条与 §P8.0.1 **同口径**的入口表；**focus** 片段为 Phase 11 主战场（飞入 + Perlin + 后续 shader 负载），idle / timeline 拖动两行用于回归对照。  
 > **Git 分支（登记时）**：`phase/p11.0-spec-entry-fps`（由当前线分出，**无** Phase 11 着色器 / uniform / 交互 diff）。  
-> **关联计划**：[`.cursor/plans/phase_11_focus_visual_upgrade_b71acde5.plan.md`](../../.cursor/plans/phase_11_focus_visual_upgrade_b71acde5.plan.md)。
+> **关联计划**：[`.cursor/plans/phase_11_focus_visual_upgrade_b71acde5.plan.md`](../../.cursor/plans/phase_11_focus_visual_upgrade_b71acde5.plan.md)。  
+> **录制**：**不必**为 P11.0 单独再跑 Chrome Performance。下表即 §P8.0.1 的**复制归档**，作为「Phase 11 代码落地前」的数值入口；若日后争议或要做 P11.7 出口对比，再按 §P8.0.1 口径补录即可。
 
 **2026-04-28（本仓库 P11.0 文档冻结）**
 
-1. **构建**：以 **`main` 合并 Phase 10 等既有改动后的提交**为准；录制前在 `frontend` 执行 `npm run build`，与生产包一致。  
-2. **Chrome Performance 三线**：下列三行数值与 §P8.0.1（2026-04-27）表**逐项一致**——表示「Phase 11 代码尚未落地」时的入口fps；Phase 11 收尾后维护者可于 §「P11.7 出口」补录对照（计划要求 focus 不退化超 5%）。若需本机独立重录，按 §P8.0.1「录制步骤」各录 idle / timeline 拖动 / **focus** 约 **5 s**，并更新环境与备注列。
+1. **构建**：以合并 Phase 10 等既有改动后的提交为准；发布/对照时在 `frontend` 执行 `npm run build` 与 §P8.0.1 环境一致即可。  
+2. **入口数值**：下列三行与 §P8.0.1（2026-04-27）表**逐项一致**，表示「Phase 11 尚未合入」时的对照基线。Phase 11 收尾后若写 §「P11.7 出口」，可再录三线并与本表比（计划侧常见门槛：focus 不退化超约 5%）。
 
 **环境（与 §P8.0.1 对齐）**：Windows；**`npm run build` + `vite preview`（4173）**；`devicePixelRatio` 以录制机为准。Chrome 精确版本 / GPU 型号仍见 §P8.0.1 环境行（待补）。
 
@@ -98,4 +99,4 @@
 | **timeline 拖动** | 拖动时间轴扫过可用跨度；Performance **选区 2.05–7.02 s**（Total **4 969 ms**） | N/A；选区内 **GPU 轨道持续高占用**（定性） | **~4.1**（1 224 ms Scripting ÷ ~298 帧） | **0**（以 Main 无 Long Task 为准） | **~60** | **INP 10 ms**（Insights）；纯交互段子选区，口径优于「整段 10 s 含拖前/拖后」 |
 | **focus** | 高 `vote_count` 片：飞入 + Perlin 出现至稳定；选区 **3.02–8.00 s**（Total **4 980 ms**） | N/A；GPU 全程有活（定性） | **~1.1**（324 ms Scripting ÷ ~299 帧） | **0** | **~60** | **P11 主战场**：选区含 **飞入（约 4.8–5.5 s 球体亮起）+ 稳态 focus**；**INP 19 ms**，**CLS 0**；稳态-only 可再框 **5.6–8.0 s** 子选区 |
 
-**录制步骤**：与 §P8.0.1 相同（DevTools → **Performance** → Record → 执行上表操作 → Stop → **Frames** / **GPU** / **Main** / Summary）。
+**可选**：若将来补录本表，步骤与 §P8.0.1「录制步骤」相同。

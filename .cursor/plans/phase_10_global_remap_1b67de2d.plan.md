@@ -35,7 +35,7 @@ isProject: false
   - [frontend/src/three/shaders/galaxyIdle.vert.glsl](frontend/src/three/shaders/galaxyIdle.vert.glsl) / [.frag.glsl](frontend/src/three/shaders/galaxyIdle.frag.glsl)
   - [frontend/src/three/shaders/galaxyActive.vert.glsl](frontend/src/three/shaders/galaxyActive.vert.glsl) / [.frag.glsl](frontend/src/three/shaders/galaxyActive.frag.glsl)
   - [frontend/src/three/scene.ts](frontend/src/three/scene.ts)（Bloom 可选调试；生产默认关）
-  - [docs/project_docs/Phase 8 基线 P8.0 性能与 P8.4 准入.md](docs/project_docs/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md)（P10 入口/出口 fps 行）
+  - [docs/benchmarks/Phase 8 基线 P8.0 性能与 P8.4 准入.md](docs/benchmarks/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md)（P10 入口/出口 fps 行）
   - [docs/project_docs/视觉参数总表.md](docs/project_docs/视觉参数总表.md)
   - [docs/project_docs/TMDB 电影宇宙 Tech Spec.md](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md) §1.2 Bloom
 
@@ -63,7 +63,7 @@ flowchart TD
 
 ## P10.0 入口性能基线复查（无代码）
 
-- 在 [`Phase 8 基线 P8.0 性能与 P8.4 准入.md`](docs/project_docs/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md) 末尾新增 `## P10.0 入口` 节
+- 在 [`Phase 8 基线 P8.0 性能与 P8.4 准入.md`](docs/benchmarks/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md) 末尾新增 `## P10.0 入口` 节
 - 重跑 P8.0.1 三个 5 s 片段（idle / timeline 拖动 / focus），同口径填表（GPU time / JS Main / fps 中位数）
 - 用作 P10.4 出口对照的 baseline；fps 退化 > 5% 时 P10.3 bloom 参数需回退
 
@@ -182,7 +182,7 @@ void main() {
 | P0     | [`视觉参数总表.md`](docs/project_docs/视觉参数总表.md)                                                         | 更新扫描基线日期；§2：`uLMin/uLMax`、P10.1 三 uniform、P10.2 `uDistanceFalloffK` / `uDistanceFalloffMode`、idle.frag alpha（mode 0/1）；「共享 uniform」一行与 `galaxyMeshes.ts` `makeSharedUniforms` 一致；§5 Bloom 与 `scene.ts` + [P10.3 报告](docs/reports/Phase%2010.3%20P10.3%20Bloom%20决策与收尾报告.md) 一致 |
 | P1     | [`TMDB 电影宇宙 Tech Spec.md`](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md)                             | §1.2：明确生产默认 **不**挂 Bloom pass；保留 `UnrealBloomPass` 参数与 `window.__bloom` 为可选调试；与 P10.3 报告交叉引用                                                                                                                                                                                              |
 | P2     | [`TMDB 电影宇宙 Design Spec.md`](docs/project_docs/TMDB%20电影宇宙%20Design%20Spec.md)                         | 若「Bloom/泛光」易被读成必选能力，弱化为亮度/对比叙事或注明当前默认无后处理 Bloom                                                                                                                                                                                                                                     |
-| P3     | [`Phase 8 基线 P8.0 性能与 P8.4 准入.md`](docs/project_docs/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md) | **自愿**：Phase 10 代码稳定后同 §P8.0.1 口径补一行备注或表（非强制）                                                                                                                                                                                                                                                  |
+| P3     | [`Phase 8 基线 P8.0 性能与 P8.4 准入.md`](docs/benchmarks/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md) | **自愿**：Phase 10 代码稳定后同 §P8.0.1 口径补一行备注或表（非强制）                                                                                                                                                                                                                                                  |
 
 **验收**：上表 P0/P1 改完后，随机抽 `galaxyMeshes.ts` + `galaxyIdle.frag.glsl` 与总表、Tech Spec 对读无矛盾。
 

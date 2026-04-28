@@ -63,7 +63,7 @@ isProject: false
   - [docs/project_docs/TMDB 电影宇宙 Tech Spec.md](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md) §1.5 / §4
   - [docs/project_docs/TMDB 电影宇宙 Design Spec.md](docs/project_docs/TMDB%20电影宇宙%20Design%20Spec.md)（搜索 UX）
   - [docs/project_docs/视觉参数总表.md](docs/project_docs/视觉参数总表.md)
-  - [docs/project_docs/Phase 8 基线 P8.0 性能与 P8.4 准入.md](docs/project_docs/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md)（P12 入口/出口 fps）
+  - [docs/benchmarks/Phase 8 基线 P8.0 性能与 P8.4 准入.md](docs/benchmarks/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md)（P12 入口/出口 fps）
 
 ## 执行顺序
 
@@ -301,7 +301,7 @@ if (uSelectionMode == 1) {
 
 ## P12.9 文档同步 + 出口 fps
 
-- [`Phase 8 基线`](docs/project_docs/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md) 末尾新增 `## P12 入口/出口` 节，重跑 P8.0.1 三片段 + 新增"search person 60+ active"压力片段
+- [`Phase 8 基线`](docs/benchmarks/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md) 末尾新增 `## P12 入口/出口` 节，重跑 P8.0.1 三片段 + 新增"search person 60+ active"压力片段
 - [视觉参数总表.md](docs/project_docs/视觉参数总表.md)：`uSelectionMask / uSelectionMode / uMovieCount / constellation maxLineCount / opacity` 登记
 - [Tech Spec §1.5](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md)：拾取小节追加 `searchMode in {'person','genre'}` 时 `inFocus` 由 mask 覆盖、active 拾取行为不变（可点击 selection 内任意 active 进 focus）
 - [Tech Spec §4.3](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md)：Movie 字段加 `title_normalized`；新增 `galaxy_search_index.json.gz` Schema 节

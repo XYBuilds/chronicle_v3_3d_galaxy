@@ -1,5 +1,9 @@
 # Phase 8 基线（P8.0 · 性能与 P8.4 准入）
 
+> **文档性质**：本文件位于 **`docs/benchmarks/`**，是 **性能测量口径、Story 准入门槛与里程碑入口/出口表的归档**（基线簿），**不是**功能或渲染行为的 SSOT；交互与实现以 [`星球状态机 spec.md`](../project_docs/星球状态机%20spec.md)、《Tech Spec》《Design Spec》及源码为准。
+>
+> **里程碑扩展**：随 Phase 10 / 11 / 12 等可在文末追加 `## P10.x`、`## P11.x`、`## P12.x` 等 **入口/出口** 节（与 §P8.0.1 **同录制口径**），并与对应 Cursor 计划交叉引用。
+
 > 从 `视觉参数总表.md` 拆出单独跟踪（**2026-04-27**）。Phase 7 宏观参数清单仍见 **`视觉参数总表.md`**（Git 跟踪；**不再**列入 `.cursorignore`）。总表文首注明：开发者速查用，**非** Agent SSOT。
 
 ---
@@ -48,7 +52,7 @@
 
 ## P8.0.4 状态机 SSOT
 
-- 四态（idle / active / hover / focus）+ 延后 **select**：见 [`星球状态机 spec.md`](星球状态机%20spec.md)（`W = uZVisWindow×0.2`、`vote_count` focus 权重与「小片偏小」意图、draw 顺序、WebGL2）。
+- 四态（idle / active / hover / focus）+ 延后 **select**：见 [`星球状态机 spec.md`](../project_docs/星球状态机%20spec.md)（`W = uZVisWindow×0.2`、`vote_count` focus 权重与「小片偏小」意图、draw 顺序、WebGL2）。
 - **Phase 8 文档回写（2026-04-27）**：《视觉参数总表》持续与源码对齐；《Tech Spec》/《Design Spec》/《数据特征工程与 3D 映射总表》已更新 P8.1–P8.4 双 mesh 与 `genre_hue`。搜索与 `select` 能力将**另行**统一设计与排期，不维护独立 spec 文件。
 
 ---

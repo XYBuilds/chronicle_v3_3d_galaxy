@@ -141,7 +141,7 @@ Output
 | **hover 环** | **HTML overlay**（`HoverRing`），**无 CSS transition**，与 Tooltip 同节奏显隐 |
 | **历史：Points** | 旧版对 `Points.threshold` 的估算与 A/B 层过滤见归档讨论；`interaction.ts` 中 `computePointScreenRadiusCss` 等**仅**供基准/遗留对照 |
 
-**假设与局限**：active 在条带外趋近零尺度时极难点中，属预期；若 T6 类问题再现，可收紧容差或第二近邻（见《Phase 8 基线 P8.0 性能与 P8.4 准入》）。
+**假设与局限**：active 在条带外趋近零尺度时极难点中，属预期；若 T6 类问题再现，可收紧容差或第二近邻（性能基线与准入归档见 [`Phase 8 基线 P8.0 性能与 P8.4 准入.md`](../benchmarks/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md)）。
 
 ## **2\. 核心坐标生成算法 (Coordinate Generation)**
 

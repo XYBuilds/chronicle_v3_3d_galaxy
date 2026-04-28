@@ -1,7 +1,7 @@
 # Phase 8.4（P8.4）双 InstancedMesh 与交互 HUD — 最终决策与操作报告
 
 > **范围**：以 `phase_8_visual_upgrade` 计划中 P8.4 为主线，合并会话 transcript 中后续迭代结论。  
-> **依据**：[`Phase 8 基线 P8.0 性能与 P8.4 准入.md`](../project_docs/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md)、[`星球状态机 spec.md`](../project_docs/星球状态机%20spec.md)；实现过程见 Cursor 父会话 transcript（本地）：[P8.4 双 mesh 主线实现](a9633d56-2fa6-4dd7-bb1c-769552b4da59)、[hover/环/tooltip/Perlin/相机迭代](dac926d0-b213-4299-9e3d-65953e91e18e)。  
+> **依据**：[`Phase 8 基线 P8.0 性能与 P8.4 准入.md`](../benchmarks/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md)、[`星球状态机 spec.md`](../project_docs/星球状态机%20spec.md)；实现过程见 Cursor 父会话 transcript（本地）：[P8.4 双 mesh 主线实现](a9633d56-2fa6-4dd7-bb1c-769552b4da59)、[hover/环/tooltip/Perlin/相机迭代](dac926d0-b213-4299-9e3d-65953e91e18e)。  
 > **仓库状态**：以当前 `frontend/` 源码为准（报告撰写日：**2026-04-27**）。
 
 ---

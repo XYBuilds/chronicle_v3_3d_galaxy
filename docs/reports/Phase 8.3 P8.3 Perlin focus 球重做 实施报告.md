@@ -67,7 +67,7 @@
 | `npm run build`（`frontend`） | **通过** |
 | `npm test`（`frontend`，含 `genreHue` / `loadGalaxyData`） | **通过** |
 | Storybook `GalaxyThreeLayerLab` + dev Leva（Perlin 旋钮、`planetAreaRatio`） | **人工通过**（本步交付范围内） |
-| Phase 8 计划中的 **fps ≥ P8.0×95%**（focus 片段） | **未在本报告中填数**；建议在定型机器上补一次 Performance 录制后记入 [Phase 8 基线](../project_docs/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md) 附录 |
+| Phase 8 计划中的 **fps ≥ P8.0×95%**（focus 片段） | **未在本报告中填数**；建议在定型机器上补一次 Performance 录制后记入 [Phase 8 基线](../benchmarks/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md) 附录 |
 
 ---
 

@@ -10,7 +10,7 @@
 
 | 计划项 | 完成情况 |
 |--------|----------|
-| Chrome DevTools Performance：idle / timeline 拖动 / focus 各约 5 s，数值落表 | **已完成**（见 [`Phase 8 基线 P8.0 性能与 P8.4 准入.md`](../project_docs/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md) §P8.0.1） |
+| Chrome DevTools Performance：idle / timeline 拖动 / focus 各约 5 s，数值落表 | **已完成**（见 [`Phase 8 基线 P8.0 性能与 P8.4 准入.md`](../benchmarks/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md) §P8.0.1） |
 | 双 mesh 60K×detail0 + 60K×detail1 同屏 VS，为 P8.4 定门槛 | **Story 与桌面独显数据已完成**；集成显卡 / throttle 行仍为可选补强 |
 | `docs/project_docs/星球状态机 spec.md` | **已完成** |
 | 生产路径 `isWebGL2` 硬断言 | **按计划在 P8.4**；P8.0 仅在 Story bench 内 `console.assert` + HUD |
@@ -21,11 +21,11 @@
 
 | 类型 | 路径 | 说明 |
 |------|------|------|
-| 性能与准入文档 | [`docs/project_docs/Phase 8 基线 P8.0 性能与 P8.4 准入.md`](../project_docs/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md) | P8.0.1 三场景表、P8.0.2 双 mesh 说明与 fps 表、P8.0.3 WebGL2、P8.0.4 指向状态机 spec |
+| 性能与准入文档 | [`docs/benchmarks/Phase 8 基线 P8.0 性能与 P8.4 准入.md`](../benchmarks/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md) | P8.0.1 三场景表、P8.0.2 双 mesh 说明与 fps 表、P8.0.3 WebGL2、P8.0.4 指向状态机 spec；现置于 **`docs/benchmarks/`**（归档 / 基线簿） |
 | 状态机 SSOT | [`docs/project_docs/星球状态机 spec.md`](../project_docs/星球状态机%20spec.md) | idle / active / hover / focus / 延后 select；`W = uZVisWindow×0.2`；双 mesh 互补 scale；WebGL2 / `gl_InstanceID` 约定 |
 | Storybook 基准 | [`frontend/src/storybook/InstancedMeshBench.tsx`](../../frontend/src/storybook/InstancedMeshBench.tsx)、[`InstancedMeshBench.stories.tsx`](../../frontend/src/storybook/InstancedMeshBench.stories.tsx) | 60k+60k `InstancedMesh`，`MeshBasicMaterial`，HUD fps 中位数、几何 `console.log` |
-| Phase 7 总表 | [`docs/project_docs/视觉参数总表.md`](../project_docs/视觉参数总表.md) | Git 跟踪；文末指针链到 Phase 8 基线文档；文首注明非 Agent SSOT（**后续**：总表已从 `.cursorignore` 移除；原《视觉参数总表-本地维护说明》已删） |
-| 规则更新 | [`.cursor/rules/project-overview.mdc`](../../.cursor/rules/project-overview.mdc) | Key Docs 含 Phase 8 基线文档（以仓库内当前文件为准） |
+| Phase 7 总表 | [`docs/project_docs/视觉参数总表.md`](../project_docs/视觉参数总表.md) | Git 跟踪；文末指针链到 [`docs/benchmarks/`](../benchmarks/) 性能与准入归档；文首注明非 Agent SSOT（**后续**：总表已从 `.cursorignore` 移除；原《视觉参数总表-本地维护说明》已删） |
+| 规则更新 | [`.cursor/rules/project-overview.mdc`](../../.cursor/rules/project-overview.mdc) | Key Docs 以仓库内 `project-overview.mdc` 为准；性能与准入归档见 **`docs/benchmarks/`** |
 
 ---
 
@@ -39,7 +39,7 @@
 ## 4. 工程与文档结构调整（纠正记录）
 
 1. **初版误用 `.gitignore`** 排除 `视觉参数总表.md`，已在提交 **`ea1ddef`** 纠正为 **仅 `.cursorignore`**，并恢复该文件 **Git 跟踪**。  
-2. Phase 8 基线从总表正文拆出为独立 **`Phase 8 基线 P8.0 性能与 P8.4 准入.md`**，避免与 Phase 7 超长清单混排；总表文末保留跳转节。
+2. Phase 8 基线从总表正文拆出为独立 **`Phase 8 基线 P8.0 性能与 P8.4 准入.md`**，避免与 Phase 7 超长清单混排；总表文末保留跳转节。**后续**：该文档已迁至 **`docs/benchmarks/`**（性能与准入归档）。
 
 ---
 
@@ -57,7 +57,7 @@
 
 ## 6. 遗留与建议（不阻塞 P8.1）
 
-1. 在 [`Phase 8 基线 P8.0 性能与 P8.4 准入.md`](../project_docs/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md) 补全 **Chrome / GPU** 环境字段。  
+1. 在 [`Phase 8 基线 P8.0 性能与 P8.4 准入.md`](../benchmarks/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md) 补全 **Chrome / GPU** 环境字段。  
 2. 在 **集成显卡**（或 Windows 图形设置「节能」Chrome）下重跑 `DualMeshWorstCase`，填写第二行 fps；若 35–50 fps，按计划在文档中 **书面接受** 后继续 P8.4。  
 3. 可选：Performance **4× CPU/GPU** 节流一行作趋势参考。
 

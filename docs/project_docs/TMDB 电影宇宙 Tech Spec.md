@@ -20,13 +20,17 @@
   * **idle**：`IcosahedronGeometry(1, 0)`；`ShaderMaterial` **`transparent: true`**、**`depthWrite: false`**、`depthTest: true`；`renderOrder = 0`。  
   * **active**：`IcosahedronGeometry(1, 1)`；`alphaTest: 0.01`、`depthWrite: true`；`renderOrder = 1`。  
   * **Z 条带与过渡**：与 [`星球状态机 spec.md`](星球状态机%20spec.md) 一致——`W = uZVisWindow × 0.2`，`inFocus = smoothstep(zLo−W, zLo, aZ) × (1 − smoothstep(zHi, zHi+W, aZ))`；**idle** 侧尺度 `sIdle = (1 − inFocus) × uSizeScale × uBgSizeMul × aSize`，**active** 侧 `sActive = inFocus × uSizeScale × uActiveSizeMul × aSize`；二者互补（初值 `uSizeScale=0.3`，`uActiveSizeMul=0.02`，`uBgSizeMul=0.002`，见《视觉参数总表》）。  
-  * 色彩：§4.3 **`genre_hue`（弧度）** + OKLab 均匀 **`uLMin` / `uLMax` / `uChroma`**（`galaxyIdle/Active` shader 与 P8.1 一致）。  
+  * 色彩：§4.3 **`genre_hue`（弧度）** + OKLab **`uLMin` / `uLMax` / `uChroma`**；**Lightness** 由 **`voteNorm`** 经 **Phase 10.1** 分段压缩与 `pow` 映射到 **L**（见《视觉参数总表》§2，非线性等价于「评分驱动明暗」）。  
 * **Focus 态 Perlin 球（按需、单实例）**：`IcosahedronGeometry(1, 6)` + **CPU** 上按顶点 noise 分位数定 **4 个硬阈值**（`perlin.frag.glsl` 中 `step` 分色带）；`movie.id` 种子化 PRNG；面积比例由 `uAreaRatio` 等控制（P8.3 定稿）。当 `uFocusedInstanceId` 命中时，**idle + active** 上该 `gl_InstanceID` 的 scale 在 shader 中**置零**，仅由 Perlin 球呈现。  
-* **后处理顺序（建议）**：同帧先画 idle → active →（`UnrealBloomPass` 等）→ focus 时 Perlin 球 `visible=true`（`renderOrder` 以 `scene.ts` 实际挂载为准）。
+* **后处理顺序（生产）**：同帧先画 idle → active → focus 时 Perlin 球 `visible=true`（`renderOrder` 以 `scene.ts` 为准）。**`UnrealBloomPass`** 默认**不**参与输出（§1.2）；调试启用时再走 composer。
 
 **历史注记（Phase 5.1.6 · 已退役）**：旧版在**单 `THREE.Points`** 上用 `uBgSizeMul` / `uFocusSizeMul` 与 `gl_PointSize` 做 A/B 层；P8.4 起由双 mesh 的 `inFocus` 与双尺度取代。
 
-### **1.2 后处理管线（Bloom）**
+### **1.2 后处理管线（Bloom：生产默认关闭，可选调试）**
+
+**生产路径（Phase 10.3 定稿）**：主 RAF **不**将 `UnrealBloomPass` 加入 `EffectComposer`，直接 **`renderer.render(scene, camera)`** 输出（见 `scene.ts` `postFxBloomEnabled` 与 `tick`）。实例 **`new UnrealBloomPass(..., 0.95, 0.52, 0.82)`** 仍存在，供本地 / Storybook 通过 **`window.__bloom.enable()`** 挂载后再 **`composer.render()`**。产品决策与曾尝试路线见 **[`Phase 10.3 P10.3 Bloom 决策与收尾报告.md`](../reports/Phase%2010.3%20P10.3%20Bloom%20决策与收尾报告.md)**。
+
+**启用 Bloom 时的逻辑管线（调试）**：
 
 ```
 Render Scene (galaxyIdle + galaxyActive + 可选 focus Perlin mesh)
@@ -38,14 +42,13 @@ UnrealBloomPass（简单路线）
 Output
 ```
 
-* **Bloom 方案**：Three.js 内置 **`UnrealBloomPass`**（`EffectComposer` 管线）。  
-* **选择性泛光策略**：采用**简单路线**——不对 Layers 做分离渲染。Mesh 片元中 vote\_norm 等驱动亮度，高分 fragment 可高于 Bloom `threshold`；`UnrealBloomPass` 的 `threshold` 筛高亮。  
-* **初始参数（均为可调配置，将随视觉调试迭代）**：  
-  * `strength`：**0.8 – 1.2**  
-  * `radius`：**0.4 – 0.6**  
-  * `threshold`：**0.85**（须与 vote\_average → emissive 映射的值域对齐——以 §4.3A 默认 emissive 映射，P75 评分 ≈ 6.8 对应 emissive ≈ 1.0，threshold 0.85 使大致前 25% 高分影片触发泛光）  
-* **Phase 5.1.6 实施工作点**：Bloom 曾在早期分层调试中被 strength=0 关闭；重写径向辉光片元与 A/B 分层后恢复为 **strength ≈ 0.95 / radius ≈ 0.52 / threshold ≈ 0.82**（落在上述建议区间内），运行时亦保留 **`window.__bloom`** 读写接口供调参。  
-* **DPR 约束**：`UnrealBloomPass` 的 `setSize` 与 `EffectComposer.setPixelRatio` 必须随 renderer 同步——详见 **§1.4 DPR 兼容性约束**。
+* **Bloom 方案**：Three.js 内置 **`UnrealBloomPass`**（`EffectComposer`）。  
+* **选择性泛光策略**（仅在 pass 启用时适用）：**简单路线**——不对 Layers 做分离渲染。Mesh 片元亮度由 OKLab **L**（含 P10.1 映射）等驱动；高分 fragment 可高于 Bloom `threshold`；`threshold` 筛高亮。  
+* **实例初值（可调；与 constructor 一致）**：`strength` **0.95**、`radius` **0.52**、`threshold` **0.82**（亦落在下列经验区间内）。  
+* **经验区间（迭代参考）**：`strength` **0.8 – 1.2**；`radius` **0.4 – 0.6**；`threshold` **~0.85**（若未来重新对齐 rating→片元亮度分布，再校准文案）。  
+* **调试接口**：**`window.__bloom`** — `enable` / `disable`，读写 `strength` / `radius` / `threshold`。  
+* **历史**：Phase 5.1.6 曾在分层调试中将 strength=0 关闭；也曾以 **strength ≈ 0.95 / radius ≈ 0.52 / threshold ≈ 0.82** 作为集成默认值——**当前产品默认不挂 pass**，以上数值保留为调试起点。  
+* **DPR 约束**：一旦启用 Bloom，`UnrealBloomPass.setSize` 与 `EffectComposer.setPixelRatio` 必须随 renderer 同步——详见 **§1.4 DPR 兼容性约束**。
 
 ### **1.3 性能参考基线（非强制，仅作优化阶段对照）**
 
@@ -138,7 +141,7 @@ Output
 | **hover 环** | **HTML overlay**（`HoverRing`），**无 CSS transition**，与 Tooltip 同节奏显隐 |
 | **历史：Points** | 旧版对 `Points.threshold` 的估算与 A/B 层过滤见归档讨论；`interaction.ts` 中 `computePointScreenRadiusCss` 等**仅**供基准/遗留对照 |
 
-**假设与局限**：active 在条带外趋近零尺度时极难点中，属预期；若 T6 类问题再现，可收紧容差或第二近邻（见《Phase 8 基线 P8.0 性能与 P8.4 准入》）。
+**假设与局限**：active 在条带外趋近零尺度时极难点中，属预期；若 T6 类问题再现，可收紧容差或第二近邻（性能基线与准入归档见 [`Phase 8 基线 P8.0 性能与 P8.4 准入.md`](../benchmarks/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md)）。
 
 ## **2\. 核心坐标生成算法 (Coordinate Generation)**
 

@@ -186,7 +186,7 @@ export function InstancedMeshBench() {
             {hud.fpsSampleCount})
           </div>
           <div className="mt-1 text-white/50">
-            Record this story on desktop dGPU + iGPU / throttled laptop; write medians into docs/project_docs/「Phase 8 基线 P8.0 性能与 P8.4 准入.md」.
+            Record this story on desktop dGPU + iGPU / throttled laptop; write medians into docs/benchmarks/Phase 8 基线 P8.0 性能与 P8.4 准入.md.
           </div>
         </div>
       ) : (

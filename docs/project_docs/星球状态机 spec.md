@@ -1,6 +1,6 @@
 # 星球状态机 spec（Phase 8.0 草案）
 
-> 与 [Phase 8 计划](../../.cursor/plans/phase_8_visual_upgrade_6ed5cf56.plan.md) 对齐；后续 P8.1–P8.5 实现与回写以本文件为单一事实源（SSOT），与 [`Phase 8 基线 P8.0 性能与 P8.4 准入.md`](Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md)、《视觉参数总表》、《Tech Spec》、《Design Spec》交叉引用。
+> 与 [Phase 8 计划](../../.cursor/plans/phase_8_visual_upgrade_6ed5cf56.plan.md) 对齐；后续 P8.1–P8.5 实现与回写以本文件为单一事实源（SSOT），与 [`Phase 8 基线 P8.0 性能与 P8.4 准入.md`](../benchmarks/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md)（**性能与准入归档**，非功能 SSOT）、《视觉参数总表》、《Tech Spec》、《Design Spec》交叉引用。
 
 ## 1. 范围与命名
 
@@ -25,7 +25,7 @@ inFocus = smoothstep(zLo - W, zLo, aZ) × (1 - smoothstep(zHi, zHi + W, aZ))
 - **idle / active 尺度（P8.4 双 mesh，无 focus 时）**  
   - `sIdle = (1 - inFocus) × uIdleScale × aSize`  
   - `sActive = inFocus × uActiveScale × aSize`  
-  - 具体 `uIdleScale` / `uActiveScale` 初值在《Phase 8 基线 P8.0 性能与 P8.4 准入》及《视觉参数总表》中维护。
+  - 具体 `uIdleScale` / `uActiveScale` 初值在 [`Phase 8 基线 P8.0 性能与 P8.4 准入.md`](../benchmarks/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md) 及《视觉参数总表》中维护。
 
 - **focus 覆盖**：当 `uFocusedInstanceId >= 0` 且 `gl_InstanceID == uFocusedInstanceId` 时，**强制** `sIdle = 0`、`sActive = 0`；该电影仅由 Perlin `IcosahedronGeometry(1, 6)` 呈现。
 

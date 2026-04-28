@@ -6,8 +6,8 @@
 
 * **天体体积 (Size)**：映射 vote\_count（评价人数）。  
   * 规则：使用**对数缩放 (Log Scale)**。爆款呈现为巨大恒星，长尾呈现为微小星尘。  
-* **内核发光度 (Bloom/Emissive)**：映射 vote\_average（评分，1-10分）。  
-  * 规则：控制材质的自发光强度与 Bloom 泛光阈值。高分片刺眼，低分片黯淡。  
+* **内核亮度（OKLab Lightness / L）**：映射 vote\_average（评分，1–10 分）。  
+  * 规则：宏观星系 shader 内由 **rating→L** 曲线（Phase 10.1：`uLMin`/`uLMax`、分段压缩与非线性）驱动 **OKLab L**，高分片更亮、低分片更暗。**屏幕空间 Bloom** 不是当前产品的默认外观（生产默认不挂 `UnrealBloomPass`；本地可调 `window.__bloom`，见 Tech Spec §1.2）。  
 * **星系色彩 (Color)**：映射 genres（流派）。  
   * 规则：基础颜色由第一顺位主类别 genres\[0\] 决定，以保持大星团的纯粹色彩秩序。
 

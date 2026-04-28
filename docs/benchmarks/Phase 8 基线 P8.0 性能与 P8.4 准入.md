@@ -1,5 +1,9 @@
 # Phase 8 基线（P8.0 · 性能与 P8.4 准入）
 
+> **文档性质**：本文件位于 **`docs/benchmarks/`**，是 **性能测量口径、Story 准入门槛与里程碑入口/出口表的归档**（基线簿），**不是**功能或渲染行为的 SSOT；交互与实现以 [`星球状态机 spec.md`](../project_docs/星球状态机%20spec.md)、《Tech Spec》《Design Spec》及源码为准。
+>
+> **里程碑扩展**：随 Phase 10 / 11 / 12 等可在文末追加 `## P10.x`、`## P11.x`、`## P12.x` 等 **入口/出口** 节（与 §P8.0.1 **同录制口径**），并与对应 Cursor 计划交叉引用。
+
 > 从 `视觉参数总表.md` 拆出单独跟踪（**2026-04-27**）。Phase 7 宏观参数清单仍见 **`视觉参数总表.md`**（Git 跟踪；**不再**列入 `.cursorignore`）。总表文首注明：开发者速查用，**非** Agent SSOT。
 
 ---
@@ -48,14 +52,14 @@
 
 ## P8.0.4 状态机 SSOT
 
-- 四态（idle / active / hover / focus）+ 延后 **select**：见 [`星球状态机 spec.md`](星球状态机%20spec.md)（`W = uZVisWindow×0.2`、`vote_count` focus 权重与「小片偏小」意图、draw 顺序、WebGL2）。
+- 四态（idle / active / hover / focus）+ 延后 **select**：见 [`星球状态机 spec.md`](../project_docs/星球状态机%20spec.md)（`W = uZVisWindow×0.2`、`vote_count` focus 权重与「小片偏小」意图、draw 顺序、WebGL2）。
 - **Phase 8 文档回写（2026-04-27）**：《视觉参数总表》持续与源码对齐；《Tech Spec》/《Design Spec》/《数据特征工程与 3D 映射总表》已更新 P8.1–P8.4 双 mesh 与 `genre_hue`。搜索与 `select` 能力将**另行**统一设计与排期，不维护独立 spec 文件。
 
 ---
 
 ## P10.0 入口（Phase 10 全局重映射 · 实施前基线）
 
-> **目的**：在 P10.1（rating→L）、P10.2（距离衰减）、P10.3（Bloom 默认开）等**渲染与后处理**改动并入前，锁定一条与 §P8.0.1 **同口径**的入口表，供 §P10.4 出口复测时对照（fps 退化 > 5% 时按 Phase 10 计划回退 Bloom 等）。  
+> **目的**：在 P10.1（rating→L）、P10.2（Z 方向距离衰减）、P10.3（Bloom — **已收尾为生产默认关**，见 Tech Spec §1.2 与 Phase 10.3 报告）等改动并入前，锁定一条与 §P8.0.1 **同口径**的入口表，供后续性能对照。**自愿**：Phase 10 代码稳定后可用同口径补一行「出口」备注（非强制；见 Phase 10 计划 P10.5）。  
 > **Git 分支（登记时）**：`phase/p10-0-entry-baseline`（由 `main` 分出，**无** Phase 10 着色器 / Bloom 默认逻辑 diff）。
 
 **2026-04-28 复查（本仓库）**

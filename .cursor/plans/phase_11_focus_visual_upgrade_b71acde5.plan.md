@@ -45,7 +45,7 @@ isProject: false
   - [frontend/src/three/interaction.ts](frontend/src/three/interaction.ts)（focus 态拾取分流）
   - [frontend/src/three/scene.ts](frontend/src/three/scene.ts)（leva 调参挂钩、focus uniform 同步）
   - [docs/project_docs/星球状态机 spec.md](docs/project_docs/星球状态机%20spec.md)（focus 视觉降级 + 双开关 spec）
-  - [docs/project_docs/Phase 8 基线 P8.0 性能与 P8.4 准入.md](docs/project_docs/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md)（P11 入口/出口 fps）
+  - [docs/benchmarks/Phase 8 基线 P8.0 性能与 P8.4 准入.md](docs/benchmarks/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md)（P11 入口/出口 fps）
   - [docs/project_docs/视觉参数总表.md](docs/project_docs/视觉参数总表.md)
   - [docs/project_docs/TMDB 电影宇宙 Tech Spec.md](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md) §1.1 / §1.5
 
@@ -84,7 +84,7 @@ flowchart TD
   - 「focus 暗化 vs selection 高亮」双开关：`uFocusDimMode: 0|1`（0 = 焦点暗化全场非焦点；1 = 仅在 `selectionMask`=0 时暗化非焦点。**本 Phase 仅实装 mode=0；预留 mode=1 接口与 uniform，但 selectionMask 通道留给后续 Phase**）
   - 「焦点近相机遮挡剔除」子节：`uFocusOcclusionRadius` 默认值与作用域（仅 `uFocusedInstanceId >= 0` 时生效）
 - Perlin 球新增「阶梯地形」一节：`uStepHeight` 上限约束（≤ `1/(1+hMax)`）+ vert 计算流程
-- 在 [`Phase 8 基线`](docs/project_docs/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md) 末尾新增 `## P11.0 入口` 节，重跑 P8.0.1 三片段（**重点录 focus 片段**作为 P11 主战场）
+- 在 [`Phase 8 基线`](docs/benchmarks/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md) 末尾新增 `## P11.0 入口` 节，重跑 P8.0.1 三片段（**重点录 focus 片段**作为 P11 主战场）
 
 ## P11.1 焦点近相机遮挡剔除
 
@@ -309,7 +309,7 @@ void main() {
 
 ## P11.7 文档同步 + 出口 fps
 
-- [`Phase 8 基线`](docs/project_docs/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md) 末尾新增 `## P11.7 出口` 节：focus 片段 fps 不退化超 5%
+- [`Phase 8 基线`](docs/benchmarks/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md) 末尾新增 `## P11.7 出口` 节：focus 片段 fps 不退化超 5%
 - [星球状态机 spec.md](docs/project_docs/星球状态机%20spec.md)：
   - §3.4 focus 节 视觉降级 / 遮挡剔除 / Perlin 阶梯地形子节正式定稿
   - 「focus 暗化 vs selection 高亮」双开关接口写明（`uFocusDimMode` mode=1 留为接口）

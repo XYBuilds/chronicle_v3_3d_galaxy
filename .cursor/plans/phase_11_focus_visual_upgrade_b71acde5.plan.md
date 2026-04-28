@@ -19,7 +19,7 @@ todos:
     status: completed
   - id: p115-perlin-opaque
     content: P11.5 Perlin 不透明化 + 包围球放宽：material transparent=false / depthWrite=true / alphaTest=0.01；lastRadius 含阶梯高度估算
-    status: pending
+    status: completed
   - id: p116-pick-routing
     content: P11.6 focus 态拾取分流：interaction.ts 优先 Perlin 球 raycaster，后主动 active mesh；selected!=null 且 hover 焦点球仍正常显 tooltip；背景星可切换 focus
     status: pending

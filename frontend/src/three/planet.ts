@@ -238,9 +238,10 @@ export function createSelectionPlanet(): SelectionPlanetHandle {
     },
     vertexShader: perlinVertexShader,
     fragmentShader: perlinFragmentShader,
-    transparent: true,
-    depthWrite: false,
+    transparent: false,
+    depthWrite: true,
     depthTest: true,
+    alphaTest: 0.01,
   })
 
   const mesh = new THREE.Mesh(geometry, material)
@@ -349,6 +350,7 @@ export function createSelectionPlanet(): SelectionPlanetHandle {
     const cuts = Math.max(0, K - 1)
     const radiusMul = 1 + cuts * stepH
     handle.lastRadius = worldRadius * radiusMul
+    console.assert(handle.lastRadius >= worldRadius, '[Planet] lastRadius covers base sphere', handle.lastRadius, worldRadius)
     lastMovie = movie
 
     const fbHue =
@@ -400,7 +402,7 @@ export function createSelectionPlanet(): SelectionPlanetHandle {
 
   const setOpacity = (alpha: number) => {
     const a = THREE.MathUtils.clamp(alpha, 0, 1)
-    material.uniforms.uAlpha.value = a
+    material.uniforms.uAlpha.value = a > 0.001 ? 1 : 0
     mesh.visible = a > 0.001
   }
 

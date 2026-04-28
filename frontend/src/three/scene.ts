@@ -260,7 +260,8 @@ export function mountGalaxyScene(
     const m = movies[idx]!
     const { r } = resolveSelectionWorldRadius(m, uZ.value, uZw.value, galaxy.activeMaterial, layoutWorldSpan)
     const stepH = planet.material.uniforms.uStepHeight.value as number
-    planet.lastRadius = r * (1 + 3 * stepH)
+    const cuts = planet.material.uniforms.uCutCount.value as number
+    planet.lastRadius = r * (1 + cuts * stepH)
     planet.mesh.scale.setScalar(r)
     planet.mesh.updateMatrixWorld(true)
   }

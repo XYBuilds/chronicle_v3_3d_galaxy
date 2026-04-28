@@ -69,12 +69,20 @@ interface GalaxyInteractionDebug {
   log: () => void
 }
 
-/** Dev console: `window.__planetTerrace` — Perlin focus sphere terrace uniforms (P11.3). */
+/** Dev console: `window.__planetTerrace` — Perlin focus sphere terrace + P11.4 lighting uniforms. */
 interface SelectionPlanetTerraceDebug {
   /** Unit-sphere extrusion per band step; world radius uses `× (1 + cuts × stepHeight)`. Clamped to [0, 0.25] on set. */
   stepHeight: number
   /** Noise-domain smoothstep half-width at thresholds; 0 ≈ hard cuts. Clamped to [0, 0.25] on set. */
   stepSmoothness: number
+  /** P11.4 — derivative vs geometric normal (1 = screen-space normal from world-position derivatives). */
+  flatShadingMix: number
+  /** P11.4 — ambient factor in `lit = base × (ambient + diffuse × lambert)`. */
+  perlinAmbient: number
+  /** P11.4 — diffuse factor (set 0 for flat ambient-only). */
+  perlinDiffuse: number
+  /** P11.4 — world-space light direction (normalized on set). */
+  perlinLightDir: THREE.Vector3
   log: () => void
 }
 
@@ -298,7 +306,15 @@ export function mountGalaxyScene(
       layoutWorldSpan,
     )
     setFocusCameraPosition(toCam, movie)
-    planet.setFromMovie(movie, meta.genre_palette, r)
+    const gu = galaxy.idleMaterial.uniforms
+    planet.setFromMovie(movie, meta.genre_palette, r, {
+      uLMin: (gu.uLMin as THREE.Uniform<number>).value,
+      uLMax: (gu.uLMax as THREE.Uniform<number>).value,
+      uHighRatingT: (gu.uHighRatingT as THREE.Uniform<number>).value,
+      uHighTierTRangeScale: (gu.uHighTierTRangeScale as THREE.Uniform<number>).value,
+      uLightnessRatingExponent: (gu.uLightnessRatingExponent as THREE.Uniform<number>).value,
+      uChroma: (gu.uChroma as THREE.Uniform<number>).value,
+    })
     uFocused.value = -1
     fromCam.copy(camera.position)
     animStartMs = performance.now()
@@ -543,10 +559,37 @@ export function mountGalaxyScene(
     set stepSmoothness(value: number) {
       planet.material.uniforms.uStepSmoothness.value = THREE.MathUtils.clamp(value, 0, 0.25)
     },
+    get flatShadingMix() {
+      return planet.material.uniforms.uFlatShadingMix.value as number
+    },
+    set flatShadingMix(value: number) {
+      planet.material.uniforms.uFlatShadingMix.value = THREE.MathUtils.clamp(value, 0, 1)
+    },
+    get perlinAmbient() {
+      return planet.material.uniforms.uAmbient.value as number
+    },
+    set perlinAmbient(value: number) {
+      planet.material.uniforms.uAmbient.value = THREE.MathUtils.clamp(value, 0, 1)
+    },
+    get perlinDiffuse() {
+      return planet.material.uniforms.uDiffuse.value as number
+    },
+    set perlinDiffuse(value: number) {
+      planet.material.uniforms.uDiffuse.value = THREE.MathUtils.clamp(value, 0, 2)
+    },
+    get perlinLightDir() {
+      return planet.material.uniforms.uLightDir.value as THREE.Vector3
+    },
+    set perlinLightDir(value: THREE.Vector3) {
+      const v = planet.material.uniforms.uLightDir.value as THREE.Vector3
+      v.copy(value)
+      if (v.lengthSq() > 1e-12) v.normalize()
+    },
     log() {
       const u = planet.material.uniforms
+      const ld = u.uLightDir.value as THREE.Vector3
       console.log(
-        `[Planet] uStepHeight=${(u.uStepHeight.value as number).toFixed(4)} uStepSmoothness=${(u.uStepSmoothness.value as number).toFixed(4)} uBandCount=${u.uBandCount.value} uCutCount=${u.uCutCount.value}`,
+        `[Planet] uStepHeight=${(u.uStepHeight.value as number).toFixed(4)} uStepSmoothness=${(u.uStepSmoothness.value as number).toFixed(4)} uBandCount=${u.uBandCount.value} uCutCount=${u.uCutCount.value} | P11.4 uFlatShadingMix=${(u.uFlatShadingMix.value as number).toFixed(2)} uAmbient=${(u.uAmbient.value as number).toFixed(2)} uDiffuse=${(u.uDiffuse.value as number).toFixed(2)} uLightDir=(${ld.x.toFixed(2)},${ld.y.toFixed(2)},${ld.z.toFixed(2)}) uPerlinL=${(u.uPerlinL.value as number).toFixed(4)} uPerlinChroma=${(u.uPerlinChroma.value as number).toFixed(4)}`,
       )
     },
   }

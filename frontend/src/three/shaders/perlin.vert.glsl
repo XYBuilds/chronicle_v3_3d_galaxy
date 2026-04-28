@@ -1,6 +1,7 @@
 varying float vNoise;
 varying vec3 vWorldPos;
 varying float vLevel;
+varying vec3 vGeomNormalWorld;
 
 attribute float aNoise;
 
@@ -29,6 +30,8 @@ void main() {
   vLevel = level;
 
   vec3 displaced = position + normal * (level * uStepHeight);
+
+  vGeomNormalWorld = normalize((modelMatrix * vec4(normal, 0.0)).xyz);
 
   vec4 worldPos4 = modelMatrix * vec4(displaced, 1.0);
   vWorldPos = worldPos4.xyz;

@@ -1,6 +1,6 @@
 ---
 name: phase 10 global remap
-overview: Phase 10 全局视觉重映射：rating→L 用全局常数 [0,10] 重映射并加高分压缩 + 指数 3、idle/active 引入 1/(1+k·d²) 距离衰减并与现有透明衰减互斥、Bloom 默认开启。属于 shader uniform + 后处理参数级改动，不动数据契约/几何。
+overview: Phase 10 全局视觉重映射：rating→L（P10.1）、距离衰减（P10.2）已落地；P10.3 Bloom「默认开」已**产品收尾为默认关、未来不采用 Bloom**（见 `docs/reports/Phase 10.3 …报告.md`）。P10.4 中与 Bloom-on 文档同步相关项取消。**P10.5**：代码与 `视觉参数总表` / Tech Spec 等文档回填（pending）。
 todos:
   - id: p100-baseline
     content: P10.0 入口性能基线复查（无代码）：重跑 P8.0.1 三片段，在 Phase 8 基线文档末尾新增 P10.0 节
@@ -12,15 +12,18 @@ todos:
     content: P10.2 距离衰减 1/(1+k·d²) + 与透明衰减互斥：idle/active.vert 计算 vDistFalloff varying；.frag 乘到 vColor；新增 uDistanceFalloffK / uDistanceFalloffMode；mode=1 时 idle alpha 锁高区避免 bloom 泄漏
     status: completed
   - id: p103-bloom-default-on
-    content: P10.3 Bloom 默认开：scene.ts postFxBloomEnabled = true 且初始化 addPass；保留 window.__bloom.disable() 调试接口；strength/radius/threshold 初值不动
+    content: P10.3 收尾（2026-04-28）：验收未达标；Bloom 保持默认关，保留 window.__bloom；决策与操作见 docs/reports Phase 10.3 报告
     status: completed
   - id: p104-perf-regression-doc
-    content: P10.4 出口 fps 复测 + 文档同步：Phase 8 基线加 P10.4 出口节；视觉参数总表登记 7 个 uniform 定稿值；Tech Spec §1.2 Bloom 默认状态改 on
+    content: P10.4 原计划含 Bloom-on 文档与出口 fps；因 P10.3 放弃 Bloom，本节中与「Bloom 默认 on / Tech Spec 改 on」绑定项取消；uniform 定稿与基线复测按需另开任务
+    status: cancelled
+  - id: p105-doc-backfill
+    content: P10.5 项目文档回填：视觉参数总表 §2/共享 uniform/Bloom 与 galaxyMeshes+shader 对齐；Tech Spec §1.2 与 P10.3 报告一致（生产默认无 Bloom）；可选 Design Spec 弱化 Bloom 叙事；可选 Phase 8 基线自愿复测节
     status: pending
 isProject: false
 ---
 
-# Phase 10 — 全局视觉重映射（rating→L、距离衰减、Bloom 默认开）
+# Phase 10 — 全局视觉重映射（rating→L、距离衰减；Bloom 已产品收尾为不采用）
 
 > 与 Phase 9（HUD）解耦；不动数据 schema、不动 mesh 拓扑、不动状态机。仅触及 idle/active 顶点+片段着色器、`scene.ts` 后处理初始化、leva 调参面板。
 
@@ -31,7 +34,7 @@ isProject: false
   - [frontend/src/three/galaxyMeshes.ts](frontend/src/three/galaxyMeshes.ts)（uniform 扩充）
   - [frontend/src/three/shaders/galaxyIdle.vert.glsl](frontend/src/three/shaders/galaxyIdle.vert.glsl) / [.frag.glsl](frontend/src/three/shaders/galaxyIdle.frag.glsl)
   - [frontend/src/three/shaders/galaxyActive.vert.glsl](frontend/src/three/shaders/galaxyActive.vert.glsl) / [.frag.glsl](frontend/src/three/shaders/galaxyActive.frag.glsl)
-  - [frontend/src/three/scene.ts](frontend/src/three/scene.ts)（Bloom 默认开 + leva 挂钩）
+  - [frontend/src/three/scene.ts](frontend/src/three/scene.ts)（Bloom 可选调试；生产默认关）
   - [docs/project_docs/Phase 8 基线 P8.0 性能与 P8.4 准入.md](docs/project_docs/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md)（P10 入口/出口 fps 行）
   - [docs/project_docs/视觉参数总表.md](docs/project_docs/视觉参数总表.md)
   - [docs/project_docs/TMDB 电影宇宙 Tech Spec.md](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md) §1.2 Bloom
@@ -43,13 +46,15 @@ flowchart TD
     P100["P10.0 入口性能基线复查（无代码）"]
     P101["P10.1 rating→L 全局常数重映射"]
     P102["P10.2 距离衰减 + 透明衰减互斥"]
-    P103["P10.3 Bloom 默认开"]
-    P104["P10.4 出口 fps 复测 + 文档同步"]
+    P103["P10.3 Bloom（已收尾：默认关）"]
+    P104["P10.4 文档/基线（已取消 Bloom 绑定项）"]
+    P105["P10.5 项目文档回填"]
 
     P100 --> P101
     P101 --> P102
     P102 --> P103
     P103 --> P104
+    P104 -.-> P105
 ```
 
 依赖说明：
@@ -147,33 +152,46 @@ void main() {
 - mode=0 时画面回到 Phase 8.4 收尾态（idle alpha = 1 - inFocus 衰减保持）
 - mode 切换不引入闪烁（同帧 uniform 更新即可）
 
-## P10.3 Bloom 默认开
+## P10.3 Bloom（原计划「默认开」— **已产品收尾**）
 
-**实施**：
-- 在 [scene.ts](frontend/src/three/scene.ts) line 308 `let postFxBloomEnabled = false` 改为 `true`，并在初始化 `composer.addPass(bloomPass)` 一次（移除 `enable()` 的"延迟 addPass"模式或在初始化时直接调用 `bloomDebug.enable()`）
-- 保留 `window.__bloom.disable()` 调试接口
-- 不改 strength/radius/threshold 初值（沿用 0.95 / 0.52 / 0.82，与 Tech Spec §1.2 一致）；P10.1 提高 `uLMax` 到 1.0 后 vote_average ≈ 7+ 的星会跨过 threshold 0.82，刚好让前 25% 高分电影发光
-- 在 leva / `window.__bloom` 中保留三档实时调参；P10.4 收尾时把 strength/radius/threshold 最终值（如有调整）写回 [Tech Spec §1.2](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md)
+> **状态（2026-04-28）**：视觉验收未通过；目标效果（对齐官方示例级柔和大光晕）工程量与管线改动面过大，**不在当前里程碑执行**；**未来产品路径不采用 `UnrealBloomPass` 作为默认叙事**。  
+> **代码**：`scene.ts` 保持 **Bloom 默认关**（`postFxBloomEnabled = false`，初始化**不** `addPass(bloomPass)`）；`UnrealBloomPass` 实例与 **`window.__bloom`**（`enable` / `disable`、strength / radius / threshold）**保留**供本地/Storybook 调试。  
+> **全文决策、根因、曾尝试操作**：见 [`docs/reports/Phase 10.3 P10.3 Bloom 决策与收尾报告.md`](docs/reports/Phase%2010.3%20P10.3%20Bloom%20决策与收尾报告.md)。
 
-**风险与对策**：
-- 集成显卡 fps 退化超过 P8.0 准入门槛 → 优先降 strength（0.95 → 0.7）或 radius（0.52 → 0.4），不动 idle/active 几何 detail
-- bloom 与 P10.2 透明 alpha 同时启用导致泄漏 → 通过 P10.2 的 `mode=1 时 alpha → 0.85+` 闭合
+以下为原计划条文，**仅供参考**，不再作为交付验收依据。
 
-## P10.4 出口 fps 复测 + 文档同步
+<details>
+<summary>原计划 P10.3 / P10.4（折叠）</summary>
 
-- 在 [`Phase 8 基线`](docs/project_docs/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md) 新建 `## P10.4 出口` 节，重跑 P10.0 同口径三片段
-- fps 退化 ≤ 5% 即通过；超 5% 时回退 P10.3 bloom 参数或暂关 P10.2 距离衰减并记入风险栏
-- 文档同步：
-  - [视觉参数总表.md](docs/project_docs/视觉参数总表.md)：登记 `uLMin/uLMax/uHighRatingT/uHighTierTRangeScale/uLightnessRatingExponent/uDistanceFalloffK/uDistanceFalloffMode` 的定稿值
-  - [Tech Spec §1.2](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md)：Bloom 默认状态从"off"改为"on"，引用 P10.4 fps
-  - 不要求实施报告（沿用 Phase 7/8 节奏）
+- P10.3 曾考虑：`postFxBloomEnabled = true` + 初始化 `composer.addPass(bloomPass)`；strength/radius/threshold 初值 0.95 / 0.52 / 0.82。
+- P10.4 曾考虑：Phase 8 基线 §P10.4 出口 fps、视觉参数总表 7 uniform、Tech Spec §1.2 Bloom 默认 on。
+
+</details>
+
+## P10.4 出口 fps 复测 + 文档同步（**已取消 Bloom 绑定部分**）
+
+- 与 **「Bloom 默认 on」**、**「Tech Spec §1.2 改默认 on」** 绑定的条目 **不再执行**（见上节报告）。
+- **仍可独立执行**（另开任务）：Phase 8 基线同口径复测；视觉参数总表登记 P10.1/P10.2 uniform 定稿（与 Bloom 无关）。
+
+## P10.5 项目文档回填（**pending** — todo `p105-doc-backfill`）
+
+**目标**：消除 P10.1/P10.2/P10.3 并入代码后，`docs/project_docs/` 与实现之间的漂移。
+
+| 优先级 | 文档 | 动作 |
+|--------|------|------|
+| P0 | [`视觉参数总表.md`](docs/project_docs/视觉参数总表.md) | 更新扫描基线日期；§2：`uLMin/uLMax`、P10.1 三 uniform、P10.2 `uDistanceFalloffK` / `uDistanceFalloffMode`、idle.frag alpha（mode 0/1）；「共享 uniform」一行与 `galaxyMeshes.ts` `makeSharedUniforms` 一致；§5 Bloom 与 `scene.ts` + [P10.3 报告](docs/reports/Phase%2010.3%20P10.3%20Bloom%20决策与收尾报告.md) 一致 |
+| P1 | [`TMDB 电影宇宙 Tech Spec.md`](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md) | §1.2：明确生产默认 **不**挂 Bloom pass；保留 `UnrealBloomPass` 参数与 `window.__bloom` 为可选调试；与 P10.3 报告交叉引用 |
+| P2 | [`TMDB 电影宇宙 Design Spec.md`](docs/project_docs/TMDB%20电影宇宙%20Design%20Spec.md) | 若「Bloom/泛光」易被读成必选能力，弱化为亮度/对比叙事或注明当前默认无后处理 Bloom |
+| P3 | [`Phase 8 基线 P8.0 性能与 P8.4 准入.md`](docs/project_docs/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md) | **自愿**：Phase 10 代码稳定后同 §P8.0.1 口径补一行备注或表（非强制） |
+
+**验收**：上表 P0/P1 改完后，随机抽 `galaxyMeshes.ts` + `galaxyIdle.frag.glsl` 与总表、Tech Spec 对读无矛盾。
 
 ## 验收（Phase 10 总）
 
 - 低分电影显著更暗、高分集中区有可读对比度
 - 远场星层有距离感（mode=1 默认开）
-- Bloom 默认开后高分电影发光，整体画面"金属感 → 星空感"切换明显
-- fps 不破 P8.0 准入门槛 95%
+- ~~Bloom 默认开后高分电影发光~~（**已移除**：Bloom 不作为产品默认）
+- fps 不破 P8.0 准入门槛 95%（默认无 Bloom pass，与 P8.x  bench 口径一致）
 - HUD / Drawer / Tooltip / 选中链路全部无回归
 - mode 与 leva 调参运行时切换无崩溃 / 无闪烁
 

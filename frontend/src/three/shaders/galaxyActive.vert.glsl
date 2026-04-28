@@ -14,6 +14,9 @@ uniform float uLightnessRatingExponent;
 uniform float uDistanceFalloffK;
 uniform float uChroma;
 uniform int uFocusedInstanceId;
+uniform float uFocusCameraBlend;
+uniform int uFocusTargetInstanceId;
+uniform float uFocusNonTargetActiveAlpha;
 
 attribute float hue;
 attribute float voteNorm;
@@ -21,6 +24,7 @@ attribute float aSize;
 
 varying vec3 vColor;
 varying float vDistFalloff;
+varying float vFocusAlphaMult;
 
 void main() {
   float aZ = instanceMatrix[3][2];
@@ -40,6 +44,7 @@ void main() {
     gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
     vColor = vec3(0.0);
     vDistFalloff = 1.0;
+    vFocusAlphaMult = 1.0;
     return;
   }
 
@@ -58,4 +63,10 @@ void main() {
   float a = uChroma * cos(hue);
   float labB = uChroma * sin(hue);
   vColor = linear_to_srgb(oklab_to_linear_srgb(vec3(L, a, labB)));
+
+  bool isFocusTarget =
+    (uFocusTargetInstanceId >= 0) && (gl_InstanceID == uFocusTargetInstanceId);
+  float blend = clamp(uFocusCameraBlend, 0.0, 1.0);
+  float dimAlpha = mix(1.0, uFocusNonTargetActiveAlpha, blend);
+  vFocusAlphaMult = isFocusTarget ? 1.0 : dimAlpha;
 }

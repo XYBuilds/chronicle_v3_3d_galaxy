@@ -1,6 +1,6 @@
 ---
 name: phase 10 global remap
-overview: Phase 10 全局视觉重映射：rating→L（P10.1）、距离衰减（P10.2）已落地；P10.3 Bloom「默认开」已**产品收尾为默认关、未来不采用 Bloom**（见 `docs/reports/Phase 10.3 …报告.md`）。P10.4 中与 Bloom-on 文档同步相关项取消。
+overview: Phase 10 全局视觉重映射：rating→L（P10.1）、距离衰减（P10.2）已落地；P10.3 Bloom「默认开」已**产品收尾为默认关、未来不采用 Bloom**（见 `docs/reports/Phase 10.3 …报告.md`）。P10.4 中与 Bloom-on 文档同步相关项取消。**P10.5**：代码与 `视觉参数总表` / Tech Spec 等文档回填（pending）。
 todos:
   - id: p100-baseline
     content: P10.0 入口性能基线复查（无代码）：重跑 P8.0.1 三片段，在 Phase 8 基线文档末尾新增 P10.0 节
@@ -17,6 +17,9 @@ todos:
   - id: p104-perf-regression-doc
     content: P10.4 原计划含 Bloom-on 文档与出口 fps；因 P10.3 放弃 Bloom，本节中与「Bloom 默认 on / Tech Spec 改 on」绑定项取消；uniform 定稿与基线复测按需另开任务
     status: cancelled
+  - id: p105-doc-backfill
+    content: P10.5 项目文档回填：视觉参数总表 §2/共享 uniform/Bloom 与 galaxyMeshes+shader 对齐；Tech Spec §1.2 与 P10.3 报告一致（生产默认无 Bloom）；可选 Design Spec 弱化 Bloom 叙事；可选 Phase 8 基线自愿复测节
+    status: pending
 isProject: false
 ---
 
@@ -45,11 +48,13 @@ flowchart TD
     P102["P10.2 距离衰减 + 透明衰减互斥"]
     P103["P10.3 Bloom（已收尾：默认关）"]
     P104["P10.4 文档/基线（已取消 Bloom 绑定项）"]
+    P105["P10.5 项目文档回填"]
 
     P100 --> P101
     P101 --> P102
     P102 --> P103
     P103 --> P104
+    P104 -.-> P105
 ```
 
 依赖说明：
@@ -167,6 +172,19 @@ void main() {
 
 - 与 **「Bloom 默认 on」**、**「Tech Spec §1.2 改默认 on」** 绑定的条目 **不再执行**（见上节报告）。
 - **仍可独立执行**（另开任务）：Phase 8 基线同口径复测；视觉参数总表登记 P10.1/P10.2 uniform 定稿（与 Bloom 无关）。
+
+## P10.5 项目文档回填（**pending** — todo `p105-doc-backfill`）
+
+**目标**：消除 P10.1/P10.2/P10.3 并入代码后，`docs/project_docs/` 与实现之间的漂移。
+
+| 优先级 | 文档 | 动作 |
+|--------|------|------|
+| P0 | [`视觉参数总表.md`](docs/project_docs/视觉参数总表.md) | 更新扫描基线日期；§2：`uLMin/uLMax`、P10.1 三 uniform、P10.2 `uDistanceFalloffK` / `uDistanceFalloffMode`、idle.frag alpha（mode 0/1）；「共享 uniform」一行与 `galaxyMeshes.ts` `makeSharedUniforms` 一致；§5 Bloom 与 `scene.ts` + [P10.3 报告](docs/reports/Phase%2010.3%20P10.3%20Bloom%20决策与收尾报告.md) 一致 |
+| P1 | [`TMDB 电影宇宙 Tech Spec.md`](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md) | §1.2：明确生产默认 **不**挂 Bloom pass；保留 `UnrealBloomPass` 参数与 `window.__bloom` 为可选调试；与 P10.3 报告交叉引用 |
+| P2 | [`TMDB 电影宇宙 Design Spec.md`](docs/project_docs/TMDB%20电影宇宙%20Design%20Spec.md) | 若「Bloom/泛光」易被读成必选能力，弱化为亮度/对比叙事或注明当前默认无后处理 Bloom |
+| P3 | [`Phase 8 基线 P8.0 性能与 P8.4 准入.md`](docs/project_docs/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md) | **自愿**：Phase 10 代码稳定后同 §P8.0.1 口径补一行备注或表（非强制） |
+
+**验收**：上表 P0/P1 改完后，随机抽 `galaxyMeshes.ts` + `galaxyIdle.frag.glsl` 与总表、Tech Spec 对读无矛盾。
 
 ## 验收（Phase 10 总）
 

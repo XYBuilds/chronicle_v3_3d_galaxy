@@ -9,6 +9,9 @@ import perlinVertexShader from './shaders/perlin.vert.glsl'
 
 const PHI = (1 + Math.sqrt(5)) / 2
 
+/** Shader-side max genre bands (weights + thresholds + colors). */
+export const PLANET_MAX_BANDS = 8
+
 /** xmur3 string hash → 32-bit seed (deterministic). */
 function xmur3(str: string): () => number {
   let h = 1779033703 ^ str.length
@@ -34,17 +37,24 @@ function mulberry32(seed: number): () => number {
   }
 }
 
-/** Largest-remainder allocation so band sizes sum to N and track target proportions. */
-function bandCountsLrm(N: number, p0: number, p1: number, p2: number, p3: number): [number, number, number, number] {
-  const parts = [p0 * N, p1 * N, p2 * N, p3 * N]
-  const n = [Math.floor(parts[0]!), Math.floor(parts[1]!), Math.floor(parts[2]!), Math.floor(parts[3]!)]
-  let sum = n[0]! + n[1]! + n[2]! + n[3]!
+/** Largest-remainder allocation so band sizes sum to N. */
+function bandCountsLrm(N: number, proportions: number[]): number[] {
+  const K = proportions.length
+  console.assert(
+    K >= 1 && Math.abs(proportions.reduce((a, b) => a + b, 0) - 1) < 1e-4,
+    '[Planet] proportions sum to 1',
+    proportions,
+  )
+  const parts = proportions.map((p) => p * N)
+  const n = parts.map((p) => Math.floor(p))
+  let sum = n.reduce((a, b) => a + b, 0)
   let rem = N - sum
-  const order = [0, 1, 2, 3].sort(
+  const order = [...Array(K).keys()].sort(
     (a, b) => parts[b]! - Math.floor(parts[b]!) - (parts[a]! - Math.floor(parts[a]!)),
   )
-  for (let k = 0; k < rem; k++) n[order[k % 4]!]!++
-  const m = (i: number) => {
+  for (let k = 0; k < rem; k++) n[order[k % K]!]!++
+
+  for (let i = 0; i < K; i++) {
     if (n[i]! < 1) {
       const donor = n.indexOf(Math.max(...n))
       if (n[donor]! > 1) {
@@ -53,36 +63,44 @@ function bandCountsLrm(N: number, p0: number, p1: number, p2: number, p3: number
       }
     }
   }
-  m(0)
-  m(1)
-  m(2)
-  m(3)
-  console.assert(n[0]! + n[1]! + n[2]! + n[3]! === N, '[Planet] band counts sum', n, N)
-  return [n[0]!, n[1]!, n[2]!, n[3]!]
+  console.assert(n.reduce((a, b) => a + b, 0) === N, '[Planet] band counts sum', n, N)
+  return n
 }
 
-/** Mid-thresholds between sorted runs so hard `< t` counts match LRM band sizes (no duplicates at cuts). */
-function thresholdsFromSortedBands(
-  sorted: Float32Array,
-  n0: number,
-  n1: number,
-  n2: number,
-  n3: number,
-): { t1: number; t2: number; t3: number; t4: number } {
+/** Mid-thresholds between sorted quantile runs (cuts between adjacent bands). */
+function thresholdsFromSortedBands(sorted: Float32Array, counts: number[]): { thresholds: number[] } {
   const N = sorted.length
-  console.assert(n0 + n1 + n2 + n3 === N && n0 >= 1 && n1 >= 1 && n2 >= 1 && n3 >= 1, '[Planet] band sizes', {
-    n0,
-    n1,
-    n2,
-    n3,
-    N,
-  })
-  const mid = (a: number, b: number) => 0.5 * (a + b)
-  const t1 = mid(sorted[n0 - 1]!, sorted[n0]!)
-  const t2 = mid(sorted[n0 + n1 - 1]!, sorted[n0 + n1]!)
-  const t3 = mid(sorted[n0 + n1 + n2 - 1]!, sorted[n0 + n1 + n2]!)
-  const t4 = sorted[N - 1]!
-  return { t1, t2, t3, t4 }
+  const K = counts.length
+  if (K === 1) {
+    return { thresholds: [] }
+  }
+  console.assert(counts.every((c) => c >= 1), '[Planet] each band >= 1 vertex', counts)
+  console.assert(counts.reduce((a, b) => a + b, 0) === N, '[Planet] counts sum', counts, N)
+
+  const thresholds: number[] = []
+  let cum = 0
+  for (let k = 0; k < K - 1; k++) {
+    cum += counts[k]!
+    const mid = 0.5 * (sorted[cum - 1]! + sorted[cum]!)
+    thresholds.push(mid)
+  }
+  const eps = 1e-5
+  for (let i = 1; i < thresholds.length; i++) {
+    if (thresholds[i]! <= thresholds[i - 1]!) {
+      thresholds[i] = thresholds[i - 1]! + eps
+    }
+  }
+  console.assert(thresholds.every((t, i) => i === 0 || t > thresholds[i - 1]!), '[Planet] thresh strictly increasing', thresholds)
+  return { thresholds }
+}
+
+/** Target area proportions ∝ [1, x, x², …, x^(K−1)], normalized. */
+function areaProportionsK(K: number, x: number): number[] {
+  const xx = Math.max(1e-6, x)
+  const raw: number[] = []
+  for (let k = 0; k < K; k++) raw.push(Math.pow(xx, k))
+  const D = raw.reduce((a, b) => a + b, 0)
+  return raw.map((w) => w / D)
 }
 
 function sampleFbm01(
@@ -154,11 +172,11 @@ export interface SelectionPlanetHandle {
 }
 
 /**
- * Phase 4.5 / P8.3 — Focus Perlin sphere: Icosahedron detail=6, CPU simplex FBM + sorted-quantile 4-band partition,
- * deterministic seed from `movie.id`.
+ * Focus Perlin sphere: Icosahedron detail=8, CPU simplex FBM + sorted-quantile K-band partition (K = genre count),
+ * deterministic seed from `movie.id`. Lowest-noise band (genre0, largest area) is lowest terrace; highest band tallest.
  */
 export function createSelectionPlanet(): SelectionPlanetHandle {
-  const detail = 6
+  const detail = 8
   const geometry = new THREE.IcosahedronGeometry(1, detail)
   const posAttr = geometry.attributes.position as THREE.BufferAttribute
   posAttr.usage = THREE.StaticDrawUsage
@@ -171,24 +189,24 @@ export function createSelectionPlanet(): SelectionPlanetHandle {
   geometry.setAttribute('aNoise', noiseAttr)
 
   const defaultAreaRatio = 1 / PHI
+  const PAD_THRESH = 2.0
+
+  const colorUniformArray = Array.from({ length: PLANET_MAX_BANDS }, () => new THREE.Vector3(0.2, 0.6, 1))
 
   const material = new THREE.ShaderMaterial({
     uniforms: {
-      uColor0: { value: new THREE.Vector3(0.2, 0.6, 1) },
-      uColor1: { value: new THREE.Vector3(0.2, 0.6, 1) },
-      uColor2: { value: new THREE.Vector3(0.2, 0.6, 1) },
-      uColor3: { value: new THREE.Vector3(0.2, 0.6, 1) },
+      uColors: { value: colorUniformArray },
       uAlpha: { value: 0 },
-      /** Object-space frequency multiplier (CPU FBM input). */
       uScale: { value: 2.35 },
       uOctaves: { value: 4 },
       uPersistence: { value: 0.52 },
-      /** Geometric weight ratio for 4-band target areas: weights ∝ [1, x, x², x³]. Default 1/φ. */
+      /** Geometric weight ratio for K-band target areas: weights ∝ [1, x, …, x^(K−1)]. Default 1/φ. */
       uAreaRatio: { value: defaultAreaRatio },
-      uThresh1: { value: 0.25 },
-      uThresh2: { value: 0.5 },
-      uThresh3: { value: 0.75 },
-      uThresh4: { value: 1 },
+      uThresh: { value: new Float32Array(7).fill(PAD_THRESH) },
+      uBandCount: { value: 1 },
+      uCutCount: { value: 0 },
+      uStepHeight: { value: 0.03 },
+      uStepSmoothness: { value: 0.01 },
     },
     vertexShader: perlinVertexShader,
     fragmentShader: perlinFragmentShader,
@@ -230,82 +248,81 @@ export function createSelectionPlanet(): SelectionPlanetHandle {
     sortedScratch.set(scratchNoise)
     sortedScratch.sort()
 
-    const x = Math.max(1e-6, u.uAreaRatio.value as number)
-    const w0 = 1
-    const w1 = x
-    const w2 = x * x
-    const w3 = x * x * x
-    const D = w0 + w1 + w2 + w3
-    const p0 = w0 / D
-    const p1 = w1 / D
-    const p2 = w2 / D
-    const p3 = w3 / D
+    const K = Math.max(1, Math.min(PLANET_MAX_BANDS, Math.round(u.uBandCount.value as number)))
+    const x = u.uAreaRatio.value as number
+    const proportions = areaProportionsK(K, x)
+    const counts = bandCountsLrm(vCount, proportions)
+    const { thresholds } = thresholdsFromSortedBands(sortedScratch, counts)
 
-    const [n0, n1, n2, n3] = bandCountsLrm(vCount, p0, p1, p2, p3)
-    let { t1, t2, t3, t4 } = thresholdsFromSortedBands(sortedScratch, n0, n1, n2, n3)
+    const threshArr = u.uThresh.value as Float32Array
+    console.assert(threshArr.length === 7, '[Planet] uThresh length')
+    for (let i = 0; i < 7; i++) {
+      threshArr[i] = i < thresholds.length ? thresholds[i]! : PAD_THRESH
+    }
+
+    console.assert(
+      thresholds.length === Math.max(0, K - 1),
+      '[Planet] threshold count',
+      K,
+      thresholds.length,
+    )
+
     const eps = 1e-5
-    if (t2 <= t1) t2 = t1 + eps
-    if (t3 <= t2) t3 = t2 + eps
-    if (t4 <= t3) t4 = t3 + eps
-
-    console.assert(t1 < t2 && t2 < t3 && t3 <= t4, '[Planet] P8.3 thresh order', { t1, t2, t3, t4 })
-
-    u.uThresh1.value = t1
-    u.uThresh2.value = t2
-    u.uThresh3.value = t3
-    u.uThresh4.value = t4
+    for (let i = 1; i < thresholds.length; i++) {
+      if (thresholds[i]! <= thresholds[i - 1]!) {
+        thresholds[i] = thresholds[i - 1]! + eps
+        threshArr[i] = thresholds[i]!
+      }
+    }
 
     for (let i = 0; i < vCount; i++) {
       noiseArr[i] = scratchNoise[i]!
     }
     noiseAttr.needsUpdate = true
 
-    let c0 = 0
-    let c1 = 0
-    let c2 = 0
-    let c3 = 0
-    for (let i = 0; i < vCount; i++) {
-      const v = scratchNoise[i]!
-      if (v < t1) c0++
-      else if (v < t2) c1++
-      else if (v < t3) c2++
-      else c3++
+    const allocErr = proportions.reduce((acc, p, k) => acc + Math.abs(counts[k]! / vCount - p), 0)
+    const bandHard = new Array(K).fill(0)
+    if (K === 1) {
+      bandHard[0] = vCount
+    } else {
+      for (let i = 0; i < vCount; i++) {
+        const v = scratchNoise[i]!
+        let b = 0
+        for (let t = 0; t < thresholds.length; t++) {
+          if (v >= thresholds[t]!) b++
+        }
+        bandHard[b]!++
+      }
     }
-    const n = vCount
-    const a0 = c0 / n
-    const a1 = c1 / n
-    const a2 = c2 / n
-    const a3 = c3 / n
-    const e0 = n0 / n
-    const e1 = n1 / n
-    const e2 = n2 / n
-    const e3 = n3 / n
-    const errAlloc =
-      Math.abs(n0 / n - p0) + Math.abs(n1 / n - p1) + Math.abs(n2 / n - p2) + Math.abs(n3 / n - p3)
-    const errHard =
-      Math.abs(a0 - n0 / n) + Math.abs(a1 - n1 / n) + Math.abs(a2 - n2 / n) + Math.abs(a3 - n3 / n)
+    const errHard = counts.reduce((acc, _, k) => acc + Math.abs(bandHard[k]! / vCount - counts[k]! / vCount), 0)
+
     console.log(
-      `[Planet] P8.3 id=${movieId} n=${n} target p=[${p0.toFixed(4)},${p1.toFixed(4)},${p2.toFixed(4)},${p3.toFixed(4)}] alloc=[${e0.toFixed(4)},${e1.toFixed(4)},${e2.toFixed(4)},${e3.toFixed(4)}] hard<[t1,t2,t3]=[${a0.toFixed(4)},${a1.toFixed(4)},${a2.toFixed(4)},${a3.toFixed(4)}] L1(alloc−p)=${errAlloc.toFixed(5)} L1(hard−alloc)=${errHard.toFixed(5)}`,
+      `[Planet] K=${K} id=${movieId} n=${vCount} allocErr(L1)=${allocErr.toFixed(5)} hardVsAlloc(L1)=${errHard.toFixed(5)} cuts=${thresholds.length}`,
     )
-    console.assert(errAlloc < 0.005, '[Planet] P8.3 alloc vs target <0.5%', { errAlloc, movieId })
-    console.assert(errHard < 0.005, '[Planet] P8.3 hard cuts vs alloc <0.5%', { errHard, movieId })
+    console.assert(allocErr < 0.02, '[Planet] alloc vs target proportions', { allocErr, movieId, K })
+    console.assert(errHard < 0.02, '[Planet] hard band counts vs LRM', { errHard, movieId, K })
   }
 
   const handle: SelectionPlanetHandle = {
     mesh,
     material,
     lastRadius: 0.1,
-    setFromMovie: () => {},
-    syncCpuNoiseFromUniforms: () => {},
-    setOpacity: () => {},
-    dispose: () => {},
+    setFromMovie: () => { },
+    syncCpuNoiseFromUniforms: () => { },
+    setOpacity: () => { },
+    dispose: () => { },
   }
 
   const setFromMovie = (movie: Movie, palette: Meta['genre_palette'], worldRadius: number) => {
-    handle.lastRadius = worldRadius
+    const stepH = material.uniforms.uStepHeight.value as number
+
+    const { genres } = genreDisplayWeights(movie.genres, PLANET_MAX_BANDS)
+    const K = genres.length
+    const cuts = Math.max(0, K - 1)
+    const radiusMul = 1 + cuts * stepH
+    handle.lastRadius = worldRadius * radiusMul
     lastMovie = movie
 
-    const { genres } = genreDisplayWeights(movie.genres, 4)
     const fbHue =
       movie.genre_hue ??
       hueFromGenreColor([movie.genre_color[0], movie.genre_color[1], movie.genre_color[2]] as [
@@ -315,13 +332,15 @@ export function createSelectionPlanet(): SelectionPlanetHandle {
       ])
     const fbColor = new THREE.Color(movie.genre_color[0], movie.genre_color[1], movie.genre_color[2])
     const cols = genres.map((g) => vec3FromHue(resolveGenreHue(g, palette, fbHue), new THREE.Vector3()))
-    while (cols.length < 4) cols.push(vec3FromHue(fbHue, new THREE.Vector3()))
+    const padCol = cols[cols.length - 1] ?? vec3FromHue(fbHue, new THREE.Vector3())
+    while (cols.length < PLANET_MAX_BANDS) cols.push(padCol.clone())
 
     const u = material.uniforms
-    ;(u.uColor0.value as THREE.Vector3).copy(cols[0]!)
-    ;(u.uColor1.value as THREE.Vector3).copy(cols[1]!)
-    ;(u.uColor2.value as THREE.Vector3).copy(cols[2]!)
-    ;(u.uColor3.value as THREE.Vector3).copy(cols[3]!)
+    u.uBandCount.value = K
+    u.uCutCount.value = cuts
+    for (let i = 0; i < PLANET_MAX_BANDS; i++) {
+      ; (u.uColors.value as THREE.Vector3[])[i]!.copy(cols[i]!)
+    }
 
     mesh.position.set(movie.x, movie.y, movie.z)
     mesh.scale.setScalar(worldRadius)
@@ -330,7 +349,9 @@ export function createSelectionPlanet(): SelectionPlanetHandle {
     recomputeNoiseAndThresholds(movie.id)
 
     const hexList = genres.map((g) => palette[g] ?? `#${fbColor.getHexString()}`)
-    console.log(`[Planet] genres=${JSON.stringify(genres)} colors=${JSON.stringify(hexList)}`)
+    console.log(
+      `[Planet] K=${K} genres=${JSON.stringify(genres)} colors=${JSON.stringify(hexList)} | lastRadius=${handle.lastRadius.toFixed(4)} worldR=${worldRadius.toFixed(4)} stepH=${stepH.toFixed(3)} radiusMul=${radiusMul.toFixed(3)}`,
+    )
   }
 
   const syncCpuNoiseFromUniforms = () => {

@@ -63,12 +63,22 @@ interface GalaxyInteractionDebug {
   log: () => void
 }
 
+/** Dev console: `window.__planetTerrace` — Perlin focus sphere terrace uniforms (P11.3). */
+interface SelectionPlanetTerraceDebug {
+  /** Unit-sphere extrusion per band step; world radius uses `× (1 + cuts × stepHeight)`. Clamped to [0, 0.25] on set. */
+  stepHeight: number
+  /** Noise-domain smoothstep half-width at thresholds; 0 ≈ hard cuts. Clamped to [0, 0.25] on set. */
+  stepSmoothness: number
+  log: () => void
+}
+
 declare global {
   interface Window {
     __bloom?: BloomDebugControls
     __galaxyPointScale?: GalaxyPointScaleDebug
     __galaxyColor?: GalaxyColorDebug
     __galaxyInteraction?: GalaxyInteractionDebug
+    __planetTerrace?: SelectionPlanetTerraceDebug
   }
 }
 
@@ -259,7 +269,9 @@ export function mountGalaxyScene(
     if (idx < 0 || idx >= movies.length) return
     const m = movies[idx]!
     const { r } = resolveSelectionWorldRadius(m, uZ.value, uZw.value, galaxy.activeMaterial, layoutWorldSpan)
-    planet.lastRadius = r
+    const stepH = planet.material.uniforms.uStepHeight.value as number
+    const cuts = planet.material.uniforms.uCutCount.value as number
+    planet.lastRadius = r * (1 + cuts * stepH)
     planet.mesh.scale.setScalar(r)
     planet.mesh.updateMatrixWorld(true)
   }
@@ -489,6 +501,30 @@ export function mountGalaxyScene(
   window.__galaxyColor = galaxyColorDebug
   galaxyColorDebug.log()
 
+  const planetTerraceDebug: SelectionPlanetTerraceDebug = {
+    get stepHeight() {
+      return planet.material.uniforms.uStepHeight.value as number
+    },
+    set stepHeight(value: number) {
+      planet.material.uniforms.uStepHeight.value = THREE.MathUtils.clamp(value, 0, 0.25)
+      syncSelectionPlanetWorldScale()
+    },
+    get stepSmoothness() {
+      return planet.material.uniforms.uStepSmoothness.value as number
+    },
+    set stepSmoothness(value: number) {
+      planet.material.uniforms.uStepSmoothness.value = THREE.MathUtils.clamp(value, 0, 0.25)
+    },
+    log() {
+      const u = planet.material.uniforms
+      console.log(
+        `[Planet] uStepHeight=${(u.uStepHeight.value as number).toFixed(4)} uStepSmoothness=${(u.uStepSmoothness.value as number).toFixed(4)} uBandCount=${u.uBandCount.value} uCutCount=${u.uCutCount.value}`,
+      )
+    },
+  }
+  window.__planetTerrace = planetTerraceDebug
+  planetTerraceDebug.log()
+
   /** Phase 5.1.5 — e.g. `__galaxyInteraction.zCamDistance = 30` or `__galaxyInteraction.store.setState({ zCurrent: 2000 })`. */
   const interactionDebug: GalaxyInteractionDebug = {
     store: useGalaxyInteractionStore,
@@ -620,6 +656,9 @@ export function mountGalaxyScene(
     }
     if (window.__galaxyInteraction === interactionDebug) {
       delete window.__galaxyInteraction
+    }
+    if (window.__planetTerrace === planetTerraceDebug) {
+      delete window.__planetTerrace
     }
     if (postFxBloomEnabled) {
       composer.removePass(bloomPass)

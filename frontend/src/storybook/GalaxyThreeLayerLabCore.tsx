@@ -45,6 +45,10 @@ export interface GalaxyThreeLayerLabProps {
   planetPersistence: number
   /** P8.3 — geometric area ratio x in weights [1,x,x²,x³]; default 1/φ. */
   planetAreaRatio: number
+  /** P11.3 — terrace extrusion on unit sphere (local); effective world radius uses ×(1+3·height). */
+  planetStepHeight: number
+  /** P11.3 — smoothstep half-band width in noise space. */
+  planetStepSmoothness: number
 }
 
 /**
@@ -79,6 +83,8 @@ export function GalaxyThreeLayerLabCore(props: GalaxyThreeLayerLabProps) {
     planetOctaves,
     planetPersistence,
     planetAreaRatio,
+    planetStepHeight,
+    planetStepSmoothness,
   } = props
 
   useEffect(() => {
@@ -151,6 +157,15 @@ export function GalaxyThreeLayerLabCore(props: GalaxyThreeLayerLabProps) {
     pu.uAreaRatio.value = planetAreaRatio
     m.selectionPlanet.syncCpuNoiseFromUniforms()
   }, [planetUScale, planetOctaves, planetPersistence, planetAreaRatio])
+
+  /** P11.3 — shader-only terrace uniforms (no CPU noise recompute). */
+  useEffect(() => {
+    const m = mountHandle.current
+    if (!m) return
+    const pu = m.selectionPlanet.material.uniforms
+    pu.uStepHeight.value = planetStepHeight
+    pu.uStepSmoothness.value = planetStepSmoothness
+  }, [planetStepHeight, planetStepSmoothness])
 
   return <div ref={rootRef} className="h-full min-h-[480px] w-full bg-black" />
 }

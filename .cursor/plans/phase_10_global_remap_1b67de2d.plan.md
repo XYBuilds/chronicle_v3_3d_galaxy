@@ -7,7 +7,7 @@ todos:
     status: completed
   - id: p101-rating-l-remap
     content: P10.1 rating→L 全局常数重映射：idle/active.vert 插入 t/HIGH_T/HIGH_SCALE/K_EXP 公式；galaxyMeshes 加三个 uniform；leva 挂调参；uLMin/uLMax 默认 0.2/1.0
-    status: pending
+    status: completed
   - id: p102-distance-falloff
     content: P10.2 距离衰减 1/(1+k·d²) + 与透明衰减互斥：idle/active.vert 计算 vDistFalloff varying；.frag 乘到 vColor；新增 uDistanceFalloffK / uDistanceFalloffMode；mode=1 时 idle alpha 锁高区避免 bloom 泄漏
     status: pending

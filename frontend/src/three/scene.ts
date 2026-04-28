@@ -670,6 +670,7 @@ export function mountGalaxyScene(
     activeMesh: galaxy.active,
     movies,
     activeMaterial: galaxy.activeMaterial,
+    selectionPlanet: planet,
   })
 
   const w = renderer.domElement.width

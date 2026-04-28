@@ -122,7 +122,13 @@ Perlin focus 球在片元侧按 **`vNoise`** 与 **`uThresh[0..K−2]`**（**K**
 - **hue**：**主 genre**（`movie.genres` 首个非空）若 JSON 含 **`movie.genre_hue`** 则该档直接用；其余档用 **`genreHueForGenreName`**（palette key 排序对齐 Python **`sorted(found)`**，**勿**用 `localeCompare` 排序）。
 - **光照定稿**：**`uLightDir = normalize(0.5, 0.5, -0.1)`**，**`uAmbient = 0.95`**，**`uDiffuse = 0.55`**，**`uFlatShadingMix = 0.8`**（详见《视觉参数总表》§4）。
 
-**不透明化（P11.5）**：当前材质仍为 **transparent**；计划在后续子阶段切换 **`transparent: false`** / **`depthWrite: true`** / **`alphaTest`**，见 Phase 11 总计划。
+**不透明化（P11.5 · 已实装）**：Perlin 材质现为 **`transparent: false`**、**`depthWrite: true`**、**`alphaTest: 0.01`**；`uAlpha` 在 `setOpacity()` 中按可见性走 **0/1 二态**，避免 focus 球在 bloom / 叠片场景出现透明边缘泄漏。
+
+#### 3.5.2 focus 态拾取分流（Phase 11.6 · **已实装**）
+
+- **优先级**：当 `selectedMovieId != null` 且 focus 球包围球（半径 `selectionPlanet.lastRadius`）沿射线命中距离 **早于** active 命中时，hover/click 视为焦点星交互。  
+- **回落**：若未命中 focus 球，或 active 命中更近，则按既有 `pickClosestActiveMovieAlongRay` 路径处理，可切换到另一颗 active 星。  
+- **语义**：focus 球 hover 继续写 `hoveredMovieId`（单一来源），tooltip 与 ring 逻辑不分叉；点击 focus 球保持当前 focus，不误切后景。
 
 ### 3.6 select（延后）
 
@@ -144,3 +150,4 @@ Perlin focus 球在片元侧按 **`vNoise`** 与 **`uThresh[0..K−2]`**（**K**
 | 2026-04-28 | P11.2 定稿对齐：§3.4.1 仅 **idle** 乘子降 C/L；`uFocusDimChroma=0.7`、`uFocusDimL=1`；active 见 §3.4.3 |
 | 2026-04-28 | Phase 11.1：§3.4.3 改为「非目标 active alpha + 相机同步」实装说明；§3.4.4 为原遮挡剔除占位（未实装） |
 | 2026-04-29 | P11.4：§3.4 focus 表更新 Perlin detail / 色彩；§3.5 改为 **K 档**阈值与 **`lastRadius`** 公式；新增 **§3.5.1** Perlin 片元与光照定稿；指向《视觉参数总表》§4 与 [`Phase 11.4 … 实施报告.md`](../reports/Phase%2011.4%20P11.4%20Perlin%20法线重构%20vote→L%20genre%20色与光照定稿%20实施报告.md) |
+| 2026-04-29 | P11.7 文档收口：§3.5 标注 **P11.5 不透明化已实装**；新增 **§3.5.2** focus 态拾取分流（P11.6）定稿描述 |

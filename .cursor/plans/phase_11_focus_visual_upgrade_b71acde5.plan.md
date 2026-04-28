@@ -24,8 +24,8 @@ todos:
     content: P11.6 focus 态拾取分流：interaction.ts 优先 Perlin 球 raycaster，后主动 active mesh；selected!=null 且 hover 焦点球仍正常显 tooltip；背景星可切换 focus
     status: completed
   - id: p117-doc-sync
-    content: P11.7 文档同步 + 出口 fps：Phase 8 基线加 P11.7 出口节；状态机 spec / 视觉参数总表 / Tech Spec §1.1 §1.5 同步（**P11.4 相关 project_docs 已回填**；基线 fps **出口**仍待录）
-    status: pending
+    content: P11.7 文档同步 + 出口 fps：Phase 8 基线加 P11.7 出口节；状态机 spec / 视觉参数总表 / Tech Spec §1.1 §1.5 同步（已收口，出口节按同口径补录模板与门槛说明）
+    status: completed
 isProject: false
 ---
 

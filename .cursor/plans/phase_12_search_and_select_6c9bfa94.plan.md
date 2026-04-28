@@ -105,7 +105,7 @@ flowchart TD
   - 顶部居中搜索框（max-w-md）+ 三类 segmented（movie / person / genre）+ 清除 X
   - 联想下拉规格（电影名 / 人名 / genre 各自的过滤、排序、格式、高亮）—— 直接吸收用户笔记 `新增搜索功能 ...md` 的所有细则，不二次设计
   - ESC 焦点栈（搜索框 > drawer > 取消选中 > 关闭 search 模式）
-- 在 [`星球状态机 spec.md`](docs/project_docs/星球状态机%20spec.md) §3.5 select 节扩充：
+- 在 [`星球状态机 spec.md`](docs/project_docs/星球状态机%20spec.md) §3.6 select 节扩充：
   - `select` 提为正式态；含义"selectionIds 非空 + viswindowDisabled"
   - 与 focus 互斥优先级：focus > select > active/idle/hover
   - selectionMask 数据流（uSelectionMask R8 DataTexture, length = movies.length）
@@ -286,7 +286,7 @@ if (uSelectionMode == 1) {
 ## P12.8 select 态正式入状态机 + ESC 焦点栈
 
 **实施**：
-- [`星球状态机 spec.md`](docs/project_docs/星球状态机%20spec.md)：把 §3.5 select 从"延后"改为"正式"，写明 mask + viswindow 禁用 + 连线（人名）规则
+- [`星球状态机 spec.md`](docs/project_docs/星球状态机%20spec.md)：把 §3.6 select 从"延后"改为"正式"，写明 mask + viswindow 禁用 + 连线（人名）规则
 - ESC 焦点栈（[App.tsx](frontend/src/App.tsx) 全局 keydown）：
   - 搜索框 input focused → 清 query / 关闭联想
   - drawer open → 关 drawer

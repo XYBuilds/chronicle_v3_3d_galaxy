@@ -50,6 +50,12 @@ interface GalaxyColorDebug {
   chroma: number
   /** P11.1 — alpha of non-target active stars when focus blend = 1 (default 0.1). */
   focusNonTargetActiveAlpha: number
+  /** P11.2 — idle focus dim: chroma multiplier toward gray. */
+  focusDimChroma: number
+  /** P11.2 — idle focus dim: L multiplier (× L_base). */
+  focusDimL: number
+  /** P11.2 — 0/1; future selection path may diverge. */
+  focusDimMode: number
   log: () => void
 }
 
@@ -178,6 +184,9 @@ export function mountGalaxyScene(
   const uFocusCameraBlend = galUniforms.uFocusCameraBlend as THREE.Uniform<number>
   const uFocusTargetInstanceId = galUniforms.uFocusTargetInstanceId as THREE.Uniform<number>
   const uFocusNonTargetActiveAlpha = galUniforms.uFocusNonTargetActiveAlpha as THREE.Uniform<number>
+  const uFocusDimChroma = galUniforms.uFocusDimChroma as THREE.Uniform<number>
+  const uFocusDimL = galUniforms.uFocusDimL as THREE.Uniform<number>
+  const uFocusDimMode = galUniforms.uFocusDimMode as THREE.Uniform<number>
   uZ.value = zCurrent
   uZw.value = zVisWindow
   uFocused.value = -1
@@ -492,9 +501,28 @@ export function mountGalaxyScene(
     set focusNonTargetActiveAlpha(value: number) {
       uFocusNonTargetActiveAlpha.value = THREE.MathUtils.clamp(value, 0.02, 1)
     },
+    get focusDimChroma() {
+      return uFocusDimChroma.value
+    },
+    set focusDimChroma(value: number) {
+      uFocusDimChroma.value = THREE.MathUtils.clamp(value, 0, 1.5)
+    },
+    get focusDimL() {
+      return uFocusDimL.value
+    },
+    set focusDimL(value: number) {
+      uFocusDimL.value = THREE.MathUtils.clamp(value, 0.05, 1.5)
+    },
+    get focusDimMode() {
+      return uFocusDimMode.value
+    },
+    set focusDimMode(value: number) {
+      const v = Math.round(value)
+      uFocusDimMode.value = v === 1 ? 1 : 0
+    },
     log() {
       console.log(
-        `[Galaxy] OKLCH+P10.1 uLMin=${uLMin.value} uLMax=${uLMax.value} uHighRatingT=${uHighRatingT.value} uHighTierTRangeScale=${uHighTierTRangeScale.value} uLightnessRatingExponent=${uLightnessRatingExponent.value} uChroma=${uChroma.value} | P10.2 uDistanceFalloffK=${uDistanceFalloffK.value} uDistanceFalloffMode=${uDistanceFalloffMode.value} | P11.1 uFocusNonTargetActiveAlpha=${uFocusNonTargetActiveAlpha.value}`,
+        `[Galaxy] OKLCH+P10.1 uLMin=${uLMin.value} uLMax=${uLMax.value} uHighRatingT=${uHighRatingT.value} uHighTierTRangeScale=${uHighTierTRangeScale.value} uLightnessRatingExponent=${uLightnessRatingExponent.value} uChroma=${uChroma.value} | P10.2 uDistanceFalloffK=${uDistanceFalloffK.value} uDistanceFalloffMode=${uDistanceFalloffMode.value} | P11.1 uFocusNonTargetActiveAlpha=${uFocusNonTargetActiveAlpha.value} | P11.2 uFocusDimChroma=${uFocusDimChroma.value} uFocusDimL=${uFocusDimL.value} uFocusDimMode=${uFocusDimMode.value}`,
       )
     },
   }

@@ -10,7 +10,7 @@ todos:
     status: completed
   - id: p112-non-focus-dim
     content: P11.2 非焦点降 chroma/L：uFocusDimChroma / uFocusDimL / uFocusDimMode uniform；vert 色彩公式插入 dimMix；焦点星 isFocused 不受影响；mode=1 接口预留
-    status: pending
+    status: completed
   - id: p113-perlin-terrace-vert
     content: P11.3 Perlin 阶梯地形 vert：perlin.vert 重写 level 累加 smoothstep + normal 位移；uStepHeight / uStepSmoothness uniform；planet.ts lastRadius 包围球放宽
     status: completed
@@ -100,40 +100,25 @@ flowchart TD
 **验收**：
 - focus 飞入过程中目标 active 不透明，其余 active 随相机缓动变淡至约 0.1；`selected` 保持稳定；退出 focus 对称恢复。
 
-## P11.2 非焦点降 chroma/L（双开关 uniform 接口）
+## P11.2 非焦点降 chroma/L（双开关 uniform 接口）— **定稿与计划差异**
 
-**目标**：focus 态把非焦点星球的 chroma/L 整体压低（用户决策：焦点星不动）。
+**目标（用户细化）**：focus 态仅 **idle** `InstancedMesh` 对非焦点实例压 chroma/L；**active** 不改 L/chroma（非目标 active 仍仅 **P11.1** alpha）。焦点实例在双 mesh 上仍隐藏。**乘子**而非绝对目标 L。
 
-**实施**：
-- 共享 uniform 新增：
-  - `uFocusDimChroma: float`（默认 `0.3`，倍率，挂 leva）
-  - `uFocusDimL: float`（默认 `0.4`，目标 L 值，挂 leva）
-  - `uFocusDimMode: int`（默认 `0`；mode=1 接口预留，本 Phase 不消费 selectionMask，行为退化为与 mode=0 相同 — 通过条件 `(uFocusDimMode == 0) || /* selection mask read 接口预留 */ false` 判定）
-- idle.vert / active.vert 现有色彩计算（line 44–47）扩展：
+**实施（代码 SSOT）**：
+- 共享 uniform：`uFocusDimChroma`（**0.7**）、`uFocusDimL`（**1**）、`uFocusDimMode`（**0**）；仅 **`galaxyIdle.vert.glsl`** 读取。
+- 公式（P10.1 `L_base` 之后）：
 
 ```glsl
-float L_base = mix(uLMin, uLMax, clamp(voteNorm, 0.0, 1.0));
-float C_base = uChroma;
-
-bool dimEligible = (uFocusedInstanceId >= 0) && !isFocused;
-float dimMix = dimEligible ? 1.0 : 0.0;
-float L = mix(L_base, uFocusDimL, dimMix);
+float L = mix(L_base, L_base * uFocusDimL, dimMix);
 float C = mix(C_base, C_base * uFocusDimChroma, dimMix);
-
-float a = C * cos(hue);
-float labB = C * sin(hue);
-vColor = linear_to_srgb(oklab_to_linear_srgb(vec3(L, a, labB)));
 ```
 
-- 焦点星本身（`isFocused == true`）走原色彩公式（不触此降级）
-- leva 暴露 `uFocusDimChroma` / `uFocusDimL`；mode 默认 0 即可
-
-**注**：若 Phase 10 已落地 `uHighRatingT/uHighTierTRangeScale/uLightnessRatingExponent` 公式，`L_base` 应使用 Phase 10 的最终公式而非简单 `mix`；本 Phase 实施时先 `cat` 当时的 vert 文件确认状态再写入。
+- 实施报告：`docs/reports/Phase 11.2 P11.2 focus 态 idle 非焦点降 chromaL 实施报告.md`
+- 状态机 / 视觉参数总表 / Tech Spec §1.1 已同步（2026-04-28）
 
 **验收**：
-- focus 进入后非焦点星整体变暗、变灰；焦点星仍鲜艳明亮
-- 退出 focus 全场恢复
-- leva 调 `uFocusDimChroma=0` 时非焦点几乎纯灰；`uFocusDimL=L_base` 时仅降饱和
+- focus 后非焦点 **idle** 适度降饱和（定稿下 **`uFocusDimL=1`** 不压明度）；active 颜色不因本条变化
+- 退出 focus 恢复
 
 ## P11.3 Perlin 阶梯地形（vert）
 

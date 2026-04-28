@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import { createNoise3D, type NoiseFunction3D } from 'simplex-noise'
 
 import type { Meta, Movie } from '@/types/galaxy'
-import { hueFromGenreColor, pipelineRingSrgb01 } from '@/utils/genreHue'
+import { genreHueForGenreName, hueFromGenreColor } from '@/utils/genreHue'
 
 import perlinFragmentShader from './shaders/perlin.frag.glsl'
 import perlinVertexShader from './shaders/perlin.vert.glsl'
@@ -146,25 +146,38 @@ function genreDisplayWeights(genres: string[], maxSlots: number): { genres: stri
   return { genres: list, weights }
 }
 
-function resolveGenreHue(name: string, palette: Meta['genre_palette'], fallbackHue: number): number {
-  const hex = palette[name]
-  if (!hex || typeof hex !== 'string') return fallbackHue
-  const order = Object.keys(palette).sort((a, b) => a.localeCompare(b))
-  const idx = order.indexOf(name)
-  if (idx < 0) return fallbackHue
-  return (2 * Math.PI * idx) / order.length
+/** Snapshot of galaxy OKLCH uniforms at focus entry — matches `galaxyIdle.vert.glsl` P10.1 L remap. */
+export interface PlanetGalaxyColorSnap {
+  uLMin: number
+  uLMax: number
+  uHighRatingT: number
+  uHighTierTRangeScale: number
+  uLightnessRatingExponent: number
+  uChroma: number
 }
 
-function vec3FromHue(hue: number, target: THREE.Vector3): THREE.Vector3 {
-  const [r, g, b] = pipelineRingSrgb01(hue)
-  return target.set(r, g, b)
+function computePerlinLFromVoteAverage(voteAverage: number, snap: PlanetGalaxyColorSnap): number {
+  const t = THREE.MathUtils.clamp(voteAverage / 10, 0, 1)
+  const { uLMin, uLMax, uHighRatingT, uHighTierTRangeScale, uLightnessRatingExponent } = snap
+  const tCompressed =
+    t < uHighRatingT ? t : uHighRatingT + (t - uHighRatingT) * uHighTierTRangeScale
+  const tPow = Math.pow(Math.max(0, tCompressed), uLightnessRatingExponent)
+  console.assert(Number.isFinite(tPow), '[Planet] Perlin L tPow finite', voteAverage, snap)
+  const L = THREE.MathUtils.lerp(uLMin, uLMax, tPow)
+  console.assert(Number.isFinite(L), '[Planet] Perlin L finite', L)
+  return L
 }
 
 export interface SelectionPlanetHandle {
   mesh: THREE.Mesh
   material: THREE.ShaderMaterial
   lastRadius: number
-  setFromMovie: (movie: Movie, palette: Meta['genre_palette'], worldRadius: number) => void
+  setFromMovie: (
+    movie: Movie,
+    palette: Meta['genre_palette'],
+    worldRadius: number,
+    galaxyColor: PlanetGalaxyColorSnap,
+  ) => void
   /** P8.3 — Recompute CPU noise + quantile thresholds after Leva changes uScale / octaves / persistence / uAreaRatio. */
   syncCpuNoiseFromUniforms: () => void
   setOpacity: (alpha: number) => void
@@ -174,6 +187,9 @@ export interface SelectionPlanetHandle {
 /**
  * Focus Perlin sphere: Icosahedron detail=8, CPU simplex FBM + sorted-quantile K-band partition (K = genre count),
  * deterministic seed from `movie.id`. Lowest-noise band (genre0, largest area) is lowest terrace; highest band tallest.
+ *
+ * Color path matches galaxy shaders: OKLCH semantics (L, C, hue rad) → OKLab (L,a,b) in fragment → display sRGB
+ * (gamma encode unavoidable for the framebuffer).
  */
 export function createSelectionPlanet(): SelectionPlanetHandle {
   const detail = 8
@@ -191,11 +207,23 @@ export function createSelectionPlanet(): SelectionPlanetHandle {
   const defaultAreaRatio = 1 / PHI
   const PAD_THRESH = 2.0
 
-  const colorUniformArray = Array.from({ length: PLANET_MAX_BANDS }, () => new THREE.Vector3(0.2, 0.6, 1))
+  const uHueArray = new Float32Array(PLANET_MAX_BANDS)
+  const uMeshWorldPos = new THREE.Vector3()
+  /** P11.4 定稿：世界空间主光方向（归一化）。调试用 `window.__planetTerrace.perlinLightDir`。 */
+  const uLightDir = new THREE.Vector3(0.5, 0.5, -0.1).normalize()
 
   const material = new THREE.ShaderMaterial({
     uniforms: {
-      uColors: { value: colorUniformArray },
+      uHue: { value: uHueArray },
+      uPerlinL: { value: 0.55 },
+      uPerlinChroma: { value: 0.15 },
+      uMeshWorldPos: { value: uMeshWorldPos },
+      uLightDir: { value: uLightDir },
+      /** P11.4 定稿：`lit = baseCol × (uAmbient + uDiffuse × lambert)` */
+      uAmbient: { value: 0.95 },
+      uDiffuse: { value: 0.55 },
+      /** 导数法线与几何法线混合；1 = 纯屏幕导数法线。 */
+      uFlatShadingMix: { value: 0.8 },
       uAlpha: { value: 0 },
       uScale: { value: 2.35 },
       uOctaves: { value: 4 },
@@ -313,7 +341,7 @@ export function createSelectionPlanet(): SelectionPlanetHandle {
     dispose: () => { },
   }
 
-  const setFromMovie = (movie: Movie, palette: Meta['genre_palette'], worldRadius: number) => {
+  const setFromMovie = (movie: Movie, palette: Meta['genre_palette'], worldRadius: number, galaxyColor: PlanetGalaxyColorSnap) => {
     const stepH = material.uniforms.uStepHeight.value as number
 
     const { genres } = genreDisplayWeights(movie.genres, PLANET_MAX_BANDS)
@@ -331,18 +359,29 @@ export function createSelectionPlanet(): SelectionPlanetHandle {
         number,
       ])
     const fbColor = new THREE.Color(movie.genre_color[0], movie.genre_color[1], movie.genre_color[2])
-    const cols = genres.map((g) => vec3FromHue(resolveGenreHue(g, palette, fbHue), new THREE.Vector3()))
-    const padCol = cols[cols.length - 1] ?? vec3FromHue(fbHue, new THREE.Vector3())
-    while (cols.length < PLANET_MAX_BANDS) cols.push(padCol.clone())
+    /** Pipeline primary genre (first non-empty in TMDB order); matches export `genre_hue`. */
+    const primaryGenreName = movie.genres.filter(Boolean)[0] ?? ''
+    const hues = genres.map((g) =>
+      movie.genre_hue != null && g === primaryGenreName ? movie.genre_hue : genreHueForGenreName(g, palette, fbHue),
+    )
+    const padHue = hues.length > 0 ? hues[hues.length - 1]! : fbHue
 
     const u = material.uniforms
-    u.uBandCount.value = K
-    u.uCutCount.value = cuts
+    const hueArr = u.uHue.value as Float32Array
+    console.assert(hueArr.length === PLANET_MAX_BANDS, '[Planet] uHue length')
     for (let i = 0; i < PLANET_MAX_BANDS; i++) {
-      ; (u.uColors.value as THREE.Vector3[])[i]!.copy(cols[i]!)
+      hueArr[i] = i < hues.length ? hues[i]! : padHue
     }
 
+    const perlinL = computePerlinLFromVoteAverage(movie.vote_average, galaxyColor)
+    u.uPerlinL.value = perlinL
+    u.uPerlinChroma.value = galaxyColor.uChroma
+
+    u.uBandCount.value = K
+    u.uCutCount.value = cuts
+
     mesh.position.set(movie.x, movie.y, movie.z)
+    uMeshWorldPos.copy(mesh.position)
     mesh.scale.setScalar(worldRadius)
     mesh.updateMatrixWorld(true)
 
@@ -350,7 +389,7 @@ export function createSelectionPlanet(): SelectionPlanetHandle {
 
     const hexList = genres.map((g) => palette[g] ?? `#${fbColor.getHexString()}`)
     console.log(
-      `[Planet] K=${K} genres=${JSON.stringify(genres)} colors=${JSON.stringify(hexList)} | lastRadius=${handle.lastRadius.toFixed(4)} worldR=${worldRadius.toFixed(4)} stepH=${stepH.toFixed(3)} radiusMul=${radiusMul.toFixed(3)}`,
+      `[Planet] K=${K} genres=${JSON.stringify(genres)} colors=${JSON.stringify(hexList)} | uPerlinL=${perlinL.toFixed(4)} uPerlinChroma=${galaxyColor.uChroma.toFixed(4)} vote_avg=${movie.vote_average.toFixed(2)} | lastRadius=${handle.lastRadius.toFixed(4)} worldR=${worldRadius.toFixed(4)} stepH=${stepH.toFixed(3)} radiusMul=${radiusMul.toFixed(3)}`,
     )
   }
 

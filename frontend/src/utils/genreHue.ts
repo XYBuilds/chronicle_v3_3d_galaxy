@@ -46,10 +46,10 @@ export function genreHueFromPaletteIndex(index: number, nGenres: number): number
 }
 
 /** Same ordering as Python `sorted(found)` on genre names. */
-export function genreHueForGenreName(genreName: string, palette: Record<string, string>): number {
+export function genreHueForGenreName(genreName: string, palette: Record<string, string>, fallbackHue = 0): number {
   const order = Object.keys(palette).sort()
   const idx = order.indexOf(genreName)
-  if (idx < 0) return 0
+  if (idx < 0) return fallbackHue
   return genreHueFromPaletteIndex(idx, order.length)
 }
 

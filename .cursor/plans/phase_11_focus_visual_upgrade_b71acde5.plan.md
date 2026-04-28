@@ -16,7 +16,7 @@ todos:
     status: completed
   - id: p114-perlin-normal-frag
     content: P11.4 Perlin 法线重构 frag + voteAverage→L：perlin.frag 重写 dFdx/dFdy cross；4 色走 hue + uPerlinL（mix(uLMin,uLMax,voteNorm)） + uPerlinChroma；Lambert；uFlatShadingMix 预留
-    status: pending
+    status: completed
   - id: p115-perlin-opaque
     content: P11.5 Perlin 不透明化 + 包围球放宽：material transparent=false / depthWrite=true / alphaTest=0.01；lastRadius 含阶梯高度估算
     status: pending
@@ -24,7 +24,7 @@ todos:
     content: P11.6 focus 态拾取分流：interaction.ts 优先 Perlin 球 raycaster，后主动 active mesh；selected!=null 且 hover 焦点球仍正常显 tooltip；背景星可切换 focus
     status: pending
   - id: p117-doc-sync
-    content: P11.7 文档同步 + 出口 fps：Phase 8 基线加 P11.7 出口节；状态机 spec / 视觉参数总表 / Tech Spec §1.1 §1.5 同步
+    content: P11.7 文档同步 + 出口 fps：Phase 8 基线加 P11.7 出口节；状态机 spec / 视觉参数总表 / Tech Spec §1.1 §1.5 同步（**P11.4 相关 project_docs 已回填**；基线 fps **出口**仍待录）
     status: pending
 isProject: false
 ---

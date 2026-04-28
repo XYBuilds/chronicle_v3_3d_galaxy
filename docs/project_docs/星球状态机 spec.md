@@ -66,8 +66,8 @@ inFocus = smoothstep(zLo - W, zLo, aZ) × (1 - smoothstep(zHi, zHi + W, aZ))
 | 维度 | 约定 |
 |------|------|
 | **z 范围** | 相机与目标 world 位置对齐；宏观条带仍由 store 驱动 |
-| **大小** | 双 mesh 上该 instance **零尺度**；Perlin 球 **detail = 6**（P8.3） |
-| **色彩** | Perlin 四阈值分区 + hue/L/C；**vote_count 在 focus 态保留视觉权重**；**小 vote 片 focus 后视觉偏小为 intended**（产品接受） |
+| **大小** | 双 mesh 上该 instance **零尺度**；Perlin 球 **detail = 8**（P11.3；取代早期文档中的 detail 6） |
+| **色彩** | Perlin **K 档**（≤8）噪声阈值分区 + **OKLab（L/C/hue）**；**Phase 11.4**：**`uPerlinL`** 与 **`vote_average`** 经 **P10.1** 与宏观一致；**主 genre** 优先 **`movie.genre_hue`**；**vote_count** 在 focus 态仍通过 **worldRadius** 影响球尺度；**小 vote 片 focus 后视觉偏小为 intended**（产品接受） |
 | **可交互性** | 抽屉/详情；ESC 或 UI 取消选中 |
 | **进入/退出** | 相机动画时长沿用现 `SELECT_MS` / `DESELECT_MS`（数值以《视觉参数总表》为准）；P8.4 起 `flyToFocus` 使用**物理距离常数** `FOCUS_CAM_DIST` |
 
@@ -108,11 +108,21 @@ inFocus = smoothstep(zLo - W, zLo, aZ) × (1 - smoothstep(zHi, zHi + W, aZ))
 
 ### 3.5 Perlin 球 · 阶梯地形（Phase 11.3 起）
 
-Perlin focus 球在片元侧保留 **四阈值分区** 的语义；顶点上将噪声区间改为 **多级 smoothstep 累加** 得到标量 `level`，再沿 **几何法线** 位移 `level * uStepHeight`（模型空间位移量；与 `mesh.scale.setScalar(worldRadius)` 相乘后为 world 高度）。各级阈值过渡带宽由 **`uStepSmoothness`** 控制（为 0 时可对照硬切）。
+Perlin focus 球在片元侧按 **`vNoise`** 与 **`uThresh[0..K−2]`**（**K** = 本片展示 genre 数，≤8）形成 **K 档** `bandIdx`；顶点上将噪声区间改为 **至多 `uCutCount = max(0,K−1)` 段 `smoothstep`** 累加得到标量 **`level`**，再沿 **几何法线** 位移 **`level × uStepHeight`**（模型空间位移量；与 `mesh.scale.setScalar(worldRadius)` 相乘后为 world 高度）。各级阈值过渡带宽由 **`uStepSmoothness`** 控制（为 0 时可对照硬切）。
 
-**尺度与包围球**：同一顶点最多叠加约 **三档** 平滑阶跃（相对 `uThresh1…uThresh3`）；在默认实现下 world 空间峰值半径约为 **`worldRadius × (1 + 3 × uStepHeight)`**（`uStepHeight` 为与 vert 一致的标量）。拾取与包围球 **`lastRadius`** 须按该上界放宽，避免阶梯最高点溢出射线/视锥判断。
+**尺度与包围球**：world 空间峰值半径约为 **`worldRadius × (1 + uCutCount × uStepHeight)`**。拾取与包围球 **`lastRadius`** 须按该上界放宽，避免阶梯最高点溢出射线/视锥判断。
 
 **参数上限**：`uStepHeight` 由 Leva 与产品上限约束（须与 `near`、`FOCUS_PERLIN_CAMERA_STANDOFF` 相容）；具体数值定稿见《视觉参数总表》与 Phase 11 实施说明。
+
+#### 3.5.1 Perlin 片元着色与光照（Phase 11.4 · **已实装**）
+
+- **法线**：屏幕空间 **`cross(dFdx(vWorldPos), dFdy(vWorldPos))`** 与顶点输出的 **`vGeomNormalWorld`** 按 **`uFlatShadingMix`** 混合，再算 Lambert **`dot(N, uLightDir)`**。
+- **底色**：每档 **`uHue[i]`** + 运行时 **`uPerlinL`** + **`uPerlinChroma`**，在 OKLab 平面用 **cos/sin(hue)** 配 **L**（与 idle/active 语义一致）；线性 RGB **clamp** 至 **[0,1]** 后再 **sRGB**，避免低 **L** / 高 **C** 出色域导致片元异常着色。
+- **vote→L**：**`vote_average`** 经与 **`galaxyIdle.vert.glsl`** 相同的 **P10.1** 映射写入 **`uPerlinL`**；入场系数快照来自 **`galaxy.idleMaterial.uniforms`**（与 `scene.ts` **`beginSelect`** 一致）。
+- **hue**：**主 genre**（`movie.genres` 首个非空）若 JSON 含 **`movie.genre_hue`** 则该档直接用；其余档用 **`genreHueForGenreName`**（palette key 排序对齐 Python **`sorted(found)`**，**勿**用 `localeCompare` 排序）。
+- **光照定稿**：**`uLightDir = normalize(0.5, 0.5, -0.1)`**，**`uAmbient = 0.95`**，**`uDiffuse = 0.55`**，**`uFlatShadingMix = 0.8`**（详见《视觉参数总表》§4）。
+
+**不透明化（P11.5）**：当前材质仍为 **transparent**；计划在后续子阶段切换 **`transparent: false`** / **`depthWrite: true`** / **`alphaTest`**，见 Phase 11 总计划。
 
 ### 3.6 select（延后）
 
@@ -133,3 +143,4 @@ Perlin focus 球在片元侧保留 **四阈值分区** 的语义；顶点上将�
 | 2026-04-28 | Phase 11.0：§3.4 focus 视觉降级 / `uFocusDimMode` / 近相机遮挡剔除；§3.5 Perlin 阶梯地形与包围球约束；原 §3.5 select 顺延为 §3.6 |
 | 2026-04-28 | P11.2 定稿对齐：§3.4.1 仅 **idle** 乘子降 C/L；`uFocusDimChroma=0.7`、`uFocusDimL=1`；active 见 §3.4.3 |
 | 2026-04-28 | Phase 11.1：§3.4.3 改为「非目标 active alpha + 相机同步」实装说明；§3.4.4 为原遮挡剔除占位（未实装） |
+| 2026-04-29 | P11.4：§3.4 focus 表更新 Perlin detail / 色彩；§3.5 改为 **K 档**阈值与 **`lastRadius`** 公式；新增 **§3.5.1** Perlin 片元与光照定稿；指向《视觉参数总表》§4 与 [`Phase 11.4 … 实施报告.md`](../reports/Phase%2011.4%20P11.4%20Perlin%20法线重构%20vote→L%20genre%20色与光照定稿%20实施报告.md) |

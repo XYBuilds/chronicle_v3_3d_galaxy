@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  genreHueForGenreName,
   hueFromGenreColor,
   pipelineRingSrgb01,
   pointColorFromHueVote,
@@ -25,5 +26,16 @@ describe('genreHue (P8.1)', () => {
     expect(out[0]).toBeCloseTo(0.8183484375234074, 6)
     expect(out[1]).toBeCloseTo(0.38652820698316337, 6)
     expect(out[2]).toBeCloseTo(0.22750723655951766, 6)
+  })
+
+  it('genreHueForGenreName follows Python sorted order, not localeCompare order', () => {
+    const palette = {
+      'Science Fiction': '#83ABFF',
+      'TV Movie': '#A4A0FF',
+      Thriller: '#C097F6',
+    }
+
+    expect(genreHueForGenreName('TV Movie', palette)).toBeCloseTo((2 * Math.PI) / 3, 12)
+    expect(genreHueForGenreName('Thriller', palette)).toBeCloseTo((4 * Math.PI) / 3, 12)
   })
 })

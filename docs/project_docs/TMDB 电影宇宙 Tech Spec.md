@@ -21,7 +21,7 @@
   * **active**：`IcosahedronGeometry(1, 1)`；`ShaderMaterial` **`transparent: true`**、**`depthWrite: false`**、`alphaTest: 0.01`、`depthTest: true`；`renderOrder = 1`。**Phase 11.1**：非目标 active 片元 **`alpha`** 随 **`uFocusCameraBlend`**（与 focus 相机动画同一 `easeOutCubic`）从 **1** 过渡到 **`uFocusNonTargetActiveAlpha`**（默认 **0.1**）；目标实例在飞入/飞出全程由 **`uFocusTargetInstanceId`** 识别并保持 **alpha = 1**（详见《星球状态机 spec》§3.4.3 与《视觉参数总表》§2）。**Phase 11.2**：**不**在 active 上改 L/chroma；非焦点 **idle** 在 focus 时对 **`L_base` / `C_base` 乘** `uFocusDimL` / `uFocusDimChroma`（定稿 **1** / **0.7**），见《星球状态机 spec》§3.4.1。  
   * **Z 条带与过渡**：与 [`星球状态机 spec.md`](星球状态机%20spec.md) 一致——`W = uZVisWindow × 0.2`，`inFocus = smoothstep(zLo−W, zLo, aZ) × (1 − smoothstep(zHi, zHi+W, aZ))`；**idle** 侧尺度 `sIdle = (1 − inFocus) × uSizeScale × uBgSizeMul × aSize`，**active** 侧 `sActive = inFocus × uSizeScale × uActiveSizeMul × aSize`；二者互补（初值 `uSizeScale=0.3`，`uActiveSizeMul=0.02`，`uBgSizeMul=0.002`，见《视觉参数总表》）。  
   * 色彩：§4.3 **`genre_hue`（弧度）** + OKLab **`uLMin` / `uLMax` / `uChroma`**；**Lightness** 由 **`voteNorm`** 经 **Phase 10.1** 分段压缩与 `pow` 映射到 **L**（见《视觉参数总表》§2，非线性等价于「评分驱动明暗」）。  
-* **Focus 态 Perlin 球（按需、单实例）**：`IcosahedronGeometry(1, 6)` + **CPU** 上按顶点 noise 分位数定 **4 个硬阈值**（`perlin.frag.glsl` 中 `step` 分色带）；`movie.id` 种子化 PRNG；面积比例由 `uAreaRatio` 等控制（P8.3 定稿）。当 `uFocusedInstanceId` 命中时，**idle + active** 上该 `gl_InstanceID` 的 scale 在 shader 中**置零**，仅由 Perlin 球呈现。  
+* **Focus 态 Perlin 球（按需、单实例）**：`IcosahedronGeometry(1, 8)` + **CPU** 上按顶点 noise **分位数阈值**划分至多 **8** 档 genre 带（`perlin.frag.glsl` 中 **`step`** 分 **`bandIdx`**；顶点 **`perlin.vert.glsl`** 用 **`smoothstep`** 累加 **`level`** 做阶梯挤出，见《星球状态机 spec》§3.5）。**Phase 11.4**：片元用 **`dFdx`/`dFdy`** 重构法线与 Lambert 明暗；**`uPerlinL`** 由 **`vote_average`** 经与宏观一致的 **P10.1** 公式写入；**`uPerlinChroma`** 与星系 **`uChroma`** 快照一致；**hue** 为主 genre **`movie.genre_hue`**（若存在）+ 其余 genre **`genreHueForGenreName`**（palette key 序对齐 Python **`sorted`**）；线性 RGB **clamp** 后编码 **sRGB**；光照定稿见《视觉参数总表》§4。`movie.id` 种子化 PRNG；面积比例由 **`uAreaRatio`** 等控制。当 `uFocusedInstanceId` 命中时，**idle + active** 上该 `gl_InstanceID` 的 scale 在 shader 中**置零**，仅由 Perlin 球呈现。  
 * **后处理顺序（生产）**：同帧先画 idle → active → focus 时 Perlin 球 `visible=true`（`renderOrder` 以 `scene.ts` 为准）。**`UnrealBloomPass`** 默认**不**参与输出（§1.2）；调试启用时再走 composer。
 
 **历史注记（Phase 5.1.6 · 已退役）**：旧版在**单 `THREE.Points`** 上用 `uBgSizeMul` / `uFocusSizeMul` 与 `gl_PointSize` 做 A/B 层；P8.4 起由双 mesh 的 `inFocus` 与双尺度取代。
@@ -142,6 +142,8 @@ Output
 | **历史：Points** | 旧版对 `Points.threshold` 的估算与 A/B 层过滤见归档讨论；`interaction.ts` 中 `computePointScreenRadiusCss` 等**仅**供基准/遗留对照 |
 
 **假设与局限**：active 在条带外趋近零尺度时极难点中，属预期；若 T6 类问题再现，可收紧容差或第二近邻（性能基线与准入归档见 [`Phase 8 基线 P8.0 性能与 P8.4 准入.md`](../benchmarks/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md)）。
+
+**Phase 11（进行中）**：**P11.6** 计划在 **focus 态**将拾取改为 **优先命中 Perlin 球**、再回落 **`galaxyActive`**，以避免误切后景焦点；**未实装前**生产仍以 **`galaxyActive` + 世界球半径** 路径为准。见《星球状态机 spec》与 Phase 11 总计划。
 
 ## **2\. 核心坐标生成算法 (Coordinate Generation)**
 
@@ -393,7 +395,7 @@ chronicle_v3_3d_galaxy/
 │   │   ├── three/                  #   原生 Three.js 模块
 │   │   │   ├── scene.ts            #     场景、renderer、postprocessing、WebGL2 断言
 │   │   │   ├── galaxyMeshes.ts     #     P8.4 双 InstancedMesh（idle + active）
-│   │   │   ├── planet.ts           #     focus Perlin 球 `Icosahedron(1,6)` + 阈值
+│   │   │   ├── planet.ts           #     focus Perlin 球 `Icosahedron(1,8)` + 分位数阈值 / P11.4 光照与 L
 │   │   │   ├── camera.ts           #     truck/pedestal、滚轮、`setFocusCameraPosition`
 │   │   │   ├── interaction.ts      #     active mesh 拾取、hover/click
 │   │   │   └── shaders/            #     GLSL

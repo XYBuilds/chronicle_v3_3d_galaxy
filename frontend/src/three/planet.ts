@@ -187,6 +187,9 @@ export interface SelectionPlanetHandle {
 /**
  * Focus Perlin sphere: Icosahedron detail=8, CPU simplex FBM + sorted-quantile K-band partition (K = genre count),
  * deterministic seed from `movie.id`. Lowest-noise band (genre0, largest area) is lowest terrace; highest band tallest.
+ *
+ * Color path matches galaxy shaders: OKLCH semantics (L, C, hue rad) → OKLab (L,a,b) in fragment → display sRGB
+ * (gamma encode unavoidable for the framebuffer).
  */
 export function createSelectionPlanet(): SelectionPlanetHandle {
   const detail = 8
@@ -206,7 +209,8 @@ export function createSelectionPlanet(): SelectionPlanetHandle {
 
   const uHueArray = new Float32Array(PLANET_MAX_BANDS)
   const uMeshWorldPos = new THREE.Vector3()
-  const uLightDir = new THREE.Vector3(0.4, 0.6, 0.8).normalize()
+  /** P11.4 定稿：世界空间主光方向（归一化）。调试用 `window.__planetTerrace.perlinLightDir`。 */
+  const uLightDir = new THREE.Vector3(0.5, 0.5, -0.1).normalize()
 
   const material = new THREE.ShaderMaterial({
     uniforms: {
@@ -215,9 +219,11 @@ export function createSelectionPlanet(): SelectionPlanetHandle {
       uPerlinChroma: { value: 0.15 },
       uMeshWorldPos: { value: uMeshWorldPos },
       uLightDir: { value: uLightDir },
-      uAmbient: { value: 0.35 },
-      uDiffuse: { value: 0.65 },
-      uFlatShadingMix: { value: 1 },
+      /** P11.4 定稿：`lit = baseCol × (uAmbient + uDiffuse × lambert)` */
+      uAmbient: { value: 0.95 },
+      uDiffuse: { value: 0.55 },
+      /** 导数法线与几何法线混合；1 = 纯屏幕导数法线。 */
+      uFlatShadingMix: { value: 0.8 },
       uAlpha: { value: 0 },
       uScale: { value: 2.35 },
       uOctaves: { value: 4 },
@@ -353,7 +359,11 @@ export function createSelectionPlanet(): SelectionPlanetHandle {
         number,
       ])
     const fbColor = new THREE.Color(movie.genre_color[0], movie.genre_color[1], movie.genre_color[2])
-    const hues = genres.map((g) => genreHueForGenreName(g, palette, fbHue))
+    /** Pipeline primary genre (first non-empty in TMDB order); matches export `genre_hue`. */
+    const primaryGenreName = movie.genres.filter(Boolean)[0] ?? ''
+    const hues = genres.map((g) =>
+      movie.genre_hue != null && g === primaryGenreName ? movie.genre_hue : genreHueForGenreName(g, palette, fbHue),
+    )
     const padHue = hues.length > 0 ? hues[hues.length - 1]! : fbHue
 
     const u = material.uniforms

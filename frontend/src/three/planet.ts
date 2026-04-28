@@ -172,11 +172,11 @@ export interface SelectionPlanetHandle {
 }
 
 /**
- * Focus Perlin sphere: Icosahedron detail=6, CPU simplex FBM + sorted-quantile K-band partition (K = genre count),
+ * Focus Perlin sphere: Icosahedron detail=8, CPU simplex FBM + sorted-quantile K-band partition (K = genre count),
  * deterministic seed from `movie.id`. Lowest-noise band (genre0, largest area) is lowest terrace; highest band tallest.
  */
 export function createSelectionPlanet(): SelectionPlanetHandle {
-  const detail = 6
+  const detail = 8
   const geometry = new THREE.IcosahedronGeometry(1, detail)
   const posAttr = geometry.attributes.position as THREE.BufferAttribute
   posAttr.usage = THREE.StaticDrawUsage
@@ -307,10 +307,10 @@ export function createSelectionPlanet(): SelectionPlanetHandle {
     mesh,
     material,
     lastRadius: 0.1,
-    setFromMovie: () => {},
-    syncCpuNoiseFromUniforms: () => {},
-    setOpacity: () => {},
-    dispose: () => {},
+    setFromMovie: () => { },
+    syncCpuNoiseFromUniforms: () => { },
+    setOpacity: () => { },
+    dispose: () => { },
   }
 
   const setFromMovie = (movie: Movie, palette: Meta['genre_palette'], worldRadius: number) => {
@@ -339,7 +339,7 @@ export function createSelectionPlanet(): SelectionPlanetHandle {
     u.uBandCount.value = K
     u.uCutCount.value = cuts
     for (let i = 0; i < PLANET_MAX_BANDS; i++) {
-      ;(u.uColors.value as THREE.Vector3[])[i]!.copy(cols[i]!)
+      ; (u.uColors.value as THREE.Vector3[])[i]!.copy(cols[i]!)
     }
 
     mesh.position.set(movie.x, movie.y, movie.z)

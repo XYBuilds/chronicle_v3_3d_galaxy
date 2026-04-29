@@ -8,6 +8,7 @@ import { MovieTooltip } from '@/components/MovieTooltip'
 import { Timeline } from '@/components/Timeline'
 import { HoverRing } from '@/hud/HoverRing'
 import { InfoButton } from '@/hud/InfoButton'
+import { clearSearch, useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
 import { useGalaxyDataStore } from '@/store/galaxyDataStore'
 import { useSearchIndexStore } from '@/store/searchIndexStore'
 import { mountGalaxyScene } from '@/three/scene'
@@ -39,6 +40,45 @@ function App() {
     if (status !== 'ready' || !data) return
     void useSearchIndexStore.getState().hydrateFromGalaxyMeta(data.meta)
   }, [status, data])
+
+  /** Design Spec §4.6 — ESC 焦点栈（capture）：blur 搜索框 → 取消 focus → 退出 select；INFO Modal 内不交叠。 */
+  useEffect(() => {
+    const onKeyDownCapture = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+
+      const ae = document.activeElement
+      if (ae instanceof HTMLElement && ae.closest('#app-info-dialog')) return
+
+      if (ae instanceof HTMLInputElement && ae.hasAttribute('data-galaxy-search-input')) {
+        ae.blur()
+        e.preventDefault()
+        e.stopPropagation()
+        return
+      }
+
+      const { selectedMovieId, searchMode } = useGalaxyInteractionStore.getState()
+
+      if (selectedMovieId !== null) {
+        useGalaxyInteractionStore.setState({ selectedMovieId: null })
+        console.log('[ESC] clear selectedMovieId (keep search select session if any)', {
+          searchMode,
+        })
+        e.preventDefault()
+        e.stopPropagation()
+        return
+      }
+
+      if (searchMode !== 'idle') {
+        clearSearch()
+        console.log('[ESC] clearSearch (exit person/genre select)')
+        e.preventDefault()
+        e.stopPropagation()
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDownCapture, true)
+    return () => window.removeEventListener('keydown', onKeyDownCapture, true)
+  }, [])
 
   if (status === 'loading' || status === 'idle') {
     return <Loading progress={loadProgress} />

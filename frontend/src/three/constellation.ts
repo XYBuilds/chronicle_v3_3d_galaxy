@@ -3,7 +3,7 @@ import * as THREE from 'three'
 import type { Movie } from '@/types/galaxy'
 
 /**
- * Tech Spec §4.5.1 (same as `export_search_index.py`):
+ * Tech Spec ?4.5.1 (same as `export_search_index.py`):
  * cast=1, director=2, dop=4, writers=8, producers=16, music_composer=32
  */
 const MASK_CAST = 1

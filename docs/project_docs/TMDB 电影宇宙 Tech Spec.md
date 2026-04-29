@@ -348,7 +348,11 @@ Python 管线的最终产物以 **`galaxy_data.json`**（及 gzip）为主；**P
     "<normalized_key>": {
       "full": "Original Display Name",
       "role_mask": 61,
-      "movie_ids": [123, 456]
+      "movie_ids": [123, 456],
+      "movie_roles": {
+        "123": 2,        // 在 #123 上仅任 director
+        "456": 17        // 在 #456 上同时任 cast(1) + producers(16)
+      }
     }
   },
   "genres": {
@@ -362,7 +366,7 @@ Python 管线的最终产物以 **`galaxy_data.json`**（及 gzip）为主；**P
 
 - **`key`**（`normalized_key`）：人名 NFKD + ASCII fold + casefold 后的字符串（与 `title_normalized` 共用同一规范化函数）；**多个原始写法可能合并到同一 key**，此时 `full` 取出现频次最高 / 第一条原始字符串。
 - **`full`**：展示用原始姓名（保留大小写、变音符号）。
-- **`role_mask`**：**uint8** 位掩码，按位**或**合并多角色：
+- **`role_mask`**：**uint8** 位掩码，按位**或**合并**全部参演影片**的多角色：
   | 位 | 数值 | 来源字段 |
   | :---- | :---- | :---- |
   | 0 | `1` | `cast` |
@@ -373,6 +377,12 @@ Python 管线的最终产物以 **`galaxy_data.json`**（及 gzip）为主；**P
   | 5 | `32` | `music_composer` |
   - 取值范围 **`[0, 63]`**；`assert role_mask <= 63` 是管线必检约束。
 - **`movie_ids`**：参演影片 TMDB ID 数组，**去重**；顺序不限（前端按需排序，例如人名星座连线按 `release_date` 升序）。
+- **`movie_roles`**（**Phase 12.7+** 新增，可选）：对象映射 **`"<tmdb_id>" → <该片上的 role 位掩码>`**，描述该人在每部参演影片**单片粒度**的职位组合。位定义与 `role_mask` 一致；同片多职位按位**或**合并。
+  - **键集合**：与 `movie_ids` 作为集合**完全一致**（管线断言 `set(movie_roles.keys()) == set(str(id) for id in movie_ids)`）。
+  - **值约束**：每个值 ∈ `[1, 63]` 且 `(value & ~role_mask) === 0`（即每片职位是该人 `role_mask` 的子集）。
+  - **用途**：前端按职位**拆分人名星座连线**（Design Spec §4.0 / §4.4），三组链 producers / crew(director|dop|writers|music_composer) / cast 各自按 `release_date` 升序连段；详见《星球状态机 spec》§3.6 与 `frontend/src/three/constellation.ts`。
+  - **降级**：旧包无 `movie_roles` 字段时前端**不报错**，星座连线退化为 `selectionIds` 单条时间序折线。
+  - **体积**：`movie_roles` 为对象，体积与「人数 × 平均参演片数」线性相关；`galaxy_search_index.json.gz` 整体随之增大，**部署侧须与 `galaxy_data` 同版本一并重导**。
 - **任意 token 前缀（Design Spec §4.4）**：实现可在 **运行时**按空白拆分 `normalized_key` token，亦可由管线**预拆分**写入额外字段（例如 `tokens: string[]`）；本 Schema 不强制，与 Design Spec 行为契约一致即可。
 
 #### **4.5.2 `genres`**
@@ -387,6 +397,7 @@ Python 管线的最终产物以 **`galaxy_data.json`**（及 gzip）为主；**P
 `galaxy_search_index` 仅承载**检索数据**；视觉层 **`uSelectionMask`**、**`uSelectionMode`**、**`uMovieCount`** 与 macro mesh 的对接见《星球状态机 spec》§3.6。
 - **`viswindow` 关系**：`person` / `genre` 进入 select 会话后，**active 集合由 `selectionIds` 决定**，**与 `uZCurrent` / `uZVisWindow` 解耦**（shader 内 `uSelectionMode == 1` 时 `inFocus` 由 mask 重写）；timeline UI 可继续接收 wheel / drag 写 `zCurrent`，但视觉无反馈。
 - **focus 嵌套**：select 会话中点击 active 影片进入 focus，**两者并存**；ESC 出栈语义见 Design Spec §4.6。
+- **`selectionPersonKey`（store 一级字段）**：人名联想点击时写入命中条目的 **normalized key**（即 `searchIndex.people` 的键），供 `scene.ts` 在 RAF 中读取 **`searchIndex.people[selectionPersonKey].movie_roles`** 作为人名星座连线的分组依据；`searchMode !== 'person'` 或 `clearSearch()` 时清回 `null`。
 
 ## **5\. 部署架构**
 

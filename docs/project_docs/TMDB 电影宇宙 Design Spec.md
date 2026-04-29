@@ -135,7 +135,7 @@
 ### **4.0 三条核心体验（验收口径）**
 
 1. **搜电影名**（含其它语言的 **`original_title`**）：关键词联想 → 点击正确项 → 进入对应影片 **focus** 态（相机飞入 + Perlin + 抽屉）。  
-2. **搜人名**（覆盖 **`cast` / `director` / `director_of_photography` / `writers` / `producers` / `music_composer`** 聚合）：点击人物 → 进入 **`person` select 会话**：**该人物参与的全部影片星球 active，其余 idle**（**active 集合由搜索结果决定**，不再受 timeline `viswindow` 条带控制；timeline 数值仍可在后台被 wheel 写入，但**不影响视觉**）。同时按 **`release_date` 升序** 用细线连接星座图（**默认开**；产品 HUD **无**开关，调试用 **`window.__galaxy.constellationEnabled`**，见《视觉参数总表》§4a）。  
+2. **搜人名**（覆盖 **`cast` / `director` / `director_of_photography` / `writers` / `producers` / `music_composer`** 聚合）：点击人物 → 进入 **`person` select 会话**：**该人物参与的全部影片星球 active，其余 idle**（**active 集合由搜索结果决定**，不再受 timeline `viswindow` 条带控制；timeline 数值仍可在后台被 wheel 写入，但**不影响视觉**）。同时按 **`release_date` 升序** 用纯白细线连接星座图（**默认开**；产品 HUD **无**开关，调试用 **`window.__galaxy.constellationEnabled`**，见《视觉参数总表》§4a）。**Phase 12.7 起**连线按职位拆为**三条独立时间链**，使「演员同框」「主创班底」「制片同盟」三种叙事并行可读；各链端点沿弦内缩到 active 球壳外（避免线段切入星球 mesh），连线视觉细则与降级行为见 §4.4a。  
 3. **搜 genre**：点击某一 genre → 进入 **`genre` select 会话**：**凡 `movie.genres` 包含该 genre（不限于 `genres[0]`）** 的影片 **active**，其余 **idle**；**不**画星座连线；同样不再受 viswindow 控制。
 
 ### **4.1 布局与控件**
@@ -177,14 +177,28 @@
 * **排序**：第一维度 prefix **优于** contains；第二维度为 **`movie_ids.length`** **降序**（参演越多越靠前）。
 * **格式**：展示 **全名**（索引内 **`full`**）；可选追加 **`role_mask`** 角色标签（位定义见 Tech Spec §4.5）。
 * **高亮**：在 `full` 上用同一忽略大小写正则匹配 query，规则同 §4.3。
-* **点击行为**：写入 store —— `searchMode='person'`、`selectionIds=people[name].movie_ids`、`selectedMovieId=null`、`constellationEnabled` 走 Leva 默认（默认 `true`）；输入框 query 替换为 `people[name].full`。
+* **点击行为**：写入 store —— `searchMode='person'`、`selectionIds=people[name].movie_ids`、**`selectionPersonKey=name`**（normalized key，供 `scene.ts` 在 RAF 中读取该人 `movie_roles` 拆三组连线，见 §4.4a）、`selectedMovieId=null`、`constellationEnabled` 走 Leva 默认（默认 `true`）；输入框 query 替换为 `people[name].full`。
+
+### **4.4a 人名星座连线（Phase 12.7 · 三组职位链）**
+
+`person` select 会话且 `constellationEnabled` 为 true 时绘制；`genre` 模式不画线。
+
+* **数据来源**：`searchIndex.people[selectionPersonKey].movie_roles`（每片职位位掩码，详见 Tech Spec §4.5.1）。
+* **三条独立时间链**（按 `release_date` 升序相邻连段，各链互不相交）：
+  1. **producers**（位 `16`）—— 该人作为制片人参与的影片串。
+  2. **crew**（位 `2 | 4 | 8 | 32`，即 director / director_of_photography / writers / music_composer 合并为一根「主创班底」链）。
+  3. **cast**（位 `1`）—— 演员同框链。
+* **视觉**：统一**纯白** `0xffffff`、`opacity ≈ 0.07`、`transparent: true`、`depthWrite: false`、线宽 1px（WebGL Line 限制）；**不**做按职位分色，避免与 genre 色板冲突；多链同时存在时整体仍呈低存在感「星图」。
+* **几何避让**：每段两端沿弦方向各内缩 `r + CONSTELLATION_SURFACE_GAP_WORLD`（`r` = 该端点 active 球壳半径，常量默认 **0.2** world），缩进后弦长不足则**跳过该段**，确保线段不切入 active 星球 mesh；`mesh.renderOrder = 0.5`（介于 idle 0 与 active 1 之间）。
+* **focus 嵌套**：`selectedMovieId !== null`（单片 focus + Perlin 球会话）时**整层星座隐藏**；ESC 取消 focus 后连线恢复（select 会话仍在则继续显示）。
+* **降级路径**：旧包 `searchIndex` 缺失 `movie_roles` 时**不报错**，退化为 `selectionIds` 一条按时间序的折线（与 Phase 12.6 初版一致）。
 
 ### **4.5 联想：流派（`genre`）**
 
 * **过滤**：对 **全部 genre**（与 `meta.genre_palette` 键集合一致）做忽略大小写**前缀**与**包含**匹配。
 * **排序**：第一维度 prefix **优于** contains；**第二维度按该 genre 在数据集中的 `count`（电影数）降序**（管线侧产出，见 Tech Spec §4.5）。
 * **格式**：展示 genre 字符串；高亮规则同 §4.3。
-* **点击行为**：`searchMode='genre'`、`selectionIds = movies 中含该 genre 的 id 列表`、`selectedMovieId=null`、连线不开启；输入框 query 替换为 `GenreName (count)`。
+* **点击行为**：`searchMode='genre'`、`selectionIds = movies 中含该 genre 的 id 列表`、**`selectionPersonKey=null`**（清掉人名上下文）、`selectedMovieId=null`、连线不开启；输入框 query 替换为 `GenreName (count)`。
 
 ### **4.6 ESC 焦点栈（全局 keydown，自上而下匹配第一级即处理并 `preventDefault`）**
 

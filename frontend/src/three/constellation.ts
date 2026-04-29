@@ -3,15 +3,15 @@ import * as THREE from 'three'
 import type { Movie } from '@/types/galaxy'
 
 /**
- * Tech Spec §4.5.1 — `export_search_index.py` 同序:
+ * Tech Spec §4.5.1 �?`export_search_index.py` 同序:
  * cast=1, director=2, dop=4, writers=8, producers=16, music_composer=32
  */
 const MASK_CAST = 1
-/** 导演、摄影、编剧、作曲 — 合并为一根时间序线 */
+/** 导演、摄影、编剧、作�?�?合并为一根时间序�?*/
 const MASK_CREW = 2 | 4 | 8 | 32
 const MASK_PRODUCERS = 16
 
-/** 三根线：制片 / 主创(导演·摄影·编剧·作曲) / 演员 — 视觉统一白色，仅几何分叉 */
+/** 三根线：制片 / 主创(导演·摄影·编剧·作曲) / 演员 �?视觉统一白色，仅几何分叉 */
 const LINE_GROUPS: readonly { label: string; mask: number }[] = [
   { label: 'producers', mask: MASK_PRODUCERS },
   { label: 'crew', mask: MASK_CREW },
@@ -44,8 +44,8 @@ export interface ConstellationHandle {
 }
 
 /**
- * P12.7 — `LineSegments` “constellation” for person select:
- * three white temporal chains when `movie_roles` is present — **制片**、**导演+摄影+编剧+作曲**、**演员**；
+ * P12.7 �?`LineSegments` “constellation�?for person select:
+ * three white temporal chains when `movie_roles` is present �?**制片**�?*导演+摄影+编剧+作曲**�?*演员**�?
  * or one chain when `movie_roles` is absent.
  */
 export function createConstellation(maxSegments = 420): ConstellationHandle {
@@ -58,7 +58,7 @@ export function createConstellation(maxSegments = 420): ConstellationHandle {
   const material = new THREE.LineBasicMaterial({
     color: 0xffffff,
     transparent: true,
-    opacity: 0.52,
+    opacity: 0.07,
     depthTest: true,
     depthWrite: false,
   })

@@ -3,22 +3,22 @@ import * as THREE from 'three'
 import type { Movie } from '@/types/galaxy'
 
 /**
- * Tech Spec ?4.5.1 ? `export_search_index.py` ??:
+ * Tech Spec §4.5.1 (same as `export_search_index.py`):
  * cast=1, director=2, dop=4, writers=8, producers=16, music_composer=32
  */
 const MASK_CAST = 1
-/** ??????????? ? ????????? */
+/** Director, DP, writers, composer ? one merged temporal chain */
 const MASK_CREW = 2 | 4 | 8 | 32
 const MASK_PRODUCERS = 16
 
-/** ?????? / ??(???????????) / ?? ? ???????????? */
+/** Three chains: producers / crew / cast ? white lines, geometry only */
 const LINE_GROUPS: readonly { label: string; mask: number }[] = [
   { label: 'producers', mask: MASK_PRODUCERS },
   { label: 'crew', mask: MASK_CREW },
   { label: 'cast', mask: MASK_CAST },
 ]
 
-/** Extra world units beyond each endpoint's active-sphere radius so lines do not touch the mesh. */
+/** World-space gap beyond each endpoint's active-sphere radius (line stops short of the mesh). */
 export const CONSTELLATION_SURFACE_GAP_WORLD = 0.2
 
 const _seg = { ax: 0, ay: 0, az: 0, bx: 0, by: 0, bz: 0 }
@@ -91,8 +91,8 @@ export interface ConstellationHandle {
 }
 
 /**
- * P12.7 ? `LineSegments` ?constellation? for person select:
- * three white temporal chains when `movie_roles` is present ? **??**?**??+??+??+??**?**??**?
+ * P12.7 ? `LineSegments` constellation for person select:
+ * three white temporal chains when `movie_roles` is present (producers / crew / cast),
  * or one chain when `movie_roles` is absent.
  */
 export function createConstellation(maxSegments = 420): ConstellationHandle {

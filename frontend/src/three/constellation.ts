@@ -3,20 +3,61 @@ import * as THREE from 'three'
 import type { Movie } from '@/types/galaxy'
 
 /**
- * Tech Spec §4.5.1 �?`export_search_index.py` 同序:
+ * Tech Spec ?4.5.1 ? `export_search_index.py` ??:
  * cast=1, director=2, dop=4, writers=8, producers=16, music_composer=32
  */
 const MASK_CAST = 1
-/** 导演、摄影、编剧、作�?�?合并为一根时间序�?*/
+/** ??????????? ? ????????? */
 const MASK_CREW = 2 | 4 | 8 | 32
 const MASK_PRODUCERS = 16
 
-/** 三根线：制片 / 主创(导演·摄影·编剧·作曲) / 演员 �?视觉统一白色，仅几何分叉 */
+/** ?????? / ??(???????????) / ?? ? ???????????? */
 const LINE_GROUPS: readonly { label: string; mask: number }[] = [
   { label: 'producers', mask: MASK_PRODUCERS },
   { label: 'crew', mask: MASK_CREW },
   { label: 'cast', mask: MASK_CAST },
 ]
+
+/** Extra world units beyond each endpoint's active-sphere radius so lines do not touch the mesh. */
+export const CONSTELLATION_SURFACE_GAP_WORLD = 0.06
+
+const _seg = { ax: 0, ay: 0, az: 0, bx: 0, by: 0, bz: 0 }
+
+/**
+ * Shorten segment A?B from both ends by (radius+gap) along the chord so endpoints sit outside each sphere.
+ * Returns null if degenerate or fully inside the offset envelopes.
+ */
+function insetSegmentToAvoidSpheres(
+  ax: number,
+  ay: number,
+  az: number,
+  bx: number,
+  by: number,
+  bz: number,
+  rA: number,
+  rB: number,
+  gap: number,
+): { ax: number; ay: number; az: number; bx: number; by: number; bz: number } | null {
+  const abx = bx - ax
+  const aby = by - ay
+  const abz = bz - az
+  const len = Math.hypot(abx, aby, abz)
+  if (len < 1e-8) return null
+  const inv = 1 / len
+  const dx = abx * inv
+  const dy = aby * inv
+  const dz = abz * inv
+  const pullA = rA + gap
+  const pullB = rB + gap
+  if (pullA + pullB >= len - 1e-6) return null
+  _seg.ax = ax + dx * pullA
+  _seg.ay = ay + dy * pullA
+  _seg.az = az + dz * pullA
+  _seg.bx = bx - dx * pullB
+  _seg.by = by - dy * pullB
+  _seg.bz = bz - dz * pullB
+  return _seg
+}
 
 function sortIdsByRelease(ids: readonly number[], movieById: ReadonlyMap<number, Movie>): number[] {
   return [...ids].sort((a, b) => {
@@ -28,6 +69,8 @@ function sortIdsByRelease(ids: readonly number[], movieById: ReadonlyMap<number,
 
 export interface ConstellationSyncParams {
   visible: boolean
+  /** When true (single-film focus / Perlin), constellation is hidden. */
+  hasFilmFocus: boolean
   movieById: ReadonlyMap<number, Movie>
   selectionIds: readonly number[] | null
   /**
@@ -35,6 +78,10 @@ export interface ConstellationSyncParams {
    * When null/undefined, falls back to one polyline over all `selectionIds` sorted by `release_date`.
    */
   movieRoles: Readonly<Record<string, number>> | null | undefined
+  /** World gap added on top of each endpoint's `getActiveWorldRadius` (see `CONSTELLATION_SURFACE_GAP_WORLD`). */
+  surfaceGapWorld: number
+  /** Active InstancedMesh world sphere radius (must match pick / `galaxyActive.vert`). */
+  getActiveWorldRadius: (movie: Movie) => number
 }
 
 export interface ConstellationHandle {
@@ -44,8 +91,8 @@ export interface ConstellationHandle {
 }
 
 /**
- * P12.7 �?`LineSegments` “constellation�?for person select:
- * three white temporal chains when `movie_roles` is present �?**制片**�?*导演+摄影+编剧+作曲**�?*演员**�?
+ * P12.7 ? `LineSegments` ?constellation? for person select:
+ * three white temporal chains when `movie_roles` is present ? **??**?**??+??+??+??**?**??**?
  * or one chain when `movie_roles` is absent.
  */
 export function createConstellation(maxSegments = 420): ConstellationHandle {
@@ -77,18 +124,19 @@ export function createConstellation(maxSegments = 420): ConstellationHandle {
   }
 
   const sync = (p: ConstellationSyncParams): void => {
-    if (!p.visible || !p.selectionIds || p.selectionIds.length < 2) {
+    if (!p.visible || p.hasFilmFocus || !p.selectionIds || p.selectionIds.length < 2) {
       mesh.visible = false
       geometry.setDrawRange(0, 0)
       if (lastLogVertices !== 0) {
         lastLogVertices = 0
-        console.log('[Constellation] hidden (off or <2 points)')
+        console.log('[Constellation] hidden (off, focus, or <2 points)')
       }
       return
     }
 
     let vi = 0
     const cap = maxVertices
+    const gap = Math.max(0, p.surfaceGapWorld)
 
     const emitChain = (chainIds: readonly number[]) => {
       if (chainIds.length < 2) return
@@ -97,9 +145,13 @@ export function createConstellation(maxSegments = 420): ConstellationHandle {
         const a = p.movieById.get(chainIds[i]!)
         const b = p.movieById.get(chainIds[i + 1]!)
         if (!a || !b) continue
-        writeVertex(vi, a.x, a.y, a.z)
+        const rA = p.getActiveWorldRadius(a)
+        const rB = p.getActiveWorldRadius(b)
+        const inset = insetSegmentToAvoidSpheres(a.x, a.y, a.z, b.x, b.y, b.z, rA, rB, gap)
+        if (!inset) continue
+        writeVertex(vi, inset.ax, inset.ay, inset.az)
         vi++
-        writeVertex(vi, b.x, b.y, b.z)
+        writeVertex(vi, inset.bx, inset.by, inset.bz)
         vi++
       }
     }

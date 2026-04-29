@@ -9,11 +9,11 @@ import { useSearchIndexStore } from '@/store/searchIndexStore'
 import type { Meta, Movie } from '@/types/galaxy'
 
 import { attachGalaxyCameraControls, clampGalaxyCameraXY, GALAXY_CAMERA_EULER, setFocusCameraPosition } from './camera'
-import { createConstellation } from './constellation'
+import { CONSTELLATION_SURFACE_GAP_WORLD, createConstellation } from './constellation'
 import { createGalaxyDualMeshes } from './galaxyMeshes'
 import { attachGalaxyActiveMeshInteraction } from './interaction'
 import { createSelectionPlanet, type SelectionPlanetHandle } from './planet'
-import { getSelectionMaskPickSet, resolveSelectionWorldRadius } from './screenRadius'
+import { computeActiveWorldRadius, getSelectionMaskPickSet, resolveSelectionWorldRadius } from './screenRadius'
 import { buildMovieIdToIndexMap, setSelectionMask, type SelectionMaskUniformBag } from './selectionMask'
 
 interface BloomDebugControls {
@@ -235,14 +235,19 @@ export function mountGalaxyScene(
       st.searchMode === 'person' && st.selectionPersonKey && index
         ? index.people[st.selectionPersonKey]
         : undefined
+    const maskPick = getSelectionMaskPickSet(st.searchMode, st.selectionIds)
+    const mat = galaxy.activeMaterial
     constellation.sync({
       visible:
         st.searchMode === 'person' &&
         st.constellationEnabled &&
         (st.selectionIds?.length ?? 0) >= 2,
+      hasFilmFocus: st.selectedMovieId !== null,
       movieById: movieByIdForConstellation,
       selectionIds: st.selectionIds,
       movieRoles: entry?.movie_roles ?? null,
+      surfaceGapWorld: CONSTELLATION_SURFACE_GAP_WORLD,
+      getActiveWorldRadius: (m) => computeActiveWorldRadius(m, st.zCurrent, st.zVisWindow, mat, maskPick),
     })
   }
   syncConstellationFromStores()
@@ -251,7 +256,10 @@ export function mountGalaxyScene(
       state.searchMode === prev.searchMode &&
       state.constellationEnabled === prev.constellationEnabled &&
       state.selectionIds === prev.selectionIds &&
-      state.selectionPersonKey === prev.selectionPersonKey
+      state.selectionPersonKey === prev.selectionPersonKey &&
+      state.selectedMovieId === prev.selectedMovieId &&
+      state.zCurrent === prev.zCurrent &&
+      state.zVisWindow === prev.zVisWindow
     ) {
       return
     }

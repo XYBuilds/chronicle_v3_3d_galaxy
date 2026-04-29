@@ -53,6 +53,7 @@ describe('createConstellation (P12.7)', () => {
     ])
     h.sync({
       visible: true,
+      hasFilmFocus: false,
       movieById: map,
       selectionIds: [1, 2, 3],
       movieRoles: {
@@ -60,6 +61,8 @@ describe('createConstellation (P12.7)', () => {
         '2': 2,
         '3': 3,
       },
+      surfaceGapWorld: 0,
+      getActiveWorldRadius: () => 0,
     })
     expect(h.mesh.visible).toBe(true)
     const pos = (h.mesh.geometry.attributes.position as THREE.BufferAttribute).array as Float32Array
@@ -71,6 +74,47 @@ describe('createConstellation (P12.7)', () => {
     expect(pos[3]).toBe(10)
     expect(pos[6]).toBe(0)
     expect(pos[9]).toBe(5)
+    h.dispose()
+  })
+
+  it('hides lines while a film is in focus', () => {
+    const h = createConstellation(32)
+    const map = new Map<number, Movie>([
+      [1, stubMovie({ id: 1, release_date: '2000-01-01', x: 0 })],
+      [2, stubMovie({ id: 2, release_date: '2010-01-01', x: 10 })],
+    ])
+    h.sync({
+      visible: true,
+      hasFilmFocus: true,
+      movieById: map,
+      selectionIds: [1, 2],
+      movieRoles: { '1': 1, '2': 1 },
+      surfaceGapWorld: 0,
+      getActiveWorldRadius: () => 0,
+    })
+    expect(h.mesh.visible).toBe(false)
+    h.dispose()
+  })
+
+  it('pulls segment ends outward by active radius + gap', () => {
+    const h = createConstellation(32)
+    const map = new Map<number, Movie>([
+      [1, stubMovie({ id: 1, release_date: '2000-01-01', x: 0 })],
+      [2, stubMovie({ id: 2, release_date: '2001-01-01', x: 10 })],
+    ])
+    h.sync({
+      visible: true,
+      hasFilmFocus: false,
+      movieById: map,
+      selectionIds: [1, 2],
+      movieRoles: { '1': 1, '2': 1 },
+      surfaceGapWorld: 0.1,
+      getActiveWorldRadius: () => 1,
+    })
+    expect(h.mesh.visible).toBe(true)
+    const pos = (h.mesh.geometry.attributes.position as THREE.BufferAttribute).array as Float32Array
+    expect(pos[0]).toBeCloseTo(1.1)
+    expect(pos[3]).toBeCloseTo(8.9)
     h.dispose()
   })
 })

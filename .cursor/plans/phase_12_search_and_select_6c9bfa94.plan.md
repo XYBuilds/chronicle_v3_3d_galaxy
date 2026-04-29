@@ -31,7 +31,7 @@ todos:
     status: completed
   - id: p129-doc-sync
     content: P12.9 文档同步 + 出口 fps：Phase 8 基线加 P12 出口 + person 60+ active 压力片段；视觉参数总表 / Tech Spec §1.5 §4 / Design Spec / 状态机 spec
-    status: pending
+    status: completed
 isProject: false
 ---
 
@@ -323,7 +323,7 @@ if (uSelectionMode == 1) {
 - [PRD §3.2](docs/project_docs/TMDB%20电影宇宙%20PRD.md)：搜索作为正式功能需求 + 三条用户路径
 - [`星球状态机 spec.md`](docs/project_docs/星球状态机%20spec.md) §3.6：select 转正、selectionMask + uSelectionMode、focus×select 嵌套、连线 Leva-only
 
-**P12.9 范围**（实施完成后再做）：
+**P12.9 范围**（**已完成** · 2026-04-29 · 分支 `phase/p12.9-doc-sync`）：
 - [`Phase 8 基线`](docs/benchmarks/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md) 末尾新增 `## P12 入口/出口` 节，重跑 P8.0.1 三片段 + 新增"search person 60+ active"与"search genre 数千 active"两段压力片段
 - [视觉参数总表.md](docs/project_docs/视觉参数总表.md)：`uSelectionMask / uSelectionMode / uMovieCount / constellation maxLineCount / opacity` 登记
 - [Tech Spec §1.5](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md) 拾取小节：补 `searchMode in {'person','genre'}` 时 `inFocus` 由 mask 覆盖、active 拾取行为不变（可点 selection 内任意 active 进 focus，与 §3.6 嵌套一致）

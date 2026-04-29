@@ -130,18 +130,18 @@ Output
 * 前端必须**全量解析**宇宙数据（默认 **`galaxy_data.json.gz`**，见 §5.1）完毕后，才初始化 Three.js 场景并移除 Loading 覆盖层。  
 * 加载失败时提供**错误提示与重试**（Phase 7 自用验收路径）。
 
-### **1.5 交互拾取（Phase 8.4：active `InstancedMesh` + 世界球）**
+### **1.5 交互拾取（Phase 8.4：active `InstancedMesh` + 世界球；Phase 12：search 多选与 mask 对齐）**
 
 生产路径**不再**对 `THREE.Points` 主拾取；**仅**对 **`galaxyActive`** 使用 `Raycaster` 时，引擎给出的网格命中**不能**直接反映 `instanceMatrix` 的顶点缩放量，故实现采用 **`screenRadius.ts` 中的世界空间球/半径** 与 `pickClosestActiveMovieAlongRay`：**射线与每颗「active 尺度下」世界球求交**，取最近合法命中，并与 shader 的 `sActive` / `inFocus` **同构**。
 
 | 环节 | 规则 |
 | :---- | :---- |
 | **主拾取对象** | `galaxyActive`（`InstancedMesh`）；**idle 不作为**可点目标 |
-| **Slab / inFocus 门控** | 与 §1.1 一致；采纳拾取时须 **`inFocus > 0.5`**（与《星球状态机 spec》及《视觉参数总表》一致），等同「只与条带内 active 可交互区」 |
+| **Slab / inFocus 门控** | **默认**（`searchMode === 'idle'`，`uSelectionMode === 0`）：与 §1.1 一致；采纳拾取时须 **`inFocus > 0.5`**（与《星球状态机 spec》及《视觉参数总表》一致），等同「只与条带内 active 可交互区」。**Phase 12**（`searchMode` 为 **`person`** 或 **`genre`**）：GPU 上 `uSelectionMode === 1` 时 idle/active 顶点着色器 **`inFocus` 改由 `uSelectionMask` 纹理采样**（与 Z 条带解耦）；CPU 侧 `screenRadius.ts` / `interaction.ts` 用 **`selectionMaskPickSet`**（`selectionIds` 集合）使**仅 mask 内影片**按全 **`inFocus = 1`** 计算 active 世界球半径并参与射线求交，其余实例跳过；采纳命中仍须 **`inFocus > 0.5`**（对 mask 内实例恒成立）。**电影名搜索**（`searchMode === 'movie'` 或未进入多选）不改变上述默认 slab 拾取。 |
 | **hover 环** | **HTML overlay**（`HoverRing`），**无 CSS transition**，与 Tooltip 同节奏显隐 |
 | **历史：Points** | 旧版对 `Points.threshold` 的估算与 A/B 层过滤见归档讨论；`interaction.ts` 中 `computePointScreenRadiusCss` 等**仅**供基准/遗留对照 |
 
-**假设与局限**：active 在条带外趋近零尺度时极难点中，属预期；若 T6 类问题再现，可收紧容差或第二近邻（性能基线与准入归档见 [`Phase 8 基线 P8.0 性能与 P8.4 准入.md`](../benchmarks/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md)）。
+**假设与局限**：active 在条带外趋近零尺度时极难点中，属预期；若 T6 类问题再现，可收紧容差或第二近邻（性能基线与准入归档见 [`Phase 8 基线 P8.0 性能与 P8.4 准入.md`](../benchmarks/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md)，含 **§P12 入口/出口** 搜索压力片段）。
 
 **Phase 11.6（已实装）**：当 `selectedMovieId != null` 时，拾取先判断 focus Perlin 球包围球（半径 `selectionPlanet.lastRadius`）是否沿当前射线比 active 命中更近；若更近，则 hover/click 归为焦点星语义（保持 focus，tooltip 继续由 `hoveredMovieId` 单一字段驱动）；否则回落既有 `galaxyActive` 世界球命中路径以支持切换 focus。详见《星球状态机 spec》§3.5.2 与 `interaction.ts`。
 

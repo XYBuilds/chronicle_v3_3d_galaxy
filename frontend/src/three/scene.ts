@@ -69,7 +69,7 @@ interface GalaxyInteractionDebug {
   zCurrent: number
   zVisWindow: number
   zCamDistance: number
-  /** P12.7 — person-mode constellation `LineSegments` (product UI uses store only; console / future Leva). */
+  /** P12.7 — person-mode constellation `LineSegments` (`window.__galaxy.constellationEnabled`; product HUD 无开关). */
   constellationEnabled: boolean
   log: () => void
 }

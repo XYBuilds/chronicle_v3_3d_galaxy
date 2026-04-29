@@ -2,7 +2,7 @@
 
 > **文档性质**：本文件位于 **`docs/benchmarks/`**，是 **性能测量口径、Story 准入门槛与里程碑入口/出口表的归档**（基线簿），**不是**功能或渲染行为的 SSOT；交互与实现以 [`星球状态机 spec.md`](../project_docs/星球状态机%20spec.md)、《Tech Spec》《Design Spec》及源码为准。
 >
-> **里程碑扩展**：随 Phase 10 / 11 / 12 等可在文末追加 `## P10.x`、`## P11.x`、`## P12.x` 等 **入口/出口** 节（与 §P8.0.1 **同录制口径**），并与对应 Cursor 计划交叉引用。
+> **里程碑扩展**：随 Phase 10 / 11 / 12 等可在文末追加 `## P10.x`、`## P11.x`、`## P12.x` 等 **入口/出口** 节（与 §P8.0.1 **同录制口径**），并与对应 Cursor 计划交叉引用。**Phase 12** 出口见下文 **`## P12 入口/出口`**（[`.cursor/plans/phase_12_search_and_select_6c9bfa94.plan.md`](../../.cursor/plans/phase_12_search_and_select_6c9bfa94.plan.md) · P12.9）。
 
 > 从 `视觉参数总表.md` 拆出单独跟踪（**2026-04-27**）。Phase 7 宏观参数清单仍见 **`视觉参数总表.md`**（Git 跟踪；**不再**列入 `.cursorignore`）。总表文首注明：开发者速查用，**非** Agent SSOT。
 
@@ -52,8 +52,8 @@
 
 ## P8.0.4 状态机 SSOT
 
-- 四态（idle / active / hover / focus）+ 延后 **select**：见 [`星球状态机 spec.md`](../project_docs/星球状态机%20spec.md)（`W = uZVisWindow×0.2`、`vote_count` focus 权重与「小片偏小」意图、draw 顺序、WebGL2）。
-- **Phase 8 文档回写（2026-04-27）**：《视觉参数总表》持续与源码对齐；《Tech Spec》/《Design Spec》/《数据特征工程与 3D 映射总表》已更新 P8.1–P8.4 双 mesh 与 `genre_hue`。搜索与 `select` 能力将**另行**统一设计与排期，不维护独立 spec 文件。
+- 四态（idle / active / hover / focus）+ **Phase 12 起正式态 `select`**（人名/genre 搜索多 active、`selectionMask`、`searchMode`、ESC 焦点栈等）：见 [`星球状态机 spec.md`](../project_docs/星球状态机%20spec.md) §3.6（`W = uZVisWindow×0.2`、`vote_count` focus 权重与「小片偏小」意图、draw 顺序、WebGL2、**focus×select 嵌套**）。
+- **Phase 8 文档回写（2026-04-27）**：《视觉参数总表》持续与源码对齐；《Tech Spec》/《Design Spec》/《数据特征工程与 3D 映射总表》已更新 P8.1–P8.4 双 mesh 与 `genre_hue`。**Phase 12（2026-04-29）**：搜索 UX、数据契约（`has_search_index`、`galaxy_search_index.json.gz`）、拾取与 mask 覆盖规则已写入上述 SSOT + 本节 **`## P12 入口/出口`**。
 
 ---
 
@@ -116,3 +116,30 @@
 | **idle** | 与 §P11.0 入口同口径 | *待补录* | *待补录* | *待补录* | *待补录* | *待补录* |
 | **timeline 拖动** | 与 §P11.0 入口同口径 | *待补录* | *待补录* | *待补录* | *待补录* | *待补录* |
 | **focus** | 与 §P11.0 入口同口径（飞入 + 稳态） | *待补录* | *待补录* | *待补录* | *待补录* | **门槛：≥ 入口的 95%** |
+
+---
+
+## P12 入口/出口（Phase 12 搜索 + Select 态 · 文档收口）
+
+> **目的**：在 P12.1–P12.8（搜索索引、`SearchBar`、selectionMask、`uSelectionMode`、人名/genre 多 active、星座连线、`select` 状态机与 ESC 栈）完成后，用与 **§P8.0.1** 相同的 Chrome Performance 口径归档 **入口三线 + 搜索压力二线**，验证 **fps 不破 Phase 12 总验收口径**（相对 §P8.0.1 / §P11.0 冻结值：**各片段中位数不低于约 95%**，且无新增 Main **Long Task >50 ms** 风暴；定性上 Frames 应保持与 idle/focus 基线同量级）。  
+> **关联计划**：[`.cursor/plans/phase_12_search_and_select_6c9bfa94.plan.md`](../../.cursor/plans/phase_12_search_and_select_6c9bfa94.plan.md)（P12.9）。  
+> **Git 分支（文档登记）**：`phase/p12.9-doc-sync`（含 P12 实现与本文档同步）。
+
+**录制环境**：与 §P8.0.1 一致 — `frontend` 下 **`npm run build` + `vite preview`（4173）**；使用带 **`meta.has_search_index === true`** 与 **`galaxy_search_index.json.gz`** 的默认数据包；`devicePixelRatio` 以录制机为准。
+
+**A — 回归三线（与 §P8.0.1 操作说明逐字一致，用于 P12 前后对照）**
+
+| 片段 | 操作说明 | GPU time（ms / frame，中位数） | JS Main（ms / frame） | Long tasks（>50 ms，次数） | fps 中位数 | 备注 |
+|------|----------|--------------------------------|----------------------|-----------------------------|------------|------|
+| **idle** | 主应用加载默认数据；`zCurrent` 远离热点年份，无 hover；**整段录制约 7.1 s** | *待补录* | *待补录* | *待补录* | *待补录* | 与 §P8.0.1 idle 行对比；含冷启动时 Long Task 可接受 |
+| **timeline 拖动** | 拖动时间轴扫过可用跨度；Performance 选区取**纯拖动**约 5 s（与 §P8.0.1 选区口径一致即可） | *待补录* | *待补录* | *待补录* | *待补录* | **P12 备注**：在 **`searchMode === 'person'` 或 `'genre'`** 时条带视觉被 mask 覆盖，但 `zCurrent` 仍更新；本行建议在 **普通时间轴态**（`searchMode === 'idle'`）录制，与历史基线可比 |
+| **focus** | 高 `vote_count` 片：飞入 + Perlin 稳定；选区与 §P8.0.1 focus 同量级 | *待补录* | *待补录* | *待补录* | *待补录* | **门槛：≥ §P11.0 入口 focus fps 的 95%**（与 §P11.7 出口判定一致） |
+
+**B — 搜索压力二线（P12 新增；与 A 同 Summary / Frames 读数习惯）**
+
+| 片段 | 操作说明 | GPU time（ms / frame，中位数） | JS Main（ms / frame） | Long tasks（>50 ms，次数） | fps 中位数 | 备注 |
+|------|----------|--------------------------------|----------------------|-----------------------------|------------|------|
+| **search · person（60+ active）** | 顶部搜索切 **人名**；输入 ≥3 字符，选联想命中 **参演电影数 ≥60** 的影人；录制约 **5 s** 稳态（多 active + mask + **星座连线** 可见，`constellationEnabled` 默认 **true**） | *待补录* | *待补录* | *待补录* | *待补录* | 验收意图：**大量 active + LineSegments** 下仍接近 60 fps；与 §P8.0.1 idle 中位数比 **≥ ~95%** 为通过参考 |
+| **search · genre（大集合 active）** | 顶部搜索切 **genre**；选 **count 最大**的一档（如 Drama / Documentary 等，数千 `movie_ids`）；录制约 **5 s** 稳态（**无**星座连线） | *待补录* | *待补录* | *待补录* | *待补录* | 验收意图：**数千 active** 仍无灾难性掉帧；同上 **≥ ~95%** 相对 idle 为参考门槛 |
+
+**录制步骤**：与 §P8.0.1「录制步骤（摘要）」相同；补充：人名/genre 片段须在联想 **点击确认** 后、画面已切换到多 active 再 **Record**。

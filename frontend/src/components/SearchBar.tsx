@@ -191,6 +191,7 @@ export function SearchBar({ hasSearchIndex, movies }: SearchBarProps) {
           useGalaxyInteractionStore.setState({
             searchMode: 'person',
             selectionIds: ids,
+            selectionPersonKey: s.personKey,
             selectedMovieId: null,
             searchQuery: q,
           })
@@ -205,6 +206,7 @@ export function SearchBar({ hasSearchIndex, movies }: SearchBarProps) {
           useGalaxyInteractionStore.setState({
             searchMode: 'genre',
             selectionIds: ids,
+            selectionPersonKey: null,
             selectedMovieId: null,
             searchQuery: q,
           })

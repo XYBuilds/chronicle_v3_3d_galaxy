@@ -25,7 +25,7 @@ todos:
     status: completed
   - id: p127-constellation-lines
     content: P12.7 人名连线（LineSegments 星座图）：constellation.ts setFromIds 按 release_date 升序连点；scene.ts 挂载 + searchMode==='person' 同步
-    status: pending
+    status: completed
   - id: p128-state-machine-select
     content: P12.8 select 态正式入状态机 + ESC 焦点栈：状态机 spec 收口；App.tsx 全局 ESC handler 四级优先级；infoCopy 顺手补
     status: pending

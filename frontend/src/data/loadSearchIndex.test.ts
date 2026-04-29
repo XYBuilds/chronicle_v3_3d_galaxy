@@ -10,8 +10,13 @@ import { parseAndValidateSearchIndex } from './validateSearchIndex'
 const searchFixture: SearchIndex = {
   version: 'fixture',
   people: {
-    'ada lovelace': { full: 'Ada Lovelace', role_mask: 1, movie_ids: [1, 42] },
-    'christopher nolan': { full: 'Christopher Nolan', role_mask: 3, movie_ids: [7] },
+    'ada lovelace': {
+      full: 'Ada Lovelace',
+      role_mask: 1,
+      movie_ids: [1, 42],
+      movie_roles: { '1': 1, '42': 1 },
+    },
+    'christopher nolan': { full: 'Christopher Nolan', role_mask: 3, movie_ids: [7], movie_roles: { '7': 3 } },
   },
   genres: {
     Drama: { count: 1, movie_ids: [1] },
@@ -50,6 +55,28 @@ describe('parseAndValidateSearchIndex (P12.1)', () => {
   it('skips palette strict check when genrePaletteKeys is null', () => {
     const data = parseAndValidateSearchIndex(searchFixture, null)
     expect(Object.keys(data.genres)).toEqual(['Drama'])
+  })
+
+  it('rejects movie_roles with missing movie id', () => {
+    const bad: unknown = {
+      version: 'v',
+      people: {
+        x: { full: 'X', role_mask: 1, movie_ids: [1, 2], movie_roles: { '1': 1 } },
+      },
+      genres: { Drama: { count: 1, movie_ids: [1] } },
+    }
+    expect(() => parseAndValidateSearchIndex(bad, ['Drama'])).toThrow(/missing entry/)
+  })
+
+  it('rejects movie_roles bit outside role_mask', () => {
+    const bad: unknown = {
+      version: 'v',
+      people: {
+        x: { full: 'X', role_mask: 1, movie_ids: [1], movie_roles: { '1': 2 } },
+      },
+      genres: { Drama: { count: 1, movie_ids: [1] } },
+    }
+    expect(() => parseAndValidateSearchIndex(bad, ['Drama'])).toThrow(/exceeds role_mask/)
   })
 })
 

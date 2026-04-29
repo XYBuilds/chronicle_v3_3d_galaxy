@@ -4,7 +4,7 @@ overview: Phase 12 搜索基础设施 + Select 态：管线导出搜索倒排索
 todos:
   - id: p120-spec
     content: P12.0 搜索 UX + 数据契约 spec（无代码）：Design Spec 加搜索节；状态机 spec select 转正 + 与 focus 优先级；Tech Spec §4 预留 has_search_index
-    status: pending
+    status: completed
   - id: p121-data-search-index
     content: P12.1 数据：export_galaxy_json 加 title_normalized + has_search_index；新增 export_search_index.py 产 galaxy_search_index.json.gz（people/genres）；类型层 + Vitest schema
     status: pending

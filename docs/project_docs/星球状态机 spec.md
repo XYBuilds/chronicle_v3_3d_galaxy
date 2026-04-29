@@ -10,7 +10,7 @@
 | **active** | 片元在 `uZCurrent … uZCurrent+uZVisWindow` 清晰条带内，且非 focus；可参与拾取 | 生产：仅对 **`galaxyActive`** 拾取（`interaction.ts`） |
 | **hover** | `hoveredMovieId` 命中；**不改变** mesh 尺度，仅 HUD（tooltip + HTML hover ring，**无 CSS transition**，即时显隐） | 已有 store 字段；P8.4 对齐 ring |
 | **focus** | 选中飞入完成：相机对准目标片、Perlin 球独占；双 galaxy mesh 上该 `instanceId` **scale 归零** | 现有 planet + 相机动画；P8.3/P8.4 调整 |
-| **select**（延后） | 多选 / 关联高亮等；本 Phase **仅占位**；搜索与 select 产品方案未来统一规划 | Phase 9 候选 |
+| **select**（正式 · Phase 12+） | **`selectionIds` 非空** 且 **`viswindowDisabled`**：时间轴条带内的 **`inFocus`** 由 **selectionMask** 覆盖（见 §3.6）；与搜索人名 / genre 联动 | Phase 12 起实装 |
 
 ## 2. 共享数学：Z 条带与 smoothstep 过渡
 
@@ -130,9 +130,21 @@ Perlin focus 球在片元侧按 **`vNoise`** 与 **`uThresh[0..K−2]`**（**K**
 - **回落**：若未命中 focus 球，或 active 命中更近，则按既有 `pickClosestActiveMovieAlongRay` 路径处理，可切换到另一颗 active 星。  
 - **语义**：focus 球 hover 继续写 `hoveredMovieId`（单一来源），tooltip 与 ring 逻辑不分叉；点击 focus 球保持当前 focus，不误切后景。
 
-### 3.6 select（延后）
+### 3.6 select（正式态 · Phase 12）
 
-- 仅列需求占位：多选集合、bloom 分层、搜索联动；**不实装**到本 Phase。搜索与 **select** 产品方案将**未来**统一设计与计划（本仓库不维护独立搜索 spec 文件）。与 §3.4.2 `uFocusDimMode = 1` 联动时再更新本节。
+**语义**：前端 **`selectionIds: number[]`** 非空、`searchMode ∈ {'person','genre'}` 时即为 **select 会话**。该会话下，**宏观 active 可视集合完全由 `selectionIds` 决定**，**与时间轴 `viswindow` 解耦**：shader 内 `uSelectionMode == 1` 时 **`inFocus`** 由 **`uSelectionMask`** 重写，**不再读取** `uZCurrent / uZVisWindow` 推导的 `inFocus_band`。Timeline UI 与 store `zCurrent / zVisWindow` 的写入通路保持运转（保留状态以便随时退出 select 回到时间轴态），但**视觉无反馈**（用户拖时间轴不会改变 active 集合）。
+
+**与 focus 的优先级**：**`focus > select > active / idle / hover`**。
+
+- **focus 嵌套**：用户在 select 会话中点击 active 影片可同时进入 focus；focus 实例走 Perlin / 双 mesh 隐藏（`uFocusedInstanceId`），**mask 仅作用于非焦点实例**（与 §3.4.2 `uFocusDimMode` 联动）。**ESC 取消 focus 时保留 select 上下文**（`searchMode` / `selectionIds` / 连线不清）；再次 ESC 才退出 select（与 Design Spec §4.6 焦点栈一致）。
+- **搜电影名并点选**：直接走 `selectedMovieId` → focus，**不**进入 §3.6 select。
+
+**selectionMask 数据流**：
+
+- **GPU**：`uSelectionMask` = `DataTexture(RedFormat, UnsignedByte)`，宽 `movieCount`、高 1，每实例 **0/1**；`uSelectionMode` ∈ `{0,1}`：`0` = 关闭（与 Phase 8–11 行为一致，inFocus 由条带驱动），`1` = mask 覆盖 inFocus（仅非焦点实例）。
+- **CPU**：`selectionIds → idToIndex → DataTexture` 写入并 `needsUpdate=true`；清空 → mode=0 + 全零。
+
+**人名连线**：`searchMode === 'person'` 且 `constellationEnabled` 时，`LineSegments` 按 **`release_date` 升序**连接 mask 内影片；`constellationEnabled` 默认 `true`，**仅 Leva debug 面板可关**（产品 UI 不暴露）。`searchMode === 'genre'` 不画连线。
 
 ## 4. 渲染与能力约定
 
@@ -151,3 +163,5 @@ Perlin focus 球在片元侧按 **`vNoise`** 与 **`uThresh[0..K−2]`**（**K**
 | 2026-04-28 | Phase 11.1：§3.4.3 改为「非目标 active alpha + 相机同步」实装说明；§3.4.4 为原遮挡剔除占位（未实装） |
 | 2026-04-29 | P11.4：§3.4 focus 表更新 Perlin detail / 色彩；§3.5 改为 **K 档**阈值与 **`lastRadius`** 公式；新增 **§3.5.1** Perlin 片元与光照定稿；指向《视觉参数总表》§4 与 [`Phase 11.4 … 实施报告.md`](../reports/Phase%2011.4%20P11.4%20Perlin%20法线重构%20vote→L%20genre%20色与光照定稿%20实施报告.md) |
 | 2026-04-29 | P11.7 文档收口：§3.5 标注 **P11.5 不透明化已实装**；新增 **§3.5.2** focus 态拾取分流（P11.6）定稿描述 |
+| 2026-04-29 | Phase 12 P12.0：**§1** 表格 **`select` 转正**；**§3.6** 重写为正式态（selectionMask、`viswindowDisabled`、与 focus 优先级、连线摘要） |
+| 2026-04-29 | Phase 12 P12.0 收口：§3.6 明确 select 会话下 **active 集合完全由 `selectionIds` 决定、与 viswindow 完全解耦**；focus 嵌套 ESC 仅取消 focus 而保留 select；连线仅 Leva 可关 |

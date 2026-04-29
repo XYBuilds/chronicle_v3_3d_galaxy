@@ -246,7 +246,7 @@ TMDB 中一条影片可出现 **任意多个**流派标签（按 API 给定顺�
 
 ## **4\. 输出数据 Schema（Python → 前端契约）**
 
-Python 管线的最终产物为**一个 JSON 文件**，前端一次性加载后拆分到 GPU Buffer 与 DOM HUD 两层。文件需 gzip 压缩后随静态资源部署。
+Python 管线的最终产物以 **`galaxy_data.json`**（及 gzip）为主；**Phase 12 起**可选增加配套 **`galaxy_search_index.json.gz`**（与 `meta.has_search_index` 联动）。前端一次性加载主文件后拆分到 GPU Buffer 与 DOM HUD；搜索索引为独立 Hydrate，详见 §4.5。
 
 ### **4.1 顶层结构**
 
@@ -269,6 +269,7 @@ Python 管线的最终产物为**一个 JSON 文件**，前端一次性加载后
 | `genre_weight_ratio` | float | 流派权重公比（默认 ≈0.618） |
 | `genre_palette` | object | **genre 名 → sRGB hex 色值** 映射表，例如 `{ "Drama": "#E74C3C", ... }`。源色彩空间为 **OKLCH**（规则见 Design Spec §1.1），管线中转为 sRGB hex 后写入此处。**HUD swatch** 与兼容用途 |
 | `has_genre_hue` | bool \| undefined | **Phase 8.1**：为 **`true`** 时，每条 `movies[i]` **应**含 **`genre_hue`**（弧度 \([0, 2\pi)\)），GPU 宏观/focus 路径优先消费 hue + 均匀 L/C；与 `genre_color` **双字段共存**直至下一大版本移除旧字段（须 bump 版本并回归） |
+| `has_search_index` | bool \| undefined | **Phase 12+**：为 **`true`** 时，静态目录中**应**存在 **`galaxy_search_index.json.gz`**（§4.5），且每条 `movies[i]` **应**含 **`title_normalized`**（§4.3）；前端据此启用 HUD 搜索（人名 / genre 联想）；缺失时搜索 UI disabled（见 Design Spec §4） |
 | `feature_weights` | object | `{ text: 1.0, genre: 1.0, lang: 1.0 }` §2.1.3 多模态融合的权重乘子 |
 | `z_range` | `[float, float]` | 数据集中 Z 轴（小数年份）的 `[min, max]`，供前端相机初始化与 clamp |
 | `xy_range` | `{ x: [min, max], y: [min, max] }` | UMAP 坐标的实际值域，供前端归一化或相机边界设置 |
@@ -294,6 +295,7 @@ Python 管线的最终产物为**一个 JSON 文件**，前端一次性加载后
 | 字段 | 类型 | 说明 |
 | :---- | :---- | :---- |
 | `title` | string | 电影标题（Tooltip + 抽屉） |
+| `title_normalized` | string \| undefined | **Phase 12+ 管线**：`NFKD` + ASCII fold + **casefold**，供搜索与子串匹配；与 `has_search_index` 同步出现；旧包无此字段时前端跳过电影名索引路径 |
 | `original_title` | string | 原始语言标题 |
 | `overview` | string | 剧情简介全文 |
 | `tagline` | string \| null | 宣传标语（可空） |
@@ -328,10 +330,63 @@ Python 管线的最终产物为**一个 JSON 文件**，前端一次性加载后
 
 ### **4.4 体积与加载说明**
 
-以 ~60K 条为例：纯 JSON 原始常见量级为**数十 MB**；经 gzip 后的体积随字段丰富度、字符串长度与压缩级别变化。**不对 `galaxy_data.json.gz` 设体积硬性上限**；首包与托管成本以实际网络环境与 `meta.count` 为准。若需减轻传输或解析压力，可考虑：  
+以 ~60K 条为例：纯 JSON 原始常见量级为**数十 MB**；经 gzip 后的体积随字段丰富度、字符串长度与压缩级别变化。**不对 `galaxy_data.json.gz` 设体积硬性上限**；首包与托管成本以实际网络环境与 `meta.count` 为准。**`galaxy_search_index.json.gz`**（§4.5）为人名倒排 + genre 列表，体积通常远小于主文件；若需减轻传输或解析压力，可考虑：  
 * **拆分**：GPU 字段抽为独立 binary buffer（Float32Array dump），HUD 字段按需懒加载。  
 * **裁剪 cast**：截取前 10 人（而非 20）可减轻一部分文本体积。  
 * **当前阶段不做此优化**，优先跑通。
+
+### **4.5 配套搜索索引 `galaxy_search_index.json.gz`（Phase 12+）**
+
+与 `galaxy_data.json.gz` **并列**部署于 `public/data/`（或等价 CDN 路径）。**仅当 `meta.has_search_index === true`** 时前端尝试加载；**`version`** 字符串与 **`galaxy_data.meta.version`** 对齐，便于一致性校验。
+
+**顶层结构（逻辑 schema）：**
+
+```jsonc
+{
+  "version": "<同 galaxy_data.meta.version>",
+  "people": {
+    "<normalized_key>": {
+      "full": "Original Display Name",
+      "role_mask": 61,
+      "movie_ids": [123, 456]
+    }
+  },
+  "genres": {
+    "Action": { "count": 12345, "movie_ids": [11, 22, 33] },
+    "Drama":  { "count":  9876, "movie_ids": [44, 55] }
+  }
+}
+```
+
+#### **4.5.1 `people`**
+
+- **`key`**（`normalized_key`）：人名 NFKD + ASCII fold + casefold 后的字符串（与 `title_normalized` 共用同一规范化函数）；**多个原始写法可能合并到同一 key**，此时 `full` 取出现频次最高 / 第一条原始字符串。
+- **`full`**：展示用原始姓名（保留大小写、变音符号）。
+- **`role_mask`**：**uint8** 位掩码，按位**或**合并多角色：
+  | 位 | 数值 | 来源字段 |
+  | :---- | :---- | :---- |
+  | 0 | `1` | `cast` |
+  | 1 | `2` | `director` |
+  | 2 | `4` | `director_of_photography` |
+  | 3 | `8` | `writers` |
+  | 4 | `16` | `producers` |
+  | 5 | `32` | `music_composer` |
+  - 取值范围 **`[0, 63]`**；`assert role_mask <= 63` 是管线必检约束。
+- **`movie_ids`**：参演影片 TMDB ID 数组，**去重**；顺序不限（前端按需排序，例如人名星座连线按 `release_date` 升序）。
+- **任意 token 前缀（Design Spec §4.4）**：实现可在 **运行时**按空白拆分 `normalized_key` token，亦可由管线**预拆分**写入额外字段（例如 `tokens: string[]`）；本 Schema 不强制，与 Design Spec 行为契约一致即可。
+
+#### **4.5.2 `genres`**
+
+- **结构**：对象映射 **`genre 名 → { count, movie_ids }`**；`genre 名` 与 **`meta.genre_palette`** 的 key 集合**完全一致**。
+- **`count`**：该 genre 在数据集中**出现次数**（`Σ movies where genre ∈ m.genres`，**不限于 `genres[0]`**）。供 Design Spec §4.5 的 **二级排序（按数量降序）** 使用。
+- **`movie_ids`**：包含该 genre（任一顺位）的全部影片 TMDB ID，去重。供 select 会话直接驱动 `selectionIds`（无需前端再扫一次 60K × N）。
+- **稳定枚举**：JSON 对象迭代顺序在 Python 3.7+ 保持插入序；管线写入顺序应为 **palette key 序**（与 `meta.genre_palette` 一致）。
+
+#### **4.5.3 渲染侧契约**
+
+`galaxy_search_index` 仅承载**检索数据**；视觉层 **`uSelectionMask`**、**`uSelectionMode`**、**`uMovieCount`** 与 macro mesh 的对接见《星球状态机 spec》§3.6。
+- **`viswindow` 关系**：`person` / `genre` 进入 select 会话后，**active 集合由 `selectionIds` 决定**，**与 `uZCurrent` / `uZVisWindow` 解耦**（shader 内 `uSelectionMode == 1` 时 `inFocus` 由 mask 重写）；timeline UI 可继续接收 wheel / drag 写 `zCurrent`，但视觉无反馈。
+- **focus 嵌套**：select 会话中点击 active 影片进入 focus，**两者并存**；ESC 出栈语义见 Design Spec §4.6。
 
 ## **5\. 部署架构**
 
@@ -343,6 +398,8 @@ Python 管线的最终产物为**一个 JSON 文件**，前端一次性加载后
 [Python 本地管线]
     ↓ 产出
 galaxy_data.json (gzip)    ← §4 定义的 Schema
+    ↓ （可选，Phase 12+）
+galaxy_search_index.json.gz ← §4.5，当 meta.has_search_index 时
     ↓ 放入
 前端项目 public/data/
     ↓ 部署

@@ -92,7 +92,8 @@ def build_search_index_dict(
 
     for m in movies:
         mid = int(m["id"])
-        for g in m.get("genres") or []:
+        # One increment per (movie, genre) membership; dedupe list duplicates in source CSV/json.
+        for g in dict.fromkeys(m.get("genres") or []):
             if g not in palette_set:
                 raise AssertionError(f"movie id={mid}: genre {g!r} not in meta.genre_palette keys")
             genre_counts[str(g)] += 1
@@ -103,6 +104,11 @@ def build_search_index_dict(
     }
 
     assert set(genres.keys()) == palette_set, "genres keys must match palette exactly"
+    for g in genre_keys_in_order:
+        entry = genres[g]
+        assert int(entry["count"]) == len(
+            entry["movie_ids"]
+        ), f"genre {g!r}: count must equal len(movie_ids) after per-movie genre dedupe"
 
     n_people = len(people)
     assert n_people > 0, "search index requires at least one person across cast/crew columns"

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 
 import { MovieDetailDrawer } from '@/components/Drawer'
+import { SearchBar } from '@/components/SearchBar'
 import { useThemeFromQuery } from '@/hooks/useThemeFromQuery'
 import { Loading } from '@/components/Loading'
 import { MovieTooltip } from '@/components/MovieTooltip'
@@ -8,6 +9,7 @@ import { Timeline } from '@/components/Timeline'
 import { HoverRing } from '@/hud/HoverRing'
 import { InfoButton } from '@/hud/InfoButton'
 import { useGalaxyDataStore } from '@/store/galaxyDataStore'
+import { useSearchIndexStore } from '@/store/searchIndexStore'
 import { mountGalaxyScene } from '@/three/scene'
 
 import './App.css'
@@ -31,6 +33,11 @@ function App() {
     if (!el) return
     const mount = mountGalaxyScene(el, data.meta, data.movies)
     return () => mount.dispose()
+  }, [status, data])
+
+  useEffect(() => {
+    if (status !== 'ready' || !data) return
+    void useSearchIndexStore.getState().hydrateFromGalaxyMeta(data.meta)
   }, [status, data])
 
   if (status === 'loading' || status === 'idle') {
@@ -60,6 +67,12 @@ function App() {
     )
   }
 
+  if (data === null) {
+    return <Loading progress={loadProgress} />
+  }
+
+  const hasSearchIndex = data.meta.has_search_index === true
+
   return (
     <main className="relative min-h-screen w-full overflow-hidden bg-black text-foreground">
       <div
@@ -67,6 +80,7 @@ function App() {
         className="fixed inset-0 h-dvh w-full bg-black"
         aria-label="Galaxy WebGL canvas host"
       />
+      <SearchBar hasSearchIndex={hasSearchIndex} movies={data.movies} />
       <HoverRing />
       <MovieTooltip />
       <InfoButton />

@@ -72,23 +72,26 @@ export function computeActiveWorldRadius(
 }
 
 /**
- * Single source of truth for Perlin selection planet world radius (must match `galaxyActive.vert` scale
- * and `computeActiveWorldRadius`). Uses span-based fallback when the movie is outside the Z slab.
+ * Perlin selection planet world radius: matches `galaxyActive.vert` when the star is in the vis slab.
+ * When `inFocus≈0` (idle / off-slab, e.g. search jump), **do not** use `meta` worldSpan here — Z uses decimal
+ * years while XY is UMAP; a span-based fallback made `r` O(10) while focus camera standoff is O(1) year,
+ * placing the camera **inside** the Perlin sphere. Instead use the same shell as `inFocus=1` active pick.
  */
 export function resolveSelectionWorldRadius(
   movie: Pick<Movie, 'z' | 'size'>,
   zCurrent: number,
   zVisWindow: number,
   activeMaterial: THREE.ShaderMaterial,
-  worldSpan: number,
 ): { r: number; rActive: number } {
   const rActive = computeActiveWorldRadius(movie, zCurrent, zVisWindow, activeMaterial)
-  const rFallback = THREE.MathUtils.clamp(worldSpan * 0.014, 0.07, worldSpan * 0.05)
-  const r = rActive > 1e-6 ? rActive : rFallback
-  console.assert(
-    rActive <= 0 || Math.abs(r - rActive) < 1e-9,
-    '[Selection] Perlin radius must match active mesh when inFocus>0',
-  )
+  if (rActive > 1e-6) {
+    return { r: rActive, rActive }
+  }
+  const u = activeMaterial.uniforms
+  const uSizeScale = (u.uSizeScale as THREE.Uniform<number>).value
+  const uActiveSizeMul = (u.uActiveSizeMul as THREE.Uniform<number>).value
+  const rShell = uSizeScale * uActiveSizeMul * movie.size
+  const r = Math.max(rShell, 1e-6)
   return { r, rActive }
 }
 

@@ -13,7 +13,7 @@ todos:
     status: completed
   - id: p123-search-input-hud
     content: P12.3 顶部搜索框 + 联想（HUD）：SearchBar.tsx + searchScore.ts 打分排序工具 + 高亮 + 200ms debounce；App.tsx 加载索引
-    status: pending
+    status: completed
   - id: p124-movie-focus-route
     content: P12.4 电影名搜索 → focus 通路：联想点击调 setState({ selectedMovieId })；零渲染层改动
     status: pending
@@ -119,7 +119,9 @@ flowchart TD
   - `meta.version` minor bump（沿用 P8.1 的 `meta.version` 双字段过渡风格）
 - 新建 `scripts/export/export_search_index.py`（或在主脚本内追加 `--write-search-index`）：
   - 输出 `frontend/public/data/galaxy_search_index.json.gz`，顶层结构（与 [Tech Spec §4.5](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md) 对齐）：
-    ```jsonc
+    
+
+```jsonc
     {
       "version": "<同 galaxy_data.meta.version>",
       "people": {
@@ -134,7 +136,9 @@ flowchart TD
         "Drama":  { "count":  9876, "movie_ids": [44, 55] }
       }
     }
-    ```
+    
+
+```
   - 人名 normalized：`NFKD + ascii + casefold`，与 `title_normalized` 同函数
   - 同一人在多角色下合并 role_mask + movie_ids 去重
   - **genre `count`**：`Σ movies where g ∈ m.genres`（**任意顺位**，不限 `genres[0]`）；**`movie_ids`** 同源去重 → 给前端联想二级排序与 `selectionIds` 直接消费

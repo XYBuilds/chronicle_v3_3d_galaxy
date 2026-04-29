@@ -44,7 +44,7 @@ function stubMovie(p: { id: number; release_date: string; x: number; y?: number;
 }
 
 describe('createConstellation (P12.7)', () => {
-  it('emits one segment per role-specific temporal chain', () => {
+  it('merges director+dop+writers+music into one crew line; cast and producers each one line', () => {
     const h = createConstellation(32)
     const map = new Map<number, Movie>([
       [1, stubMovie({ id: 1, release_date: '2000-01-01', x: 0 })],
@@ -66,10 +66,11 @@ describe('createConstellation (P12.7)', () => {
     const geom = h.mesh.geometry
     const count = geom.drawRange.count
     expect(count).toBe(4)
-    expect(pos[0]).toBe(0)
-    expect(pos[3]).toBe(5)
-    expect(pos[6]).toBe(5)
-    expect(pos[9]).toBe(10)
+    // LINE_GROUPS order: producers → crew → cast; only crew + cast emit here
+    expect(pos[0]).toBe(5)
+    expect(pos[3]).toBe(10)
+    expect(pos[6]).toBe(0)
+    expect(pos[9]).toBe(5)
     h.dispose()
   })
 })

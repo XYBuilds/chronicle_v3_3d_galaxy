@@ -2,17 +2,21 @@ import * as THREE from 'three'
 
 import type { Movie } from '@/types/galaxy'
 
-/** Same bit order as Tech Spec §4.5.1 / `export_search_index.py`. */
-const ROLE_BITS = [1, 2, 4, 8, 16, 32] as const
+/**
+ * Tech Spec §4.5.1 — `export_search_index.py` 同序:
+ * cast=1, director=2, dop=4, writers=8, producers=16, music_composer=32
+ */
+const MASK_CAST = 1
+/** 导演、摄影、编剧、作曲 — 合并为一根时间序线 */
+const MASK_CREW = 2 | 4 | 8 | 32
+const MASK_PRODUCERS = 16
 
-const ROLE_COLOR_SRGB: Record<number, [number, number, number]> = {
-  1: [0.55, 0.78, 1.0],
-  2: [1.0, 0.82, 0.45],
-  4: [0.68, 0.55, 1.0],
-  8: [0.45, 1.0, 0.72],
-  16: [1.0, 0.55, 0.65],
-  32: [0.55, 1.0, 0.85],
-}
+/** 三根线：制片 / 主创(导演·摄影·编剧·作曲) / 演员 */
+const LINE_GROUPS: readonly { label: string; mask: number; rgb: [number, number, number] }[] = [
+  { label: 'producers', mask: MASK_PRODUCERS, rgb: [1.0, 0.55, 0.72] },
+  { label: 'crew', mask: MASK_CREW, rgb: [1.0, 0.82, 0.45] },
+  { label: 'cast', mask: MASK_CAST, rgb: [0.55, 0.78, 1.0] },
+]
 
 const FALLBACK_LINE_SRGB: [number, number, number] = [0.92, 0.92, 0.95]
 
@@ -42,8 +46,9 @@ export interface ConstellationHandle {
 }
 
 /**
- * P12.7 — `LineSegments` “constellation” for person select: one temporal chain per job bit
- * (cast / director / …), or a single chain when `movie_roles` is absent.
+ * P12.7 — `LineSegments` “constellation” for person select:
+ * three temporal chains when `movie_roles` is present — **制片**、**导演+摄影+编剧+作曲**、**演员**；
+ * or one chain when `movie_roles` is absent.
  */
 export function createConstellation(maxSegments = 420): ConstellationHandle {
   const maxVertices = maxSegments * 2
@@ -108,11 +113,10 @@ export function createConstellation(maxSegments = 420): ConstellationHandle {
 
     const roles = p.movieRoles
     if (roles && Object.keys(roles).length > 0) {
-      for (const bit of ROLE_BITS) {
-        const inRole = p.selectionIds.filter((id) => ((roles[String(id)] ?? 0) & bit) !== 0)
-        const sorted = sortIdsByRelease(inRole, p.movieById)
-        const rgb = ROLE_COLOR_SRGB[bit] ?? FALLBACK_LINE_SRGB
-        emitChain(sorted, rgb)
+      for (const g of LINE_GROUPS) {
+        const inGroup = p.selectionIds.filter((id) => ((roles[String(id)] ?? 0) & g.mask) !== 0)
+        const sorted = sortIdsByRelease(inGroup, p.movieById)
+        emitChain(sorted, g.rgb)
       }
     } else {
       const sorted = sortIdsByRelease(p.selectionIds, p.movieById)
@@ -135,7 +139,13 @@ export function createConstellation(maxSegments = 420): ConstellationHandle {
     if (vi !== lastLogVertices) {
       lastLogVertices = vi
       const segCount = vi / 2
-      console.log('[Constellation] visible | vertices=', vi, 'segments=', segCount, '| byRole=', Boolean(roles && Object.keys(roles).length > 0))
+      console.log(
+        '[Constellation] visible | vertices=',
+        vi,
+        'segments=',
+        segCount,
+        '| groups=producers+crew(director|dop|writers|music)+cast',
+      )
     }
   }
 

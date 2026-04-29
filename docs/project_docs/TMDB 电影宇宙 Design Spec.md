@@ -140,7 +140,7 @@
 
 ### **4.1 布局与控件**
 
-* **位置**：`fixed` 贴顶居中，`top-4`、`left-1/2` + `-translate-x-1/2`；`z-index` 高于画布且低于系统级 modal（实现约定 **`z-[90]`**）；容器 **`max-w-md`**、水平内边距防贴边。
+* **位置**：`fixed` 贴顶居中，`top-4`、`left-1/2` + `-translate-x-1/2`；`z-index` 高于画布且低于系统级 modal（实现约定 **`z-[90]`**）；容器 **`max-w-lg`**、水平内边距防贴边。
 * **分段**：三档 **`movie` / `person` / `genre`**（segmented control：`Tabs` 或三键 ToggleGroup）。**切换分段时清空** query + 联想，避免跨模式残留。
 * **输入框**：单行文本；右侧 **清除按钮（X）**，一键清空 query 并收起联想；点击 X **同时退出**当前 select 会话（清 `selectionIds`，见 §4.7）。
 * **联想面板**：输入框下方浮动列表（`Popover` 或自建 `<ul>`）。
@@ -155,7 +155,7 @@
   * **`Enter`**：等价于点击当前高亮项（无高亮则不触发）。
   * **`Tab`**：**不**拦截（让浏览器自然移焦，方便键盘用户继续浏览页面）。
   * **`Esc`**：见 §4.6。
-* **点击联想项**：关闭下拉；`movie` 走 §4.3 → focus；`person` / `genre` 走 §4.4 / §4.5 → select 会话（保留 query 文本以便随时切人/切类）。
+* **点击联想项**：关闭下拉；`movie` 走 §4.3 → focus；`person` / `genre` 走 §4.4 / §4.5 → select 会话；并将输入框 `searchQuery` 替换为已选项的格式化文本（见各节点击行为）。
 
 ### **4.3 联想：电影名（`movie`）**
 
@@ -167,7 +167,7 @@
 * **格式化（Format）**：行内布局语义为 **`Title`** + **`原始标题`** + **`(YYYY)`** + **`Genre0`**（即 **`genres[0]`**；`YYYY` 取 `release_date` 前 4 字符）。  
   * **去重**：若 **`original_title`** 与 **`title`** 相同或为空，**不再重复**展示原始标题段。
 * **高亮（Highlight）**：用忽略大小写正则在最终展示字符串上匹配 query，命中子串用语义 mark（`<mark>` + `bg-primary/30` 等）包裹。
-* **点击行为**：`useGalaxyInteractionStore.setState({ selectedMovieId: id })`，复用现有 focus 链路；**不进入** `select` 会话；query 文本保留。
+* **点击行为**：`useGalaxyInteractionStore.setState({ selectedMovieId: id })`，复用现有 focus 链路；**不进入** `select` 会话；输入框 query 替换为该电影联想格式化标签（`Title [Original] (YYYY) Genre0`）。
 
 ### **4.4 联想：人名（`person`）**
 
@@ -177,14 +177,14 @@
 * **排序**：第一维度 prefix **优于** contains；第二维度为 **`movie_ids.length`** **降序**（参演越多越靠前）。
 * **格式**：展示 **全名**（索引内 **`full`**）；可选追加 **`role_mask`** 角色标签（位定义见 Tech Spec §4.5）。
 * **高亮**：在 `full` 上用同一忽略大小写正则匹配 query，规则同 §4.3。
-* **点击行为**：写入 store —— `searchMode='person'`、`selectionIds=people[name].movie_ids`、`selectedMovieId=null`、`constellationEnabled` 走 Leva 默认（默认 `true`）。
+* **点击行为**：写入 store —— `searchMode='person'`、`selectionIds=people[name].movie_ids`、`selectedMovieId=null`、`constellationEnabled` 走 Leva 默认（默认 `true`）；输入框 query 替换为 `people[name].full`。
 
 ### **4.5 联想：流派（`genre`）**
 
 * **过滤**：对 **全部 genre**（与 `meta.genre_palette` 键集合一致）做忽略大小写**前缀**与**包含**匹配。
 * **排序**：第一维度 prefix **优于** contains；**第二维度按该 genre 在数据集中的 `count`（电影数）降序**（管线侧产出，见 Tech Spec §4.5）。
 * **格式**：展示 genre 字符串；高亮规则同 §4.3。
-* **点击行为**：`searchMode='genre'`、`selectionIds = movies 中含该 genre 的 id 列表`、`selectedMovieId=null`、连线不开启。
+* **点击行为**：`searchMode='genre'`、`selectionIds = movies 中含该 genre 的 id 列表`、`selectedMovieId=null`、连线不开启；输入框 query 替换为 `GenreName (count)`。
 
 ### **4.6 ESC 焦点栈（全局 keydown，自上而下匹配第一级即处理并 `preventDefault`）**
 

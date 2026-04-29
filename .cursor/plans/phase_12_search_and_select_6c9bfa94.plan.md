@@ -185,7 +185,7 @@ constellationEnabled: boolean           // person 模式下连线开关，默认
 
 **实施**：
 - 新建 [frontend/src/components/SearchBar.tsx](frontend/src/components/SearchBar.tsx)（参考 [Drawer.tsx](frontend/src/components/Drawer.tsx) 的 shadcn 风格）：
-  - 布局：顶部居中 `fixed top-4 left-1/2 -translate-x-1/2 z-[90] w-full max-w-md`
+  - 布局：顶部居中 `fixed top-4 left-1/2 -translate-x-1/2 z-[90] w-[calc(100%-2rem)] max-w-lg`
   - segmented：`Tabs` 或自建三键 ToggleGroup（movie / person / genre）；**切换时清空 query + 联想**
   - input + clear X（`lucide-react X` 图标）；点击 X 同步触发 `clearSearch()`（含 selectionIds 清空）
   - 联想列表：浮动 `Popover` / 或自实装 `<ul>`（**200ms debounce**、`useDeferredValue` 抗顿）
@@ -196,9 +196,10 @@ constellationEnabled: boolean           // person 模式下连线开关，默认
   - **人名**：扫 `searchIndex.people` keys（已 normalized）；**任意 token 前缀**判定 prefix —— 把 normalized key 按空白拆分为 token 列表，query 是任一 token 的前缀 → 记 prefix；否则若是整串子串 → 记 contains；否则不召回。同档按 `movie_ids.length` 降序；格式：`full` 全名 + 可选 role_mask 角色标签
   - **genre**：扫 `searchIndex.genres` keys；同样 prefix > contains；同档**按 `genres[name].count` 降序**（不再前端反扫 60K）
   - 限上限：联想列表最多 12 条（电影名）/ 8 条（人名）/ 5 条（genre）
-- 数据加载：
-  - [frontend/src/App.tsx](frontend/src/App.tsx) 在 `status === 'ready'` 后 `void fetchSearchIndex()`（新增 `useSearchIndexStore` 或挂在现有 `galaxyDataStore`）
+  - 数据加载：
+  - [frontend/src/App.tsx](frontend/src/App.tsx) 在 `status === 'ready'` 后调用 `useSearchIndexStore.getState().hydrateFromGalaxyMeta(data.meta)`
   - `meta.has_search_index !== true` 时 SearchBar 显示 disabled 状态 + 提示
+  - 交互定稿：点击联想后不再使用输入框上方 banner；直接替换输入框 `searchQuery`（movie=`formatMovieSuggestionLabel`，person=`entry.full`，genre=`${name} (${count})`），并同步 debounce 值避免旧 query 回弹
 - Vitest：`searchScore.spec.ts` 覆盖前缀/包含、加权排序、空值边界、**任意 token 前缀**（"nolan" 命中 "christopher nolan" 为 prefix）、min-query-len 阈值
 
 **验收**：

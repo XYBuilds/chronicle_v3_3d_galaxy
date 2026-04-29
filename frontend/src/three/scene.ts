@@ -12,6 +12,7 @@ import { createGalaxyDualMeshes } from './galaxyMeshes'
 import { attachGalaxyActiveMeshInteraction } from './interaction'
 import { createSelectionPlanet, type SelectionPlanetHandle } from './planet'
 import { resolveSelectionWorldRadius } from './screenRadius'
+import { buildMovieIdToIndexMap, setSelectionMask, type SelectionMaskUniformBag } from './selectionMask'
 
 interface BloomDebugControls {
   strength: number
@@ -176,8 +177,27 @@ export function mountGalaxyScene(
   const webglLabel = gl instanceof WebGL2RenderingContext ? 'WebGL2' : 'WebGL1'
 
   const pr = Math.min(window.devicePixelRatio, 2)
-  const galaxy = createGalaxyDualMeshes(movies, pr)
+  const galaxy = createGalaxyDualMeshes(movies, pr, renderer.capabilities.maxTextureSize)
   const galUniforms = galaxy.idleMaterial.uniforms
+  const movieIdToIndex = buildMovieIdToIndexMap(movies)
+  const selectionMaskUniforms: SelectionMaskUniformBag = {
+    uSelectionMask: galUniforms.uSelectionMask as THREE.Uniform<THREE.DataTexture>,
+    uSelectionCount: galUniforms.uSelectionCount as THREE.Uniform<number>,
+    uSelectionMode: galUniforms.uSelectionMode as THREE.Uniform<number>,
+    uMovieCount: galUniforms.uMovieCount as THREE.Uniform<number>,
+    uSelectionAtlasWidth: galUniforms.uSelectionAtlasWidth as THREE.Uniform<number>,
+    uSelectionAtlasHeight: galUniforms.uSelectionAtlasHeight as THREE.Uniform<number>,
+  }
+
+  const syncSelectionMaskFromStore = () => {
+    setSelectionMask(useGalaxyInteractionStore.getState().selectionIds, movieIdToIndex, selectionMaskUniforms)
+  }
+  syncSelectionMaskFromStore()
+  const unsubSelectionMask = useGalaxyInteractionStore.subscribe((state, prev) => {
+    if (state.selectionIds === prev.selectionIds) return
+    syncSelectionMaskFromStore()
+  })
+
   const uZ = galUniforms.uZCurrent as THREE.Uniform<number>
   const uZw = galUniforms.uZVisWindow as THREE.Uniform<number>
   const uFocused = galUniforms.uFocusedInstanceId as THREE.Uniform<number>
@@ -696,6 +716,7 @@ export function mountGalaxyScene(
     ro?.disconnect()
     window.removeEventListener('resize', resize)
     unsubSelection()
+    unsubSelectionMask()
     detachControls()
     detachInteraction()
     planet.mesh.removeFromParent()

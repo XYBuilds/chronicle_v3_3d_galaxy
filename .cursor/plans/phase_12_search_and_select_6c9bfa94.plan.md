@@ -12,11 +12,11 @@ todos:
     content: P12.2 状态层扩充：galaxyInteractionStore 加 searchMode/searchQuery/searchResults/selectionIds/constellationEnabled + helpers；viswindowDisabled 派生
     status: completed
   - id: p123-search-input-hud
-    content: P12.3 顶部搜索框 + 联想（HUD）：SearchBar.tsx + searchScore.ts 打分排序工具 + 高亮 + 200ms debounce；App.tsx 加载索引
+    content: P12.3 顶部搜索框 + 联想（HUD，含电影→focus）：SearchBar.tsx + searchScore.ts 打分排序工具 + 高亮 + 200ms debounce；App.tsx 加载索引；电影联想点击 → selectedMovieId
     status: completed
   - id: p124-movie-focus-route
-    content: P12.4 电影名搜索 → focus 通路：联想点击调 setState({ selectedMovieId })；零渲染层改动
-    status: pending
+    content: P12.4 电影名搜索 → focus 通路：已并入 P12.3（不再单开实现）
+    status: completed
   - id: p125-selection-mask-pipeline
     content: P12.5 selectionMask 渲染通路：galaxyMeshes 加 uSelectionMask DataTexture / uSelectionMode / uMovieCount；idle/active.vert 采样 mask；selectionMask.ts helper
     status: pending
@@ -72,8 +72,8 @@ flowchart TD
     P120["P12.0 搜索 UX + 数据契约 spec（无代码）"]
     P121["P12.1 数据：title_normalized + 搜索倒排索引导出 + Vitest schema"]
     P122["P12.2 状态层扩充（zustand）"]
-    P123["P12.3 顶部搜索框 + 联想（HUD）"]
-    P124["P12.4 电影名搜索 → focus 通路（零渲染层）"]
+    P123["P12.3 顶部搜索框 + 联想（HUD，含电影→focus）"]
+    P124["P12.4 ✓ 并入 P12.3（电影→focus）"]
     P125["P12.5 selectionMask 渲染通路（DataTexture + uSelectionMode）"]
     P126["P12.6 人名/genre 搜索 → 多 active + viswindow 禁用"]
     P127["P12.7 人名连线（LineSegments 星座图）"]
@@ -84,7 +84,8 @@ flowchart TD
     P120 --> P122
     P121 --> P123
     P122 --> P123
-    P123 --> P124
+    P123 --> P125
+    P124 -.->|已合并| P123
     P122 --> P125
     P125 --> P126
     P126 --> P127
@@ -95,7 +96,7 @@ flowchart TD
 依赖说明：
 - P12.0 把搜索 UX 与 selectionMask 数据流定义清楚，避免后续 P12.5/P12.6 来回返工
 - P12.1 是数据前置；前端 P12.3 的联想列表无此索引会需要扫 60K × 6 字段（性能不可接受）
-- P12.4 完全复用现有 `selectedMovieId` 链路，可独立验收为"电影搜索 MVP"
+- P12.4 已并入 P12.3：电影联想点击复用现有 `selectedMovieId` 链路（原「独立验收」与 P12.3 一并落地，不再单开）
 - P12.5 是 P12.6 / P12.7 的渲染基础设施
 - P12.8 在所有功能落地后才把状态机正式收口
 
@@ -209,7 +210,9 @@ constellationEnabled: boolean           // person 模式下连线开关，默认
 - 键盘 `↑↓Enter` 行为符合 combobox 标准
 - 高亮渲染正确
 
-## P12.4 电影名搜索 → focus 通路
+## P12.4 电影名搜索 → focus 通路（已完成 · 并入 P12.3）
+
+> **状态**：本小节目标已在 **P12.3** 落地；**不再单开** P12.4 实现或 PR。以下保留为验收口径与行为说明。
 
 **目标**：最小可用 slice，零渲染层改动。
 
@@ -352,7 +355,7 @@ if (uSelectionMode == 1) {
 
 ## 总验收清单（对照 [PRD §3.2](docs/project_docs/TMDB%20电影宇宙%20PRD.md) + [Design Spec §4.0](docs/project_docs/TMDB%20电影宇宙%20Design%20Spec.md) 三条核心体验）
 
-- 1) 电影名搜索 → focus：✅ P12.4
+- 1) 电影名搜索 → focus：✅ P12.3（原 P12.4 并入）
 - 2) 人名搜索 → 全部 active + 时间序连线（active 集由 selectionIds 决定，与 viswindow 解耦）：✅ P12.6 + P12.7
 - 3) genre 搜索 → 全部 active（同上解耦，无连线）：✅ P12.6
 - 联想：min len ≥3、prefix > contains、人名任意 token 前缀、genre 二级按 count、加权 score、格式化、高亮、combobox 键盘：✅ P12.3

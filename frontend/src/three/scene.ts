@@ -129,13 +129,6 @@ function easeOutCubic(t: number): number {
   return 1 - Math.pow(1 - x, 3)
 }
 
-function worldSpan(meta: Pick<Meta, 'xy_range' | 'z_range'>): number {
-  const xr = meta.xy_range.x
-  const yr = meta.xy_range.y
-  const zr = meta.z_range
-  return Math.max(xr[1] - xr[0], yr[1] - yr[0], zr[1] - zr[0])
-}
-
 export function mountGalaxyScene(
   container: HTMLElement,
   meta: Pick<Meta, 'z_range' | 'xy_range' | 'count' | 'genre_palette'>,
@@ -184,7 +177,6 @@ export function mountGalaxyScene(
 
   const pr = Math.min(window.devicePixelRatio, 2)
   const galaxy = createGalaxyDualMeshes(movies, pr)
-  const layoutWorldSpan = worldSpan(meta)
   const galUniforms = galaxy.idleMaterial.uniforms
   const uZ = galUniforms.uZCurrent as THREE.Uniform<number>
   const uZw = galUniforms.uZVisWindow as THREE.Uniform<number>
@@ -285,7 +277,7 @@ export function mountGalaxyScene(
     const idx = pendingSelectInstanceIndex
     if (idx < 0 || idx >= movies.length) return
     const m = movies[idx]!
-    const { r } = resolveSelectionWorldRadius(m, uZ.value, uZw.value, galaxy.activeMaterial, layoutWorldSpan)
+    const { r } = resolveSelectionWorldRadius(m, uZ.value, uZw.value, galaxy.activeMaterial)
     const stepH = planet.material.uniforms.uStepHeight.value as number
     const cuts = planet.material.uniforms.uCutCount.value as number
     planet.lastRadius = r * (1 + cuts * stepH)
@@ -298,13 +290,7 @@ export function mountGalaxyScene(
     planet.material.uniforms.uAlpha.value = 1
     pendingSelectInstanceIndex = movies.findIndex((m) => m.id === movie.id)
     console.assert(pendingSelectInstanceIndex >= 0, '[Selection] movie must exist in mounted list')
-    const { r, rActive } = resolveSelectionWorldRadius(
-      movie,
-      uZ.value,
-      uZw.value,
-      galaxy.activeMaterial,
-      layoutWorldSpan,
-    )
+    const { r, rActive } = resolveSelectionWorldRadius(movie, uZ.value, uZw.value, galaxy.activeMaterial)
     setFocusCameraPosition(toCam, movie)
     const gu = galaxy.idleMaterial.uniforms
     planet.setFromMovie(movie, meta.genre_palette, r, {

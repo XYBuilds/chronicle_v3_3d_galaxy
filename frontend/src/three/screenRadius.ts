@@ -1,6 +1,20 @@
 import * as THREE from 'three'
 
+import type { SearchMode } from '@/store/galaxyInteractionStore'
 import type { Movie } from '@/types/galaxy'
+
+/**
+ * P12.6+ — CPU pick/hover must match shader `inFocus`: in person/genre search, mask-hit ids are
+ * fully active regardless of Z slab; others are not pickable on the active shell.
+ */
+export function getSelectionMaskPickSet(
+  searchMode: SearchMode,
+  selectionIds: number[] | null,
+): Set<number> | null {
+  if (searchMode !== 'person' && searchMode !== 'genre') return null
+  if (!selectionIds?.length) return null
+  return new Set(selectionIds)
+}
 
 /** GLSL `smoothstep` replica for CPU gates (P8.4 pick: `inFocus > 0.5`). */
 export function smoothstep(edge0: number, edge1: number, x: number): number {
@@ -59,12 +73,16 @@ function rayFirstPositiveSphereT(
 
 /** World-space active icosphere radius (matches `galaxyActive.vert`: `inFocus * uSizeScale * uActiveSizeMul * aSize`). */
 export function computeActiveWorldRadius(
-  movie: Pick<Movie, 'z' | 'size'>,
+  movie: Pick<Movie, 'id' | 'z' | 'size'>,
   zCurrent: number,
   zVisWindow: number,
   activeMaterial: THREE.ShaderMaterial,
+  selectionMaskPickSet: Set<number> | null = null,
 ): number {
-  const inF = movieZInFocusFactor(movie.z, zCurrent, zVisWindow)
+  const inF =
+    selectionMaskPickSet && selectionMaskPickSet.has(movie.id)
+      ? 1
+      : movieZInFocusFactor(movie.z, zCurrent, zVisWindow)
   const u = activeMaterial.uniforms
   const uSizeScale = (u.uSizeScale as THREE.Uniform<number>).value
   const uActiveSizeMul = (u.uActiveSizeMul as THREE.Uniform<number>).value
@@ -78,12 +96,13 @@ export function computeActiveWorldRadius(
  * placing the camera **inside** the Perlin sphere. Instead use the same shell as `inFocus=1` active pick.
  */
 export function resolveSelectionWorldRadius(
-  movie: Pick<Movie, 'z' | 'size'>,
+  movie: Pick<Movie, 'id' | 'z' | 'size'>,
   zCurrent: number,
   zVisWindow: number,
   activeMaterial: THREE.ShaderMaterial,
+  selectionMaskPickSet: Set<number> | null = null,
 ): { r: number; rActive: number } {
-  const rActive = computeActiveWorldRadius(movie, zCurrent, zVisWindow, activeMaterial)
+  const rActive = computeActiveWorldRadius(movie, zCurrent, zVisWindow, activeMaterial, selectionMaskPickSet)
   if (rActive > 1e-6) {
     return { r: rActive, rActive }
   }
@@ -101,6 +120,7 @@ export type ActiveRayPickResult = { index: number; hitPoint: THREE.Vector3; t: n
  * True mesh pick: ray vs world spheres with the same radius the active vertex shader uses (InstancedMesh
  * built-in raycast ignores per-vertex `sActive` scale).
  * @param requireSlabInteraction — if true, require `movieZInFocusFactor > 0.5` (P8.4 click gate); hover passes false.
+ * @param selectionMaskPickSet — if set (person/genre search), only these ids use full active radius; others skipped.
  */
 export function pickClosestActiveMovieAlongRay(options: {
   ray: THREE.Ray
@@ -109,8 +129,9 @@ export function pickClosestActiveMovieAlongRay(options: {
   zCurrent: number
   zVisWindow: number
   requireSlabInteraction: boolean
+  selectionMaskPickSet?: Set<number> | null
 }): ActiveRayPickResult | null {
-  const { ray, movies, activeMaterial, zCurrent, zVisWindow, requireSlabInteraction } = options
+  const { ray, movies, activeMaterial, zCurrent, zVisWindow, requireSlabInteraction, selectionMaskPickSet } = options
   const u = activeMaterial.uniforms
   const uSizeScale = (u.uSizeScale as THREE.Uniform<number>).value
   const uActiveSizeMul = (u.uActiveSizeMul as THREE.Uniform<number>).value
@@ -120,7 +141,13 @@ export function pickClosestActiveMovieAlongRay(options: {
 
   for (let i = 0; i < movies.length; i++) {
     const m = movies[i]
-    const inF = movieZInFocusFactor(m.z, zCurrent, zVisWindow)
+    let inF: number
+    if (selectionMaskPickSet && selectionMaskPickSet.size > 0) {
+      if (!selectionMaskPickSet.has(m.id)) continue
+      inF = 1
+    } else {
+      inF = movieZInFocusFactor(m.z, zCurrent, zVisWindow)
+    }
     if (inF < 1e-6) continue
     if (requireSlabInteraction && inF <= slabGate) continue
 
@@ -145,15 +172,16 @@ export function pickClosestActiveMovieAlongRay(options: {
  * Uses perspective height at `distCam` and the same scale factors as the active vertex shader.
  */
 export function computeActiveMeshScreenRadiusCss(options: {
-  movie: Pick<Movie, 'x' | 'y' | 'z' | 'size'>
+  movie: Pick<Movie, 'id' | 'x' | 'y' | 'z' | 'size'>
   camera: THREE.PerspectiveCamera
   domElement: HTMLElement
   activeMaterial: THREE.ShaderMaterial
   zCurrent: number
   zVisWindow: number
+  selectionMaskPickSet?: Set<number> | null
 }): number {
-  const { movie, camera, domElement, activeMaterial, zCurrent, zVisWindow } = options
-  const rWorld = computeActiveWorldRadius(movie, zCurrent, zVisWindow, activeMaterial)
+  const { movie, camera, domElement, activeMaterial, zCurrent, zVisWindow, selectionMaskPickSet } = options
+  const rWorld = computeActiveWorldRadius(movie, zCurrent, zVisWindow, activeMaterial, selectionMaskPickSet ?? null)
   if (rWorld <= 1e-6) return 0
 
   _mv.set(movie.x, movie.y, movie.z)

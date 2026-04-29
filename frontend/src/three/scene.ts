@@ -11,7 +11,7 @@ import { attachGalaxyCameraControls, clampGalaxyCameraXY, GALAXY_CAMERA_EULER, s
 import { createGalaxyDualMeshes } from './galaxyMeshes'
 import { attachGalaxyActiveMeshInteraction } from './interaction'
 import { createSelectionPlanet, type SelectionPlanetHandle } from './planet'
-import { resolveSelectionWorldRadius } from './screenRadius'
+import { getSelectionMaskPickSet, resolveSelectionWorldRadius } from './screenRadius'
 import { buildMovieIdToIndexMap, setSelectionMask, type SelectionMaskUniformBag } from './selectionMask'
 
 interface BloomDebugControls {
@@ -298,7 +298,9 @@ export function mountGalaxyScene(
     const idx = pendingSelectInstanceIndex
     if (idx < 0 || idx >= movies.length) return
     const m = movies[idx]!
-    const { r } = resolveSelectionWorldRadius(m, uZ.value, uZw.value, galaxy.activeMaterial)
+    const stPick = useGalaxyInteractionStore.getState()
+    const maskPick = getSelectionMaskPickSet(stPick.searchMode, stPick.selectionIds)
+    const { r } = resolveSelectionWorldRadius(m, uZ.value, uZw.value, galaxy.activeMaterial, maskPick)
     const stepH = planet.material.uniforms.uStepHeight.value as number
     const cuts = planet.material.uniforms.uCutCount.value as number
     planet.lastRadius = r * (1 + cuts * stepH)
@@ -311,7 +313,9 @@ export function mountGalaxyScene(
     planet.material.uniforms.uAlpha.value = 1
     pendingSelectInstanceIndex = movies.findIndex((m) => m.id === movie.id)
     console.assert(pendingSelectInstanceIndex >= 0, '[Selection] movie must exist in mounted list')
-    const { r, rActive } = resolveSelectionWorldRadius(movie, uZ.value, uZw.value, galaxy.activeMaterial)
+    const stPick = useGalaxyInteractionStore.getState()
+    const maskPick = getSelectionMaskPickSet(stPick.searchMode, stPick.selectionIds)
+    const { r, rActive } = resolveSelectionWorldRadius(movie, uZ.value, uZw.value, galaxy.activeMaterial, maskPick)
     setFocusCameraPosition(toCam, movie)
     const gu = galaxy.idleMaterial.uniforms
     planet.setFromMovie(movie, meta.genre_palette, r, {

@@ -23,6 +23,7 @@ import type { Movie } from '@/types/galaxy'
 import type { TextHighlightRange } from '@/utils/searchScore'
 import {
   SEARCH_MIN_QUERY_LEN,
+  formatMovieSuggestionLabel,
   scoreGenresForQuery,
   scoreMoviesForQuery,
   scorePeopleForQuery,
@@ -79,6 +80,7 @@ function sortIdsByRelease(ids: readonly number[], movieById: ReadonlyMap<number,
 
 export function SearchBar({ hasSearchIndex, movies }: SearchBarProps) {
   const searchQuery = useGalaxyInteractionStore((s) => s.searchQuery)
+  const searchBannerText = useGalaxyInteractionStore((s) => s.searchBannerText)
   const indexStatus = useSearchIndexStore((s) => s.status)
   const searchIndex = useSearchIndexStore((s) => s.data)
   const indexError = useSearchIndexStore((s) => s.errorMessage)
@@ -87,6 +89,8 @@ export function SearchBar({ hasSearchIndex, movies }: SearchBarProps) {
   const [listOpen, setListOpen] = useState(false)
   const [highlightIndex, setHighlightIndex] = useState(-1)
   const panelRootRef = useRef<HTMLDivElement>(null)
+  /** Next `selectedMovieId` change after movie pick from this list should not clear `searchBannerText`. */
+  const preserveSearchBannerOnNextMovieIdChange = useRef(false)
 
   const [debouncedQuery, setDebouncedQuery] = useState(searchQuery)
   useEffect(() => {
@@ -168,15 +172,34 @@ export function SearchBar({ hasSearchIndex, movies }: SearchBarProps) {
     setHudTab(next)
     setSearchQuery('')
     setSearchResults([])
+    useGalaxyInteractionStore.setState({ searchBannerText: null })
     setListOpen(false)
     setHighlightIndex(-1)
+  }, [])
+
+  useEffect(() => {
+    let prevSel = useGalaxyInteractionStore.getState().selectedMovieId
+    return useGalaxyInteractionStore.subscribe(() => {
+      const s = useGalaxyInteractionStore.getState()
+      const nextSel = s.selectedMovieId
+      if (nextSel === prevSel) return
+      const preserve = preserveSearchBannerOnNextMovieIdChange.current
+      preserveSearchBannerOnNextMovieIdChange.current = false
+      if (!preserve && s.searchMode === 'idle' && s.searchBannerText !== null) {
+        useGalaxyInteractionStore.setState({ searchBannerText: null })
+      }
+      prevSel = nextSel
+    })
   }, [])
 
   const applySuggestion = useCallback(
     (row: ResultRow) => {
       const s = row.suggestion
       if (s.kind === 'movie') {
-        useGalaxyInteractionStore.setState({ selectedMovieId: s.movieId })
+        const m = movieById.get(s.movieId)
+        const banner = m ? formatMovieSuggestionLabel(m) : s.label
+        preserveSearchBannerOnNextMovieIdChange.current = true
+        useGalaxyInteractionStore.setState({ selectedMovieId: s.movieId, searchBannerText: banner })
       } else if (s.kind === 'person' && searchIndex) {
         const entry = searchIndex.people[s.personKey]
         if (entry) {
@@ -185,6 +208,7 @@ export function SearchBar({ hasSearchIndex, movies }: SearchBarProps) {
             searchMode: 'person',
             selectionIds: ids,
             selectedMovieId: null,
+            searchBannerText: entry.full,
           })
         }
       } else if (s.kind === 'genre' && searchIndex) {
@@ -195,6 +219,7 @@ export function SearchBar({ hasSearchIndex, movies }: SearchBarProps) {
             searchMode: 'genre',
             selectionIds: ids,
             selectedMovieId: null,
+            searchBannerText: `${s.genreName} (${s.count})`,
           })
         }
       }
@@ -257,6 +282,17 @@ export function SearchBar({ hasSearchIndex, movies }: SearchBarProps) {
             </button>
           ))}
         </div>
+
+        {searchBannerText !== null && searchBannerText.length > 0 && !isBlocked && (
+          <div
+            className="mb-1.5 truncate px-0.5 text-xs text-muted-foreground"
+            title={searchBannerText}
+            role="status"
+            aria-live="polite"
+          >
+            {searchBannerText}
+          </div>
+        )}
 
         <div className="relative flex items-center gap-1">
           <input

@@ -37,6 +37,11 @@ export interface GalaxyInteractionState {
   selectionIds: number[] | null
   /** Person-mode constellation lines; Leva-only in product (P12.7). Default on. */
   constellationEnabled: boolean
+  /**
+   * Read-only line above the search input after committing a suggestion:
+   * movie `Title (YYYY) Genre0`, person `full`, genre `Name (count)`; cleared on clearSearch / tab / canvas pick (idle).
+   */
+  searchBannerText: string | null
 }
 
 export const useGalaxyInteractionStore = create<GalaxyInteractionState>(() => ({
@@ -53,6 +58,7 @@ export const useGalaxyInteractionStore = create<GalaxyInteractionState>(() => ({
   searchResults: [],
   selectionIds: null,
   constellationEnabled: true,
+  searchBannerText: null,
 }))
 
 /** Derived: timeline vis-window must not drive `inFocus` when in person/genre select (Tech Spec §4.5). */
@@ -83,6 +89,7 @@ export function setSearchMode(mode: SearchMode): void {
     next.searchQuery = ''
     next.searchResults = []
     next.selectionIds = null
+    next.searchBannerText = null
   } else if (mode === 'movie') {
     next.selectionIds = null
   }
@@ -138,6 +145,7 @@ export function clearSearch(): void {
     searchQuery: '',
     searchResults: [],
     selectionIds: null,
+    searchBannerText: null,
   })
   logSearchTransition('clearSearch', {
     searchMode: 'idle',

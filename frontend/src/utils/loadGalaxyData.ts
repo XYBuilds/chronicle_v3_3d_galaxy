@@ -76,6 +76,13 @@ function validateMeta(meta: unknown): asserts meta is Meta {
   if ('has_genre_hue' in meta && meta.has_genre_hue !== undefined && typeof meta.has_genre_hue !== 'boolean') {
     throw new Error('[GalaxyData] meta.has_genre_hue must be a boolean when present')
   }
+  if (
+    'has_search_index' in meta &&
+    meta.has_search_index !== undefined &&
+    typeof meta.has_search_index !== 'boolean'
+  ) {
+    throw new Error('[GalaxyData] meta.has_search_index must be a boolean when present')
+  }
   if (typeof meta.count !== 'number' || !Number.isInteger(meta.count) || meta.count < 0) {
     throw new Error(`[GalaxyData] meta.count must be a non-negative integer, got ${String(meta.count)}`)
   }
@@ -109,7 +116,12 @@ function validateMeta(meta: unknown): asserts meta is Meta {
   }
 }
 
-function validateMovie(m: unknown, index: number, requireGenreHue: boolean): asserts m is Movie {
+function validateMovie(
+  m: unknown,
+  index: number,
+  requireGenreHue: boolean,
+  requireTitleNormalized: boolean,
+): asserts m is Movie {
   if (!isRecord(m)) {
     throw new Error(`[GalaxyData] movies[${index}] must be an object`)
   }
@@ -152,6 +164,14 @@ function validateMovie(m: unknown, index: number, requireGenreHue: boolean): ass
       )
     }
   }
+  if (requireTitleNormalized) {
+    const tn = (m as Record<string, unknown>).title_normalized
+    if (typeof tn !== 'string' || !tn.trim()) {
+      throw new Error(
+        `[GalaxyData] movies[${index}].title_normalized must be a non-empty string when meta.has_search_index`,
+      )
+    }
+  }
 }
 
 function parseAndValidate(raw: unknown): GalaxyData {
@@ -174,8 +194,9 @@ function parseAndValidate(raw: unknown): GalaxyData {
     )
   }
   const requireGenreHue = meta.has_genre_hue === true
+  const requireTitleNormalized = meta.has_search_index === true
   for (let i = 0; i < moviesUnknown.length; i++) {
-    validateMovie(moviesUnknown[i], i, requireGenreHue)
+    validateMovie(moviesUnknown[i], i, requireGenreHue, requireTitleNormalized)
   }
   const data: GalaxyData = { meta, movies: moviesUnknown as Movie[] }
   console.assert(data.meta.count === data.movies.length, 'GalaxyData count invariant')

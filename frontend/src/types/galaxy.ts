@@ -35,6 +35,8 @@ export interface Meta {
   generated_at: string
   /** P8.1+: when true, every movie must include `genre_hue` (radians ∈ [0, 2π)). */
   has_genre_hue?: boolean
+  /** P12.1+: when true, ship `galaxy_search_index.json.gz` and `title_normalized` on each movie. */
+  has_search_index?: boolean
   count: number
   embedding_model: string
   umap_params: UmapParams
@@ -61,6 +63,8 @@ export interface Movie {
   genre_hue?: number
 
   title: string
+  /** NFKD + ASCII + casefold; required when `meta.has_search_index === true` (Tech Spec §4.3). */
+  title_normalized?: string
   original_title: string
   overview: string
   tagline: string | null

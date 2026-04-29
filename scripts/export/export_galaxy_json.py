@@ -19,6 +19,11 @@ _SCRIPTS_DIR = Path(__file__).resolve().parents[1]
 if str(_SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS_DIR))
 
+from export.export_search_index import (  # noqa: E402
+    build_search_index_dict,
+    normalize_for_search,
+    write_search_index_gzip,
+)
 from feature_engineering.genre_encoding import (  # noqa: E402
     DEFAULT_GENRE_WEIGHT_RATIO,
     collect_sorted_genres,
@@ -227,6 +232,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return p.parse_args(argv)
 
 
+def _title_normalized_field(title: str, original_title: str) -> str:
+    """NFKD + ASCII + casefold; concatenate distinct normalized originals with space (Tech Spec §4.3)."""
+    t = normalize_for_search(str(title).strip())
+    o = normalize_for_search(str(original_title).strip())
+    if not o or o == t:
+        return t
+    return f"{t} {o}".strip()
+
+
 def _movie_row(
     row: pd.Series,
     *,
@@ -259,6 +273,9 @@ def _movie_row(
     cast_full = _split_list_cell(row.get("cast"))
     cast_out = cast_full[:20]
 
+    title_s = str(row.get("title", "")).strip()
+    orig_s = str(row.get("original_title", "")).strip()
+
     return {
         "x": x,
         "y": y,
@@ -267,8 +284,9 @@ def _movie_row(
         "emissive": emissive,
         "genre_color": genre_color,
         "genre_hue": float(genre_hue),
-        "title": str(row.get("title", "")).strip(),
-        "original_title": str(row.get("original_title", "")).strip(),
+        "title": title_s,
+        "title_normalized": _title_normalized_field(title_s, orig_s),
+        "original_title": orig_s,
         "overview": str(row.get("overview", "")).strip(),
         "tagline": tagline_out,
         "release_date": str(row.get("release_date", "")).strip(),
@@ -418,8 +436,8 @@ def main(argv: list[str] | None = None) -> int:
         assert len(movies) > 0, "z subset produced zero movies — check CSV / z band"
 
     now = datetime.now(timezone.utc)
-    # P8.1 `genre_hue`; P8 UMAP 定稿: n_neighbors=300, min_dist=0.4 (meta.umap_params).
-    version = f"{now.strftime('%Y.%m.%d')}.h2"
+    # P8.1 `genre_hue`; P12.1 `title_normalized` + `has_search_index` + companion gzip.
+    version = f"{now.strftime('%Y.%m.%d')}.h3"
     generated_at = now.isoformat()
 
     if subset_z_active:
@@ -443,6 +461,7 @@ def main(argv: list[str] | None = None) -> int:
         "version": version,
         "generated_at": generated_at,
         "has_genre_hue": True,
+        "has_search_index": True,
         "count": len(movies),
         "embedding_model": str(args.embedding_model),
         "umap_params": {
@@ -469,6 +488,9 @@ def main(argv: list[str] | None = None) -> int:
     assert meta["count"] == len(movies)
 
     for m in movies:
+        tn = m.get("title_normalized")
+        if not isinstance(tn, str) or not tn.strip():
+            raise AssertionError(f"title_normalized missing/empty for movie id={m.get('id')}")
         for k in ("x", "y", "z", "size", "emissive"):
             v = m[k]
             if not math.isfinite(v):
@@ -494,6 +516,12 @@ def main(argv: list[str] | None = None) -> int:
             gz.write(raw)
         gz_mb = out_gz.stat().st_size / (1024 * 1024)
         print(f"[Export] Wrote {out_gz} ({gz_mb:.2f} MB gzip)")
+
+    if movies:
+        search_gz = out_gz.parent / "galaxy_search_index.json.gz"
+        print(f"[SearchIndex] building from exported movies={len(movies)} …")
+        si = build_search_index_dict(movies=movies, genre_keys_in_order=genre_order, version=version)
+        write_search_index_gzip(si, search_gz)
 
     return 0
 

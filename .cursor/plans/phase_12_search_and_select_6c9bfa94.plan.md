@@ -7,7 +7,7 @@ todos:
     status: completed
   - id: p121-data-search-index
     content: P12.1 数据：export_galaxy_json 加 title_normalized + has_search_index；新增 export_search_index.py 产 galaxy_search_index.json.gz（people/genres）；类型层 + Vitest schema
-    status: pending
+    status: completed
   - id: p122-store-extend
     content: P12.2 状态层扩充：galaxyInteractionStore 加 searchMode/searchQuery/searchResults/selectionIds/constellationEnabled + helpers；viswindowDisabled 派生
     status: pending

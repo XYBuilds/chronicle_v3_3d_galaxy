@@ -114,9 +114,16 @@ def validate_payload(data: dict[str, Any]) -> tuple[dict[str, Any], list[dict[st
     _check_umap_params(meta.get("umap_params"))
     if meta["count"] != len(movies):
         raise AssertionError(f"meta.count ({meta['count']}) != len(movies) ({len(movies)})")
+    has_search_index = meta.get("has_search_index") is True
     for m in movies:
         mid = int(m["id"])
         _check_movie(mid, m)
+        if has_search_index:
+            tn = m.get("title_normalized")
+            if not isinstance(tn, str) or not str(tn).strip():
+                raise AssertionError(
+                    f"movie id={mid}: title_normalized must be a non-empty string when meta.has_search_index",
+                )
     return meta, movies
 
 

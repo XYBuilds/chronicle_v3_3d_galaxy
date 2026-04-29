@@ -146,6 +146,20 @@ Perlin focus 球在片元侧按 **`vNoise`** 与 **`uThresh[0..K−2]`**（**K**
 
 **人名连线**：`searchMode === 'person'` 且 `constellationEnabled` 时，`LineSegments` 按 **`release_date` 升序**连接 mask 内影片；`constellationEnabled` 默认 `true`，**仅 Leva debug 面板可关**（产品 UI 不暴露）。`searchMode === 'genre'` 不画连线。
 
+#### 3.6.1 ESC 焦点栈（Phase 12.8 · 实现收口）
+
+与 [Design Spec §4.6](./TMDB%20电影宇宙%20Design%20Spec.md) 一致；`App.tsx` 在 **`window` `keydown` capture** 阶段自上而下处理，**命中一级即 `preventDefault` + `stopPropagation`**（避免与 Radix Sheet 重复闭合并保证顺序）。
+
+| 级 | 条件 | 行为 |
+|----|------|------|
+| 1 | `document.activeElement` 为带 `data-galaxy-search-input` 的搜索框 | **仅 `blur()`**；不清 query、不收联想、不改 `searchMode` / `selectionIds` |
+| 2–3 | `selectedMovieId !== null`（含 Sheet 已打开或飞入途中） | **`selectedMovieId → null`** 取消 focus；**若 `searchMode ∈ {'person','genre'}` 则保留 select**（mask / 连线 / `selectionIds` 不变） |
+| 4 | `searchMode !== 'idle'` | 调用 **`clearSearch()`**（`selectionIds` 清空、mask 归零、连线隐藏、`searchMode → 'idle'`） |
+
+**与 INFO Modal 不交叠**：焦点在 `#app-info-dialog` 内时不处理上表（交由 Radix Dialog 默认 Esc 关闭）。
+
+**搜电影名**：仅走 `selectedMovieId`，`searchMode` 保持 `'idle'`，故第 4 级不触发；两次 Esc 行为以实现为准（先 blur → 再取消 focus）。
+
 ## 4. 渲染与能力约定
 
 - **WebGL2**：启动时 `console.assert(renderer.capabilities.isWebGL2)`，失败抛错并提示升级浏览器（与 Phase 7.2 红线一致）；**不**维护 WebGL1 / 自定义 `aInstanceId` attribute fallback。
@@ -165,3 +179,4 @@ Perlin focus 球在片元侧按 **`vNoise`** 与 **`uThresh[0..K−2]`**（**K**
 | 2026-04-29 | P11.7 文档收口：§3.5 标注 **P11.5 不透明化已实装**；新增 **§3.5.2** focus 态拾取分流（P11.6）定稿描述 |
 | 2026-04-29 | Phase 12 P12.0：**§1** 表格 **`select` 转正**；**§3.6** 重写为正式态（selectionMask、`viswindowDisabled`、与 focus 优先级、连线摘要） |
 | 2026-04-29 | Phase 12 P12.0 收口：§3.6 明确 select 会话下 **active 集合完全由 `selectionIds` 决定、与 viswindow 完全解耦**；focus 嵌套 ESC 仅取消 focus 而保留 select；连线仅 Leva 可关 |
+| 2026-04-29 | Phase 12 P12.8：**§3.6.1** ESC 焦点栈实现表（`App.tsx` capture、`data-galaxy-search-input`、INFO Modal 排除） |

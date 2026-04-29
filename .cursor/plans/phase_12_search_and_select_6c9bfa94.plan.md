@@ -28,7 +28,7 @@ todos:
     status: completed
   - id: p128-state-machine-select
     content: P12.8 select 态正式入状态机 + ESC 焦点栈：状态机 spec 收口；App.tsx 全局 ESC handler 四级优先级；infoCopy 顺手补
-    status: pending
+    status: completed
   - id: p129-doc-sync
     content: P12.9 文档同步 + 出口 fps：Phase 8 基线加 P12 出口 + person 60+ active 压力片段；视觉参数总表 / Tech Spec §1.5 §4 / Design Spec / 状态机 spec
     status: pending

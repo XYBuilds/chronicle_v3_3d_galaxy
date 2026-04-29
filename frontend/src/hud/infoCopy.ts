@@ -13,7 +13,7 @@ export const INFO_INTRO_HEADING = '项目简介'
 
 /** TODO: fill at project wrap-up */
 export const INFO_INTRO_BODY =
-  '（占位）项目简介正文将在项目收尾阶段补全。当前阶段仅验证布局与交互。'
+  '（占位）TMDB 电影宇宙：约六万部影片以 2.5D 粒子星系呈现；支持时间轴、搜索（片名 / 影人 / 流派）与多片选中高亮。正文与产品表述将在收尾阶段补全。'
 
 /** TODO: fill at project wrap-up */
 export const INFO_DATA_HEADING = '数据来源'
@@ -27,7 +27,7 @@ export const INFO_STACK_HEADING = '技术栈'
 
 /** TODO: fill at project wrap-up */
 export const INFO_STACK_BODY =
-  '（占位）技术栈摘要待补。'
+  '（占位）Vite + React + Three.js（实例化星系 / 后处理）、Zustand、管线导出 gzip 数据包。摘要待收尾补全。'
 
 /** TODO: fill at project wrap-up */
 export const INFO_LINKS_HEADING = '链接'

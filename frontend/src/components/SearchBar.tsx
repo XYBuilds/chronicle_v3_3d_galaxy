@@ -276,6 +276,7 @@ export function SearchBar({ hasSearchIndex, movies }: SearchBarProps) {
         <div className="relative flex items-center gap-1">
           <input
             type="text"
+            data-galaxy-search-input
             role="searchbox"
             enterKeyHint="search"
             autoComplete="off"
@@ -308,11 +309,7 @@ export function SearchBar({ hasSearchIndex, movies }: SearchBarProps) {
               }
             }}
             onKeyDown={(e) => {
-              if (e.key === 'Escape') {
-                e.preventDefault()
-                ;(e.target as HTMLInputElement).blur()
-                return
-              }
+              // Escape：Design Spec §4.6 第 1 级 — 全局 capture（App.tsx）仅 blur；此处不拦截以免双处理
               if (e.key === 'ArrowDown') {
                 if (!canShowList) return
                 e.preventDefault()

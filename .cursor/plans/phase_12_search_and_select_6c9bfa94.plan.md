@@ -21,7 +21,7 @@ todos:
     content: P12.5 selectionMask 渲染通路：galaxyMeshes 加 uSelectionMask DataTexture / uSelectionMode / uMovieCount；idle/active.vert 采样 mask；selectionMask.ts helper
     status: pending
   - id: p126-people-genre-active
-    content: P12.6 人名/genre 搜索 → 多 active + viswindow 禁用：联想点击写 selectionIds + searchMode；scene.ts RAF 同步 mask；genre 反查 useMemo 缓存
+    content: P12.6 人名/genre 搜索 → 多 active + viswindow 解耦：联想点击写 selectionIds + searchMode；scene.ts RAF 同步 mask；genre selectionIds 直接读 searchIndex.genres[name].movie_ids（无前端反扫）
     status: pending
   - id: p127-constellation-lines
     content: P12.7 人名连线（LineSegments 星座图）：constellation.ts setFromIds 按 release_date 升序连点；scene.ts 挂载 + searchMode==='person' 同步
@@ -99,17 +99,14 @@ flowchart TD
 - P12.5 是 P12.6 / P12.7 的渲染基础设施
 - P12.8 在所有功能落地后才把状态机正式收口
 
-## P12.0 搜索 UX + 数据契约 spec（无代码）
+## P12.0 搜索 UX + 数据契约 spec（已完成 · 三份项目文档为 SSOT）
 
-- 在 [`Design Spec`](docs/project_docs/TMDB%20电影宇宙%20Design%20Spec.md) 末新增 `## 搜索 UX` 节：
-  - 顶部居中搜索框（max-w-md）+ 三类 segmented（movie / person / genre）+ 清除 X
-  - 联想下拉规格（电影名 / 人名 / genre 各自的过滤、排序、格式、高亮）—— 直接吸收用户笔记 `新增搜索功能 ...md` 的所有细则，不二次设计
-  - ESC 焦点栈（搜索框 > drawer > 取消选中 > 关闭 search 模式）
-- 在 [`星球状态机 spec.md`](docs/project_docs/星球状态机%20spec.md) §3.6 select 节扩充：
-  - `select` 提为正式态；含义"selectionIds 非空 + viswindowDisabled"
-  - 与 focus 互斥优先级：focus > select > active/idle/hover
-  - selectionMask 数据流（uSelectionMask R8 DataTexture, length = movies.length）
-- 在 [`Tech Spec §4`](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md) 数据契约小节预留 `meta.has_search_index: bool` 与 `galaxy_search_index.json.gz` 顶层结构
+> 用户产品笔记（`docs/temp/新增搜索功能 ...md`）已**全量分解**到下列三份项目文档并删除；以下文档为 Phase 12 搜索功能的活动 SSOT。
+
+- [Design Spec §4](docs/project_docs/TMDB%20电影宇宙%20Design%20Spec.md)：UX SSOT —— §4.0 三条核心体验、§4.1 布局、§4.2 触发阈值 (≥3) + 200ms debounce + 标准 combobox 键盘、§4.3–§4.5 三档联想算法（电影名 prefix>contains+score；人名**任意 token 前缀**+`movie_ids.length` 降序；genre prefix>contains+`count` 降序）、§4.6 ESC 四级焦点栈（blur > drawer > unfocus > exit-select）、§4.7 focus×select 嵌套、§4.8 无索引退化
+- [Tech Spec §4.5](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md)：数据契约 SSOT —— `meta.has_search_index`、`movies[].title_normalized`、`galaxy_search_index.json.gz` Schema（`people: { full, role_mask, movie_ids }` + `genres: { count, movie_ids }`）+ role_mask 位表 + `viswindow` 解耦渲染契约
+- [PRD §3.2](docs/project_docs/TMDB%20电影宇宙%20PRD.md)：搜索作为正式功能需求（不再是 future roadmap） + 三条用户路径
+- [`星球状态机 spec.md`](docs/project_docs/星球状态机%20spec.md) §3.6：`select` 转正、`uSelectionMask`/`uSelectionMode` 数据流、focus×select 嵌套优先级、连线条件（仅 `searchMode === 'person'` + `constellationEnabled`，后者仅 Leva 暴露）
 
 ## P12.1 数据：title_normalized + 搜索倒排索引导出 + Vitest schema
 
@@ -121,29 +118,34 @@ flowchart TD
   - `meta` 加 `has_search_index: True`
   - `meta.version` minor bump（沿用 P8.1 的 `meta.version` 双字段过渡风格）
 - 新建 `scripts/export/export_search_index.py`（或在主脚本内追加 `--write-search-index`）：
-  - 输出 `frontend/public/data/galaxy_search_index.json.gz`，顶层结构：
+  - 输出 `frontend/public/data/galaxy_search_index.json.gz`，顶层结构（与 [Tech Spec §4.5](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md) 对齐）：
     ```jsonc
     {
       "version": "<同 galaxy_data.meta.version>",
       "people": {
-        "<normalized_name>": {
+        "<normalized_key>": {
           "full": "Original Name",
           "role_mask": 0b00111101,            // bit: cast=1, director=2, dop=4, writers=8, producers=16, music_composer=32
           "movie_ids": [123, 456]
         }
       },
-      "genres": ["Action", "Drama", ...]       // 等价 keys(meta.genre_palette) 的稳定排序
+      "genres": {
+        "Action": { "count": 12345, "movie_ids": [11, 22, 33] },
+        "Drama":  { "count":  9876, "movie_ids": [44, 55] }
+      }
     }
     ```
   - 人名 normalized：`NFKD + ascii + casefold`，与 `title_normalized` 同函数
   - 同一人在多角色下合并 role_mask + movie_ids 去重
-  - `print` 索引人数、平均每人参演数、文件大小（gzip 后）；`assert` 关键路径（人数 > 0、role_mask ∈ uint8）
+  - **genre `count`**：`Σ movies where g ∈ m.genres`（**任意顺位**，不限 `genres[0]`）；**`movie_ids`** 同源去重 → 给前端联想二级排序与 `selectionIds` 直接消费
+  - genre 对象迭代序按 `meta.genre_palette` key 序写入（Python 3.7+ 保持插入顺序）
+  - `print` 索引人数、平均每人参演数、genre count 总览、文件大小（gzip 后）；`assert` 关键路径（人数 > 0、role_mask ∈ [0,63]、`genres` key 集合 == palette key 集合）
 - 类型层 [frontend/src/types/galaxy.ts](frontend/src/types/galaxy.ts)：
-  - `Movie` 加 `title_normalized: string`
+  - `Movie` 加 `title_normalized?: string`（`has_search_index === true` 时**必出**；旧包向后兼容）
   - `Meta` 加 `has_search_index?: boolean`
-  - 新文件 `frontend/src/types/searchIndex.ts`：`SearchIndex / PersonEntry / RoleMask` 类型
+  - 新文件 `frontend/src/types/searchIndex.ts`：`SearchIndex / PersonEntry / GenreEntry / RoleMask` 类型；`GenreEntry = { count: number; movie_ids: number[] }`
 - Vitest（沿用 P8.1 安装的 vitest）：
-  - `loadSearchIndex.spec.ts`：`has_search_index=true` 时 schema 必含 `people / genres`；role_mask ∈ [0, 63]
+  - `loadSearchIndex.spec.ts`：`has_search_index=true` 时 schema 必含 `people / genres`；role_mask ∈ [0, 63]；`genres[*].count >= 1`、`movie_ids.length >= 1`、`genres` key 集合 ⊇ `meta.genre_palette` keys
   - `searchScore.spec.ts`（P12.3 实施时再补打分用例）
 
 **验收**：
@@ -180,23 +182,26 @@ constellationEnabled: boolean           // person 模式下连线开关，默认
 **实施**：
 - 新建 [frontend/src/components/SearchBar.tsx](frontend/src/components/SearchBar.tsx)（参考 [Drawer.tsx](frontend/src/components/Drawer.tsx) 的 shadcn 风格）：
   - 布局：顶部居中 `fixed top-4 left-1/2 -translate-x-1/2 z-[90] w-full max-w-md`
-  - segmented：`Tabs` 或自建三键 ToggleGroup（movie / person / genre）；切换时清空 query
-  - input + clear X（`lucide-react X` 图标）
-  - 联想列表：浮动 `Popover` / 或自实装 `<ul>`（200ms debounce、`useDeferredValue` 抗顿）
+  - segmented：`Tabs` 或自建三键 ToggleGroup（movie / person / genre）；**切换时清空 query + 联想**
+  - input + clear X（`lucide-react X` 图标）；点击 X 同步触发 `clearSearch()`（含 selectionIds 清空）
+  - 联想列表：浮动 `Popover` / 或自实装 `<ul>`（**200ms debounce**、`useDeferredValue` 抗顿）
+  - **触发阈值**：`query.trim().length >= 3` 才计算 + 展开联想；< 3 字符面板收起
+  - **键盘**（标准 combobox）：`↓` / `↑` 高亮上下条；`Enter` 等价点击当前高亮项；`Tab` 不拦截；`Esc` 走 P12.8 焦点栈第 1 级（仅 `blur()` 输入框）
 - 联想算法（新文件 `frontend/src/utils/searchScore.ts`）：
-  - **电影名**：扫 `movie.title_normalized + original_title`（已小写 + 去重音）；前缀匹配优先于包含；同档按 `Math.log10(vote_count + 1) * vote_average` 降序；格式 `Title 原始标题 (YYYY) Genre0`（去重相同 original/title）；高亮：`<mark>` 包裹匹配子串（CSS 用 `bg-primary/30`）
-  - **人名**：直接扫 `searchIndex.people` keys（已 normalized）；同档按 `movie_ids.length` 降序；格式：人名 + role_mask 角色标签（导演/演员等）
-  - **genre**：扫 `searchIndex.genres`，同算法
+  - **电影名**：扫 `movie.title_normalized + original_title`（已小写 + 去重音）；前缀匹配优先于包含；同档按 `Math.log10(vote_count + 1) * vote_average` 降序；格式 `Title 原始标题 (YYYY) Genre0`（`original_title === title` 或为空时**去重**）；**`release_date` 不参与排序**；高亮：`<mark>` 包裹匹配子串（CSS 用 `bg-primary/30`）
+  - **人名**：扫 `searchIndex.people` keys（已 normalized）；**任意 token 前缀**判定 prefix —— 把 normalized key 按空白拆分为 token 列表，query 是任一 token 的前缀 → 记 prefix；否则若是整串子串 → 记 contains；否则不召回。同档按 `movie_ids.length` 降序；格式：`full` 全名 + 可选 role_mask 角色标签
+  - **genre**：扫 `searchIndex.genres` keys；同样 prefix > contains；同档**按 `genres[name].count` 降序**（不再前端反扫 60K）
   - 限上限：联想列表最多 12 条（电影名）/ 8 条（人名）/ 5 条（genre）
 - 数据加载：
   - [frontend/src/App.tsx](frontend/src/App.tsx) 在 `status === 'ready'` 后 `void fetchSearchIndex()`（新增 `useSearchIndexStore` 或挂在现有 `galaxyDataStore`）
   - `meta.has_search_index !== true` 时 SearchBar 显示 disabled 状态 + 提示
-- Vitest：`searchScore.spec.ts` 覆盖前缀/包含、加权排序、空值边界
+- Vitest：`searchScore.spec.ts` 覆盖前缀/包含、加权排序、空值边界、**任意 token 前缀**（"nolan" 命中 "christopher nolan" 为 prefix）、min-query-len 阈值
 
 **验收**：
 - 顶部搜索框出现在 canvas 上方
-- 三档切换与 200ms debounce 流畅
+- 三档切换与 200ms debounce 流畅；< 3 字符不展开联想
 - 60K 电影 / 几万人名下 keystroke 不卡（<16ms / frame）
+- 键盘 `↑↓Enter` 行为符合 combobox 标准
 - 高亮渲染正确
 
 ## P12.4 电影名搜索 → focus 通路
@@ -256,10 +261,10 @@ if (uSelectionMode == 1) {
 **实施**：
 - [SearchBar.tsx](frontend/src/components/SearchBar.tsx) 联想项点击（人名 / genre）：
   - 人名：取 `searchIndex.people[name].movie_ids`
-  - genre：扫 `movies` 找 `m.genres.includes(name)` 的 id 列表（首次扫描后用 `useMemo` 按 genre 缓存）
-  - 写入 store：`setState({ searchMode: 'person'|'genre', selectionIds: ids, selectedMovieId: null, constellationEnabled: searchMode === 'person' })`
+  - **genre：取 `searchIndex.genres[name].movie_ids`**（管线已含；前端**无需** `useMemo` 反扫 60K）
+  - 写入 store：`setState({ searchMode: 'person'|'genre', selectionIds: ids, selectedMovieId: null })`；`constellationEnabled` 不在点击时改写（默认 true，仅 Leva 调整）
 - [scene.ts](frontend/src/three/scene.ts) RAF 内：当 `searchMode in {'person','genre'}` 时 `uSelectionMode.value = 1`（mask override）；否则 `0`
-- viswindow 禁用：`uSelectionMode == 1` 时 idle/active.vert 已经覆盖 inFocus，**实质等价**于禁用条带；不需要额外改 `uZCurrent / uZVisWindow`（不破坏 timeline 的 zCurrent 状态，方便用户随时退出 search 回到原 z 轴）
+- viswindow 解耦：`uSelectionMode == 1` 时 idle/active.vert 内 `inFocus = mask`，**完全不读** `uZCurrent / uZVisWindow` 推导的条带 `inFocus_band`；timeline UI 与 store `zCurrent` 写入仍正常（保留状态便于退出 search 回到时间轴态），但视觉无反馈
 
 **验收**：
 - 搜某导演 → 60+ 颗其参与的电影同时变 active；其他完全 idle
@@ -276,7 +281,7 @@ if (uSelectionMode == 1) {
   - `setFromIds(ids: number[])`：按 movie 的 release_date 升序排序后，逐对 `[i, i+1]` 写入 position（每段 2 顶点）；颜色可选用第一颗的 `genre_color` 染色
 - [scene.ts](frontend/src/three/scene.ts) 挂载 constellation mesh（`renderOrder` 在 idle 之后、active 之前），监听 `searchMode === 'person' && constellationEnabled` 并同步 `setFromIds(selectionIds)`
 - 与 focus 兼容：focus 一颗 selection 内电影时仅高亮该段（可选 stretch；P12.7 起步可不实现，仅"focus 不破坏连线"）
-- store 加 leva 开关 `constellationEnabled` 默认 true
+- **`constellationEnabled` 仅在 Leva debug 面板暴露开关，默认 `true`，产品 UI 不出现**（Design Spec §4.0 / 状态机 §3.6）
 
 **验收**：
 - 搜某导演 → 连线沿时间顺序串起所有作品，可见星座效果
@@ -285,27 +290,35 @@ if (uSelectionMode == 1) {
 
 ## P12.8 select 态正式入状态机 + ESC 焦点栈
 
+**前置**：状态机 §3.6 已在 P12.0 SSOT 收口（select 转正、viswindow 解耦、focus×select 嵌套）。
+
 **实施**：
-- [`星球状态机 spec.md`](docs/project_docs/星球状态机%20spec.md)：把 §3.6 select 从"延后"改为"正式"，写明 mask + viswindow 禁用 + 连线（人名）规则
-- ESC 焦点栈（[App.tsx](frontend/src/App.tsx) 全局 keydown）：
-  - 搜索框 input focused → 清 query / 关闭联想
-  - drawer open → 关 drawer
-  - selectedMovieId !== null → 取消 focus
-  - searchMode !== 'idle' → 退出 search
-  - 顺序按上述优先级匹配
+- ESC 焦点栈（[App.tsx](frontend/src/App.tsx) 全局 keydown，自上而下匹配第一级即处理并 `preventDefault`，与 [Design Spec §4.6](docs/project_docs/TMDB%20电影宇宙%20Design%20Spec.md) 一致）：
+  1. **搜索框 input focused** → **仅 `blur()`**（不清 query、不关联想下拉、不动 select）
+  2. **drawer / Sheet open** → 关 drawer
+  3. **`selectedMovieId !== null`** → 取消 focus；**若 `searchMode !== 'idle'` 则保留 select 上下文**（searchMode / selectionIds / 连线 / mask 不动）
+  4. **`searchMode !== 'idle'`** → `clearSearch()`：清 selectionIds / mask 归零 / 连线 hide / searchMode='idle'
+- focus×select 嵌套点击：select 会话中点击 active 影片仅设置 `selectedMovieId`（既有路径），searchMode / selectionIds **不被清**；focus 切换到另一颗 active 时同理
+- shadcn `Sheet` / `Dialog` 自带 `onOpenChange(false)` 走 store 同一通路，避免与全局 ESC 双重触发
 - 顺手补 [frontend/src/hud/infoCopy.ts](frontend/src/hud/infoCopy.ts) 的占位文案（按需，作为收尾窗口）
 
 **验收**：
-- 焦点栈四级 ESC 行为符合预期
-- search 与 focus 切换不冲突（搜电影名 → 选中 → ESC 取消 focus → 仍保留 query 但 search 模式自动回 idle 也可，按 spec 收口）
+- ESC 第 1 级仅失焦；第 2 级 ESC 才进入 drawer/focus/searchMode 出栈
+- 搜导演 → 多 active + 连线 → 点其中一颗 → focus；ESC 取消 focus 后**仍保留** active + 连线；再 ESC 才退出 search
+- 搜电影名 → focus → ESC 取消 focus；query 文本是否保留以实现为准（无 select 会话，下次 ESC 直接走未拦截）
 
 ## P12.9 文档同步 + 出口 fps
 
-- [`Phase 8 基线`](docs/benchmarks/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md) 末尾新增 `## P12 入口/出口` 节，重跑 P8.0.1 三片段 + 新增"search person 60+ active"压力片段
+**已在 P12.0 完成的 SSOT 收口**（不重复改）：
+- [Tech Spec §4.3 / §4.5](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md)：`title_normalized` + `has_search_index` + `galaxy_search_index` Schema（含 `genres: { count, movie_ids }`、`role_mask` 位表、`viswindow` 解耦渲染契约）
+- [Design Spec §4](docs/project_docs/TMDB%20电影宇宙%20Design%20Spec.md)：搜索 UX SSOT（§4.0–§4.8）
+- [PRD §3.2](docs/project_docs/TMDB%20电影宇宙%20PRD.md)：搜索作为正式功能需求 + 三条用户路径
+- [`星球状态机 spec.md`](docs/project_docs/星球状态机%20spec.md) §3.6：select 转正、selectionMask + uSelectionMode、focus×select 嵌套、连线 Leva-only
+
+**P12.9 范围**（实施完成后再做）：
+- [`Phase 8 基线`](docs/benchmarks/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md) 末尾新增 `## P12 入口/出口` 节，重跑 P8.0.1 三片段 + 新增"search person 60+ active"与"search genre 数千 active"两段压力片段
 - [视觉参数总表.md](docs/project_docs/视觉参数总表.md)：`uSelectionMask / uSelectionMode / uMovieCount / constellation maxLineCount / opacity` 登记
-- [Tech Spec §1.5](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md)：拾取小节追加 `searchMode in {'person','genre'}` 时 `inFocus` 由 mask 覆盖、active 拾取行为不变（可点击 selection 内任意 active 进 focus）
-- [Tech Spec §4.3](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md)：Movie 字段加 `title_normalized`；新增 `galaxy_search_index.json.gz` Schema 节
-- [Design Spec](docs/project_docs/TMDB%20电影宇宙%20Design%20Spec.md)：搜索 UX 节定稿
+- [Tech Spec §1.5](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md) 拾取小节：补 `searchMode in {'person','genre'}` 时 `inFocus` 由 mask 覆盖、active 拾取行为不变（可点 selection 内任意 active 进 focus，与 §3.6 嵌套一致）
 - 不要求实施报告
 
 ## 验收（Phase 12 总）
@@ -325,16 +338,17 @@ if (uSelectionMode == 1) {
 | 风险                                                                                        | 对策                                                                                                                                                                                                                                     |
 | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `meta.version` bump 后旧 `galaxy_data.json.gz` 不含 `title_normalized` 导致 schema 校验失败 | loader 在 `has_search_index !== true` 时跳过校验、disable 搜索框（参考 P8.1 双字段过渡）                                                                                                                                                 |
-| 60K × 6 字段构建索引前端做太慢                                                              | 已通过 P12.1 在 pipeline 出 `galaxy_search_index.json.gz` 闭合                                                                                                                                                                           |
-| genre 搜索每次 keystroke 全表扫 60K 找 `genres.includes(name)`                              | 在 P12.6 第一次访问时按 genre 缓存 `Map<genre, number[]>` 到本地 useMemo                                                                                                                                                                 |
+| 60K × 6 字段构建索引前端做太慢                                                              | 已通过 P12.1 在 pipeline 出 `galaxy_search_index.json.gz` 闭合（含 `genres[*].movie_ids`，**无前端反扫**）                                                                                                                                |
 | `uSelectionMode==1` 与 P11.2 `uFocusDimMode` 在 search + focus 同时态下交互未定义           | spec 优先级写明"focus > select"：`uFocusedInstanceId >= 0` 时 mask 仅决定**非焦点**实例的 dim/无 dim；shader 内 `if (isFocused) inFocus = ...` 不被 mask 覆盖；`uFocusDimMode=1` 路径在 mask=1 时不暗化（保留焦点时 selection 高亮意图） |
+| ESC 嵌套：focus×select 共存时退出顺序歧义                                                    | Design Spec §4.6 / 状态机 §3.6 写明：第 3 级 ESC 仅取消 focus、保留 select；第 4 级 ESC 才退出 search                                                                                                                                     |
 | LineSegments 在 bloom 下泛白                                                                | 线材质 `transparent + opacity 0.5` 起步；超亮时降到 0.35 或换 `Line2`（fat lines）作为 stretch                                                                                                                                           |
 | ESC 焦点栈与 shadcn Sheet/Dialog 自带 ESC 冲突                                              | 在全局 handler 内 `event.target.tagName === 'INPUT'` 优先；shadcn `onOpenChange(false)` 走 store 同一通路                                                                                                                                |
 | Storybook 中无 search index 时 SearchBar 故事卡死                                           | SearchBar 接受 `searchIndex: SearchIndex                                                                                                                                                                                                 | null` prop；null 时显示 disabled |
 
-## 总验收清单（按用户笔记 `新增搜索功能 ...md` 三条 UX 对照）
+## 总验收清单（对照 [PRD §3.2](docs/project_docs/TMDB%20电影宇宙%20PRD.md) + [Design Spec §4.0](docs/project_docs/TMDB%20电影宇宙%20Design%20Spec.md) 三条核心体验）
 
 - 1) 电影名搜索 → focus：✅ P12.4
-- 2) 人名搜索 → 全部 active + 连线（禁 viswindow）：✅ P12.6 + P12.7
-- 3) genre 搜索 → 全部 active（禁 viswindow）：✅ P12.6
-- 联想：前缀+包含、加权 score 排序、格式化、高亮：✅ P12.3
+- 2) 人名搜索 → 全部 active + 时间序连线（active 集由 selectionIds 决定，与 viswindow 解耦）：✅ P12.6 + P12.7
+- 3) genre 搜索 → 全部 active（同上解耦，无连线）：✅ P12.6
+- 联想：min len ≥3、prefix > contains、人名任意 token 前缀、genre 二级按 count、加权 score、格式化、高亮、combobox 键盘：✅ P12.3
+- ESC 焦点栈四级（blur > drawer > unfocus > exit-select）+ focus×select 嵌套保留：✅ P12.8

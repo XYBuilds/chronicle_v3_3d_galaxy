@@ -198,6 +198,7 @@ export function mountGalaxyScene(
     syncSelectionMaskFromStore()
   })
 
+  const uSelectionMode = galUniforms.uSelectionMode as THREE.Uniform<number>
   const uZ = galUniforms.uZCurrent as THREE.Uniform<number>
   const uZw = galUniforms.uZVisWindow as THREE.Uniform<number>
   const uFocused = galUniforms.uFocusedInstanceId as THREE.Uniform<number>
@@ -686,10 +687,18 @@ export function mountGalaxyScene(
   )
 
   let raf = 0
+  let prevSearchSelectMode = -1
   const tick = () => {
     raf = requestAnimationFrame(tick)
     applySelectionFrame(performance.now())
     const st = useGalaxyInteractionStore.getState()
+    // P12.6 — person/genre: mask overrides timeline vis-window for `inFocus`; mode follows store, not mask write path
+    const searchSelectMode = st.searchMode === 'person' || st.searchMode === 'genre' ? 1 : 0
+    uSelectionMode.value = searchSelectMode
+    if (searchSelectMode !== prevSearchSelectMode) {
+      prevSearchSelectMode = searchSelectMode
+      console.log('[Scene] uSelectionMode=', searchSelectMode, '| searchMode=', st.searchMode)
+    }
     uZ.value = st.zCurrent
     uZw.value = st.zVisWindow
     syncSelectionPlanetWorldScale()

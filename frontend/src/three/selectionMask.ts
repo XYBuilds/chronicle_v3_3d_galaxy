@@ -52,8 +52,8 @@ export function buildMovieIdToIndexMap(movies: Movie[]): Map<number, number> {
 }
 
 /**
- * Writes R8 selection mask (0/255 per instance) and sets `uSelectionMode`: 0 = off (timeline inFocus),
- * 1 = mask overrides `inFocus` in shaders (P12.6 person/genre select).
+ * Writes R8 selection mask (0/255 per instance). `uSelectionMode` is driven each frame in `scene.ts`
+ * from `searchMode` (P12.6) so person/genre select stays in sync with the mask texture.
  */
 export function setSelectionMask(
   idsOrNull: number[] | null,
@@ -70,8 +70,7 @@ export function setSelectionMask(
     data.fill(0)
     tex.needsUpdate = true
     uniforms.uSelectionCount.value = 0
-    uniforms.uSelectionMode.value = 0
-    console.log('[SelectionMask] cleared | mode=0 | movieCount=', movieN)
+    console.log('[SelectionMask] cleared | movieCount=', movieN)
     return
   }
 
@@ -93,6 +92,5 @@ export function setSelectionMask(
   }
   tex.needsUpdate = true
   uniforms.uSelectionCount.value = written
-  uniforms.uSelectionMode.value = written > 0 ? 1 : 0
-  console.log('[SelectionMask] mode=', uniforms.uSelectionMode.value, '| count=', written, '| requested=', idsOrNull.length)
+  console.log('[SelectionMask] written=', written, '| requested=', idsOrNull.length)
 }

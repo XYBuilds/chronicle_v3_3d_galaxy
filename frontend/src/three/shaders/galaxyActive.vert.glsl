@@ -34,19 +34,20 @@ void main() {
   float aZ = instanceMatrix[3][2];
   float zHi = uZCurrent + uZVisWindow;
   float W = uZVisWindow * 0.2;
-  float inFocus =
-    smoothstep(uZCurrent - W, uZCurrent, aZ) *
-    (1.0 - smoothstep(zHi, zHi + W, aZ));
 
-  float aw = float(max(uSelectionAtlasWidth, 1));
-  float ah = float(max(uSelectionAtlasHeight, 1));
-  float idF = float(gl_InstanceID);
-  float ax = mod(idF, aw);
-  float ay = floor(idF / aw);
-  vec2 selUv = vec2((ax + 0.5) / aw, (ay + 0.5) / ah);
-  float selMask = texture2D(uSelectionMask, selUv).r;
+  float inFocus;
   if (uSelectionMode == 1) {
-    inFocus = selMask;
+    float aw = float(max(uSelectionAtlasWidth, 1));
+    float ah = float(max(uSelectionAtlasHeight, 1));
+    float idF = float(gl_InstanceID);
+    float ax = mod(idF, aw);
+    float ay = floor(idF / aw);
+    vec2 selUv = vec2((ax + 0.5) / aw, (ay + 0.5) / ah);
+    inFocus = texture2D(uSelectionMask, selUv).r;
+  } else {
+    inFocus =
+      smoothstep(uZCurrent - W, uZCurrent, aZ) *
+      (1.0 - smoothstep(zHi, zHi + W, aZ));
   }
 
   bool isFocused = (uFocusedInstanceId >= 0) && (gl_InstanceID == uFocusedInstanceId);

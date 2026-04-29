@@ -19,7 +19,7 @@ todos:
     status: completed
   - id: p125-selection-mask-pipeline
     content: P12.5 selectionMask 渲染通路：galaxyMeshes 加 uSelectionMask DataTexture / uSelectionMode / uMovieCount；idle/active.vert 采样 mask；selectionMask.ts helper
-    status: pending
+    status: completed
   - id: p126-people-genre-active
     content: P12.6 人名/genre 搜索 → 多 active + viswindow 解耦：联想点击写 selectionIds + searchMode；scene.ts RAF 同步 mask；genre selectionIds 直接读 searchIndex.genres[name].movie_ids（无前端反扫）
     status: pending

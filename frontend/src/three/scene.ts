@@ -5,9 +5,11 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 
 import { setGalaxyCameraZ } from '@/lib/galaxyCameraZBridge'
 import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
+import { useSearchIndexStore } from '@/store/searchIndexStore'
 import type { Meta, Movie } from '@/types/galaxy'
 
 import { attachGalaxyCameraControls, clampGalaxyCameraXY, GALAXY_CAMERA_EULER, setFocusCameraPosition } from './camera'
+import { createConstellation } from './constellation'
 import { createGalaxyDualMeshes } from './galaxyMeshes'
 import { attachGalaxyActiveMeshInteraction } from './interaction'
 import { createSelectionPlanet, type SelectionPlanetHandle } from './planet'
@@ -67,6 +69,8 @@ interface GalaxyInteractionDebug {
   zCurrent: number
   zVisWindow: number
   zCamDistance: number
+  /** P12.7 — person-mode constellation `LineSegments` (product UI uses store only; console / future Leva). */
+  constellationEnabled: boolean
   log: () => void
 }
 
@@ -215,6 +219,48 @@ export function mountGalaxyScene(
   uFocusTargetInstanceId.value = -1
   scene.add(galaxy.idle)
   scene.add(galaxy.active)
+
+  const movieByIdForConstellation = new Map<number, Movie>()
+  for (const m of movies) {
+    movieByIdForConstellation.set(m.id, m)
+  }
+  const constellation = createConstellation()
+  constellation.mesh.renderOrder = 0.5
+  scene.add(constellation.mesh)
+
+  const syncConstellationFromStores = () => {
+    const st = useGalaxyInteractionStore.getState()
+    const index = useSearchIndexStore.getState().data
+    const entry =
+      st.searchMode === 'person' && st.selectionPersonKey && index
+        ? index.people[st.selectionPersonKey]
+        : undefined
+    constellation.sync({
+      visible:
+        st.searchMode === 'person' &&
+        st.constellationEnabled &&
+        (st.selectionIds?.length ?? 0) >= 2,
+      movieById: movieByIdForConstellation,
+      selectionIds: st.selectionIds,
+      movieRoles: entry?.movie_roles ?? null,
+    })
+  }
+  syncConstellationFromStores()
+  const unsubConstellation = useGalaxyInteractionStore.subscribe((state, prev) => {
+    if (
+      state.searchMode === prev.searchMode &&
+      state.constellationEnabled === prev.constellationEnabled &&
+      state.selectionIds === prev.selectionIds &&
+      state.selectionPersonKey === prev.selectionPersonKey
+    ) {
+      return
+    }
+    syncConstellationFromStores()
+  })
+  const unsubConstellationIndex = useSearchIndexStore.subscribe((state, prev) => {
+    if (state.data === prev.data) return
+    syncConstellationFromStores()
+  })
 
   const planet = createSelectionPlanet()
   planet.mesh.renderOrder = 2
@@ -628,10 +674,16 @@ export function mountGalaxyScene(
     set zCamDistance(value: number) {
       useGalaxyInteractionStore.setState({ zCamDistance: value })
     },
+    get constellationEnabled() {
+      return useGalaxyInteractionStore.getState().constellationEnabled
+    },
+    set constellationEnabled(value: boolean) {
+      useGalaxyInteractionStore.setState({ constellationEnabled: value })
+    },
     log() {
       const s = useGalaxyInteractionStore.getState()
       console.log(
-        `[Galaxy] zCurrent=${s.zCurrent.toFixed(4)} zVisWindow=${s.zVisWindow.toFixed(4)} zCamDistance=${s.zCamDistance.toFixed(4)} (macro idle: camera.z = zCurrent - zCamDistance)`,
+        `[Galaxy] zCurrent=${s.zCurrent.toFixed(4)} zVisWindow=${s.zVisWindow.toFixed(4)} zCamDistance=${s.zCamDistance.toFixed(4)} (macro idle: camera.z = zCurrent - zCamDistance) | constellationEnabled=${s.constellationEnabled}`,
       )
     },
   }
@@ -730,6 +782,10 @@ export function mountGalaxyScene(
     window.removeEventListener('resize', resize)
     unsubSelection()
     unsubSelectionMask()
+    unsubConstellation()
+    unsubConstellationIndex()
+    constellation.mesh.removeFromParent()
+    constellation.dispose()
     detachControls()
     detachInteraction()
     planet.mesh.removeFromParent()

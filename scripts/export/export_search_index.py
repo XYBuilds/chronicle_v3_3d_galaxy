@@ -44,10 +44,13 @@ def _merge_person(
     if not nk:
         return
     if nk not in bucket:
-        bucket[nk] = {"full_counts": Counter(), "role_mask": 0, "ids": set()}
+        bucket[nk] = {"full_counts": Counter(), "role_mask": 0, "ids": set(), "id_roles": {}}
     bucket[nk]["full_counts"][name] += 1
     bucket[nk]["role_mask"] |= int(role_bit)
-    bucket[nk]["ids"].add(int(movie_id))
+    mid = int(movie_id)
+    bucket[nk]["ids"].add(mid)
+    ir: dict[int, int] = bucket[nk]["id_roles"]
+    ir[mid] = int(ir.get(mid, 0)) | int(role_bit)
 
 
 def build_search_index_dict(
@@ -84,7 +87,14 @@ def build_search_index_dict(
         assert 0 <= rm <= ROLE_MASK_MAX, f"role_mask out of [0,63] for key={nk!r}: {rm}"
         full: str = v["full_counts"].most_common(1)[0][0]
         ids_sorted = sorted(int(x) for x in v["ids"])
-        people[nk] = {"full": full, "role_mask": rm, "movie_ids": ids_sorted}
+        id_roles: dict[int, int] = v.get("id_roles") or {}
+        movie_roles = {str(mid): int(id_roles[mid]) for mid in ids_sorted}
+        assert len(movie_roles) == len(ids_sorted), f"person {nk!r}: id_roles must cover each movie_id"
+        for mid in ids_sorted:
+            mrm = int(movie_roles[str(mid)])
+            assert 0 <= mrm <= ROLE_MASK_MAX, f"per-movie role_mask for id={mid}"
+            assert (mrm & ~rm) == 0, f"person {nk!r} movie {mid}: movie role bits must ⊆ merged role_mask"
+        people[nk] = {"full": full, "role_mask": rm, "movie_ids": ids_sorted, "movie_roles": movie_roles}
 
     genre_counts: dict[str, int] = {g: 0 for g in genre_keys_in_order}
     genre_ids: dict[str, set[int]] = {g: set() for g in genre_keys_in_order}

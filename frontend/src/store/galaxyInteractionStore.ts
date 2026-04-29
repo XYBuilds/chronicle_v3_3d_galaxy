@@ -35,6 +35,11 @@ export interface GalaxyInteractionState {
    * `null` when not in a multi-select session.
    */
   selectionIds: number[] | null
+  /**
+   * Normalized search-index key for the selected person (`searchIndex.people[key]`); drives per-film `movie_roles` for constellation.
+   * `null` when not in a person select session.
+   */
+  selectionPersonKey: string | null
   /** Person-mode constellation lines; Leva-only in product (P12.7). Default on. */
   constellationEnabled: boolean
 }
@@ -52,6 +57,7 @@ export const useGalaxyInteractionStore = create<GalaxyInteractionState>(() => ({
   searchQuery: '',
   searchResults: [],
   selectionIds: null,
+  selectionPersonKey: null,
   constellationEnabled: true,
 }))
 
@@ -83,8 +89,10 @@ export function setSearchMode(mode: SearchMode): void {
     next.searchQuery = ''
     next.searchResults = []
     next.selectionIds = null
+    next.selectionPersonKey = null
   } else if (mode === 'movie') {
     next.selectionIds = null
+    next.selectionPersonKey = null
   }
   useGalaxyInteractionStore.setState(next)
   if (prev !== mode) {
@@ -138,6 +146,7 @@ export function clearSearch(): void {
     searchQuery: '',
     searchResults: [],
     selectionIds: null,
+    selectionPersonKey: null,
   })
   logSearchTransition('clearSearch', {
     searchMode: 'idle',

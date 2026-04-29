@@ -27,6 +27,39 @@ function validatePersonEntry(key: string, v: unknown): asserts v is PersonEntry 
       throw new Error(`[SearchIndex] people[${JSON.stringify(key)}].movie_ids[${i}] must be an integer`)
     }
   }
+  const mr = v.movie_roles
+  if (mr !== undefined) {
+    if (!isRecord(mr)) {
+      throw new Error(`[SearchIndex] people[${JSON.stringify(key)}].movie_roles must be an object when present`)
+    }
+    const idSet = new Set(ids)
+    for (const sk of Object.keys(mr)) {
+      const mid = Number(sk)
+      if (!Number.isInteger(mid) || !idSet.has(mid)) {
+        throw new Error(
+          `[SearchIndex] people[${JSON.stringify(key)}].movie_roles has unknown movie key ${JSON.stringify(sk)}`,
+        )
+      }
+      const mrm = mr[sk]
+      if (typeof mrm !== 'number' || !Number.isInteger(mrm) || mrm < 1 || mrm > 63) {
+        throw new Error(
+          `[SearchIndex] people[${JSON.stringify(key)}].movie_roles[${JSON.stringify(sk)}] must be integer in [1,63]`,
+        )
+      }
+      if ((mrm & ~rm) !== 0) {
+        throw new Error(
+          `[SearchIndex] people[${JSON.stringify(key)}].movie_roles[${JSON.stringify(sk)}]=${mrm} exceeds role_mask=${rm}`,
+        )
+      }
+    }
+    for (const id of ids) {
+      if (mr[String(id)] === undefined) {
+        throw new Error(
+          `[SearchIndex] people[${JSON.stringify(key)}].movie_roles missing entry for movie id=${id}`,
+        )
+      }
+    }
+  }
 }
 
 function validateGenreEntry(name: string, v: unknown): asserts v is GenreEntry {

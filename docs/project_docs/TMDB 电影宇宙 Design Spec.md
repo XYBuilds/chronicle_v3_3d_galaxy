@@ -125,3 +125,47 @@
 * **用途**：开发或验收时快速查看 HUD 在亮 / 暗 CSS 变量下的表现。  
 * **行为**：App 挂载时读取 `theme` query；命中 `light` 或 `dark` 时设置 **`document.documentElement.dataset.theme`**，并与 Tailwind **`dark` class** 联动（见 `useThemeFromQuery`）；无参数时维持默认暗色 HUD。  
 * **画布**：**不要求** Three.js 场景、星空或 Bloom 随浅色主题重算；画布可保持深色底，与浅色 HUD 并存仅作工程验收场景。
+
+## **4\. 搜索 UX（Phase 12）**
+
+顶部 **HUD** 搜索：与 3D 画布分层；数据来源为 `galaxy_data`（电影字段）+ 可选配套文件 `galaxy_search_index.json.gz`（人名 / genre 索引）。当 **`meta.has_search_index !== true`** 时，搜索框为 **disabled**，并展示简短说明（无法联想人名 / genre 索引）。
+
+### **4.1 布局与控件**
+
+* **位置**：`fixed` 贴顶居中，`top-4`、`left-1/2` + `-translate-x-1/2`，`z-index` 高于画布且低于系统级 modal（与 Phase 12 实现约定 **`z-[90]`** 一致）；容器 **`max-w-md`**、水平方向适当内边距以免贴边。
+* **分段**：三档 **`movie` / `person` / `genre`**（segmented control：`Tabs` 或三键 ToggleGroup）。**切换分段时清空**当前输入框内容与联想列表（避免跨模式残留）。
+* **输入框**：单行文本；右侧 **清除按钮（X）**，一键清空 query 并收起联想下拉。
+* **联想面板**：输入框下方浮动列表（`Popover` 或自建 `<ul>`）；与键盘导航、无障碍焦点顺序在实现层与 shadcn 组件行为对齐。
+
+### **4.2 联想：节流、条数上限与交互**
+
+* **防抖**：输入联想 **`200 ms` debounce**；可与 **`useDeferredValue`** 等并用，避免 60K 量级下每键全量计算卡顿。
+* **条数上限（单次展示）**：电影名 **≤ 12** 条；人名 **≤ 8** 条；genre **≤ 5** 条。
+* **点击联想项**：关闭下拉；电影名模式保留 query 文本便于连续检索（与 Phase 12 电影 → focus 通路一致）；人名 / genre 模式行为见《星球状态机 spec》§3.6。
+
+### **4.3 联想：电影名（`movie`）**
+
+* **匹配域**：对每条影片使用管线提供的 **`title_normalized`**（以及 **`original_title`** 经同一规范化规则得到的可检索串）做子串检索；**前缀匹配优先于纯包含**（同档再比分数）。
+* **排序（同匹配档位内）**：按 **`Math.log10(vote_count + 1) × vote_average`** **降序**（高热度 × 高评分优先）。
+* **列表行格式**：**`Title`**；若存在 **`original_title`** 且与 **`title`** 不同则附带展示；**`(`发行年`)`**；主类型 **`genres[0]`**。若标题与原名组合与另一条重复则去重展示规则由实现与数据一致即可。
+* **高亮**：命中片段用 **`<mark>`** 包裹；样式使用语义化背景（例如 **`bg-primary/30`**），保证明暗主题下可读。
+
+### **4.4 联想：人名（`person`）**
+
+* **数据源**：仅当存在搜索索引时，对 **`searchIndex.people`** 的 **normalized 键**做前缀 / 包含匹配（键已为 NFKD + ASCII + casefold，与电影侧 `title_normalized` 规则一致）。
+* **排序（同档）**：按该人条目 **`movie_ids.length`** **降序**（参演越多越靠前）。
+* **列表行格式**：展示 **展示名**（索引内 `full` 或等价字段）+ **角色标签**：由 **`role_mask`** 位解析（cast / director / dop / writers / producers / music\_composer 等，位定义见 Tech Spec §4 配套索引 Schema）。
+
+### **4.5 联想：流派（`genre`）**
+
+* **数据源**：对 **`searchIndex.genres`**（与 `meta.genre_palette` 键集合一致的稳定排序列表）做前缀 / 包含匹配。
+* **排序**：与电影名类似采用可读的先前缀后包含；同档次序以实现为准（条数少，可字母序或 palette 序）。
+
+### **4.6 ESC 焦点栈（全局，自上而下匹配一级即处理并 `preventDefault`）**
+
+1. **搜索输入框聚焦**：清空当前 query / 收起联想（不强制失焦；具体「清空 vs 仅关闭面板」以实现与 Phase 12 `clearSearch` 一致）。
+2. **档案抽屉打开**：关闭抽屉（与既有 Sheet 行为一致）。
+3. **`selectedMovieId !== null`**：取消 focus（相机退回 / Perlin 收起），走既有选中取消链路。
+4. **`searchMode !== 'idle'`**（人名 / genre 等多选搜索会话）：退出搜索模式（清 `selectionIds`、selection mask 等，见状态机 spec）。
+
+未命中以上任一项时，**不**拦截 ESC。

@@ -7,6 +7,7 @@ import type { SelectionPlanetHandle } from './planet'
 import {
   computeActiveMeshScreenRadiusCss,
   computeWorldSphereScreenRadiusCss,
+  getSelectionMaskPickSet,
   pickClosestActiveMovieAlongRay,
   rayPositiveSphereFirstT,
 } from './screenRadius'
@@ -85,6 +86,14 @@ export function attachGalaxyActiveMeshInteraction(options: {
   selectionPlanet?: SelectionPlanetHandle
 }): () => void {
   const { camera, domElement, activeMesh, movies, activeMaterial, selectionPlanet } = options
+  let selectionMaskPickSet = getSelectionMaskPickSet(
+    useGalaxyInteractionStore.getState().searchMode,
+    useGalaxyInteractionStore.getState().selectionIds,
+  )
+  const unsubMaskPick = useGalaxyInteractionStore.subscribe((state, prev) => {
+    if (state.searchMode === prev.searchMode && state.selectionIds === prev.selectionIds) return
+    selectionMaskPickSet = getSelectionMaskPickSet(state.searchMode, state.selectionIds)
+  })
   const sizeAttr = activeMesh.geometry.getAttribute('aSize') as THREE.InstancedBufferAttribute | undefined
   console.assert(!!sizeAttr, '[Interaction] active mesh must have aSize InstancedBufferAttribute')
   console.assert(
@@ -137,6 +146,7 @@ export function attachGalaxyActiveMeshInteraction(options: {
       zCurrent: st.zCurrent,
       zVisWindow: st.zVisWindow,
       requireSlabInteraction,
+      selectionMaskPickSet,
     })
     if (pickedActive === null) return true
     return tFocus < pickedActive.t
@@ -152,6 +162,7 @@ export function attachGalaxyActiveMeshInteraction(options: {
       zCurrent: st.zCurrent,
       zVisWindow: st.zVisWindow,
       requireSlabInteraction,
+      selectionMaskPickSet,
     })
   }
 
@@ -212,6 +223,7 @@ export function attachGalaxyActiveMeshInteraction(options: {
       activeMaterial,
       zCurrent: st.zCurrent,
       zVisWindow: st.zVisWindow,
+      selectionMaskPickSet,
     })
     const planetRadiusCss = rCss > 0 ? rCss : null
     emitHover(m.id, anchor, planetRadiusCss)
@@ -275,6 +287,7 @@ export function attachGalaxyActiveMeshInteraction(options: {
   domElement.addEventListener('pointerleave', onPointerLeave)
 
   return () => {
+    unsubMaskPick()
     window.removeEventListener('pointerup', onWindowPointerUp, true)
     window.removeEventListener('pointercancel', onWindowPointerCancel, true)
     primaryPressActive = false

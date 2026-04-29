@@ -187,6 +187,7 @@ export function SearchBar({ hasSearchIndex, movies }: SearchBarProps) {
         if (entry) {
           const ids = sortIdsByRelease(entry.movie_ids, movieById)
           const q = entry.full
+          console.log('[Search] person select', { key: s.personKey, full: entry.full, selectionLen: ids.length })
           useGalaxyInteractionStore.setState({
             searchMode: 'person',
             selectionIds: ids,
@@ -199,7 +200,8 @@ export function SearchBar({ hasSearchIndex, movies }: SearchBarProps) {
         const g = searchIndex.genres[s.genreName]
         if (g) {
           const ids = sortIdsByRelease(g.movie_ids, movieById)
-          const q = `${s.genreName} (${s.count})`
+          const q = `${s.genreName} (${g.count})`
+          console.log('[Search] genre select', { genre: s.genreName, count: g.count, selectionLen: ids.length })
           useGalaxyInteractionStore.setState({
             searchMode: 'genre',
             selectionIds: ids,

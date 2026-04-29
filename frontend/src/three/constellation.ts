@@ -19,7 +19,7 @@ const LINE_GROUPS: readonly { label: string; mask: number }[] = [
 ]
 
 /** Extra world units beyond each endpoint's active-sphere radius so lines do not touch the mesh. */
-export const CONSTELLATION_SURFACE_GAP_WORLD = 0.06
+export const CONSTELLATION_SURFACE_GAP_WORLD = 0.2
 
 const _seg = { ax: 0, ay: 0, az: 0, bx: 0, by: 0, bz: 0 }
 

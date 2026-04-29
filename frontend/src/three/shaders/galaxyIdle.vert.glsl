@@ -16,6 +16,9 @@ uniform int uFocusedInstanceId;
 uniform float uFocusDimChroma;
 uniform float uFocusDimL;
 uniform int uFocusDimMode;
+uniform sampler2D uSelectionMask;
+uniform int uSelectionMode;
+uniform int uMovieCount;
 
 attribute float hue;
 attribute float voteNorm;
@@ -32,6 +35,13 @@ void main() {
   float inFocus =
     smoothstep(uZCurrent - W, uZCurrent, aZ) *
     (1.0 - smoothstep(zHi, zHi + W, aZ));
+
+  float idF = float(gl_InstanceID) + 0.5;
+  float uCoord = idF / float(max(uMovieCount, 1));
+  float selMask = texture2D(uSelectionMask, vec2(uCoord, 0.5)).r;
+  if (uSelectionMode == 1) {
+    inFocus = selMask;
+  }
 
   bool isFocused = (uFocusedInstanceId >= 0) && (gl_InstanceID == uFocusedInstanceId);
   float sIdle = (1.0 - inFocus) * uSizeScale * uBgSizeMul * aSize;

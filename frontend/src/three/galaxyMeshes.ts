@@ -50,8 +50,34 @@ export interface GalaxyDualMeshHandle {
   dispose: () => void
 }
 
-function makeSharedUniforms(pixelRatio: number): { [uniform: string]: THREE.IUniform } {
+function makeSharedUniforms(
+  pixelRatio: number,
+  movieCount: number,
+): {
+  uniforms: { [uniform: string]: THREE.IUniform }
+  disposeSelectionMaskTexture: () => void
+} {
+  console.assert(movieCount >= 0, '[GalaxyMeshes] movieCount must be non-negative')
+  const maskData = new Uint8Array(movieCount)
+  const selectionMaskTex = new THREE.DataTexture(
+    maskData,
+    movieCount,
+    1,
+    THREE.RedFormat,
+    THREE.UnsignedByteType,
+  )
+  selectionMaskTex.magFilter = THREE.NearestFilter
+  selectionMaskTex.minFilter = THREE.NearestFilter
+  selectionMaskTex.flipY = false
+  selectionMaskTex.needsUpdate = true
+
+  const disposeSelectionMaskTexture = () => {
+    selectionMaskTex.dispose()
+  }
+
   return {
+    disposeSelectionMaskTexture,
+    uniforms: {
     uPixelRatio: { value: pixelRatio },
     uZCurrent: { value: 0 },
     uZVisWindow: { value: 1 },
@@ -80,6 +106,13 @@ function makeSharedUniforms(pixelRatio: number): { [uniform: string]: THREE.IUni
     uFocusDimL: { value: 1 },
     /** P11.2 — 0 = focus-field dim; 1 = reserved (selectionMask); both behave identically until wired. */
     uFocusDimMode: { value: 0 },
+    /** P12.5 — R8 per-instance mask (width = instance count, height = 1). */
+    uSelectionMask: { value: selectionMaskTex },
+    uSelectionCount: { value: 0 },
+    /** 0 = timeline `inFocus`; 1 = mask-only active set; 2 = reserved (mix-with-inFocus). */
+    uSelectionMode: { value: 0 },
+    uMovieCount: { value: movieCount },
+    },
   }
 }
 
@@ -115,7 +148,7 @@ export function createGalaxyDualMeshes(movies: Movie[], pixelRatio: number): Gal
   activeGeom.setAttribute('aSize', sizeActive)
 
   /** Single uniform bag — both materials read the same values each frame (P8.4). */
-  const sharedUniforms = makeSharedUniforms(pixelRatio)
+  const { uniforms: sharedUniforms, disposeSelectionMaskTexture } = makeSharedUniforms(pixelRatio, n)
   console.assert(
     sharedUniforms.uHighRatingT.value > 0 &&
     sharedUniforms.uHighRatingT.value < 1 &&
@@ -177,6 +210,7 @@ export function createGalaxyDualMeshes(movies: Movie[], pixelRatio: number): Gal
   console.assert(idle.count === movies.length && active.count === movies.length, '[GalaxyMeshes] instance count')
 
   const dispose = () => {
+    disposeSelectionMaskTexture()
     idleGeom.dispose()
     activeGeom.dispose()
     idleMaterial.dispose()

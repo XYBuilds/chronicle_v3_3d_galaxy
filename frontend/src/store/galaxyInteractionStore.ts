@@ -40,7 +40,7 @@ export interface GalaxyInteractionState {
    * `null` when not in a person select session.
    */
   selectionPersonKey: string | null
-  /** Person-mode constellation lines; Leva-only in product (P12.7). Default on. */
+  /** Person-mode constellation lines; product HUD has no toggle — use `window.__galaxy.constellationEnabled` in dev (P12.7). Default on. */
   constellationEnabled: boolean
 }
 

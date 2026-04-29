@@ -144,7 +144,7 @@ Perlin focus 球在片元侧按 **`vNoise`** 与 **`uThresh[0..K−2]`**（**K**
 - **GPU**：`uSelectionMask` = `DataTexture(RedFormat, UnsignedByte)`，宽 `movieCount`、高 1，每实例 **0/1**；`uSelectionMode` ∈ `{0,1}`：`0` = 关闭（与 Phase 8–11 行为一致，inFocus 由条带驱动），`1` = mask 覆盖 inFocus（仅非焦点实例）。
 - **CPU**：`selectionIds → idToIndex → DataTexture` 写入并 `needsUpdate=true`；清空 → mode=0 + 全零。
 
-**人名连线**：`searchMode === 'person'` 且 `constellationEnabled` 时，`LineSegments` 按 **`release_date` 升序**连接 mask 内影片；`constellationEnabled` 默认 `true`，**仅 Leva debug 面板可关**（产品 UI 不暴露）。`searchMode === 'genre'` 不画连线。
+**人名连线**：`searchMode === 'person'` 且 `constellationEnabled` 时，`LineSegments` 按 **`release_date` 升序**连接 mask 内影片；`constellationEnabled` 默认 `true`，**产品 UI 不暴露**；调试通过 **`window.__galaxy.constellationEnabled`**（见《视觉参数总表》§4a）。`searchMode === 'genre'` 不画连线。
 
 #### 3.6.1 ESC 焦点栈（Phase 12.8 · 实现收口）
 
@@ -178,5 +178,6 @@ Perlin focus 球在片元侧按 **`vNoise`** 与 **`uThresh[0..K−2]`**（**K**
 | 2026-04-29 | P11.4：§3.4 focus 表更新 Perlin detail / 色彩；§3.5 改为 **K 档**阈值与 **`lastRadius`** 公式；新增 **§3.5.1** Perlin 片元与光照定稿；指向《视觉参数总表》§4 与 [`Phase 11.4 … 实施报告.md`](../reports/Phase%2011.4%20P11.4%20Perlin%20法线重构%20vote→L%20genre%20色与光照定稿%20实施报告.md) |
 | 2026-04-29 | P11.7 文档收口：§3.5 标注 **P11.5 不透明化已实装**；新增 **§3.5.2** focus 态拾取分流（P11.6）定稿描述 |
 | 2026-04-29 | Phase 12 P12.0：**§1** 表格 **`select` 转正**；**§3.6** 重写为正式态（selectionMask、`viswindowDisabled`、与 focus 优先级、连线摘要） |
-| 2026-04-29 | Phase 12 P12.0 收口：§3.6 明确 select 会话下 **active 集合完全由 `selectionIds` 决定、与 viswindow 完全解耦**；focus 嵌套 ESC 仅取消 focus 而保留 select；连线仅 Leva 可关 |
+| 2026-04-29 | Phase 12 P12.0 收口：§3.6 明确 select 会话下 **active 集合完全由 `selectionIds` 决定、与 viswindow 完全解耦**；focus 嵌套 ESC 仅取消 focus 而保留 select；连线开关仅 **`window.__galaxy`**（产品 HUD 无入口） |
+| 2026-04-29 | Phase 12 P12.9：§3.6 连线开关表述与实现对齐（`window.__galaxy.constellationEnabled`）；性能归档指针见《Phase 8 基线》**`## P12 入口/出口`** |
 | 2026-04-29 | Phase 12 P12.8：**§3.6.1** ESC 焦点栈实现表（`App.tsx` capture、`data-galaxy-search-input`、INFO Modal 排除） |

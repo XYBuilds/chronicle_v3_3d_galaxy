@@ -128,14 +128,14 @@
 
 ## **4\. 搜索 UX（Phase 12 起 · UX SSOT）**
 
-本节为搜索功能的 **UX 单一事实源（SSOT）**：覆盖入口位置、控件、联想规则、ESC 焦点栈与状态嵌套行为。**数据契约**（管线字段、`galaxy_search_index.json.gz` Schema）以《Tech Spec》§4 为准；**渲染层语义**（selectionMask、focus×select 优先级）以《星球状态机 spec》§3.6 为准；**功能需求**（产品价值、用户旅程）以《PRD》§3 为准。
+本节为搜索功能的 **UX 单一事实源（SSOT）**：覆盖入口位置、控件、联想规则、ESC 焦点栈与状态嵌套行为。**数据契约**（管线字段、`galaxy_search_index.json.gz` Schema）以《Tech Spec》§4 为准；**渲染层语义**（selectionMask、focus×select 优先级）以《星球状态机 spec》§3.6 为准；**功能需求**（产品价值、用户旅程）以《PRD》§3 为准。**性能与 fps 归档**（含人名 60+ active、genre 大集合压力片段）见 [`Phase 8 基线 P8.0 性能与 P8.4 准入.md`](../benchmarks/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md) **`## P12 入口/出口`**。
 
 顶部 **HUD** 搜索：与 3D 画布分层。数据来源为 `galaxy_data`（电影字段）+ 配套 `galaxy_search_index.json.gz`（人名 / genre 索引）。当 **`meta.has_search_index !== true`** 时，搜索框为 **disabled**，仅显示提示语，不阻塞画布。
 
 ### **4.0 三条核心体验（验收口径）**
 
 1. **搜电影名**（含其它语言的 **`original_title`**）：关键词联想 → 点击正确项 → 进入对应影片 **focus** 态（相机飞入 + Perlin + 抽屉）。  
-2. **搜人名**（覆盖 **`cast` / `director` / `director_of_photography` / `writers` / `producers` / `music_composer`** 聚合）：点击人物 → 进入 **`person` select 会话**：**该人物参与的全部影片星球 active，其余 idle**（**active 集合由搜索结果决定**，不再受 timeline `viswindow` 条带控制；timeline 数值仍可在后台被 wheel 写入，但**不影响视觉**）。同时按 **`release_date` 升序** 用细线连接星座图（默认开，仅 Leva 可关）。  
+2. **搜人名**（覆盖 **`cast` / `director` / `director_of_photography` / `writers` / `producers` / `music_composer`** 聚合）：点击人物 → 进入 **`person` select 会话**：**该人物参与的全部影片星球 active，其余 idle**（**active 集合由搜索结果决定**，不再受 timeline `viswindow` 条带控制；timeline 数值仍可在后台被 wheel 写入，但**不影响视觉**）。同时按 **`release_date` 升序** 用细线连接星座图（**默认开**；产品 HUD **无**开关，调试用 **`window.__galaxy.constellationEnabled`**，见《视觉参数总表》§4a）。  
 3. **搜 genre**：点击某一 genre → 进入 **`genre` select 会话**：**凡 `movie.genres` 包含该 genre（不限于 `genres[0]`）** 的影片 **active**，其余 **idle**；**不**画星座连线；同样不再受 viswindow 控制。
 
 ### **4.1 布局与控件**

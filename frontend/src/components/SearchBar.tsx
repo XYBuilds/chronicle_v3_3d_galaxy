@@ -228,7 +228,7 @@ export function SearchBar({ hasSearchIndex, movies }: SearchBarProps) {
   return (
     <div
       className={cn(
-        'pointer-events-auto fixed top-4 left-1/2 z-[90] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 px-2',
+        'pointer-events-auto fixed top-4 left-1/2 z-[90] w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 px-2',
         isBlocked && 'opacity-60',
       )}
       role="search"
@@ -260,7 +260,9 @@ export function SearchBar({ hasSearchIndex, movies }: SearchBarProps) {
 
         <div className="relative flex items-center gap-1">
           <input
-            type="search"
+            type="text"
+            role="searchbox"
+            enterKeyHint="search"
             autoComplete="off"
             spellCheck={false}
             aria-autocomplete="list"
@@ -343,7 +345,10 @@ export function SearchBar({ hasSearchIndex, movies }: SearchBarProps) {
           <ul
             id="galaxy-search-suggestions"
             role="listbox"
-            className="mt-1 max-h-72 overflow-y-auto rounded-lg border border-border/60 bg-background/95 py-1 text-sm shadow-md"
+            className={cn(
+              'mt-1 max-h-72 min-h-0 overflow-y-auto overflow-x-hidden rounded-lg border border-border/60 bg-background/95 py-1 text-sm shadow-md',
+              '[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden',
+            )}
           >
             {resultRows.map((row, idx) => {
               const active = idx === activeRowIndex

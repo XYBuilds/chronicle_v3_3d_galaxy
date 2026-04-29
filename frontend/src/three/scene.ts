@@ -177,7 +177,7 @@ export function mountGalaxyScene(
   const webglLabel = gl instanceof WebGL2RenderingContext ? 'WebGL2' : 'WebGL1'
 
   const pr = Math.min(window.devicePixelRatio, 2)
-  const galaxy = createGalaxyDualMeshes(movies, pr)
+  const galaxy = createGalaxyDualMeshes(movies, pr, renderer.capabilities.maxTextureSize)
   const galUniforms = galaxy.idleMaterial.uniforms
   const movieIdToIndex = buildMovieIdToIndexMap(movies)
   const selectionMaskUniforms: SelectionMaskUniformBag = {
@@ -185,6 +185,8 @@ export function mountGalaxyScene(
     uSelectionCount: galUniforms.uSelectionCount as THREE.Uniform<number>,
     uSelectionMode: galUniforms.uSelectionMode as THREE.Uniform<number>,
     uMovieCount: galUniforms.uMovieCount as THREE.Uniform<number>,
+    uSelectionAtlasWidth: galUniforms.uSelectionAtlasWidth as THREE.Uniform<number>,
+    uSelectionAtlasHeight: galUniforms.uSelectionAtlasHeight as THREE.Uniform<number>,
   }
 
   const syncSelectionMaskFromStore = () => {

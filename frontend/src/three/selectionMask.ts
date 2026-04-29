@@ -8,6 +8,32 @@ export interface SelectionMaskUniformBag {
   uSelectionCount: THREE.IUniform<number>
   uSelectionMode: THREE.IUniform<number>
   uMovieCount: THREE.IUniform<number>
+  uSelectionAtlasWidth: THREE.IUniform<number>
+  uSelectionAtlasHeight: THREE.IUniform<number>
+}
+
+/**
+ * Pack `movieCount` instances into a 2D R8 atlas ≤ `maxTextureSize` on each axis
+ * (`gl.MAX_TEXTURE_SIZE`; single-row 59k×1 exceeds typical 16384).
+ */
+export function computeSelectionMaskAtlasDimensions(
+  movieCount: number,
+  maxTextureSize: number,
+): { width: number; height: number } {
+  const cap = Math.max(1, Math.floor(maxTextureSize))
+  if (movieCount <= 0) {
+    return { width: 1, height: 1 }
+  }
+  if (movieCount > cap * cap) {
+    throw new Error(
+      `[SelectionMask] movieCount=${movieCount} exceeds atlas capacity ${cap}×${cap} (raise pipeline limit or use chunked masks)`,
+    )
+  }
+  const width = Math.min(movieCount, cap)
+  const height = Math.max(1, Math.ceil(movieCount / width))
+  console.assert(width <= cap && height <= cap, '[SelectionMask] atlas dims')
+  console.assert(width * height >= movieCount, '[SelectionMask] atlas area')
+  return { width, height }
 }
 
 /**
@@ -36,14 +62,16 @@ export function setSelectionMask(
 ): void {
   const tex = uniforms.uSelectionMask.value
   const data = (tex.image as { data: Uint8Array }).data
-  const n = data.length
+  const atlasW = uniforms.uSelectionAtlasWidth.value
+  const movieN = uniforms.uMovieCount.value
+  console.assert(atlasW >= 1, '[SelectionMask] uSelectionAtlasWidth')
 
   if (idsOrNull === null || idsOrNull.length === 0) {
     data.fill(0)
     tex.needsUpdate = true
     uniforms.uSelectionCount.value = 0
     uniforms.uSelectionMode.value = 0
-    console.log('[SelectionMask] cleared | mode=0 | instances=', n)
+    console.log('[SelectionMask] cleared | mode=0 | movieCount=', movieN)
     return
   }
 
@@ -55,8 +83,12 @@ export function setSelectionMask(
       console.warn(`[SelectionMask] unknown movie id=${id} — skipped`)
       continue
     }
-    console.assert(idx >= 0 && idx < n, '[SelectionMask] index out of range')
-    data[idx] = 255
+    console.assert(idx >= 0 && idx < movieN, '[SelectionMask] instance index out of range')
+    const x = idx % atlasW
+    const y = Math.floor(idx / atlasW)
+    const offset = y * atlasW + x
+    console.assert(offset >= 0 && offset < data.length, '[SelectionMask] atlas offset')
+    data[offset] = 255
     written++
   }
   tex.needsUpdate = true

@@ -7,6 +7,7 @@ import galaxyActiveFragmentShader from './shaders/galaxyActive.frag.glsl'
 import galaxyActiveVertexShader from './shaders/galaxyActive.vert.glsl'
 import galaxyIdleFragmentShader from './shaders/galaxyIdle.frag.glsl'
 import galaxyIdleVertexShader from './shaders/galaxyIdle.vert.glsl'
+import { computeSelectionMaskAtlasDimensions } from './selectionMask'
 
 /**
  * Default world `uSizeScale` for dual InstancedMesh (matches former Points macro knob `0.3` at current focus/bg mul).
@@ -53,16 +54,22 @@ export interface GalaxyDualMeshHandle {
 function makeSharedUniforms(
   pixelRatio: number,
   movieCount: number,
+  maxTextureSize: number,
 ): {
   uniforms: { [uniform: string]: THREE.IUniform }
   disposeSelectionMaskTexture: () => void
 } {
   console.assert(movieCount >= 0, '[GalaxyMeshes] movieCount must be non-negative')
-  const maskData = new Uint8Array(movieCount)
+  const { width: atlasW, height: atlasH } = computeSelectionMaskAtlasDimensions(
+    movieCount,
+    maxTextureSize,
+  )
+  const texelCount = atlasW * atlasH
+  const maskData = new Uint8Array(texelCount)
   const selectionMaskTex = new THREE.DataTexture(
     maskData,
-    movieCount,
-    1,
+    atlasW,
+    atlasH,
     THREE.RedFormat,
     THREE.UnsignedByteType,
   )
@@ -74,6 +81,10 @@ function makeSharedUniforms(
   const disposeSelectionMaskTexture = () => {
     selectionMaskTex.dispose()
   }
+
+  console.log(
+    `[GalaxyMeshes] P12.5 selection mask atlas ${atlasW}×${atlasH} texels | maxTextureSize=${maxTextureSize} | movies=${movieCount}`,
+  )
 
   return {
     disposeSelectionMaskTexture,
@@ -106,12 +117,14 @@ function makeSharedUniforms(
     uFocusDimL: { value: 1 },
     /** P11.2 — 0 = focus-field dim; 1 = reserved (selectionMask); both behave identically until wired. */
     uFocusDimMode: { value: 0 },
-    /** P12.5 — R8 per-instance mask (width = instance count, height = 1). */
+    /** P12.5 — R8 per-instance mask packed in a 2D atlas (each dimension ≤ gl.MAX_TEXTURE_SIZE). */
     uSelectionMask: { value: selectionMaskTex },
     uSelectionCount: { value: 0 },
     /** 0 = timeline `inFocus`; 1 = mask-only active set; 2 = reserved (mix-with-inFocus). */
     uSelectionMode: { value: 0 },
     uMovieCount: { value: movieCount },
+    uSelectionAtlasWidth: { value: atlasW },
+    uSelectionAtlasHeight: { value: atlasH },
     },
   }
 }
@@ -120,7 +133,11 @@ function makeSharedUniforms(
  * P8.4 — dual `InstancedMesh` (idle icosa d0 + active d1), shared per-instance hue / vote / size;
  * Z slab + focus use uniforms (`uZCurrent`, `uFocusedInstanceId`).
  */
-export function createGalaxyDualMeshes(movies: Movie[], pixelRatio: number): GalaxyDualMeshHandle {
+export function createGalaxyDualMeshes(
+  movies: Movie[],
+  pixelRatio: number,
+  maxTextureSize: number,
+): GalaxyDualMeshHandle {
   const n = movies.length
   const { hues, voteNorms, sizes } = buildInstanceAttributes(movies)
 
@@ -148,7 +165,7 @@ export function createGalaxyDualMeshes(movies: Movie[], pixelRatio: number): Gal
   activeGeom.setAttribute('aSize', sizeActive)
 
   /** Single uniform bag — both materials read the same values each frame (P8.4). */
-  const { uniforms: sharedUniforms, disposeSelectionMaskTexture } = makeSharedUniforms(pixelRatio, n)
+  const { uniforms: sharedUniforms, disposeSelectionMaskTexture } = makeSharedUniforms(pixelRatio, n, maxTextureSize)
   console.assert(
     sharedUniforms.uHighRatingT.value > 0 &&
     sharedUniforms.uHighRatingT.value < 1 &&

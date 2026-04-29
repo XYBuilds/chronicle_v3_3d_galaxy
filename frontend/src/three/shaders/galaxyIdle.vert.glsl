@@ -18,7 +18,8 @@ uniform float uFocusDimL;
 uniform int uFocusDimMode;
 uniform sampler2D uSelectionMask;
 uniform int uSelectionMode;
-uniform int uMovieCount;
+uniform int uSelectionAtlasWidth;
+uniform int uSelectionAtlasHeight;
 
 attribute float hue;
 attribute float voteNorm;
@@ -36,9 +37,13 @@ void main() {
     smoothstep(uZCurrent - W, uZCurrent, aZ) *
     (1.0 - smoothstep(zHi, zHi + W, aZ));
 
-  float idF = float(gl_InstanceID) + 0.5;
-  float uCoord = idF / float(max(uMovieCount, 1));
-  float selMask = texture2D(uSelectionMask, vec2(uCoord, 0.5)).r;
+  float aw = float(max(uSelectionAtlasWidth, 1));
+  float ah = float(max(uSelectionAtlasHeight, 1));
+  float idF = float(gl_InstanceID);
+  float ax = mod(idF, aw);
+  float ay = floor(idF / aw);
+  vec2 selUv = vec2((ax + 0.5) / aw, (ay + 0.5) / ah);
+  float selMask = texture2D(uSelectionMask, selUv).r;
   if (uSelectionMode == 1) {
     inFocus = selMask;
   }

@@ -10,7 +10,7 @@ todos:
     status: completed
   - id: p122-store-extend
     content: P12.2 状态层扩充：galaxyInteractionStore 加 searchMode/searchQuery/searchResults/selectionIds/constellationEnabled + helpers；viswindowDisabled 派生
-    status: pending
+    status: completed
   - id: p123-search-input-hud
     content: P12.3 顶部搜索框 + 联想（HUD）：SearchBar.tsx + searchScore.ts 打分排序工具 + 高亮 + 200ms debounce；App.tsx 加载索引
     status: pending
@@ -338,9 +338,9 @@ if (uSelectionMode == 1) {
 | 风险                                                                                        | 对策                                                                                                                                                                                                                                     |
 | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `meta.version` bump 后旧 `galaxy_data.json.gz` 不含 `title_normalized` 导致 schema 校验失败 | loader 在 `has_search_index !== true` 时跳过校验、disable 搜索框（参考 P8.1 双字段过渡）                                                                                                                                                 |
-| 60K × 6 字段构建索引前端做太慢                                                              | 已通过 P12.1 在 pipeline 出 `galaxy_search_index.json.gz` 闭合（含 `genres[*].movie_ids`，**无前端反扫**）                                                                                                                                |
+| 60K × 6 字段构建索引前端做太慢                                                              | 已通过 P12.1 在 pipeline 出 `galaxy_search_index.json.gz` 闭合（含 `genres[*].movie_ids`，**无前端反扫**）                                                                                                                               |
 | `uSelectionMode==1` 与 P11.2 `uFocusDimMode` 在 search + focus 同时态下交互未定义           | spec 优先级写明"focus > select"：`uFocusedInstanceId >= 0` 时 mask 仅决定**非焦点**实例的 dim/无 dim；shader 内 `if (isFocused) inFocus = ...` 不被 mask 覆盖；`uFocusDimMode=1` 路径在 mask=1 时不暗化（保留焦点时 selection 高亮意图） |
-| ESC 嵌套：focus×select 共存时退出顺序歧义                                                    | Design Spec §4.6 / 状态机 §3.6 写明：第 3 级 ESC 仅取消 focus、保留 select；第 4 级 ESC 才退出 search                                                                                                                                     |
+| ESC 嵌套：focus×select 共存时退出顺序歧义                                                   | Design Spec §4.6 / 状态机 §3.6 写明：第 3 级 ESC 仅取消 focus、保留 select；第 4 级 ESC 才退出 search                                                                                                                                    |
 | LineSegments 在 bloom 下泛白                                                                | 线材质 `transparent + opacity 0.5` 起步；超亮时降到 0.35 或换 `Line2`（fat lines）作为 stretch                                                                                                                                           |
 | ESC 焦点栈与 shadcn Sheet/Dialog 自带 ESC 冲突                                              | 在全局 handler 内 `event.target.tagName === 'INPUT'` 优先；shadcn `onOpenChange(false)` 走 store 同一通路                                                                                                                                |
 | Storybook 中无 search index 时 SearchBar 故事卡死                                           | SearchBar 接受 `searchIndex: SearchIndex                                                                                                                                                                                                 | null` prop；null 时显示 disabled |

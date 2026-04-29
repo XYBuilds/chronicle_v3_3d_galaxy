@@ -130,6 +130,16 @@
 
 顶部 **HUD** 搜索：与 3D 画布分层；数据来源为 `galaxy_data`（电影字段）+ 可选配套文件 `galaxy_search_index.json.gz`（人名 / genre 索引）。当 **`meta.has_search_index !== true`** 时，搜索框为 **disabled**，并展示简短说明（无法联想人名 / genre 索引）。
 
+下列 **联想规则、排序与三条体验路径** 与产品笔记 [`docs/temp/新增搜索功能 34ff460b49b38063bd61fbebe425472b.md`](../temp/新增搜索功能%2034ff460b49b38063bd61fbebe425472b.md) **逐项对齐**（笔记为 UX 细则 SSOT；管线字段名以 Tech Spec §4 为准）。
+
+### **4.0 三条核心体验（验收口径）**
+
+1. **搜电影名**（含其它语言的 **`original_title`**）：关键词联想 → 点击正确项 → 进入对应影片 **focus** 态（相机飞入 + Perlin + 抽屉）。  
+2. **搜人名**（覆盖 **`cast` / `director` / `director_of_photography` / `writers` / `producers` / `music_composer`** 聚合）：点击人物 → **禁用 viswindow 语义下的条带视觉**（见《星球状态机 spec》§3.6），该人物参与的全部影片星球 **active**，其余 **idle**；并按 **发行时间顺序** 用细线连接（星座图，Phase 12 连线实现）。  
+3. **搜 genre**：点击某一 genre → 同上禁用 viswindow 语义；**凡 `movie.genres` 包含该 genre（不限于 `genres[0]`）** 的影片 **active**，其余 **idle**；**不**画星座连线。
+
+若需升级数据结构，允许调整 Python 管线（与 Tech Spec §4、`galaxy_search_index` Schema 一致）。
+
 ### **4.1 布局与控件**
 
 * **位置**：`fixed` 贴顶居中，`top-4`、`left-1/2` + `-translate-x-1/2`，`z-index` 高于画布且低于系统级 modal（与 Phase 12 实现约定 **`z-[90]`** 一致）；容器 **`max-w-md`**、水平方向适当内边距以免贴边。
@@ -145,21 +155,26 @@
 
 ### **4.3 联想：电影名（`movie`）**
 
-* **匹配域**：对每条影片使用管线提供的 **`title_normalized`**（以及 **`original_title`** 经同一规范化规则得到的可检索串）做子串检索；**前缀匹配优先于纯包含**（同档再比分数）。
-* **排序（同匹配档位内）**：按 **`Math.log10(vote_count + 1) × vote_average`** **降序**（高热度 × 高评分优先）。
-* **列表行格式**：**`Title`**；若存在 **`original_title`** 且与 **`title`** 不同则附带展示；**`(`发行年`)`**；主类型 **`genres[0]`**。若标题与原名组合与另一条重复则去重展示规则由实现与数据一致即可。
-* **高亮**：命中片段用 **`<mark>`** 包裹；样式使用语义化背景（例如 **`bg-primary/30`**），保证明暗主题下可读。
+* **过滤（Filter）**：搜索词（**忽略大小写**）须被包含在 **`title`** 或 **`original_title`** 中。实现上可用 **`title_normalized`** 及原名经同一规范化规则得到的检索串，与上述语义等价。**仅**允许 **前缀匹配（Starts with）** 与 **包含匹配（Contains）**；**不做**模糊匹配（Fuzzy）、**不做**拼写纠错。  
+* **排序（Sort）**  
+  * **第一维度（匹配类型）**：前缀匹配 **优于** 包含匹配。  
+  * **第二维度（加权热度）**：匹配类型相同时，`Score = Math.log10(vote_count + 1) × vote_average`，按 Score **降序**。  
+  * **`release_date` 不得参与联想排序**（任何维度）。  
+* **格式化（Format）**：列表行与笔记一致，语义为 **`Title`** + **`原始标题`** + **`(YYYY)`** + **`Genre0`**（即 **`genres[0]`**）。  
+  * **去重**：若 **`original_title`** 与 **`title`** 相同或为空，则**不再重复**展示原始标题段。  
+* **高亮（Highlight）**：在最终展示字符串上，用正则按**忽略大小写**匹配当前搜索词，将命中子串用带样式的元素包裹（例如 **`<mark>`** + **`bg-primary/30`**）。
 
 ### **4.4 联想：人名（`person`）**
 
-* **数据源**：仅当存在搜索索引时，对 **`searchIndex.people`** 的 **normalized 键**做前缀 / 包含匹配（键已为 NFKD + ASCII + casefold，与电影侧 `title_normalized` 规则一致）。
-* **排序（同档）**：按该人条目 **`movie_ids.length`** **降序**（参演越多越靠前）。
-* **列表行格式**：展示 **展示名**（索引内 `full` 或等价字段）+ **角色标签**：由 **`role_mask`** 位解析（cast / director / dop / writers / producers / music\_composer 等，位定义见 Tech Spec §4 配套索引 Schema）。
+* **过滤**：**前缀**与**包含**；搜索词（忽略大小写）命中索引中的人名键；索引须覆盖 **`cast` / `director` / `director_of_photography` / `writers` / `producers` / `music_composer`**（见 `galaxy_search_index` **`people`**）。  
+* **排序**：第一维度前缀 **优于** 包含；第二维度为人物 **参演影片数量**，按数量 **降序**（与 **`movie_ids.length`** 一致）。  
+* **格式**：展示 **全名**（索引内 **`full`**）。可选追加 **`role_mask`** 解析的角色标签（Tech Spec §4）。  
+* **高亮**：与 §4.3 相同规则。
 
 ### **4.5 联想：流派（`genre`）**
 
-* **数据源**：对 **`searchIndex.genres`**（与 `meta.genre_palette` 键集合一致的稳定排序列表）做前缀 / 包含匹配。
-* **排序**：与电影名类似采用可读的先前缀后包含；同档次序以实现为准（条数少，可字母序或 palette 序）。
+* **过滤**：对数据集内**全部 genre**（**`searchIndex.genres`**，与 `meta.genre_palette` 键集合一致的稳定列表）做 **前缀**与 **包含**匹配。  
+* **排序**：第一维度前缀优于包含；第二维度条数少时可固定次序（如字母序或 palette 序），**不作为**硬编码产品约束。
 
 ### **4.6 ESC 焦点栈（全局，自上而下匹配一级即处理并 `preventDefault`）**
 

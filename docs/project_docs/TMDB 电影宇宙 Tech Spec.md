@@ -345,20 +345,48 @@ Python 管线的最终产物以 **`galaxy_data.json`**（及 gzip）为主；**P
 {
   "version": "<同 galaxy_data.meta.version>",
   "people": {
-    "<normalized_name>": {
+    "<normalized_key>": {
       "full": "Original Display Name",
       "role_mask": 61,
       "movie_ids": [123, 456]
     }
   },
-  "genres": ["Action", "Drama"]
+  "genres": {
+    "Action": { "count": 12345, "movie_ids": [11, 22, 33] },
+    "Drama":  { "count":  9876, "movie_ids": [44, 55] }
+  }
 }
 ```
 
-- **`people`**：`key` 为人名 **normalized**（与 `title_normalized` 同一规范化函数）。**`role_mask`**：uint8 位标志——**cast = 1**，**director = 2**，**dop = 4**，**writers = 8**，**producers = 16**，**music_composer = 32**；同一人多角色按位或合并；**`movie_ids`** 去重。**`full`** 为展示用原名。
-- **`genres`**：字符串数组，与 **`meta.genre_palette`** 的 key 集合一致，**稳定排序**（如按 palette 迭代序），供 genre 联想枚举。
+#### **4.5.1 `people`**
 
-渲染侧 **`uSelectionMask`**、**`uSelectionMode`**、**`uMovieCount`** 等与 macro mesh 的契约见《星球状态机 spec》§3.6 与 Phase 12 实现。
+- **`key`**（`normalized_key`）：人名 NFKD + ASCII fold + casefold 后的字符串（与 `title_normalized` 共用同一规范化函数）；**多个原始写法可能合并到同一 key**，此时 `full` 取出现频次最高 / 第一条原始字符串。
+- **`full`**：展示用原始姓名（保留大小写、变音符号）。
+- **`role_mask`**：**uint8** 位掩码，按位**或**合并多角色：
+  | 位 | 数值 | 来源字段 |
+  | :---- | :---- | :---- |
+  | 0 | `1` | `cast` |
+  | 1 | `2` | `director` |
+  | 2 | `4` | `director_of_photography` |
+  | 3 | `8` | `writers` |
+  | 4 | `16` | `producers` |
+  | 5 | `32` | `music_composer` |
+  - 取值范围 **`[0, 63]`**；`assert role_mask <= 63` 是管线必检约束。
+- **`movie_ids`**：参演影片 TMDB ID 数组，**去重**；顺序不限（前端按需排序，例如人名星座连线按 `release_date` 升序）。
+- **任意 token 前缀（Design Spec §4.4）**：实现可在 **运行时**按空白拆分 `normalized_key` token，亦可由管线**预拆分**写入额外字段（例如 `tokens: string[]`）；本 Schema 不强制，与 Design Spec 行为契约一致即可。
+
+#### **4.5.2 `genres`**
+
+- **结构**：对象映射 **`genre 名 → { count, movie_ids }`**；`genre 名` 与 **`meta.genre_palette`** 的 key 集合**完全一致**。
+- **`count`**：该 genre 在数据集中**出现次数**（`Σ movies where genre ∈ m.genres`，**不限于 `genres[0]`**）。供 Design Spec §4.5 的 **二级排序（按数量降序）** 使用。
+- **`movie_ids`**：包含该 genre（任一顺位）的全部影片 TMDB ID，去重。供 select 会话直接驱动 `selectionIds`（无需前端再扫一次 60K × N）。
+- **稳定枚举**：JSON 对象迭代顺序在 Python 3.7+ 保持插入序；管线写入顺序应为 **palette key 序**（与 `meta.genre_palette` 一致）。
+
+#### **4.5.3 渲染侧契约**
+
+`galaxy_search_index` 仅承载**检索数据**；视觉层 **`uSelectionMask`**、**`uSelectionMode`**、**`uMovieCount`** 与 macro mesh 的对接见《星球状态机 spec》§3.6。
+- **`viswindow` 关系**：`person` / `genre` 进入 select 会话后，**active 集合由 `selectionIds` 决定**，**与 `uZCurrent` / `uZVisWindow` 解耦**（shader 内 `uSelectionMode == 1` 时 `inFocus` 由 mask 重写）；timeline UI 可继续接收 wheel / drag 写 `zCurrent`，但视觉无反馈。
+- **focus 嵌套**：select 会话中点击 active 影片进入 focus，**两者并存**；ESC 出栈语义见 Design Spec §4.6。
 
 ## **5\. 部署架构**
 

@@ -126,61 +126,85 @@
 * **行为**：App 挂载时读取 `theme` query；命中 `light` 或 `dark` 时设置 **`document.documentElement.dataset.theme`**，并与 Tailwind **`dark` class** 联动（见 `useThemeFromQuery`）；无参数时维持默认暗色 HUD。  
 * **画布**：**不要求** Three.js 场景、星空或 Bloom 随浅色主题重算；画布可保持深色底，与浅色 HUD 并存仅作工程验收场景。
 
-## **4\. 搜索 UX（Phase 12）**
+## **4\. 搜索 UX（Phase 12 起 · UX SSOT）**
 
-顶部 **HUD** 搜索：与 3D 画布分层；数据来源为 `galaxy_data`（电影字段）+ 可选配套文件 `galaxy_search_index.json.gz`（人名 / genre 索引）。当 **`meta.has_search_index !== true`** 时，搜索框为 **disabled**，并展示简短说明（无法联想人名 / genre 索引）。
+本节为搜索功能的 **UX 单一事实源（SSOT）**：覆盖入口位置、控件、联想规则、ESC 焦点栈与状态嵌套行为。**数据契约**（管线字段、`galaxy_search_index.json.gz` Schema）以《Tech Spec》§4 为准；**渲染层语义**（selectionMask、focus×select 优先级）以《星球状态机 spec》§3.6 为准；**功能需求**（产品价值、用户旅程）以《PRD》§3 为准。
 
-下列 **联想规则、排序与三条体验路径** 与产品笔记 [`docs/temp/新增搜索功能 34ff460b49b38063bd61fbebe425472b.md`](../temp/新增搜索功能%2034ff460b49b38063bd61fbebe425472b.md) **逐项对齐**（笔记为 UX 细则 SSOT；管线字段名以 Tech Spec §4 为准）。
+顶部 **HUD** 搜索：与 3D 画布分层。数据来源为 `galaxy_data`（电影字段）+ 配套 `galaxy_search_index.json.gz`（人名 / genre 索引）。当 **`meta.has_search_index !== true`** 时，搜索框为 **disabled**，仅显示提示语，不阻塞画布。
 
 ### **4.0 三条核心体验（验收口径）**
 
 1. **搜电影名**（含其它语言的 **`original_title`**）：关键词联想 → 点击正确项 → 进入对应影片 **focus** 态（相机飞入 + Perlin + 抽屉）。  
-2. **搜人名**（覆盖 **`cast` / `director` / `director_of_photography` / `writers` / `producers` / `music_composer`** 聚合）：点击人物 → **禁用 viswindow 语义下的条带视觉**（见《星球状态机 spec》§3.6），该人物参与的全部影片星球 **active**，其余 **idle**；并按 **发行时间顺序** 用细线连接（星座图，Phase 12 连线实现）。  
-3. **搜 genre**：点击某一 genre → 同上禁用 viswindow 语义；**凡 `movie.genres` 包含该 genre（不限于 `genres[0]`）** 的影片 **active**，其余 **idle**；**不**画星座连线。
-
-若需升级数据结构，允许调整 Python 管线（与 Tech Spec §4、`galaxy_search_index` Schema 一致）。
+2. **搜人名**（覆盖 **`cast` / `director` / `director_of_photography` / `writers` / `producers` / `music_composer`** 聚合）：点击人物 → 进入 **`person` select 会话**：**该人物参与的全部影片星球 active，其余 idle**（**active 集合由搜索结果决定**，不再受 timeline `viswindow` 条带控制；timeline 数值仍可在后台被 wheel 写入，但**不影响视觉**）。同时按 **`release_date` 升序** 用细线连接星座图（默认开，仅 Leva 可关）。  
+3. **搜 genre**：点击某一 genre → 进入 **`genre` select 会话**：**凡 `movie.genres` 包含该 genre（不限于 `genres[0]`）** 的影片 **active**，其余 **idle**；**不**画星座连线；同样不再受 viswindow 控制。
 
 ### **4.1 布局与控件**
 
-* **位置**：`fixed` 贴顶居中，`top-4`、`left-1/2` + `-translate-x-1/2`，`z-index` 高于画布且低于系统级 modal（与 Phase 12 实现约定 **`z-[90]`** 一致）；容器 **`max-w-md`**、水平方向适当内边距以免贴边。
-* **分段**：三档 **`movie` / `person` / `genre`**（segmented control：`Tabs` 或三键 ToggleGroup）。**切换分段时清空**当前输入框内容与联想列表（避免跨模式残留）。
-* **输入框**：单行文本；右侧 **清除按钮（X）**，一键清空 query 并收起联想下拉。
-* **联想面板**：输入框下方浮动列表（`Popover` 或自建 `<ul>`）；与键盘导航、无障碍焦点顺序在实现层与 shadcn 组件行为对齐。
+* **位置**：`fixed` 贴顶居中，`top-4`、`left-1/2` + `-translate-x-1/2`；`z-index` 高于画布且低于系统级 modal（实现约定 **`z-[90]`**）；容器 **`max-w-md`**、水平内边距防贴边。
+* **分段**：三档 **`movie` / `person` / `genre`**（segmented control：`Tabs` 或三键 ToggleGroup）。**切换分段时清空** query + 联想，避免跨模式残留。
+* **输入框**：单行文本；右侧 **清除按钮（X）**，一键清空 query 并收起联想；点击 X **同时退出**当前 select 会话（清 `selectionIds`，见 §4.7）。
+* **联想面板**：输入框下方浮动列表（`Popover` 或自建 `<ul>`）。
 
-### **4.2 联想：节流、条数上限与交互**
+### **4.2 联想触发、节流与键盘交互**
 
-* **防抖**：输入联想 **`200 ms` debounce**；可与 **`useDeferredValue`** 等并用，避免 60K 量级下每键全量计算卡顿。
-* **条数上限（单次展示）**：电影名 **≤ 12** 条；人名 **≤ 8** 条；genre **≤ 5** 条。
-* **点击联想项**：关闭下拉；电影名模式保留 query 文本便于连续检索（与 Phase 12 电影 → focus 通路一致）；人名 / genre 模式行为见《星球状态机 spec》§3.6。
+* **触发阈值**：query **`trim().length >= 3`** 才触发联想；不足 3 字符时面板不展开（不显示空列表/历史）。
+* **防抖**：**`200 ms` debounce**；可叠加 `useDeferredValue` 抗顿。
+* **条数上限**：电影名 **≤ 12**；人名 **≤ 8**；genre **≤ 5**。
+* **键盘**（标准 combobox）：
+  * **`↓` / `↑`**：在联想列表内高亮上下条；列表未展开但有结果时 `↓` 展开并定位到第一条。
+  * **`Enter`**：等价于点击当前高亮项（无高亮则不触发）。
+  * **`Tab`**：**不**拦截（让浏览器自然移焦，方便键盘用户继续浏览页面）。
+  * **`Esc`**：见 §4.6。
+* **点击联想项**：关闭下拉；`movie` 走 §4.3 → focus；`person` / `genre` 走 §4.4 / §4.5 → select 会话（保留 query 文本以便随时切人/切类）。
 
 ### **4.3 联想：电影名（`movie`）**
 
-* **过滤（Filter）**：搜索词（**忽略大小写**）须被包含在 **`title`** 或 **`original_title`** 中。实现上可用 **`title_normalized`** 及原名经同一规范化规则得到的检索串，与上述语义等价。**仅**允许 **前缀匹配（Starts with）** 与 **包含匹配（Contains）**；**不做**模糊匹配（Fuzzy）、**不做**拼写纠错。  
+* **过滤（Filter）**：搜索词与 **`title`** / **`original_title`** 做 **忽略大小写**子串检索（实现可用管线产物 **`title_normalized`** + 原名规范化形）。**仅**支持 **前缀匹配（Starts with）** 与 **包含匹配（Contains）**；**不做** Fuzzy / 拼写纠错。
 * **排序（Sort）**  
   * **第一维度（匹配类型）**：前缀匹配 **优于** 包含匹配。  
-  * **第二维度（加权热度）**：匹配类型相同时，`Score = Math.log10(vote_count + 1) × vote_average`，按 Score **降序**。  
-  * **`release_date` 不得参与联想排序**（任何维度）。  
-* **格式化（Format）**：列表行与笔记一致，语义为 **`Title`** + **`原始标题`** + **`(YYYY)`** + **`Genre0`**（即 **`genres[0]`**）。  
-  * **去重**：若 **`original_title`** 与 **`title`** 相同或为空，则**不再重复**展示原始标题段。  
-* **高亮（Highlight）**：在最终展示字符串上，用正则按**忽略大小写**匹配当前搜索词，将命中子串用带样式的元素包裹（例如 **`<mark>`** + **`bg-primary/30`**）。
+  * **第二维度（加权热度）**：同档内 `Score = Math.log10(vote_count + 1) × vote_average`，**降序**。  
+  * **`release_date` 不参与排序**（任何维度）。
+* **格式化（Format）**：行内布局语义为 **`Title`** + **`原始标题`** + **`(YYYY)`** + **`Genre0`**（即 **`genres[0]`**；`YYYY` 取 `release_date` 前 4 字符）。  
+  * **去重**：若 **`original_title`** 与 **`title`** 相同或为空，**不再重复**展示原始标题段。
+* **高亮（Highlight）**：用忽略大小写正则在最终展示字符串上匹配 query，命中子串用语义 mark（`<mark>` + `bg-primary/30` 等）包裹。
+* **点击行为**：`useGalaxyInteractionStore.setState({ selectedMovieId: id })`，复用现有 focus 链路；**不进入** `select` 会话；query 文本保留。
 
 ### **4.4 联想：人名（`person`）**
 
-* **过滤**：**前缀**与**包含**；搜索词（忽略大小写）命中索引中的人名键；索引须覆盖 **`cast` / `director` / `director_of_photography` / `writers` / `producers` / `music_composer`**（见 `galaxy_search_index` **`people`**）。  
-* **排序**：第一维度前缀 **优于** 包含；第二维度为人物 **参演影片数量**，按数量 **降序**（与 **`movie_ids.length`** 一致）。  
-* **格式**：展示 **全名**（索引内 **`full`**）。可选追加 **`role_mask`** 解析的角色标签（Tech Spec §4）。  
-* **高亮**：与 §4.3 相同规则。
+* **过滤**：搜索词与 `searchIndex.people[*]` 的 **normalized 键** 做忽略大小写子串检索。索引须覆盖 **`cast` / `director` / `director_of_photography` / `writers` / `producers` / `music_composer`**。
+* **匹配类型（任意 token 前缀）**：把 **normalized 键**按空白拆分为 token 列表；当 query 是任一 token 的前缀（含整体前缀）时记为 **prefix**；否则若是整串子串则记为 **contains**。  
+  * 例：query「nolan」对「christopher nolan」记为 **prefix**（命中 `nolan` token 的前缀），对「al pacino」既非前缀也非子串则不召回。
+* **排序**：第一维度 prefix **优于** contains；第二维度为 **`movie_ids.length`** **降序**（参演越多越靠前）。
+* **格式**：展示 **全名**（索引内 **`full`**）；可选追加 **`role_mask`** 角色标签（位定义见 Tech Spec §4.5）。
+* **高亮**：在 `full` 上用同一忽略大小写正则匹配 query，规则同 §4.3。
+* **点击行为**：写入 store —— `searchMode='person'`、`selectionIds=people[name].movie_ids`、`selectedMovieId=null`、`constellationEnabled` 走 Leva 默认（默认 `true`）。
 
 ### **4.5 联想：流派（`genre`）**
 
-* **过滤**：对数据集内**全部 genre**（**`searchIndex.genres`**，与 `meta.genre_palette` 键集合一致的稳定列表）做 **前缀**与 **包含**匹配。  
-* **排序**：第一维度前缀优于包含；第二维度条数少时可固定次序（如字母序或 palette 序），**不作为**硬编码产品约束。
+* **过滤**：对 **全部 genre**（与 `meta.genre_palette` 键集合一致）做忽略大小写**前缀**与**包含**匹配。
+* **排序**：第一维度 prefix **优于** contains；**第二维度按该 genre 在数据集中的 `count`（电影数）降序**（管线侧产出，见 Tech Spec §4.5）。
+* **格式**：展示 genre 字符串；高亮规则同 §4.3。
+* **点击行为**：`searchMode='genre'`、`selectionIds = movies 中含该 genre 的 id 列表`、`selectedMovieId=null`、连线不开启。
 
-### **4.6 ESC 焦点栈（全局，自上而下匹配一级即处理并 `preventDefault`）**
+### **4.6 ESC 焦点栈（全局 keydown，自上而下匹配第一级即处理并 `preventDefault`）**
 
-1. **搜索输入框聚焦**：清空当前 query / 收起联想（不强制失焦；具体「清空 vs 仅关闭面板」以实现与 Phase 12 `clearSearch` 一致）。
-2. **档案抽屉打开**：关闭抽屉（与既有 Sheet 行为一致）。
-3. **`selectedMovieId !== null`**：取消 focus（相机退回 / Perlin 收起），走既有选中取消链路。
-4. **`searchMode !== 'idle'`**（人名 / genre 等多选搜索会话）：退出搜索模式（清 `selectionIds`、selection mask 等，见状态机 spec）。
+按用户口径**保持四级独立**，每按一次 ESC 推进一格：
 
-未命中以上任一项时，**不**拦截 ESC。
+1. **搜索输入框获焦**：仅 **`blur()`** 搜索框 — **不**清空 query、**不**关闭联想下拉、**不**改变 select 会话。
+2. **档案抽屉打开**（drawer / Sheet 开启状态）：关闭抽屉。
+3. **`selectedMovieId !== null`**（focus 态）：取消 focus（相机退回 / Perlin 收起）。**若同时存在 select 会话，select 会话保留**（见 §4.7）。
+4. **`searchMode !== 'idle'`**（select 会话存在）：退出搜索 select 模式（清 `selectionIds` / `searchMode='idle'` / 清连线 / mask 归零）。
+
+未命中以上任一级时，**不**拦截 ESC。键盘 `↑↓Enter` 在搜索输入框聚焦且联想展开时仍优先消费（不与 ESC 冲突）。
+
+### **4.7 search × focus 嵌套**
+
+* **场景**：用户搜某人 → 进入 person select（多 active + 连线）→ 点击其中一颗影片进入 focus（相机推进 + Perlin + 抽屉）。
+* **嵌套规则**：focus 与 select **可并存**；优先级 **`focus > select > active / idle / hover`**（见状态机 spec §3.6）。
+* **ESC 出栈**：按 §4.6 顺序，先取消 focus（保留 select 上下文：searchMode / selectionIds / 星座连线），再取消 select。
+* **focus 中点击其它 active**：保留 select 会话；focus 切换到新影片（与既有 Phase 11.6 拾取分流一致）。
+
+### **4.8 无搜索索引退化**
+
+* `meta.has_search_index !== true` 时：搜索框 **disabled**；即便用户尝试切换 `person` / `genre` 分段也禁用提示。
+* 即使无 `title_normalized`，电影名搜索仍可通过运行时对 `title` / `original_title` 做忽略大小写子串实现，**作为最简退化**；但此时不保证多语言 fold（如重音去敏）。

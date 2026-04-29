@@ -22,7 +22,7 @@ todos:
     status: completed
   - id: p126-people-genre-active
     content: P12.6 人名/genre 搜索 → 多 active + viswindow 解耦：联想点击写 selectionIds + searchMode；scene.ts RAF 同步 mask；genre selectionIds 直接读 searchIndex.genres[name].movie_ids（无前端反扫）
-    status: pending
+    status: completed
   - id: p127-constellation-lines
     content: P12.7 人名连线（LineSegments 星座图）：constellation.ts setFromIds 按 release_date 升序连点；scene.ts 挂载 + searchMode==='person' 同步
     status: pending

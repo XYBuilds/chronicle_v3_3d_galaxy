@@ -80,22 +80,24 @@ Output
 \]
 
 * **挂载时**与 **RAF `tick`** 中 `selectionPhase === 'idle'` 的每一帧重置一次，使相机与 store 单向对齐。  
-* **非 idle（选中飞入 / 特写）**：不再用 `zCurrent - zCamDistance` 覆盖 `camera.position.z`，避免打断飞入动画；Timeline bridge 改为 **`camera.position.z + zCamDistance`** 推导「等效时间轴读数」。
+* **Timeline 等效读数（Phase 13 起）**：HUD / `galaxyCameraZBridge` 使用**单一路径** **`bridgeZ = zCurrent`**（**不再**按 `selectionPhase === 'idle'` 分支为 `camera.position.z + zCamDistance`）。**理由**：进入 focus 时 **`zCurrent`** 与焦点片 **`movie.z`** 对齐（瞬时或经 **`transitionDriver`** 渐变，见 Phase 13 P13.4）；退出 focus 后 **`zCurrent` 保留在 `movie.z`**，不回退到进入前宏观值。
 
 #### **1.4.2 相机初始位置**
 
 * **X, Y**：`meta.xy_range` 的中心点（`(x_min + x_max) / 2`、`(y_min + y_max) / 2`）。  
 * **Z**：由 §1.4.1 关系计算得 **`camera.position.z = zLo - zCamDistance`**（不再使用旧的"`z_range[0] - 2`"固定偏移）。  
-* **朝向**：始终看向 **+Z 方向**（向未来），`GALAXY_CAMERA_EULER = Euler(0, π, 0, 'YXZ')`，**运行期恒定不变**（与 Design Spec §2.1 一致）；**严禁**将目测 yaw / pitch 补偿（如 -15° / -7.5°）写入代码常量（Phase 5.1.4 硬约束）。
+* **朝向**：**宏观 idle** 下始终看向 **+Z 方向**（向未来），`GALAXY_CAMERA_EULER = Euler(0, π, 0, 'YXZ')`，**在 `selectionPhase === 'idle'` 时运行期恒定不变**（与 Design Spec §2.1 一致）；**严禁**将目测 yaw / pitch 补偿（如 -15° / -7.5°）写入代码常量（Phase 5.1.4 硬约束）。  
+* **Phase 13 红线例外**：**`GALAXY_CAMERA_EULER` 恒定**仅对上述 **idle** 相位成立。**单片 focus**（`selectedMovieId !== null` 且处于 **`selecting` / `selected` / `deselecting`** 的 focus 相机路径）使用**轨道相机**（`lookAt(pivot)` + store **`focusOrbit.{yaw,pitch}`**，半径恒 **`FOCUS_PERLIN_CAMERA_STANDOFF`**），详见《星球状态机 spec》§3.4.6。
 
 #### **1.4.3 滚轮与拖拽控制**
 
-* **滚轮双模式**（Phase 5.1.5）：  
+* **滚轮双模式**（Phase 5.1.5，经 Phase 13 修订）：  
   * **宏观 idle 态**：滚轮修改 **`zCurrent`**（受 `[zLo, zHi]` clamp），随即同帧写 `camera.position.z = next - zCamDistance`，减少一帧延迟感。  
-  * **非 idle（选中飞入 / 特写）**：滚轮直接调节 `camera.position.z`，保留 Phase 4.5 的特写推拉体验。  
+  * **非 idle、且非 Phase 13 focus 轨道路径**（如历史「飞入途中推拉」等）：滚轮可直接调节 `camera.position.z`（保留 Phase 4.5 特写推拉体验），**直至** focus 轨道相机语义落地后以实现为准。  
+  * **Phase 13 · focus 会话**（与单片 `selectedMovieId` 关联的 **`selecting` / `selected` / `deselecting`**）：滚轮 **noop**——**不**修改 **`zCurrent`**、**不** dolly 改变 **`camera.position.z`**、**不**改变 **`FOCUS_PERLIN_CAMERA_STANDOFF`** 所定义的相机–pivot 距离（保证 Perlin 球屏幕尺寸严格映射 **`vote_count`**）。  
   * 控制函数暴露 **`getMacroZWheel?: () => boolean`** 钩子；缺省视为 true。  
 * **滚轮步长初值**：每刻度约 **0.5**（半年），在开发阶段按实际视觉效果调整。  
-* **拖拽**：仅执行 truck / pedestal（XY 平移），Rotation 恒定。
+* **拖拽**：**宏观 idle** 下仅 **truck / pedestal**（XY 平移），Rotation 恒定。**Phase 13 · focus 轨道段**：指针拖拽用于 **orbit**（更新 store **`focusOrbit.yaw` / `focusOrbit.pitch`**，绕 pivot），**不**沿用 idle 的 truck/pedestal 语义（见状态机 spec §3.4.6）。
 
 #### **1.4.4 Clamp（相机运动约束）**
 
@@ -137,7 +139,7 @@ Output
 | 环节 | 规则 |
 | :---- | :---- |
 | **主拾取对象** | `galaxyActive`（`InstancedMesh`）；**idle 不作为**可点目标 |
-| **Slab / inFocus 门控** | **默认**（`searchMode === 'idle'`，`uSelectionMode === 0`）：与 §1.1 一致；采纳拾取时须 **`inFocus > 0.5`**（与《星球状态机 spec》及《视觉参数总表》一致），等同「只与条带内 active 可交互区」。**Phase 12**（`searchMode` 为 **`person`** 或 **`genre`**）：GPU 上 `uSelectionMode === 1` 时 idle/active 顶点着色器 **`inFocus` 改由 `uSelectionMask` 纹理采样**（与 Z 条带解耦）；CPU 侧 `screenRadius.ts` / `interaction.ts` 用 **`selectionMaskPickSet`**（`selectionIds` 集合）使**仅 mask 内影片**按全 **`inFocus = 1`** 计算 active 世界球半径并参与射线求交，其余实例跳过；采纳命中仍须 **`inFocus > 0.5`**（对 mask 内实例恒成立）。**电影名搜索**（`searchMode === 'movie'` 或未进入多选）不改变上述默认 slab 拾取。 |
+| **Slab / inFocus 门控** | **默认**（`searchMode === 'idle'`，`uSelectionMode === 0`）：与 §1.1 一致；采纳拾取时须 **`inFocus > 0.5`**（与《星球状态机 spec》及《视觉参数总表》一致），等同「只与条带内 active 可交互区」。**Phase 12**（`searchMode` 为 **`person`** 或 **`genre`**）：GPU 上 `uSelectionMode === 1` 时 idle/active 顶点着色器 **`inFocus` 改由 `uSelectionMask` 纹理采样**（与 Z 条带解耦）；CPU 侧 `screenRadius.ts` / `interaction.ts` 用 **`selectionMaskPickSet`**（`selectionIds` 集合）使**仅 mask 内影片**按全 **`inFocus = 1`** 计算 active 世界球半径并参与射线求交，其余实例跳过；采纳命中仍须 **`inFocus > 0.5`**（对 mask 内实例恒成立）。**电影名搜索**（`searchMode === 'movie'` 或未进入多选）不改变上述默认 slab 拾取。**Phase 13**：当 **`selectedMovieId !== null`** 且 **`uSelectionMode === 2`**（focus 邻域球）时，**`getSelectionMaskPickSet`** 返回 **focus 邻域 id 集合**（与 search mask **互斥**：focus 态优先邻域 mask；退出 focus 后若仍处于 select，则恢复 §1.5 上行 `mode=1` 行为），GPU 与 CPU 同构。 |
 | **hover 环** | **HTML overlay**（`HoverRing`），**无 CSS transition**，与 Tooltip 同节奏显隐 |
 | **历史：Points** | 旧版对 `Points.threshold` 的估算与 A/B 层过滤见归档讨论；`interaction.ts` 中 `computePointScreenRadiusCss` 等**仅**供基准/遗留对照 |
 

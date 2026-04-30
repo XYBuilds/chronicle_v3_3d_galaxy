@@ -65,11 +65,11 @@ inFocus = smoothstep(zLo - W, zLo, aZ) × (1 - smoothstep(zHi, zHi + W, aZ))
 
 | 维度 | 约定 |
 |------|------|
-| **z 范围** | 相机与目标 world 位置对齐；宏观条带仍由 store 驱动 |
+| **z 范围** | 相机与目标 world 位置对齐；**Phase 13 起**：focus 会话中 **active** 可视/可拾取子集由 **`uSelectionMode = 2`** 球形邻域 mask 决定（见 **§3.4.5**），**不再**由 viswindow 条带单独承担「邻域探索」语义；时间轴读数与 **`zCurrent`** 对齐见 Tech Spec §1.4.1 |
 | **大小** | 双 mesh 上该 instance **零尺度**；Perlin 球 **detail = 8**（P11.3；取代早期文档中的 detail 6） |
 | **色彩** | Perlin **K 档**（≤8）噪声阈值分区 + **OKLab（L/C/hue）**；**Phase 11.4**：**`uPerlinL`** 与 **`vote_average`** 经 **P10.1** 与宏观一致；**主 genre** 优先 **`movie.genre_hue`**；**vote_count** 在 focus 态仍通过 **worldRadius** 影响球尺度；**小 vote 片 focus 后视觉偏小为 intended**（产品接受） |
-| **可交互性** | 抽屉/详情；ESC 或 UI 取消选中 |
-| **进入/退出** | 相机动画时长沿用现 `SELECT_MS` / `DESELECT_MS`（数值以《视觉参数总表》为准）；P8.4 起 `flyToFocus` 使用**物理距离常数** `FOCUS_CAM_DIST` |
+| **可交互性** | 抽屉/详情；**邻域内 active** 可点击**切换 focus**（仍经 Phase 11.6 拾取分流与 Perlin 球优先级）；**退出 focus** 仅 **ESC**、档案抽屉关闭、搜索栏清除（**X**）——**不**再支持「点击画布空白」退出（与 Design Spec §4.6 一致） |
+| **进入/退出** | 相机动画时长沿用现 `SELECT_MS` / `DESELECT_MS`（数值以《视觉参数总表》为准）；P8.4 起 `flyToFocus` 使用**物理距离常数** `FOCUS_CAM_DIST`；**Phase 13 起**进出 focus 的相机位姿与 **`uFocusCameraBlend`** 等通道由统一 **`transitionDriver`**（`focusDriver.progress`）驱动；**selected** 段为**轨道相机**（§3.4.6） |
 
 #### 3.4.1 focus 视觉降级（Phase 11.2 · **idle 层**）
 
@@ -106,6 +106,21 @@ inFocus = smoothstep(zLo - W, zLo, aZ) × (1 - smoothstep(zHi, zHi + W, aZ))
 
 **规格占位**（与 Phase 11 计划稿对齐，供未来如需启用时对照）：当 `uFocusedInstanceId >= 0` 且实例非焦点时，若实例 world 位置与相机距离 `< uFocusOcclusionRadius`（计划默认约 2.5 world），则 `sIdle/sActive → 0` 并走 NDC 外出口。**当前代码路径无此逻辑。**
 
+#### 3.4.5 focus 态周边邻域 active（Phase 13 · **mask 语义**）
+
+- **`uSelectionMode = 2`**（focus 邻域）：GPU 顶点路径上 **`inFocus` 与 `uSelectionMode = 1` 一致**——即按 **`uSelectionMask`** 纹理采样结果**覆盖**条带公式算出的 `inFocus`；**区别仅在 CPU 写 mask 的数据源**（本模式为**球形邻域 id 集合**，而非人名/genre 搜索的 `selectionIds`）。
+- **邻域定义**：以**焦点影片**的 world 位置为球心、store **`focusNeighborRadius`**（世界单位）为半径 **R**，凡满足欧氏距离 **≤ R** 的影片 id 写入 mask（**含**焦点 id 与否以实现为准，拾取仍以 Perlin 球优先，见 §3.5.2）。
+- **默认值**：`focusNeighborRadius` 初值 **5** world units（Leva 扫参后可收口；见《视觉参数总表》）。
+- **退出 focus**：清空邻域 mask；**`uSelectionMode` 回到 `0`**（idle）或 **`1`**（若仍处于 person/genre **select** 会话且须在下一帧恢复 search mask，见下条 **D1**）。
+
+#### 3.4.6 focus 态轨道相机（Phase 13 · **相机契约破例**）
+
+- **`selectionPhase === 'selected'`** 且存在单片 focus 时：**`GALAXY_CAMERA_EULER` 恒定约束破例失效**；相机**位置** = **`pivot + offset(yaw, pitch)`**，其中 **pivot** 为焦点 world 位置，**offset** 由 store **`focusOrbit.{ yaw, pitch }`** 推导，**半径恒为 `FOCUS_PERLIN_CAMERA_STANDOFF`**（与 `camera.ts` 定稿一致；**不可**用滚轮改变该距离）。
+- **朝向**：恒 **`lookAt(pivot)`**。
+- **`selecting` / `deselecting`**：与抽屉/非目标 alpha 等一致，经 **`transitionDriver`** 同时对**世界坐标位置**（`lerpVectors`）与**四元数**（`slerp`）插值，自宏观机位过渡到轨道机位或反向。
+- **`selectionPhase === 'idle'`**（无 focus）：恢复 **`GALAXY_CAMERA_EULER`**；**`focusOrbit.yaw` / `focusOrbit.pitch` 重置为 `0`**（**不含**径向 **`r`** 字段）。
+- **滚轮**：整条 focus 相关相位（与单片 `selectedMovieId` 关联的 **`selecting` / `selected` / `deselecting`**）内滚轮 **noop**（不推进 `zCurrent`、不 dolly `camera.position.z`、不改变 standoff），以保证 Perlin 球屏幕尺寸严格映射 **`vote_count`**（见 Tech Spec §1.4.3）。
+
 ### 3.5 Perlin 球 · 阶梯地形（Phase 11.3 起）
 
 Perlin focus 球在片元侧按 **`vNoise`** 与 **`uThresh[0..K−2]`**（**K** = 本片展示 genre 数，≤8）形成 **K 档** `bandIdx`；顶点上将噪声区间改为 **至多 `uCutCount = max(0,K−1)` 段 `smoothstep`** 累加得到标量 **`level`**，再沿 **几何法线** 位移 **`level × uStepHeight`**（模型空间位移量；与 `mesh.scale.setScalar(worldRadius)` 相乘后为 world 高度）。各级阈值过渡带宽由 **`uStepSmoothness`** 控制（为 0 时可对照硬切）。
@@ -136,12 +151,12 @@ Perlin focus 球在片元侧按 **`vNoise`** 与 **`uThresh[0..K−2]`**（**K**
 
 **与 focus 的优先级**：**`focus > select > active / idle / hover`**。
 
-- **focus 嵌套**：用户在 select 会话中点击 active 影片可同时进入 focus；focus 实例走 Perlin / 双 mesh 隐藏（`uFocusedInstanceId`），**mask 仅作用于非焦点实例**（与 §3.4.2 `uFocusDimMode` 联动）。**ESC 取消 focus 时保留 select 上下文**（`searchMode` / `selectionIds` / 连线不清）；再次 ESC 才退出 select（与 Design Spec §4.6 焦点栈一致）。
+- **focus 嵌套**：用户在 select 会话中点击 active 影片可同时进入 focus；focus 实例走 Perlin / 双 mesh 隐藏（`uFocusedInstanceId`），**mask 仅作用于非焦点实例**（与 §3.4.2 `uFocusDimMode` 联动）。**Phase 13（D1）**：当 **focus 与 person/genre select 并存**时，**focus 邻域 mask（`uSelectionMode = 2`）替换** search mask（`mode = 1`）对非焦点的可视/拾取语义；**退出 focus** 后若 **`selectedMovieId === null`** 且 **`searchMode ∈ { 'person','genre' }`**，在随后 RAF **自动恢复** `uSelectionMode = 1` 与 search mask。**ESC 取消 focus 时保留 select 上下文**（`searchMode` / `selectionIds` / 连线不清）；再次 ESC 才退出 select（与 Design Spec §4.6 焦点栈一致）。
 - **搜电影名并点选**：直接走 `selectedMovieId` → focus，**不**进入 §3.6 select。
 
 **selectionMask 数据流**：
 
-- **GPU**：`uSelectionMask` = `DataTexture(RedFormat, UnsignedByte)`，宽 `movieCount`、高 1，每实例 **0/1**；`uSelectionMode` ∈ `{0,1}`：`0` = 关闭（与 Phase 8–11 行为一致，inFocus 由条带驱动），`1` = mask 覆盖 inFocus（仅非焦点实例）。
+- **GPU**：`uSelectionMask` = `DataTexture(RedFormat, UnsignedByte)`，宽 `movieCount`、高 1，每实例 **0/1**；`uSelectionMode` ∈ **`{0,1,2}`**：`0` = 关闭（与 Phase 8–11 行为一致，inFocus 由条带驱动），`1` = **search** mask 覆盖 inFocus（仅非焦点实例），`2` = **focus 邻域球** mask 覆盖 inFocus（§3.4.5；CPU 来源为 pivot+R 内 id 列表）。
 - **CPU**：`selectionIds → idToIndex → DataTexture` 写入并 `needsUpdate=true`；清空 → mode=0 + 全零。
 
 **人名连线**：`searchMode === 'person'` 且 `constellationEnabled` 时，`LineSegments` 按 **`release_date` 升序**连接 mask 内影片；`constellationEnabled` 默认 `true`，**产品 UI 不暴露**；调试通过 **`window.__galaxy.constellationEnabled`**（见《视觉参数总表》§4a）。`searchMode === 'genre'` 不画连线。
@@ -181,3 +196,4 @@ Perlin focus 球在片元侧按 **`vNoise`** 与 **`uThresh[0..K−2]`**（**K**
 | 2026-04-29 | Phase 12 P12.0 收口：§3.6 明确 select 会话下 **active 集合完全由 `selectionIds` 决定、与 viswindow 完全解耦**；focus 嵌套 ESC 仅取消 focus 而保留 select；连线开关仅 **`window.__galaxy`**（产品 HUD 无入口） |
 | 2026-04-29 | Phase 12 P12.9：§3.6 连线开关表述与实现对齐（`window.__galaxy.constellationEnabled`）；性能归档指针见《Phase 8 基线》**`## P12 入口/出口`** |
 | 2026-04-29 | Phase 12 P12.8：**§3.6.1** ESC 焦点栈实现表（`App.tsx` capture、`data-galaxy-search-input`、INFO Modal 排除） |
+| 2026-04-30 | **Phase 13 P13.0**：§3.4 表修订（邻域球、轨道相机、退出路径）；新增 **§3.4.5** 邻域 mask、**§3.4.6** 轨道相机；§3.6 **`uSelectionMode = 2`** 与 **focus×select（D1）** mask 替换语义 |

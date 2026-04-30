@@ -2,7 +2,7 @@
 
 > **文档性质**：本文件位于 **`docs/benchmarks/`**，是 **性能测量口径、Story 准入门槛与里程碑入口/出口表的归档**（基线簿），**不是**功能或渲染行为的 SSOT；交互与实现以 [`星球状态机 spec.md`](../project_docs/星球状态机%20spec.md)、《Tech Spec》《Design Spec》及源码为准。
 >
-> **里程碑扩展**：随 Phase 10 / 11 / 12 等可在文末追加 `## P10.x`、`## P11.x`、`## P12.x` 等 **入口/出口** 节（与 §P8.0.1 **同录制口径**），并与对应 Cursor 计划交叉引用。**Phase 12** 出口见下文 **`## P12 入口/出口`**（[`.cursor/plans/phase_12_search_and_select_6c9bfa94.plan.md`](../../.cursor/plans/phase_12_search_and_select_6c9bfa94.plan.md) · P12.9）。
+> **里程碑扩展**：随 Phase 10 / 11 / 12 / **13** 等可在文末追加 `## P10.x`、`## P11.x`、`## P12.x`、**`## P13.0 入口`** 等 **入口/出口** 节（与 §P8.0.1 **同录制口径**），并与对应 Cursor 计划交叉引用。**Phase 12** 出口见下文 **`## P12 入口/出口`**（[`.cursor/plans/phase_12_search_and_select_6c9bfa94.plan.md`](../../.cursor/plans/phase_12_search_and_select_6c9bfa94.plan.md) · P12.9）。**Phase 13** 入口见 **`## P13.0 入口`**（[`.cursor/plans/phase_13_focus_experience_ab016b85.plan.md`](../../.cursor/plans/phase_13_focus_experience_ab016b85.plan.md) · P13.0）。
 
 > 从 `视觉参数总表.md` 拆出单独跟踪（**2026-04-27**）。Phase 7 宏观参数清单仍见 **`视觉参数总表.md`**（Git 跟踪；**不再**列入 `.cursorignore`）。总表文首注明：开发者速查用，**非** Agent SSOT。
 
@@ -53,7 +53,7 @@
 ## P8.0.4 状态机 SSOT
 
 - 四态（idle / active / hover / focus）+ **Phase 12 起正式态 `select`**（人名/genre 搜索多 active、`selectionMask`、`searchMode`、ESC 焦点栈等）：见 [`星球状态机 spec.md`](../project_docs/星球状态机%20spec.md) §3.6（`W = uZVisWindow×0.2`、`vote_count` focus 权重与「小片偏小」意图、draw 顺序、WebGL2、**focus×select 嵌套**）。
-- **Phase 8 文档回写（2026-04-27）**：《视觉参数总表》持续与源码对齐；《Tech Spec》/《Design Spec》/《数据特征工程与 3D 映射总表》已更新 P8.1–P8.4 双 mesh 与 `genre_hue`。**Phase 12（2026-04-29）**：搜索 UX、数据契约（`has_search_index`、`galaxy_search_index.json.gz`）、拾取与 mask 覆盖规则已写入上述 SSOT + 本节 **`## P12 入口/出口`**。
+- **Phase 8 文档回写（2026-04-27）**：《视觉参数总表》持续与源码对齐；《Tech Spec》/《Design Spec》/《数据特征工程与 3D 映射总表》已更新 P8.1–P8.4 双 mesh 与 `genre_hue`。**Phase 12（2026-04-29）**：搜索 UX、数据契约（`has_search_index`、`galaxy_search_index.json.gz`）、拾取与 mask 覆盖规则已写入上述 SSOT + 本节 **`## P12 入口/出口`**。**Phase 13 P13.0（2026-04-30）**：focus 邻域球 **`uSelectionMode=2`**、轨道相机、`bridgeZ=zCurrent` / Timeline snap、`transitionDriver` 等契约已写入 SSOT；性能入口见 **`## P13.0 入口`**。
 
 ---
 
@@ -143,3 +143,26 @@
 | **search · genre（大集合 active）** | 顶部搜索切 **genre**；选 **count 最大**的一档（如 Drama / Documentary 等，数千 `movie_ids`）；录制约 **5 s** 稳态（**无**星座连线） | *待补录* | *待补录* | *待补录* | *待补录* | 验收意图：**数千 active** 仍无灾难性掉帧；同上 **≥ ~95%** 相对 idle 为参考门槛 |
 
 **录制步骤**：与 §P8.0.1「录制步骤（摘要）」相同；补充：人名/genre 片段须在联想 **点击确认** 后、画面已切换到多 active 再 **Record**。
+
+---
+
+## P13.0 入口（Phase 13 focus 邻域 + 轨道相机 · 实施前基线）
+
+> **目的**：在 P13.1（`transitionDriver`）、P13.2（邻域球 mask）、P13.3（轨道相机）、P13.4（Timeline snap）、P13.5（size/L 图例）等代码并入前，锁定一条与 **§P8.0.1** **同口径**的入口表；**focus** 片段为 Phase 13 **主战场**（飞入 + Perlin + **后续**邻域 mask CPU、轨道相机、HUD 图例等增量负载），idle / timeline 拖动两行用于回归对照。  
+> **关联计划**：[`.cursor/plans/phase_13_focus_experience_ab016b85.plan.md`](../../.cursor/plans/phase_13_focus_experience_ab016b85.plan.md)（P13.0 spec 锁定）。  
+> **Git 分支（登记时）**：`phase13/p13-0-spec`（由 `main` 分出，**仅**文档 / 计划 diff，**无** Phase 13 实现代码）。
+
+**2026-04-30（本仓库 P13.0 文档冻结）**
+
+1. **构建**：在 P13.1+ 实现合并前，于 `frontend` 执行 `npm run build` + `vite preview`（4173），与 §P8.0.1 环境一致即可。  
+2. **入口数值**：下列三行与 §P8.0.1（2026-04-27）表**逐项一致**，表示「Phase 13 实现尚未合入」时的对照基线。Phase 13 收尾后若写 **`## P13.7 出口`**（或计划约定的出口节），应重录三线并与本表比（门槛建议与 §P11.7 一致：**focus 行 fps 不低于入口约 95%**）。
+
+**环境（与 §P8.0.1 对齐）**：Windows；**`npm run build` + `vite preview`（4173）**；`devicePixelRatio` 以录制机为准。Chrome 精确版本 / GPU 型号仍见 §P8.0.1 环境行（待补）。
+
+| 片段 | 操作说明 | GPU time（ms / frame，中位数） | JS Main（ms / frame） | Long tasks（>50 ms，次数） | fps 中位数 | 备注 |
+|------|----------|--------------------------------|----------------------|-----------------------------|------------|------|
+| **idle** | 主应用加载默认数据；`zCurrent` 远离热点年份，无 hover；**整段录制约 7.1 s** | N/A（trace 未汇总 GPU ms） | **~0.6**（236 ms Scripting ÷ ~427 帧 @60fps） | **1**（开头 **Evaluate Script** Long Task） | **~60**（Frames 几乎全绿） | 含**冷启动首屏**；若只要稳态 idle 应「画面稳定后再 Record 5 s」另录一条对照 |
+| **timeline 拖动** | 拖动时间轴扫过可用跨度；Performance **选区 2.05–7.02 s**（Total **4 969 ms**） | N/A；选区内 **GPU 轨道持续高占用**（定性） | **~4.1**（1 224 ms Scripting ÷ ~298 帧） | **0**（以 Main 无 Long Task 为准） | **~60** | **INP 10 ms**（Insights）；纯交互段子选区，口径优于「整段 10 s 含拖前/拖后」 |
+| **focus** | 高 `vote_count` 片：飞入 + Perlin 出现至稳定；选区 **3.02–8.00 s**（Total **4 980 ms**） | N/A；GPU 全程有活（定性） | **~1.1**（324 ms Scripting ÷ ~299 帧） | **0** | **~60** | **P13 主战场**：选区含 **飞入（约 4.8–5.5 s 球体亮起）+ 稳态 focus**；**INP 19 ms**，**CLS 0**；稳态-only 可再框 **5.6–8.0 s** 子选区；**P13 代码落地后**须在此片段覆盖 **邻域 active + 轨道拖拽** 的稳态 |
+
+**录制步骤**：与 §P8.0.1「录制步骤（摘要）」相同。

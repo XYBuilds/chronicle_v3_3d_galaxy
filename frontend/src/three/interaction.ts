@@ -86,13 +86,27 @@ export function attachGalaxyActiveMeshInteraction(options: {
   selectionPlanet?: SelectionPlanetHandle
 }): () => void {
   const { camera, domElement, activeMesh, movies, activeMaterial, selectionPlanet } = options
-  let selectionMaskPickSet = getSelectionMaskPickSet(
-    useGalaxyInteractionStore.getState().searchMode,
-    useGalaxyInteractionStore.getState().selectionIds,
-  )
+  const maskPickFromState = () => {
+    const s = useGalaxyInteractionStore.getState()
+    return getSelectionMaskPickSet(s.selectedMovieId, s.focusNeighborIds, s.searchMode, s.selectionIds)
+  }
+  let selectionMaskPickSet = maskPickFromState()
   const unsubMaskPick = useGalaxyInteractionStore.subscribe((state, prev) => {
-    if (state.searchMode === prev.searchMode && state.selectionIds === prev.selectionIds) return
-    selectionMaskPickSet = getSelectionMaskPickSet(state.searchMode, state.selectionIds)
+    if (
+      state.searchMode === prev.searchMode &&
+      state.selectionIds === prev.selectionIds &&
+      state.selectedMovieId === prev.selectedMovieId &&
+      state.focusNeighborIds === prev.focusNeighborIds &&
+      state.focusNeighborRadius === prev.focusNeighborRadius
+    ) {
+      return
+    }
+    selectionMaskPickSet = getSelectionMaskPickSet(
+      state.selectedMovieId,
+      state.focusNeighborIds,
+      state.searchMode,
+      state.selectionIds,
+    )
   })
   const sizeAttr = activeMesh.geometry.getAttribute('aSize') as THREE.InstancedBufferAttribute | undefined
   console.assert(!!sizeAttr, '[Interaction] active mesh must have aSize InstancedBufferAttribute')
@@ -299,6 +313,7 @@ export function attachGalaxyActiveMeshInteraction(options: {
     useGalaxyInteractionStore.setState({
       hoveredMovieId: null,
       selectedMovieId: null,
+      focusNeighborIds: null,
       hoverAnchorCss: null,
       hoverPlanetRadiusCss: null,
     })

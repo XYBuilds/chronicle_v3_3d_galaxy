@@ -4,13 +4,18 @@ import type { SearchMode } from '@/store/galaxyInteractionStore'
 import type { Movie } from '@/types/galaxy'
 
 /**
- * P12.6+ — CPU pick/hover must match shader `inFocus`: in person/genre search, mask-hit ids are
- * fully active regardless of Z slab; others are not pickable on the active shell.
+ * P12.6+ / P13.2 — CPU pick/hover must match shader `inFocus`.
+ * Focus (`selectedMovieId`) wins over person/genre search mask (D1).
  */
 export function getSelectionMaskPickSet(
+  selectedMovieId: number | null,
+  focusNeighborIds: number[] | null,
   searchMode: SearchMode,
   selectionIds: number[] | null,
 ): Set<number> | null {
+  if (selectedMovieId !== null && focusNeighborIds && focusNeighborIds.length > 0) {
+    return new Set(focusNeighborIds)
+  }
   if (searchMode !== 'person' && searchMode !== 'genre') return null
   if (!selectionIds?.length) return null
   return new Set(selectionIds)

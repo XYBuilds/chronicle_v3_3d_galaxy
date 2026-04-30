@@ -7,7 +7,7 @@ todos:
     status: completed
   - id: p131-transition-driver
     content: P13.1 过渡曲线驱动器抽象（基础设施）：transitionDriver.ts；scene.ts applySelectionFrame 重构为通用 progress 通道；现有 focus 进出 1:1 行为保持（无视觉变化）
-    status: pending
+    status: completed
   - id: p132-focus-neighbor-mask
     content: P13.2 焦点邻域球 active mask：uSelectionMode=2 通道；CPU O(n) 计算半径 R 内 ids → 写入 selectionMask；focus×select 嵌套规则（D1 决策为替换）；拾取/连线对 selectionMaskPickSet 同步识别新 mode
     status: pending

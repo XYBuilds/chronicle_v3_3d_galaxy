@@ -15,6 +15,7 @@ import { attachGalaxyActiveMeshInteraction } from './interaction'
 import { createSelectionPlanet, type SelectionPlanetHandle } from './planet'
 import { computeActiveWorldRadius, getSelectionMaskPickSet, resolveSelectionWorldRadius } from './screenRadius'
 import { buildMovieIdToIndexMap, setSelectionMask, type SelectionMaskUniformBag } from './selectionMask'
+import { createTransitionDriver } from './transitionDriver'
 
 interface BloomDebugControls {
   strength: number
@@ -128,11 +129,6 @@ function xyCenter(meta: Pick<Meta, 'xy_range'>): { cx: number; cy: number } {
  */
 const SELECT_MS = 700
 const DESELECT_MS = 450
-
-function easeOutCubic(t: number): number {
-  const x = THREE.MathUtils.clamp(t, 0, 1)
-  return 1 - Math.pow(1 - x, 3)
-}
 
 export function mountGalaxyScene(
   container: HTMLElement,
@@ -277,7 +273,7 @@ export function mountGalaxyScene(
   type SelectionPhase = 'idle' | 'selecting' | 'selected' | 'deselecting'
   let selectionPhase: SelectionPhase = 'idle'
   const macroZWheel = () => selectionPhase === 'idle'
-  let animStartMs = 0
+  const focusDriver = createTransitionDriver()
   const restCam = new THREE.Vector3()
   const fromCam = new THREE.Vector3()
   const toCam = new THREE.Vector3()
@@ -299,13 +295,13 @@ export function mountGalaxyScene(
     if (selectionPhase === 'selecting') {
       inputLocked = true
       uFocused.value = -1
-      const t = Math.min(1, (nowMs - animStartMs) / SELECT_MS)
-      const camEased = easeOutCubic(t)
-      camera.position.lerpVectors(fromCam, toCam, camEased)
+      focusDriver.tick(nowMs)
+      const p = focusDriver.progress
+      camera.position.lerpVectors(fromCam, toCam, p)
       camera.rotation.copy(GALAXY_CAMERA_EULER)
       uFocusTargetInstanceId.value = pendingSelectInstanceIndex
-      uFocusCameraBlend.value = camEased
-      if (t >= 1) {
+      uFocusCameraBlend.value = p
+      if (!focusDriver.active) {
         selectionPhase = 'selected'
         uFocused.value = pendingSelectInstanceIndex
         uFocusCameraBlend.value = 1
@@ -320,13 +316,14 @@ export function mountGalaxyScene(
     if (selectionPhase === 'deselecting') {
       inputLocked = true
       uFocused.value = -1
-      const t = Math.min(1, (nowMs - animStartMs) / DESELECT_MS)
-      const camEased = easeOutCubic(t)
-      camera.position.lerpVectors(fromCam, toCam, camEased)
+      focusDriver.tick(nowMs)
+      const p = focusDriver.progress
+      const camWeight = 1 - p
+      camera.position.lerpVectors(fromCam, toCam, camWeight)
       camera.rotation.copy(GALAXY_CAMERA_EULER)
       uFocusTargetInstanceId.value = pendingSelectInstanceIndex
-      uFocusCameraBlend.value = 1 - camEased
-      if (t >= 1) {
+      uFocusCameraBlend.value = p
+      if (!focusDriver.active) {
         selectionPhase = 'idle'
         uFocusTargetInstanceId.value = -1
         uFocusCameraBlend.value = 0
@@ -382,7 +379,7 @@ export function mountGalaxyScene(
     })
     uFocused.value = -1
     fromCam.copy(camera.position)
-    animStartMs = performance.now()
+    focusDriver.start(SELECT_MS)
     selectionPhase = 'selecting'
     const camDz = movie.z - toCam.z
     console.log(
@@ -394,7 +391,8 @@ export function mountGalaxyScene(
     uFocused.value = -1
     fromCam.copy(camera.position)
     toCam.copy(restCam)
-    animStartMs = performance.now()
+    focusDriver.setImmediate(1)
+    focusDriver.reverse(DESELECT_MS)
     selectionPhase = 'deselecting'
     console.log(`[Selection] phase=deselecting | duration=${DESELECT_MS}ms`)
   }

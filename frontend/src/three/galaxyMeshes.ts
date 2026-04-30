@@ -109,8 +109,8 @@ function makeSharedUniforms(
     uFocusCameraBlend: { value: 0 },
     /** P11.1 — instance id of the movie being focused (-1 = no focus transition). */
     uFocusTargetInstanceId: { value: -1 },
-    /** P11.1 — alpha for non-target active instances when blend=1 (default 0.1). */
-    uFocusNonTargetActiveAlpha: { value: 0.1 },
+    /** P11.1 / P13.6 — non-target active alpha at focus blend=1 (tuned down from 0.1 for dense neighbor sphere). */
+    uFocusNonTargetActiveAlpha: { value: 0.08 },
     /** P11.2 — idle focus dim: chroma × this when dim (OKLab a,b scale with C). */
     uFocusDimChroma: { value: 0.7 },
     /** P11.2 — idle focus dim: multiply OKLab L by this (with chroma mult below). */

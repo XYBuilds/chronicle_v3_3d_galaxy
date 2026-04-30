@@ -60,7 +60,7 @@ interface GalaxyColorDebug {
   /** P10.2 — `0` off (P8.4 idle alpha), `1` on (color × falloff + high idle alpha vs bloom halo). */
   distanceFalloffMode: number
   chroma: number
-  /** P11.1 — alpha of non-target active stars when focus blend = 1 (default 0.1). */
+  /** P11.1 / P13.6 — alpha of non-target active stars when focus blend = 1 (default 0.08). */
   focusNonTargetActiveAlpha: number
   /** P11.2 — idle focus dim: chroma multiplier toward gray. */
   focusDimChroma: number

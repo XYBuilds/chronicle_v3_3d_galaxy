@@ -22,7 +22,7 @@ todos:
     status: completed
   - id: p136-cleanup
     content: P13.6 收尾：搜索 X 同步清 selectedMovieId（与 ESC §4.6 第 3 级一致）；扫调 uFocusNonTargetActiveAlpha 默认值；hover ring 在 focus 邻域上的回归
-    status: pending
+    status: completed
   - id: p137-doc-sync
     content: P13.7 文档同步 + 出口 fps：Phase 8 基线加 P13 出口；状态机 spec / 视觉参数总表 / Tech Spec / Design Spec / PRD 收口；每个子 phase 实施报告
     status: pending

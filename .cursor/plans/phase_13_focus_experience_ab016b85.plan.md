@@ -19,7 +19,7 @@ todos:
     status: completed
   - id: p135-focus-legend
     content: P13.5 focus 态 size/L 参照组件：size 参照为 Perlin 球同圆心 5 档 vote_count 圆环（10/100/1k/10k/100k，按 movie id seed 固定随机角度，随 Perlin 球显隐）；L 参照仅用指针标出当前星球 L，不显示“Rating 0 → 10”标题
-    status: pending
+    status: completed
   - id: p136-cleanup
     content: P13.6 收尾：搜索 X 同步清 selectedMovieId（与 ESC §4.6 第 3 级一致）；扫调 uFocusNonTargetActiveAlpha 默认值；hover ring 在 focus 邻域上的回归
     status: pending

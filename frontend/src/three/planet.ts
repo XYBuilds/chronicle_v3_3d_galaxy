@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { createNoise3D, type NoiseFunction3D } from 'simplex-noise'
 
+import { lightnessFromVoteAverage } from '@/lib/colorMath'
 import type { Meta, Movie } from '@/types/galaxy'
 import { genreHueForGenreName, hueFromGenreColor } from '@/utils/genreHue'
 
@@ -154,18 +155,6 @@ export interface PlanetGalaxyColorSnap {
   uHighTierTRangeScale: number
   uLightnessRatingExponent: number
   uChroma: number
-}
-
-function computePerlinLFromVoteAverage(voteAverage: number, snap: PlanetGalaxyColorSnap): number {
-  const t = THREE.MathUtils.clamp(voteAverage / 10, 0, 1)
-  const { uLMin, uLMax, uHighRatingT, uHighTierTRangeScale, uLightnessRatingExponent } = snap
-  const tCompressed =
-    t < uHighRatingT ? t : uHighRatingT + (t - uHighRatingT) * uHighTierTRangeScale
-  const tPow = Math.pow(Math.max(0, tCompressed), uLightnessRatingExponent)
-  console.assert(Number.isFinite(tPow), '[Planet] Perlin L tPow finite', voteAverage, snap)
-  const L = THREE.MathUtils.lerp(uLMin, uLMax, tPow)
-  console.assert(Number.isFinite(L), '[Planet] Perlin L finite', L)
-  return L
 }
 
 export interface SelectionPlanetHandle {
@@ -375,7 +364,7 @@ export function createSelectionPlanet(): SelectionPlanetHandle {
       hueArr[i] = i < hues.length ? hues[i]! : padHue
     }
 
-    const perlinL = computePerlinLFromVoteAverage(movie.vote_average, galaxyColor)
+    const perlinL = lightnessFromVoteAverage(movie.vote_average, galaxyColor)
     u.uPerlinL.value = perlinL
     u.uPerlinChroma.value = galaxyColor.uChroma
 

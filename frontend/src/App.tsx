@@ -7,6 +7,7 @@ import { Loading } from '@/components/Loading'
 import { MovieTooltip } from '@/components/MovieTooltip'
 import { Timeline } from '@/components/Timeline'
 import { HoverRing } from '@/hud/HoverRing'
+import { FocusLReference } from '@/hud/FocusLReference'
 import { InfoButton } from '@/hud/InfoButton'
 import { clearSearch, useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
 import { useGalaxyDataStore } from '@/store/galaxyDataStore'
@@ -124,6 +125,7 @@ function App() {
       <HoverRing />
       <MovieTooltip />
       <InfoButton />
+      <FocusLReference />
       <Timeline />
       <MovieDetailDrawer />
     </main>

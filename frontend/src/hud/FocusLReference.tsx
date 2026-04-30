@@ -50,17 +50,19 @@ export function FocusLReference() {
 
   if (!movie || !snap || !style) return null
 
+  const ratingTitle = `Rating = ${movie.vote_average.toFixed(1)}`
+
   return (
     <div
       className={cn(
         'pointer-events-none fixed left-1/2 z-[35] w-[min(22rem,calc(100vw-2rem))] -translate-x-1/2 select-none',
-        'top-[min(58vh,calc(50%+6.5rem))] sm:top-[56vh]',
+        'top-[min(70vh,calc(50%+11rem))] sm:top-[68vh]',
       )}
       role="img"
-      aria-label={`Rating spectrum for ${movie.title}; pointer near ${movie.vote_average.toFixed(1)} of 10`}
+      aria-label={`${ratingTitle} on OKLab L spectrum for ${movie.title}; scale 0 to 10`}
     >
-      <div className="mb-1.5 text-center text-[0.72rem] font-semibold tracking-[0.12em] text-white/88">
-        Rating
+      <div className="mb-1.5 text-center text-[0.72rem] font-semibold tracking-wide text-white/88 tabular-nums">
+        {ratingTitle}
       </div>
       <div className="flex items-center gap-2">
         <span className="w-5 shrink-0 text-right font-mono text-[0.68rem] tabular-nums text-white/75">0</span>

@@ -1,6 +1,6 @@
 ---
 name: phase 14 hud polish
-overview: Phase 14 是 HUD/UI 抛光层，不动 3D 渲染管线与数据契约。核心：抽 string table 做全英语化（不引 i18n 框架）、抽 CloseButton primitive + UI edge design token（hover ring / timeline / close button 视觉统一）、加全屏切换按钮 + F 快捷键 + Cmd/Ctrl+K 聚焦搜索框、Drawer Writers/DOP 字段调序、Timeline 横置变体（保留纵置默认 + URL query 切换）。
+overview: Phase 14 是 HUD/UI 抛光层，不动 3D 渲染管线与数据契约。核心：抽 string table 做全英语化（不引 i18n 框架）、抽 CloseButton primitive + UI edge design token（hover ring / timeline / close button 视觉统一）、加全屏切换按钮 + F 快捷键 + Cmd/Ctrl+K 聚焦搜索框、Drawer Details 四组排序与显隐规则（两栏一行 / 每组换行）+ Storybook 全覆盖、Timeline 横置变体（保留纵置默认 + URL query 切换）。
 todos:
   - id: p140-spec
     content: P14.0 spec 升级（无代码）：Design Spec §3 / §3.1 / §3.x 加 string table SSOT、Timeline 双 orientation、CloseButton primitive、键盘快捷键节；视觉参数总表 §7 / §7a 加 UI edge token
@@ -21,7 +21,7 @@ todos:
     content: P14.5 Cmd/Ctrl+K 聚焦搜索框：App.tsx capture handler；data-galaxy-search-input focus；disabled 时 noop
     status: pending
   - id: p146-drawer-reorder
-    content: P14.6 Drawer 字段调序：Writers ↔ Director of Photography 位置交换
+    content: P14.6 Drawer Details 四组逻辑 + Storybook：组1 Runtime|Language（永显；无数据「/」；Runtime=0 视为有）；组2–4 见 §P14.6；Drawer.stories 覆盖各组合
     status: pending
   - id: p147-timeline-horizontal
     content: P14.7 Timeline 横置变体 + URL query：orientation prop（vertical 默认 / horizontal）；useTimelineOrientationFromQuery hook；Storybook 双 story
@@ -47,7 +47,8 @@ isProject: false
   - 新建 `frontend/src/hud/FullscreenButton.tsx`
   - [frontend/src/components/Loading.tsx](frontend/src/components/Loading.tsx)（英语化）
   - [frontend/src/App.tsx](frontend/src/App.tsx)（错误页英语化 + Cmd/Ctrl+K + F 全局 keydown 接入）
-  - [frontend/src/components/Drawer.tsx](frontend/src/components/Drawer.tsx)（英语化 + 字段调序 + 接 CloseButton）
+  - [frontend/src/components/Drawer.tsx](frontend/src/components/Drawer.tsx)（英语化 + Details 四组排序/显隐 + 接 CloseButton）
+  - [frontend/src/components/Drawer.stories.tsx](frontend/src/components/Drawer.stories.tsx)（P14.6：Details 规则矩阵 story）
   - [frontend/src/components/MovieTooltip.tsx](frontend/src/components/MovieTooltip.tsx)（英语化）
   - [frontend/src/components/SearchBar.tsx](frontend/src/components/SearchBar.tsx)（placeholder 英语化 + X 接 CloseButton）
   - [frontend/src/components/Timeline.tsx](frontend/src/components/Timeline.tsx)（接 `orientation` prop + URL query 钩子）
@@ -67,6 +68,7 @@ isProject: false
 | D2  | Timeline 横置交付形态 | **横置 + 纵置双变体共存**，URL `?timeline=horizontal\|vertical` 切换；默认沿用现有纵置                                                   | 后续 A/B 评估再决最终形态                                 |
 | D3  | 键盘快捷键集合        | **F = 全屏 + Cmd/Ctrl+K = 聚焦搜索框**（不上单 `/` 键避免与文本输入冲突）                                                                | ESC 焦点栈维持 Phase 12.8 §4.6                            |
 | D4  | 关闭按钮共用粒度      | **primitive + token 双管齐下**：抽 `CloseButton` 组件（variants）+ 抽 UI edge CSS token（hover ring / timeline / close button 视觉对齐） |                                                           |
+| D5  | Drawer **Details** 区块 | **四组顺序 + 显隐**（见 §P14.6）；用语：**栏**=单条标签+值；**行**=两列网格的一行（最多两栏）；组间无新增分隔样式，仅换行 | 仅改 HUD；**Budget/Revenue**：`0`、`null`、`undefined`、缺失皆无；**Runtime**：`0` 分钟视为**有**（须正常展示），`null`/`undefined`/缺失为无（见 §P14.6） |
 
 ## 执行顺序
 
@@ -78,7 +80,7 @@ flowchart TD
     P143["P14.3 hover ring × timeline 视觉对齐"]
     P144["P14.4 全屏按钮 + F 快捷键"]
     P145["P14.5 Cmd/Ctrl+K 聚焦搜索框"]
-    P146["P14.6 Drawer Writers/DOP 字段调序"]
+    P146["P14.6 Drawer Details 四组 + Storybook"]
     P147["P14.7 Timeline 横置变体 + URL query"]
     P148["P14.8 文档同步 + 回归"]
 
@@ -353,19 +355,52 @@ export function CloseButton({ variant, label, className, ...rest }: CloseButtonP
 
 ---
 
-## P14.6 Drawer Writers / DOP 字段调序
+## P14.6 Drawer **Details** 四组排序与显隐
+
+> 范围仅限 **Details** 小标题下的元数据网格；**Overview / Cast / 外链等**不在本子节重排。数据契约不变。
+
+### 用语（与产品对齐）
+
+- **栏**：一条独立信息（标签 + 值），如 Director、Runtime、Budget 各为一栏。
+- **行**：`grid-cols-2` 下的一行，**一行最多两栏**（左、右）；栏按顺序从左到右填满，再换行。**奇数个栏**时末栏仅占左格、右格空（与现状两列网格一致；若未来要末栏 `col-span-2` 需单独决策）。
+
+### 组顺序与规则
+
+组与组之间 **仅换行**，不增加分割线、背景或新区块样式；**现有 typography / gap 保持**。
+
+| 组 | 栏顺序（组内） | 规则 |
+| -- | -------------- | ---- |
+| **组 1** | Runtime → Language | **整组永远渲染**。某一栏无数据：**值**显示 `/`（占位）。**例外**：Runtime **`0` 分钟视为有**，不显示 `/`。 |
+| **组 2** | Director → Producers → Writers | 某一栏无数据：**该栏不渲染**。三栏可全缺 → 组 2 不出现。 |
+| **组 3** | Director of Photography → Music Composer | 同上：无数据栏不渲染；可全缺 → 组 3 不出现。 |
+| **组 4** | Budget → Revenue | 单栏无数据：该栏**值**为 `/`。Budget 与 Revenue **皆**无可展示数据：**整组不渲染**。 |
+
+**栏顺序小结**（相对旧实现中 Writers 与 DOP 的线性混排）：Runtime / Language 置顶；创作职务块为 Director、Producers、Writers；技术/音乐块为 DOP、Composer；财务块为 Budget、Revenue。
+
+### 「无数据」判定（已锁定）
+
+- **Budget、Revenue**：`null`、`undefined`、字段缺失，以及 **`0` 一律视为无数据**（单栏 → 值 `/`；两栏皆无 → 组 4 不渲染）。若日后需区分「零」与「未知」，须另开数据契约或产品决策。
+- **Runtime**：**`0` 分钟视为有数据**，须按正常时长格式化展示（业务上为有效值）；仅 `null` / `undefined` / 缺失视为无 → 值 `/`。
+- **名单 / 字符串栏**（组 2、3 及 Language 等）：`null` / `undefined` / 缺失、空字符串、空数组视为该栏无；**不**用数字 `0` 表示名单语义。
+
+### 一段话复述（可粘贴 Design Spec / 实施报告）
+
+Details 在固定 **两列网格** 中按 **四组** 纵向衔接：**组 1** 永远渲染 Runtime 与 Language；**Language** 及 **Runtime** 仅在 `null` / `undefined` / 缺失时为无（值 `/`），其中 **Runtime = 0 分钟视为有**、须正常展示。**组 2**（Director → Producers → Writers）与 **组 3**（Director of Photography → Music Composer）逐栏判断，无有效数据则**整栏不渲染**，两组皆可因栏尽缺而整体不出现；**组 4**（Budget → Revenue）单栏无有效数据时该栏值为 `/`，两栏皆无有效数据时**整组不渲染**；Budget/Revenue 的「无」**含** `0`。栏按顺序 **从左到右填满一行再换行**（奇数个栏时末栏仅占左格）；**组与组之间**不增加分割线或新区块样式，仅自然换行。**名单/字符串栏**以空值、空集合与缺失为无。
 
 ### 实施
 
-[components/Drawer.tsx](frontend/src/components/Drawer.tsx) 内 「director / writers / cast」之外的六字段当前顺序：`director_of_photography → producers → music_composer → writers`（按现 `Drawer.tsx` 实际 JSX 顺序，需打开文件确认）
+- [components/Drawer.tsx](frontend/src/components/Drawer.tsx)：将 Details 内上述栏拆为「组」级数据结构或小块渲染；`showMetaBlock`（或等价）需与**新组规则**一致，避免出现「只有空壳 Details 标题」或漏组。
+- 建议抽小纯函数（同文件或 `drawerDetailsLayout.ts`）：输入 `movie`（或已有派生字段）→ 各组「要渲染的栏」列表，便于单测 / Story 对照。
 
-调整为用户期望顺序：将 **Writers** 与 **Director of Photography** 位置交换。
+### Storybook
 
-具体由 P14.6 实施时按 `Drawer.tsx` 现状确认精准 JSX 节点位置；语义结果是 Writers 出现在 DOP 之前（或反向，按用户当时直觉确认）。
+- [components/Drawer.stories.tsx](frontend/src/components/Drawer.stories.tsx)：为 **组 1 `/`、组 2/3 缺栏、组 4 `/ 与整组隐藏、奇数栏换行** 等组合各提供 story（或 args 矩阵），保证每种规则至少一条可见用例。
 
 ### 验收
 
-- Drawer story 截图新顺序与设计意图一致
+- 对照上表逐组 spot-check；Storybook 截图可并入 P14.8 报告。
+- **Budget / Revenue**：含 `0` / `null` / 缺失 的用例在 Storybook 中可验收 `/` 与组 4 整组隐藏。
+- **Runtime = 0**：Storybook 用例须展示**非 `/`** 的合法时长文案（与「缺失 → `/`」对照）。
 
 ---
 
@@ -417,7 +452,7 @@ export function useTimelineOrientationFromQuery(): 'vertical' | 'horizontal' {
 - 实施报告 P14.1 / P14.2 / P14.7 各一份（其它子节合并到 Phase 14 总报告）
 - 回归清单：
   - Loading / Error 页英语完整
-  - Drawer 字段顺序、关闭按钮、Tooltip / SearchBar / InfoModal 英语完整
+  - Drawer Details 四组规则（§P14.6）、关闭按钮、Tooltip / SearchBar / InfoModal 英语完整
   - hover ring 与 timeline 同色同宽（dark + light）
   - 全屏按钮 + F 快捷键全链路
   - Cmd-K 聚焦不与文本输入冲突
@@ -439,5 +474,5 @@ export function useTimelineOrientationFromQuery(): 'vertical' | 'horizontal' {
 
 - 所有 P14.0–P14.8 todos `completed`
 - 中文字符在生产 UI 路径上为 0（实现 `rg` 报告）
-- Storybook 三类 variants（CloseButton / Timeline 双向 / FullscreenButton）story 完整
+- Storybook：`CloseButton` / Timeline 双向 / FullscreenButton；**Drawer Details 规则矩阵**（P14.6）story 完整
 - Design Spec / 视觉参数总表 / strings.ts 三方与代码一致

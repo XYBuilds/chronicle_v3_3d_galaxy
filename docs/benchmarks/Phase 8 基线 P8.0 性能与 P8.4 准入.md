@@ -2,7 +2,7 @@
 
 > **文档性质**：本文件位于 **`docs/benchmarks/`**，是 **性能测量口径、Story 准入门槛与里程碑入口/出口表的归档**（基线簿），**不是**功能或渲染行为的 SSOT；交互与实现以 [`星球状态机 spec.md`](../project_docs/星球状态机%20spec.md)、《Tech Spec》《Design Spec》及源码为准。
 >
-> **里程碑扩展**：随 Phase 10 / 11 / 12 / **13** 等可在文末追加 `## P10.x`、`## P11.x`、`## P12.x`、**`## P13.0 入口`** 等 **入口/出口** 节（与 §P8.0.1 **同录制口径**），并与对应 Cursor 计划交叉引用。**Phase 12** 出口见下文 **`## P12 入口/出口`**（[`.cursor/plans/phase_12_search_and_select_6c9bfa94.plan.md`](../../.cursor/plans/phase_12_search_and_select_6c9bfa94.plan.md) · P12.9）。**Phase 13** 入口见 **`## P13.0 入口`**（[`.cursor/plans/phase_13_focus_experience_ab016b85.plan.md`](../../.cursor/plans/phase_13_focus_experience_ab016b85.plan.md) · P13.0）。
+> **里程碑扩展**：随 Phase 10 / 11 / 12 / **13** 等可在文末追加 `## P10.x`、`## P11.x`、`## P12.x`、**`## P13.0 入口`**、**`## P13 出口`** 等 **入口/出口** 节（与 §P8.0.1 **同录制口径**），并与对应 Cursor 计划交叉引用。**Phase 12** 出口见下文 **`## P12 入口/出口`**（[`.cursor/plans/phase_12_search_and_select_6c9bfa94.plan.md`](../../.cursor/plans/phase_12_search_and_select_6c9bfa94.plan.md) · P12.9）。**Phase 13** 入口见 **`## P13.0 入口`**；**收尾与文档登记**见 **`## P13 出口`**（[`.cursor/plans/phase_13_focus_experience_ab016b85.plan.md`](../../.cursor/plans/phase_13_focus_experience_ab016b85.plan.md) · P13.7）。
 
 > 从 `视觉参数总表.md` 拆出单独跟踪（**2026-04-27**）。Phase 7 宏观参数清单仍见 **`视觉参数总表.md`**（Git 跟踪；**不再**列入 `.cursorignore`）。总表文首注明：开发者速查用，**非** Agent SSOT。
 
@@ -53,7 +53,7 @@
 ## P8.0.4 状态机 SSOT
 
 - 四态（idle / active / hover / focus）+ **Phase 12 起正式态 `select`**（人名/genre 搜索多 active、`selectionMask`、`searchMode`、ESC 焦点栈等）：见 [`星球状态机 spec.md`](../project_docs/星球状态机%20spec.md) §3.6（`W = uZVisWindow×0.2`、`vote_count` focus 权重与「小片偏小」意图、draw 顺序、WebGL2、**focus×select 嵌套**）。
-- **Phase 8 文档回写（2026-04-27）**：《视觉参数总表》持续与源码对齐；《Tech Spec》/《Design Spec》/《数据特征工程与 3D 映射总表》已更新 P8.1–P8.4 双 mesh 与 `genre_hue`。**Phase 12（2026-04-29）**：搜索 UX、数据契约（`has_search_index`、`galaxy_search_index.json.gz`）、拾取与 mask 覆盖规则已写入上述 SSOT + 本节 **`## P12 入口/出口`**。**Phase 13 P13.0（2026-04-30）**：focus 邻域球 **`uSelectionMode=2`**、轨道相机、`bridgeZ=zCurrent` / Timeline snap、`transitionDriver` 等契约已写入 SSOT；性能入口见 **`## P13.0 入口`**。
+- **Phase 8 文档回写（2026-04-27）**：《视觉参数总表》持续与源码对齐；《Tech Spec》/《Design Spec》/《数据特征工程与 3D 映射总表》已更新 P8.1–P8.4 双 mesh 与 `genre_hue`。**Phase 12（2026-04-29）**：搜索 UX、数据契约（`has_search_index`、`galaxy_search_index.json.gz`）、拾取与 mask 覆盖规则已写入上述 SSOT + 本节 **`## P12 入口/出口`**。**Phase 13 P13.0（2026-04-30）**：focus 邻域球 **`uSelectionMode=2`**、轨道相机、`bridgeZ=zCurrent` / Timeline snap、`transitionDriver` 等契约已写入 SSOT；性能入口见 **`## P13.0 入口`**。**Phase 13 P13.7（2026-05-01）**：全量 spec / 视觉总表与实现对齐；Chrome Performance 三线**未**在本里程碑重录时见 **`## P13 出口`**。
 
 ---
 
@@ -155,7 +155,7 @@
 **2026-04-30（本仓库 P13.0 文档冻结）**
 
 1. **构建**：在 P13.1+ 实现合并前，于 `frontend` 执行 `npm run build` + `vite preview`（4173），与 §P8.0.1 环境一致即可。  
-2. **入口数值**：下列三行与 §P8.0.1（2026-04-27）表**逐项一致**，表示「Phase 13 实现尚未合入」时的对照基线。Phase 13 收尾后若写 **`## P13.7 出口`**（或计划约定的出口节），应重录三线并与本表比（门槛建议与 §P11.7 一致：**focus 行 fps 不低于入口约 95%**）。
+2. **入口数值**：下列三行与 §P8.0.1（2026-04-27）表**逐项一致**，表示「Phase 13 实现尚未合入」时的对照基线。Phase 13 收尾后应写 **`## P13 出口`**（见文末），重录三线并与本表比（门槛建议与 §P11.7 一致：**focus 行 fps 不低于入口约 95%**）；若当次里程碑**跳过** DevTools 重录，须在 **`## P13 出口`** 明示原因与验收替代口径。
 
 **环境（与 §P8.0.1 对齐）**：Windows；**`npm run build` + `vite preview`（4173）**；`devicePixelRatio` 以录制机为准。Chrome 精确版本 / GPU 型号仍见 §P8.0.1 环境行（待补）。
 
@@ -164,5 +164,28 @@
 | **idle** | 主应用加载默认数据；`zCurrent` 远离热点年份，无 hover；**整段录制约 7.1 s** | N/A（trace 未汇总 GPU ms） | **~0.6**（236 ms Scripting ÷ ~427 帧 @60fps） | **1**（开头 **Evaluate Script** Long Task） | **~60**（Frames 几乎全绿） | 含**冷启动首屏**；若只要稳态 idle 应「画面稳定后再 Record 5 s」另录一条对照 |
 | **timeline 拖动** | 拖动时间轴扫过可用跨度；Performance **选区 2.05–7.02 s**（Total **4 969 ms**） | N/A；选区内 **GPU 轨道持续高占用**（定性） | **~4.1**（1 224 ms Scripting ÷ ~298 帧） | **0**（以 Main 无 Long Task 为准） | **~60** | **INP 10 ms**（Insights）；纯交互段子选区，口径优于「整段 10 s 含拖前/拖后」 |
 | **focus** | 高 `vote_count` 片：飞入 + Perlin 出现至稳定；选区 **3.02–8.00 s**（Total **4 980 ms**） | N/A；GPU 全程有活（定性） | **~1.1**（324 ms Scripting ÷ ~299 帧） | **0** | **~60** | **P13 主战场**：选区含 **飞入（约 4.8–5.5 s 球体亮起）+ 稳态 focus**；**INP 19 ms**，**CLS 0**；稳态-only 可再框 **5.6–8.0 s** 子选区；**P13 代码落地后**须在此片段覆盖 **邻域 active + 轨道拖拽** 的稳态 |
+
+**录制步骤**：与 §P8.0.1「录制步骤（摘要）」相同。
+
+---
+
+## P13 出口（Phase 13 focus 体验重构 · 文档与验收登记）
+
+> **目的**：在 P13.1–P13.6（`transitionDriver`、邻域球 **`uSelectionMode=2`**、轨道相机、Timeline/`zCurrent`、size/L 图例、搜索 X / 默认 alpha）全部落地后，用与 **§P8.0.1** / **`## P13.0 入口`** **同口径**的 Chrome Performance **三线**归档 **出口**，并与 **§P13.0 入口**表对比（常见门槛：**focus 行 fps 中位数 ≥ 入口约 95%**，见 §P11.7 判定习惯）。  
+> **关联计划**：[`.cursor/plans/phase_13_focus_experience_ab016b85.plan.md`](../../.cursor/plans/phase_13_focus_experience_ab016b85.plan.md)（P13.7）。  
+> **Git 分支（文档登记）**：`phase13/p13-7-doc-sync`（P13.7 文档同步）。
+
+**2026-05-01（本仓库 P13 出口登记）**
+
+1. **交互与渲染验收**：维护者手测通过（focus 进入 / 轨道拖拽 / 邻域切换 / ESC·抽屉·搜索 X 退出 / focus×select 嵌套）；**未**在本里程碑执行 §P8.0.1 规定的 DevTools Performance **三线重录**。  
+2. **数值表**：下列三线**留空**，表示「待将来按同口径补录」；当前以 **§P13.0 入口**冻结值为对照锚，补录后填入并与 **focus ≥ 入口 × 0.95** 门槛比对。
+
+**环境（与 §P8.0.1 对齐）**：`frontend` 下 **`npm run build` + `vite preview`（4173）**；**focus** 片段录制时须在稳态包含 **邻域 active 可见** + **轨道相机拖拽**（与 §P13.0 入口表「P13 代码落地后」备注一致）。
+
+| 片段 | 操作说明 | GPU time（ms / frame，中位数） | JS Main（ms / frame） | Long tasks（>50 ms，次数） | fps 中位数 | 与 §P13.0 入口对比 |
+|------|----------|--------------------------------|----------------------|-----------------------------|------------|-------------------|
+| **idle** | 与 §P13.0 入口同口径 | *未重录* | *未重录* | *未重录* | *未重录* | 补录后与 §P13.0 idle 行逐项比 |
+| **timeline 拖动** | 与 §P13.0 入口同口径 | *未重录* | *未重录* | *未重录* | *未重录* | 同上 |
+| **focus** | 与 §P13.0 入口同口径，且稳态含 **邻域 + 轨道** | *未重录* | *未重录* | *未重录* | *未重录* | **门槛（计划）**：≥ §P13.0 入口 focus **约 95%** |
 
 **录制步骤**：与 §P8.0.1「录制步骤（摘要）」相同。

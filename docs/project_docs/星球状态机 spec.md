@@ -99,7 +99,7 @@ inFocus = smoothstep(zLo - W, zLo, aZ) × (1 - smoothstep(zHi, zHi + W, aZ))
 - **运行时 uniform**（与《视觉参数总表》§2、`scene.ts` 一致）：
   - **`uFocusCameraBlend ∈ [0,1]`**：与选中相机动画**同一标量**——`selecting` 时等于 `easeOutCubic(t)`（与 `camera.position.lerpVectors(fromCam, toCam, ·)` 第三个参数一致）；`selected` 恒为 **1**；`deselecting` 为 **`1 - easeOutCubic(t)`**；`idle` 为 **0**。
   - **`uFocusTargetInstanceId`**：`selecting` / `selected` / `deselecting` 为当前操作对应的 **`pendingSelectInstanceIndex`**；`idle` 为 **-1**。用于在 **`uFocusedInstanceId === -1`** 的飞入阶段仍能识别「目标」实例，使目标 active **alpha 恒为 1**（飞入中仍不透明）。
-  - **`uFocusNonTargetActiveAlpha`**：定稿默认 **0.1**；非目标 active 片元 `alpha = mix(1.0, uFocusNonTargetActiveAlpha, uFocusCameraBlend)`（在 vert 打包为 `vFocusAlphaMult` 传入片元）。
+  - **`uFocusNonTargetActiveAlpha`**：定稿默认 **0.08**（**Phase 13.6**：邻域 active 变密后由 **0.10** 下调；见《视觉参数总表》§2）；非目标 active 片元 `alpha = mix(1.0, uFocusNonTargetActiveAlpha, uFocusCameraBlend)`（在 vert 打包为 `vFocusAlphaMult` 传入片元）。
 - **焦点实例在 `selected` 后**仍在 vert 上 `sActive = 0`（双 mesh 隐藏），Perlin 为主视觉；本条主要压低**其余** slab 内 active，突出 focus。
 
 #### 3.4.4 焦点近相机遮挡剔除（原计划 P11.1 · **未实装**）
@@ -110,7 +110,7 @@ inFocus = smoothstep(zLo - W, zLo, aZ) × (1 - smoothstep(zHi, zHi + W, aZ))
 
 - **`uSelectionMode = 2`**（focus 邻域）：GPU 顶点路径上 **`inFocus` 与 `uSelectionMode = 1` 一致**——即按 **`uSelectionMask`** 纹理采样结果**覆盖**条带公式算出的 `inFocus`；**区别仅在 CPU 写 mask 的数据源**（本模式为**球形邻域 id 集合**，而非人名/genre 搜索的 `selectionIds`）。
 - **邻域定义**：以**焦点影片**的 world 位置为球心、store **`focusNeighborRadius`**（世界单位）为半径 **R**，凡满足欧氏距离 **≤ R** 的影片 id 写入 mask（**含**焦点 id 与否以实现为准，拾取仍以 Perlin 球优先，见 §3.5.2）。
-- **默认值**：`focusNeighborRadius` 初值 **5** world units（Leva 扫参后可收口；见《视觉参数总表》）。
+- **默认值**：`focusNeighborRadius` **5** world units（Leva **`__galaxy.focusNeighborRadius`** 可调；与《视觉参数总表》§6 一致）。
 - **退出 focus**：清空邻域 mask；**`uSelectionMode` 回到 `0`**（idle）或 **`1`**（若仍处于 person/genre **select** 会话且须在下一帧恢复 search mask，见下条 **D1**）。
 
 #### 3.4.6 focus 态轨道相机（Phase 13 · **相机契约破例**）
@@ -198,3 +198,4 @@ Perlin focus 球在片元侧按 **`vNoise`** 与 **`uThresh[0..K−2]`**（**K**
 | 2026-04-29 | Phase 12 P12.8：**§3.6.1** ESC 焦点栈实现表（`App.tsx` capture、`data-galaxy-search-input`、INFO Modal 排除） |
 | 2026-04-30 | Phase 18 文档同步：`genre_hue` / palette 顺序改由 Data Pipeline SSOT 的 frozen palette 管理 |
 | 2026-04-30 | **Phase 13 P13.0**：§3.4 表修订（邻域球、轨道相机、退出路径）；新增 **§3.4.5** 邻域 mask、**§3.4.6** 轨道相机；§3.6 **`uSelectionMode = 2`** 与 **focus×select（D1）** mask 替换语义 |
+| 2026-05-01 | **Phase 13 P13.7**：文档与 Phase 8 基线收口；§3.4.3 **`uFocusNonTargetActiveAlpha`** 默认与代码对齐为 **0.08**（P13.6）；性能三线未重录时见 [`Phase 8 基线 P8.0 性能与 P8.4 准入.md`](../benchmarks/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md) **`## P13 出口`** |

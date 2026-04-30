@@ -36,7 +36,7 @@ void main() {
   float W = uZVisWindow * 0.2;
 
   float inFocus;
-  if (uSelectionMode == 1) {
+  if (uSelectionMode >= 1) {
     float aw = float(max(uSelectionAtlasWidth, 1));
     float ah = float(max(uSelectionAtlasHeight, 1));
     float idF = float(gl_InstanceID);

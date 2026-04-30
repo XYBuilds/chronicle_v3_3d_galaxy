@@ -14,6 +14,7 @@ import { createGalaxyDualMeshes } from './galaxyMeshes'
 import { attachGalaxyActiveMeshInteraction } from './interaction'
 import { createSelectionPlanet, type SelectionPlanetHandle } from './planet'
 import { computeActiveWorldRadius, getSelectionMaskPickSet, resolveSelectionWorldRadius } from './screenRadius'
+import { computeFocusNeighborIds } from './focusNeighborMask'
 import { buildMovieIdToIndexMap, setSelectionMask, type SelectionMaskUniformBag } from './selectionMask'
 import { createTransitionDriver } from './transitionDriver'
 
@@ -189,13 +190,58 @@ export function mountGalaxyScene(
     uSelectionAtlasHeight: galUniforms.uSelectionAtlasHeight as THREE.Uniform<number>,
   }
 
-  const syncSelectionMaskFromStore = () => {
-    setSelectionMask(useGalaxyInteractionStore.getState().selectionIds, movieIdToIndex, selectionMaskUniforms)
+  const syncSelectionMaskToGPU = () => {
+    const st = useGalaxyInteractionStore.getState()
+    if (st.selectedMovieId !== null) {
+      let ids = st.focusNeighborIds
+      if (!ids?.length) {
+        const movie = movies.find((m) => m.id === st.selectedMovieId)
+        if (!movie) {
+          setSelectionMask(null, movieIdToIndex, selectionMaskUniforms)
+          return
+        }
+        ids = computeFocusNeighborIds(
+          movies,
+          { x: movie.x, y: movie.y, z: movie.z },
+          st.focusNeighborRadius,
+        )
+        useGalaxyInteractionStore.setState({ focusNeighborIds: ids })
+      }
+      setSelectionMask(ids, movieIdToIndex, selectionMaskUniforms)
+      return
+    }
+    if (st.searchMode === 'person' || st.searchMode === 'genre') {
+      setSelectionMask(st.selectionIds, movieIdToIndex, selectionMaskUniforms)
+      return
+    }
+    setSelectionMask(null, movieIdToIndex, selectionMaskUniforms)
   }
-  syncSelectionMaskFromStore()
+  syncSelectionMaskToGPU()
   const unsubSelectionMask = useGalaxyInteractionStore.subscribe((state, prev) => {
-    if (state.selectionIds === prev.selectionIds) return
-    syncSelectionMaskFromStore()
+    if (
+      state.selectionIds === prev.selectionIds &&
+      state.selectedMovieId === prev.selectedMovieId &&
+      state.focusNeighborIds === prev.focusNeighborIds &&
+      state.focusNeighborRadius === prev.focusNeighborRadius &&
+      state.searchMode === prev.searchMode
+    ) {
+      return
+    }
+    if (
+      state.selectedMovieId !== null &&
+      (state.selectedMovieId !== prev.selectedMovieId || state.focusNeighborRadius !== prev.focusNeighborRadius)
+    ) {
+      const pivot = movies.find((m) => m.id === state.selectedMovieId)
+      if (pivot) {
+        const ids = computeFocusNeighborIds(
+          movies,
+          { x: pivot.x, y: pivot.y, z: pivot.z },
+          state.focusNeighborRadius,
+        )
+        useGalaxyInteractionStore.setState({ focusNeighborIds: ids })
+      }
+    }
+    syncSelectionMaskToGPU()
   })
 
   const uSelectionMode = galUniforms.uSelectionMode as THREE.Uniform<number>
@@ -231,7 +277,12 @@ export function mountGalaxyScene(
       st.searchMode === 'person' && st.selectionPersonKey && index
         ? index.people[st.selectionPersonKey]
         : undefined
-    const maskPick = getSelectionMaskPickSet(st.searchMode, st.selectionIds)
+    const maskPick = getSelectionMaskPickSet(
+      st.selectedMovieId,
+      st.focusNeighborIds,
+      st.searchMode,
+      st.selectionIds,
+    )
     const mat = galaxy.activeMaterial
     constellation.sync({
       visible:
@@ -254,6 +305,8 @@ export function mountGalaxyScene(
       state.selectionIds === prev.selectionIds &&
       state.selectionPersonKey === prev.selectionPersonKey &&
       state.selectedMovieId === prev.selectedMovieId &&
+      state.focusNeighborIds === prev.focusNeighborIds &&
+      state.focusNeighborRadius === prev.focusNeighborRadius &&
       state.zCurrent === prev.zCurrent &&
       state.zVisWindow === prev.zVisWindow
     ) {
@@ -350,7 +403,12 @@ export function mountGalaxyScene(
     if (idx < 0 || idx >= movies.length) return
     const m = movies[idx]!
     const stPick = useGalaxyInteractionStore.getState()
-    const maskPick = getSelectionMaskPickSet(stPick.searchMode, stPick.selectionIds)
+    const maskPick = getSelectionMaskPickSet(
+      stPick.selectedMovieId,
+      stPick.focusNeighborIds,
+      stPick.searchMode,
+      stPick.selectionIds,
+    )
     const { r } = resolveSelectionWorldRadius(m, uZ.value, uZw.value, galaxy.activeMaterial, maskPick)
     const stepH = planet.material.uniforms.uStepHeight.value as number
     const cuts = planet.material.uniforms.uCutCount.value as number
@@ -365,7 +423,18 @@ export function mountGalaxyScene(
     pendingSelectInstanceIndex = movies.findIndex((m) => m.id === movie.id)
     console.assert(pendingSelectInstanceIndex >= 0, '[Selection] movie must exist in mounted list')
     const stPick = useGalaxyInteractionStore.getState()
-    const maskPick = getSelectionMaskPickSet(stPick.searchMode, stPick.selectionIds)
+    const neighborIds = computeFocusNeighborIds(
+      movies,
+      { x: movie.x, y: movie.y, z: movie.z },
+      stPick.focusNeighborRadius,
+    )
+    useGalaxyInteractionStore.setState({ focusNeighborIds: neighborIds })
+    const maskPick = getSelectionMaskPickSet(
+      movie.id,
+      neighborIds,
+      stPick.searchMode,
+      stPick.selectionIds,
+    )
     const { r, rActive } = resolveSelectionWorldRadius(movie, uZ.value, uZw.value, galaxy.activeMaterial, maskPick)
     setFocusCameraPosition(toCam, movie)
     const gu = galaxy.idleMaterial.uniforms
@@ -405,6 +474,7 @@ export function mountGalaxyScene(
     if (id === prev.selectedMovieId) return
 
     if (id === null) {
+      useGalaxyInteractionStore.setState({ focusNeighborIds: null })
       if (selectionPhase === 'selected' || selectionPhase === 'selecting') {
         beginDeselect()
       }
@@ -754,12 +824,13 @@ export function mountGalaxyScene(
     raf = requestAnimationFrame(tick)
     applySelectionFrame(performance.now())
     const st = useGalaxyInteractionStore.getState()
-    // P12.6 — person/genre: mask overrides timeline vis-window for `inFocus`; mode follows store, not mask write path
-    const searchSelectMode = st.searchMode === 'person' || st.searchMode === 'genre' ? 1 : 0
-    uSelectionMode.value = searchSelectMode
-    if (searchSelectMode !== prevSearchSelectMode) {
-      prevSearchSelectMode = searchSelectMode
-      console.log('[Scene] uSelectionMode=', searchSelectMode, '| searchMode=', st.searchMode)
+    // P12.6 / P13.2 — person/genre mask vs focus spherical neighborhood vs timeline slab
+    const selectionDrawMode =
+      st.selectedMovieId !== null ? 2 : st.searchMode === 'person' || st.searchMode === 'genre' ? 1 : 0
+    uSelectionMode.value = selectionDrawMode
+    if (selectionDrawMode !== prevSearchSelectMode) {
+      prevSearchSelectMode = selectionDrawMode
+      console.log('[Scene] uSelectionMode=', selectionDrawMode, '| searchMode=', st.searchMode, '| filmFocus=', st.selectedMovieId !== null)
     }
     uZ.value = st.zCurrent
     uZw.value = st.zVisWindow

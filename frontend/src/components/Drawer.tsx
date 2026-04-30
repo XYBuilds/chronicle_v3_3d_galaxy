@@ -115,7 +115,7 @@ export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailD
   const showCast = movie != null && movie.cast.length > 0
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={onOpenChange} modal={false} disablePointerDismissal>
       <SheetContent
         side="right"
         showCloseButton={false}

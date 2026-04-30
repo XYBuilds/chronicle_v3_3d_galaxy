@@ -42,6 +42,11 @@ export interface GalaxyInteractionState {
   selectionPersonKey: string | null
   /** Person-mode constellation lines; product HUD has no toggle — use `window.__galaxy.constellationEnabled` in dev (P12.7). Default on. */
   constellationEnabled: boolean
+
+  /** P13.2 — world-space radius for focus spherical neighborhood (decimal-year Z + UMAP XY). */
+  focusNeighborRadius: number
+  /** P13.2 — cached `Movie.id[]` within `focusNeighborRadius` of pivot; `null` when not in film focus. */
+  focusNeighborIds: number[] | null
 }
 
 export const useGalaxyInteractionStore = create<GalaxyInteractionState>(() => ({
@@ -59,6 +64,9 @@ export const useGalaxyInteractionStore = create<GalaxyInteractionState>(() => ({
   selectionIds: null,
   selectionPersonKey: null,
   constellationEnabled: true,
+
+  focusNeighborRadius: 5,
+  focusNeighborIds: null,
 }))
 
 /** Derived: timeline vis-window must not drive `inFocus` when in person/genre select (Tech Spec §4.5). */

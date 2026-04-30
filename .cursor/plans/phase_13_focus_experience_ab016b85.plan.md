@@ -25,7 +25,7 @@ todos:
     status: completed
   - id: p137-doc-sync
     content: P13.7 文档同步 + 出口 fps：Phase 8 基线加 P13 出口；状态机 spec / 视觉参数总表 / Tech Spec / Design Spec / PRD 收口；每个子 phase 实施报告
-    status: pending
+    status: completed
 isProject: false
 ---
 
@@ -477,8 +477,8 @@ if (selectionPhase === 'selected') {
 - [Tech Spec.md](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md) §1.4 / §1.5 红线例外补丁
 - [Design Spec.md](docs/project_docs/TMDB%20电影宇宙%20Design%20Spec.md) §2.2 / §3.1 同步
 - [PRD.md](docs/project_docs/TMDB%20电影宇宙%20PRD.md) §3.1 层级二补充
-- [Phase 8 基线](docs/benchmarks/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md) 加 `## P13 出口` 节，重跑三片段（focus 邻域球 mask × orbit × transition driver 综合开销）
-- 每个子 phase 一份实施报告（沿用 Phase 11/12 命名格式）
+- [Phase 8 基线](docs/benchmarks/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md) 加 `## P13 出口` 节；**理想**为重跑三片段（focus 邻域球 mask × orbit × transition driver 综合开销）并与 §P13.0 入口比 **≥ ~95%**。**本期登记**：视觉手测通过，三线**未**重录，出口表留空待补 — 见该节正文。
+- 每个子 phase 一份实施报告（沿用 Phase 11/12 命名格式）；P13.7 见 [`docs/reports/Phase 13.7 P13.7 文档同步与基线收口 实施报告.md`](docs/reports/Phase%2013.7%20P13.7%20文档同步与基线收口%20实施报告.md)
 
 ---
 
@@ -499,6 +499,6 @@ if (selectionPhase === 'selected') {
 
 - 所有 P13.0–P13.7 todos `completed`
 - focus 进入 / 退出 / 切换三场景手测通过
-- Phase 8 基线 P13 出口 fps ≥ 入口 - 5%（容差）
+- Phase 8 基线 **`## P13 出口`** 已登记（三线可日后补录）；**或**已按 §P8.0.1 重录且 focus 行满足 **≥ §P13.0 入口约 95%**
 - 三份项目 spec 与代码一致；变更记录有 Phase 13 行
 

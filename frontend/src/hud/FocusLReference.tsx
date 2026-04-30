@@ -1,10 +1,6 @@
 import { useMemo } from 'react'
 
-import {
-  normalizedLBlendTFromVoteNorm,
-  srgb01FromHueAndVoteNorm,
-  srgb01ToCss,
-} from '@/lib/colorMath'
+import { srgb01FromHueAndVoteNorm, srgb01ToCss } from '@/lib/colorMath'
 import { useGalaxyDataStore } from '@/store/galaxyDataStore'
 import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
 import type { Movie } from '@/types/galaxy'
@@ -40,12 +36,17 @@ export function FocusLReference() {
   const style = useMemo(() => {
     if (!movie || !snap || !data) return null
     const hue = primaryHueRad(movie, data.meta.genre_palette)
-    const left = srgb01ToCss(srgb01FromHueAndVoteNorm(hue, 0, snap))
-    const right = srgb01ToCss(srgb01FromHueAndVoteNorm(hue, 1, snap))
-    const voteNorm = Math.max(0, Math.min(1, movie.vote_average / 10))
-    const t = normalizedLBlendTFromVoteNorm(voteNorm, snap)
-    const grad = `linear-gradient(to right, ${left}, ${right})`
-    return { grad, pointerLeftPct: t * 100 }
+    /** 10 档：rating 0.5, 1.5, …, 9.5 → `voteNorm` = (k+0.5)/10（与 shader `voteNorm` 一致）。 */
+    const stripeColors: string[] = []
+    for (let k = 0; k < 10; k++) {
+      const voteNorm = (k + 0.5) / 10
+      const rgb = srgb01FromHueAndVoteNorm(hue, voteNorm, snap)
+      stripeColors.push(srgb01ToCss(rgb))
+    }
+    console.assert(stripeColors.length === 10, '[FocusLReference] stripe count', stripeColors.length)
+    const ratingNorm = Math.max(0, Math.min(1, movie.vote_average / 10))
+    const pointerLeftPct = ratingNorm * 100
+    return { stripeColors, pointerLeftPct }
   }, [movie, snap, data])
 
   if (!movie || !snap || !style) return null
@@ -59,23 +60,26 @@ export function FocusLReference() {
         'top-[min(70vh,calc(50%+11rem))] sm:top-[68vh]',
       )}
       role="img"
-      aria-label={`${ratingTitle} on OKLab L spectrum for ${movie.title}; scale 0 to 10`}
+      aria-label={`${ratingTitle} on OKLab L spectrum for ${movie.title}; ten bands at half-step ratings`}
     >
       <div className="mb-1.5 text-center text-[0.72rem] font-semibold tracking-wide text-white/88 tabular-nums">
         {ratingTitle}
       </div>
-      <div className="flex items-center gap-2">
-        <span className="w-5 shrink-0 text-right font-mono text-[0.68rem] tabular-nums text-white/75">0</span>
-        <div className="relative min-w-0 flex-1">
-          <div className="relative h-2.5 w-full overflow-hidden rounded-full border border-white/[0.12] shadow-[0_0_20px_rgba(0,0,0,0.45)]">
-            <div className="absolute inset-0" style={{ background: style.grad }} />
+      <div className="relative flex h-2.5 w-full overflow-hidden">
+        <div className="flex min-w-0 flex-1">
+          {style.stripeColors.map((bg, k) => (
             <div
-              className="absolute top-1/2 h-4 w-px -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.65)]"
-              style={{ left: `${style.pointerLeftPct}%` }}
+              key={k}
+              className="min-h-0 min-w-0 flex-1"
+              style={{ backgroundColor: bg }}
+              aria-hidden
             />
-          </div>
+          ))}
         </div>
-        <span className="w-5 shrink-0 font-mono text-[0.68rem] tabular-nums text-white/75">10</span>
+        <div
+          className="pointer-events-none absolute top-1/2 h-4 w-px -translate-x-1/2 -translate-y-1/2 bg-white"
+          style={{ left: `${style.pointerLeftPct}%` }}
+        />
       </div>
     </div>
   )

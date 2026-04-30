@@ -26,7 +26,8 @@ dist-ssr
 *storybook.log
 storybook-static
 
-# Local pipeline output (tracked artifact is galaxy_data.json.gz only — see root .gitignore)
+# Local pipeline output (tracked gzip bundles — see root .gitignore)
 public/data/*.json
 public/data/*.json.gz
 !public/data/galaxy_data.json.gz
+!public/data/galaxy_search_index.json.gz

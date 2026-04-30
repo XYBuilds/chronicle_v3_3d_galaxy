@@ -84,8 +84,11 @@ export async function fetchGunzippedJson(
   }
 
   if (!res.ok) {
+    const tail = url.includes('search_index')
+      ? 'frontend/public/data/galaxy_search_index.json.gz'
+      : 'frontend/public/data/galaxy_data.json.gz'
     throw new Error(
-      `[GalaxyData] HTTP ${res.status} ${res.statusText} — 请确认已部署 frontend/public/data/galaxy_data.json.gz`,
+      `[GalaxyData] HTTP ${res.status} ${res.statusText} — ${url} — 请确认已部署 ${tail}`,
     )
   }
 

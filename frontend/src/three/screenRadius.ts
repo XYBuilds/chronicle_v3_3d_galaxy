@@ -13,7 +13,8 @@ export function getSelectionMaskPickSet(
   searchMode: SearchMode,
   selectionIds: number[] | null,
 ): Set<number> | null {
-  if (selectedMovieId !== null && focusNeighborIds && focusNeighborIds.length > 0) {
+  // P13.6 — mask mode whenever focus ids are committed (incl. empty Set); avoids vis-slab fallback during focus.
+  if (selectedMovieId !== null && focusNeighborIds !== null) {
     return new Set(focusNeighborIds)
   }
   if (searchMode !== 'person' && searchMode !== 'genre') return null

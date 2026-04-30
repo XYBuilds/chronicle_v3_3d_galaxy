@@ -221,6 +221,8 @@ export function SearchBar({ hasSearchIndex, movies }: SearchBarProps) {
 
   const onClear = useCallback(() => {
     clearSearch()
+    // P13.6 — align with ESC §4.6: exit focus in one action (no second ESC).
+    useGalaxyInteractionStore.setState({ selectedMovieId: null })
     setListOpen(false)
     setHighlightIndex(-1)
   }, [])

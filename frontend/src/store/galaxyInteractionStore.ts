@@ -47,6 +47,8 @@ export interface GalaxyInteractionState {
   focusNeighborRadius: number
   /** P13.2 — cached `Movie.id[]` within `focusNeighborRadius` of pivot; `null` when not in film focus. */
   focusNeighborIds: number[] | null
+  /** P13.3 — orbit camera around focus pivot (r fixed); reset when returning to macro idle. */
+  focusOrbit: { yaw: number; pitch: number }
 }
 
 export const useGalaxyInteractionStore = create<GalaxyInteractionState>(() => ({
@@ -67,6 +69,7 @@ export const useGalaxyInteractionStore = create<GalaxyInteractionState>(() => ({
 
   focusNeighborRadius: 5,
   focusNeighborIds: null,
+  focusOrbit: { yaw: 0, pitch: 0 },
 }))
 
 /** Derived: timeline vis-window must not drive `inFocus` when in person/genre select (Tech Spec §4.5). */

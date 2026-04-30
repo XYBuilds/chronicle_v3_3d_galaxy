@@ -260,6 +260,7 @@ export function attachGalaxyActiveMeshInteraction(options: {
       return
     }
     const picked = pickAlongRay(e.clientX, e.clientY, true)
+    // P13.3 — blank click in focus: do not clear selectedMovieId (only ESC / drawer / search X).
     if (picked === null && useGalaxyInteractionStore.getState().selectedMovieId !== null) {
       return
     }

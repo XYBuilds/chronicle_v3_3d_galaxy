@@ -10,10 +10,35 @@ import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
  */
 export const FOCUS_PERLIN_CAMERA_STANDOFF = 1
 
-/** Writes world-space camera position for Perlin focus. */
+/** Writes world-space camera position for Perlin focus (yaw=0, pitch=0 orbit). */
 export function setFocusCameraPosition(out: THREE.Vector3, movie: Pick<Movie, 'x' | 'y' | 'z'>): THREE.Vector3 {
-  return out.set(movie.x, movie.y, movie.z - FOCUS_PERLIN_CAMERA_STANDOFF)
+  return setFocusOrbitCameraPosition(out, movie, 0, 0)
 }
+
+/** Orbit offset: pivot + spherical coords; radius fixed (P13.3). yaw=0,pitch=0 → camera at pivot.z − r on axis. */
+export function setFocusOrbitCameraPosition(
+  out: THREE.Vector3,
+  pivot: Pick<Movie, 'x' | 'y' | 'z'>,
+  yaw: number,
+  pitch: number,
+  r: number = FOCUS_PERLIN_CAMERA_STANDOFF,
+): THREE.Vector3 {
+  const cosP = Math.cos(pitch)
+  const sinP = Math.sin(pitch)
+  return out.set(
+    pivot.x + r * cosP * Math.sin(yaw),
+    pivot.y + r * sinP,
+    pivot.z - r * cosP * Math.cos(yaw),
+  )
+}
+
+export function applyFocusOrbitLookAt(camera: THREE.PerspectiveCamera, pivot: Pick<Movie, 'x' | 'y' | 'z'>): void {
+  camera.lookAt(pivot.x, pivot.y, pivot.z)
+}
+
+/** Radians per CSS pixel — orbit drag sensitivity (P13.3). */
+export const ORBIT_YAW_SPEED = 0.003
+export const ORBIT_PITCH_SPEED = 0.003
 
 /** Fixed orientation: parallel to Z, facing +world Z (no tilt / orbit). */
 export const GALAXY_CAMERA_EULER = new THREE.Euler(0, Math.PI, 0, 'YXZ')
@@ -34,6 +59,10 @@ export interface GalaxyCameraControlOptions {
   getMacroZWheel?: () => boolean
   /** Fraction of each XY axis span used as extra clamp margin beyond `xy_range`. Default 0.08. */
   xyClampPaddingRatio?: number
+  /** P13.3 — `'orbit'` = focus selected: rotation only (no XY/Z translation via controls). */
+  getCameraMode?: () => 'macro' | 'orbit'
+  /** World pivot for orbit drag; null disables orbit branch. */
+  getOrbitPivot?: () => THREE.Vector3 | null
 }
 
 function applyFixedOrientation(camera: THREE.PerspectiveCamera): void {
@@ -114,6 +143,22 @@ export function attachGalaxyCameraControls(
     const dy = e.clientY - lastY
     lastX = e.clientX
     lastY = e.clientY
+    const mode = options.getCameraMode?.() ?? 'macro'
+    // Focus orbit: no truck/pedestal (keeps planet screen size/position from fixed standoff); only yaw/pitch.
+    if (mode === 'orbit') {
+      if (options.getOrbitPivot?.()) {
+        const dyaw = -dx * ORBIT_YAW_SPEED
+        const dpitch = -dy * ORBIT_PITCH_SPEED
+        const { yaw: y0, pitch: p0 } = useGalaxyInteractionStore.getState().focusOrbit
+        const pitchNext = THREE.MathUtils.clamp(
+          p0 + dpitch,
+          -Math.PI / 2 + 0.05,
+          Math.PI / 2 - 0.05,
+        )
+        useGalaxyInteractionStore.setState({ focusOrbit: { yaw: y0 + dyaw, pitch: pitchNext } })
+      }
+      return
+    }
     camera.position.x += dx * truckPedestalSpeed
     camera.position.y += dy * truckPedestalSpeed
     clampCameraXY(camera, options.xyRange, xyClampPaddingRatio)
@@ -123,6 +168,10 @@ export function attachGalaxyCameraControls(
   const onWheel = (e: WheelEvent) => {
     if (options.getInputLocked?.()) return
     e.preventDefault()
+    // Focus orbit: fixed camera–pivot distance (Perlin vote scale); no timeline Z / dolly.
+    if (options.getCameraMode?.() === 'orbit') {
+      return
+    }
     const dz = Math.sign(e.deltaY) * zScrollSpeed * Math.min(Math.abs(e.deltaY) / 100, 3)
     const macro = options.getMacroZWheel?.() ?? true
     if (macro) {

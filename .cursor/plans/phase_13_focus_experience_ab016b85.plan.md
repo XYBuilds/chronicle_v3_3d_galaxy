@@ -13,10 +13,10 @@ todos:
     status: completed
   - id: p133-orbit-camera
     content: P13.3 focus 态轨道相机：拖拽改 yaw/pitch 绕 pivot（半径 r 恒定 = FOCUS_PERLIN_CAMERA_STANDOFF；focus 态滚轮 noop，因 Perlin 球屏幕尺寸严格映射 vote_count）；退出 focus 时位置 lerp + quaternion slerp 同步走 P13.1 曲线回 GALAXY_CAMERA_EULER；删除「点空白退出 focus」逻辑
-    status: pending
+    status: completed
   - id: p134-timeline-snap
     content: P13.4 Timeline snap 到 movie.z：beginSelect 写 zCurrent；scene.ts tick bridgeZ 单分支；选用 P13.1 driver 让 zCurrent 渐变到 movie.z（与相机飞入同步）
-    status: pending
+    status: completed
   - id: p135-focus-legend
     content: P13.5 focus 态 size/L 参照图例 HUD：5 档 vote_count 圆点（10/100/1k/10k/100k）+ 焦点电影 genre0 hue 下 0–10 评分 L 渐变条；focus 态可见，由 P13.1 driver 淡入淡出
     status: pending

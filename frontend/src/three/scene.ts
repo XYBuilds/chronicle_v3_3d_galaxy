@@ -348,6 +348,9 @@ export function mountGalaxyScene(
   const selectingQuatHelper = new THREE.Object3D()
 
   let pendingSelectInstanceIndex = 0
+  /** P13.4 — Timeline `zCurrent` animates with focus enter (same eased progress as camera). */
+  let focusZAnimStart = 0
+  let focusZAnimTarget = 0
 
   const applySelectionFrame = (nowMs: number) => {
     if (selectionPhase === 'idle') {
@@ -365,6 +368,8 @@ export function mountGalaxyScene(
       uFocused.value = -1
       focusDriver.tick(nowMs)
       const p = focusDriver.progress
+      const zNext = focusZAnimStart + (focusZAnimTarget - focusZAnimStart) * p
+      useGalaxyInteractionStore.setState({ zCurrent: zNext })
       camera.position.lerpVectors(fromCam, toCam, p)
       if (selectingEnteredFromMacro) {
         camera.rotation.copy(GALAXY_CAMERA_EULER)
@@ -381,6 +386,7 @@ export function mountGalaxyScene(
         planet.mesh.visible = true
         planet.material.uniforms.uAlpha.value = 1
         camera.position.copy(toCam)
+        useGalaxyInteractionStore.setState({ zCurrent: focusZAnimTarget })
         if (!selectingEnteredFromMacro) {
           camera.quaternion.copy(selectingEndQuat)
         }
@@ -493,6 +499,10 @@ export function mountGalaxyScene(
       uChroma: (gu.uChroma as THREE.Uniform<number>).value,
     })
     uFocused.value = -1
+    const zSnap = useGalaxyInteractionStore.getState().zCurrent
+    focusZAnimStart = zSnap
+    focusZAnimTarget = movie.z
+    console.log('[FocusZ] selecting', { zStart: focusZAnimStart, zTarget: focusZAnimTarget, movieId: movie.id })
     fromCam.copy(camera.position)
     focusDriver.start(SELECT_MS)
     selectionPhase = 'selecting'
@@ -897,8 +907,8 @@ export function mountGalaxyScene(
       camera.position.z = st.zCurrent - st.zCamDistance
       clampGalaxyCameraXY(camera, meta.xy_range, 0.08)
     }
-    const bridgeZ = selectionPhase === 'idle' ? st.zCurrent : camera.position.z + st.zCamDistance
-    setGalaxyCameraZ(bridgeZ)
+    // P13.4 — Timeline reads `bridgeZ` ≡ macro axis focus; during focus `zCurrent` is kept at movie.z (enter anim only).
+    setGalaxyCameraZ(st.zCurrent)
     const expectedPr = Math.min(window.devicePixelRatio, 2)
     if (renderer.getPixelRatio() !== expectedPr) {
       resize()

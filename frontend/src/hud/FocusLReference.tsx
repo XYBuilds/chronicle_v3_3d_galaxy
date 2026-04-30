@@ -24,8 +24,8 @@ function primaryHueRad(movie: Movie, palette: Record<string, string>): number {
 }
 
 /**
- * P13.5 — Focus-only OKLab L legend: horizontal gradient at primary genre hue + pointer from `vote_average`
- * (no “Rating 0 → 10” title).
+ * P13.5 — Focus-only OKLab L legend: primary-genre hue spectrum + pointer from `vote_average`.
+ * Placed below the on-screen planet region (upper-mid viewport).
  */
 export function FocusLReference() {
   const selectedMovieId = useGalaxyInteractionStore((s) => s.selectedMovieId)
@@ -53,17 +53,27 @@ export function FocusLReference() {
   return (
     <div
       className={cn(
-        'pointer-events-none fixed bottom-6 left-1/2 z-[35] w-[min(22rem,calc(100vw-2rem))] -translate-x-1/2 select-none',
-        'sm:bottom-8',
+        'pointer-events-none fixed left-1/2 z-[35] w-[min(22rem,calc(100vw-2rem))] -translate-x-1/2 select-none',
+        'top-[min(58vh,calc(50%+6.5rem))] sm:top-[56vh]',
       )}
-      aria-hidden
+      role="img"
+      aria-label={`Rating spectrum for ${movie.title}; pointer near ${movie.vote_average.toFixed(1)} of 10`}
     >
-      <div className="relative h-2.5 w-full overflow-hidden rounded-full border border-white/[0.12] shadow-[0_0_20px_rgba(0,0,0,0.45)]">
-        <div className="absolute inset-0" style={{ background: style.grad }} />
-        <div
-          className="absolute top-1/2 h-4 w-px -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.65)]"
-          style={{ left: `${style.pointerLeftPct}%` }}
-        />
+      <div className="mb-1.5 text-center text-[0.72rem] font-semibold tracking-[0.12em] text-white/88">
+        Rating
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="w-5 shrink-0 text-right font-mono text-[0.68rem] tabular-nums text-white/75">0</span>
+        <div className="relative min-w-0 flex-1">
+          <div className="relative h-2.5 w-full overflow-hidden rounded-full border border-white/[0.12] shadow-[0_0_20px_rgba(0,0,0,0.45)]">
+            <div className="absolute inset-0" style={{ background: style.grad }} />
+            <div
+              className="absolute top-1/2 h-4 w-px -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.65)]"
+              style={{ left: `${style.pointerLeftPct}%` }}
+            />
+          </div>
+        </div>
+        <span className="w-5 shrink-0 font-mono text-[0.68rem] tabular-nums text-white/75">10</span>
       </div>
     </div>
   )

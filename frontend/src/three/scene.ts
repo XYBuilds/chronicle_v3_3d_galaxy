@@ -917,9 +917,9 @@ export function mountGalaxyScene(
     if (ringsPhaseActive && mRings) {
       ringsPivot.set(mRings.x, mRings.y, mRings.z)
       sizeRings.update({
-        camera,
         pivotWorld: ringsPivot,
         movieId: mRings.id,
+        voteCount: mRings.vote_count,
         opacity: ringOpacity,
         uSizeScale: uSizeScale.value,
         uActiveSizeMul: uActiveSizeMul.value,
@@ -927,9 +927,9 @@ export function mountGalaxyScene(
     } else {
       ringsPivot.set(0, 0, 0)
       sizeRings.update({
-        camera,
         pivotWorld: ringsPivot,
         movieId: 0,
+        voteCount: 0,
         opacity: 0,
         uSizeScale: uSizeScale.value,
         uActiveSizeMul: uActiveSizeMul.value,

@@ -7,9 +7,33 @@ import {
 } from '@/lib/galaxyVoteSize'
 import type { Movie } from '@/types/galaxy'
 
-const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5))
+// ---------------------------------------------------------------------------
+// Size reference — tunables (圆环粗细 / 标签大小)
+//
+// 圆环「线粗」由内外半径相对值决定：实际世界线宽 ≈ (RING_STROKE_OUTER_FR − RING_STROKE_INNER_FR) × r，
+// 其中 r 为该档 vote 对应的壳半径。两常数越接近 1.0 线越细，越远越粗。
+//
+// 标签为同一字号、固定世界高度 LABEL_PLANE_WORLD_HEIGHT；与相机无关，贴在环平面内、沿切向。
+// ---------------------------------------------------------------------------
 
-const TIER_LABELS = ['10', '100', '1k', '10k', '100k'] as const
+/** Inner radius factor (unit ring geometry, before `mesh.scale.setScalar(r)`). */
+export const RING_STROKE_INNER_FR = 1
+/** Outer radius factor; stroke thickness in «r» units is (OUTER − INNER). */
+export const RING_STROKE_OUTER_FR = 1.01
+
+/** Ring alpha multiplier (also multiplied by focus fade `opacity`). */
+export const RING_OPACITY_BASE = 0.38
+
+/** Label canvas text size (px); same for every tier. */
+export const LABEL_CANVAS_FONT_PX = 36
+
+/** Label plane height in world units (width follows canvas aspect). */
+export const LABEL_PLANE_WORLD_HEIGHT = 0.032
+
+/** Unicode superscripts for 10¹ … 10⁵ (Votes). */
+const VOTE_TIER_SUP = ['\u00b9', '\u00b2', '\u00b3', '\u2074', '\u2075'] as const
+
+const TIER_LABEL_TEXTS = VOTE_TIER_SUP.map((s) => `10${s} Votes`) as readonly string[]
 
 /** Mulberry32 PRNG in [0, 1) — stable per integer seed. */
 function mulberry32(seed: number): () => number {
@@ -45,55 +69,57 @@ function makeRingMesh(innerR: number, outerR: number): THREE.Mesh {
   return mesh
 }
 
-function makeLabelSprite(text: string): THREE.Sprite {
+const LABEL_CANVAS_W = 720
+const LABEL_CANVAS_H = 112
+
+function makeLabelPlaneMesh(text: string, planeGeo: THREE.PlaneGeometry): THREE.Mesh {
   const canvas = document.createElement('canvas')
-  const w = 256
-  const h = 112
-  canvas.width = w
-  canvas.height = h
+  canvas.width = LABEL_CANVAS_W
+  canvas.height = LABEL_CANVAS_H
   const ctx = canvas.getContext('2d')
   if (!ctx) {
     throw new Error('[FocusSizeReferenceRings] canvas 2d context unavailable')
   }
-  ctx.clearRect(0, 0, w, h)
-  ctx.fillStyle = 'rgba(8,10,18,0.55)'
-  ctx.strokeStyle = 'rgba(255,255,255,0.28)'
-  ctx.lineWidth = 3
-  const pad = 10
-  ctx.fillRect(pad, pad, w - pad * 2, h - pad * 2)
-  ctx.strokeRect(pad, pad, w - pad * 2, h - pad * 2)
-  ctx.fillStyle = 'rgba(255,255,255,0.9)'
-  ctx.font = '600 52px ui-monospace, monospace'
+  ctx.clearRect(0, 0, LABEL_CANVAS_W, LABEL_CANVAS_H)
+  ctx.font = `600 ${LABEL_CANVAS_FONT_PX}px ui-monospace, "Cascadia Code", monospace`
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  ctx.fillText(text, w / 2, h / 2 + 2)
+  const cx = LABEL_CANVAS_W / 2
+  const cy = LABEL_CANVAS_H / 2
+  ctx.lineJoin = 'round'
+  ctx.lineWidth = 4
+  ctx.strokeStyle = 'rgba(0,0,0,0.82)'
+  ctx.strokeText(text, cx, cy + 1)
+  ctx.fillStyle = 'rgba(255,255,255,0.92)'
+  ctx.fillText(text, cx, cy + 1)
 
   const tex = new THREE.CanvasTexture(canvas)
   tex.colorSpace = THREE.SRGBColorSpace
   tex.needsUpdate = true
-  const mat = new THREE.SpriteMaterial({
+  const mat = new THREE.MeshBasicMaterial({
     map: tex,
     transparent: true,
     depthWrite: false,
     depthTest: true,
+    side: THREE.DoubleSide,
   })
-  const sprite = new THREE.Sprite(mat)
-  sprite.center.set(0.5, 0.5)
-  sprite.renderOrder = 2.7
-  return sprite
+  const mesh = new THREE.Mesh(planeGeo, mat)
+  mesh.frustumCulled = false
+  mesh.renderOrder = 2.7
+  return mesh
 }
 
 export interface FocusSizeReferenceRingsHandle {
   readonly group: THREE.Group
   dispose(): void
   /**
-   * Sync pose, radii (from live `uSizeScale` / `uActiveSizeMul`), opacity (Perlin blend), billboards.
-   * @param opacity — multiply with ring alpha; use `uFocusCameraBlend` × planet alpha during transitions.
+   * Sync pose, radii, per-tier visibility (rings with tier &lt; `voteCount` stay visible; tier &lt; votes hidden).
+   * Labels lie in the ring plane, tangent to the circle, shared azimuth; not camera-facing.
    */
   update(params: {
-    camera: THREE.PerspectiveCamera
     pivotWorld: THREE.Vector3
     movieId: number
+    voteCount: number
     opacity: number
     uSizeScale: number
     uActiveSizeMul: number
@@ -101,7 +127,7 @@ export interface FocusSizeReferenceRingsHandle {
 }
 
 /**
- * P13.5 — five vote_count reference rings coplanar with Perlin sphere center, radii from pipeline size mapping.
+ * P13.5 — vote_count reference rings coplanar with Perlin sphere center, radii from pipeline size mapping.
  */
 export function createFocusSizeReferenceRings(movies: readonly Movie[]): FocusSizeReferenceRingsHandle {
   const { logMin, logMax } = computeLogVoteRangeFromMovies(movies)
@@ -112,43 +138,48 @@ export function createFocusSizeReferenceRings(movies: readonly Movie[]): FocusSi
   group.visible = false
   group.renderOrder = 2.5
 
+  const aspect = LABEL_CANVAS_W / LABEL_CANVAS_H
+  const planeGeo = new THREE.PlaneGeometry(LABEL_PLANE_WORLD_HEIGHT * aspect, LABEL_PLANE_WORLD_HEIGHT)
+
   const rings: THREE.Mesh[] = []
-  const sprites: THREE.Sprite[] = []
+  const labels: THREE.Mesh[] = []
   const orient = new THREE.Quaternion()
   let lastMovieId = Number.NaN
   let lastLoggedRingDiag = Number.NaN
-  const labelAngles = new Float32Array(FOCUS_VOTE_REFERENCE_TIERS.length)
+  /** Shared azimuth (rad) in ring-plane XY for all tiers — same clock position. */
+  let sharedLabelAzimuth = 0
 
   for (let i = 0; i < FOCUS_VOTE_REFERENCE_TIERS.length; i++) {
-    rings.push(makeRingMesh(0.97, 1.03))
-    sprites.push(makeLabelSprite(TIER_LABELS[i]!))
+    rings.push(makeRingMesh(RING_STROKE_INNER_FR, RING_STROKE_OUTER_FR))
+    labels.push(makeLabelPlaneMesh(TIER_LABEL_TEXTS[i]!, planeGeo))
     group.add(rings[i]!)
-    group.add(sprites[i]!)
+    group.add(labels[i]!)
   }
 
   const tmpPos = new THREE.Vector3()
 
   const dispose = () => {
+    planeGeo.dispose()
     for (const m of rings) {
       m.geometry.dispose()
-      ;(m.material as THREE.MeshBasicMaterial).dispose()
+        ; (m.material as THREE.MeshBasicMaterial).dispose()
     }
-    for (const s of sprites) {
-      const mat = s.material as THREE.SpriteMaterial
+    for (const m of labels) {
+      const mat = m.material as THREE.MeshBasicMaterial
       mat.map?.dispose()
       mat.dispose()
     }
   }
 
   const update = (params: {
-    camera: THREE.PerspectiveCamera
     pivotWorld: THREE.Vector3
     movieId: number
+    voteCount: number
     opacity: number
     uSizeScale: number
     uActiveSizeMul: number
   }) => {
-    const { camera, pivotWorld, movieId, opacity, uSizeScale, uActiveSizeMul } = params
+    const { pivotWorld, movieId, voteCount, opacity, uSizeScale, uActiveSizeMul } = params
     const op = THREE.MathUtils.clamp(opacity, 0, 1)
     if (op < 0.002) {
       group.visible = false
@@ -162,10 +193,7 @@ export function createFocusSizeReferenceRings(movies: readonly Movie[]): FocusSi
       lastLoggedRingDiag = Number.NaN
       orient.copy(seededRingPlaneQuaternion(movieId))
       const rnd = mulberry32((movieId >>> 0) ^ 0x85ebca6b)
-      const phase = rnd() * Math.PI * 2
-      for (let i = 0; i < labelAngles.length; i++) {
-        labelAngles[i] = phase + i * GOLDEN_ANGLE
-      }
+      sharedLabelAzimuth = rnd() * Math.PI * 2
     }
     group.quaternion.copy(orient)
 
@@ -173,26 +201,33 @@ export function createFocusSizeReferenceRings(movies: readonly Movie[]): FocusSi
     console.assert(radii.length === rings.length, '[FocusSizeReferenceRings] radii vs rings')
     if (op > 0.5 && movieId !== lastLoggedRingDiag) {
       lastLoggedRingDiag = movieId
-      console.log('[P13.5] size ring radii (world)', { movieId, uSizeScale, uActiveSizeMul, radii: [...radii] })
+      console.log('[P13.5] size ring radii (world)', { movieId, voteCount, uSizeScale, uActiveSizeMul, radii: [...radii] })
     }
 
-    const camQ = camera.quaternion
-    for (let i = 0; i < rings.length; i++) {
-      const r = radii[i]!
-      const mesh = rings[i]!
-      const spr = sprites[i]!
-      mesh.scale.setScalar(r)
-      const mat = mesh.material as THREE.MeshBasicMaterial
-      mat.opacity = 0.38 * op
+    const th = sharedLabelAzimuth
+    const cosT = Math.cos(th)
+    const sinT = Math.sin(th)
 
-      const th = labelAngles[i]!
-      tmpPos.set(Math.cos(th) * r * 1.08, Math.sin(th) * r * 1.08, 0)
-      spr.position.copy(tmpPos)
-      spr.quaternion.copy(camQ)
-      const sprMat = spr.material as THREE.SpriteMaterial
-      sprMat.opacity = 0.92 * op
-      const labelScale = Math.max(r * 0.55, 0.04)
-      spr.scale.set(labelScale, labelScale * 0.38, 1)
+    for (let i = 0; i < rings.length; i++) {
+      const tier = FOCUS_VOTE_REFERENCE_TIERS[i]!
+      const show = voteCount <= tier
+      const r = radii[i]!
+      const ringMesh = rings[i]!
+      const labelMesh = labels[i]!
+
+      ringMesh.visible = show
+      labelMesh.visible = show
+      if (!show) continue
+
+      ringMesh.scale.setScalar(r)
+      const mat = ringMesh.material as THREE.MeshBasicMaterial
+      mat.opacity = RING_OPACITY_BASE * op
+
+      tmpPos.set(cosT * r, sinT * r, 0)
+      labelMesh.position.copy(tmpPos)
+      labelMesh.rotation.set(0, 0, th + Math.PI / 2)
+      const lm = labelMesh.material as THREE.MeshBasicMaterial
+      lm.opacity = 0.95 * op
     }
   }
 

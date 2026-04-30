@@ -84,10 +84,11 @@ export function computeActiveWorldRadius(
   activeMaterial: THREE.ShaderMaterial,
   selectionMaskPickSet: Set<number> | null = null,
 ): number {
-  const inF =
-    selectionMaskPickSet && selectionMaskPickSet.has(movie.id)
+  const inF = selectionMaskPickSet
+    ? selectionMaskPickSet.has(movie.id)
       ? 1
-      : movieZInFocusFactor(movie.z, zCurrent, zVisWindow)
+      : 0
+    : movieZInFocusFactor(movie.z, zCurrent, zVisWindow)
   const u = activeMaterial.uniforms
   const uSizeScale = (u.uSizeScale as THREE.Uniform<number>).value
   const uActiveSizeMul = (u.uActiveSizeMul as THREE.Uniform<number>).value

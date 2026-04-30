@@ -10,7 +10,7 @@ todos:
     status: completed
   - id: p132-focus-neighbor-mask
     content: P13.2 焦点邻域球 active mask：uSelectionMode=2 通道；CPU O(n) 计算半径 R 内 ids → 写入 selectionMask；focus×select 嵌套规则（D1 决策为替换）；拾取/连线对 selectionMaskPickSet 同步识别新 mode
-    status: pending
+    status: completed
   - id: p133-orbit-camera
     content: P13.3 focus 态轨道相机：拖拽改 yaw/pitch 绕 pivot（半径 r 恒定 = FOCUS_PERLIN_CAMERA_STANDOFF；focus 态滚轮 noop，因 Perlin 球屏幕尺寸严格映射 vote_count）；退出 focus 时位置 lerp + quaternion slerp 同步走 P13.1 曲线回 GALAXY_CAMERA_EULER；删除「点空白退出 focus」逻辑
     status: pending
@@ -239,12 +239,16 @@ export function computeFocusNeighborIds(
 - `beginSelect(movie)` 内调 `computeFocusNeighborIds` → `setState({ focusNeighborIds })`
 - 订阅 `focusNeighborRadius` 变化 → 重算
 - RAF tick 决定 `uSelectionMode`：
-  ```ts
+  
+
+```ts
   const mode =
     selectedMovieId !== null ? 2 :          // focus → 邻域 mask
     (searchMode === 'person' || 'genre') ? 1 : // search → search mask
     0                                        // idle → 条带
-  ```
+  
+
+```
 - mask atlas 写入：mode=2 时写 `focusNeighborIds`，mode=1 时写 `selectionIds`，mode=0 时清零
 
 ### Shader
@@ -256,11 +260,15 @@ export function computeFocusNeighborIds(
 ### 拾取 / 连线
 
 - [screenRadius.ts](frontend/src/three/screenRadius.ts) `getSelectionMaskPickSet`：
-  ```ts
+  
+
+```ts
   if (selectedMovieId !== null && focusNeighborIds) return new Set(focusNeighborIds)
   if (searchMode === 'person' || 'genre') return new Set(selectionIds)
   return null
-  ```
+  
+
+```
 - 焦点星本身在双 mesh 上 sActive=0（已 P11 实装），不参与拾取；`focusPlanetBeatsActiveAlongRay` 的"焦点优先"路径继续生效
 - 连线（人名）：focus 嵌套 person select 时按 D1 决策处理（建议 A：focus 期间隐藏连线，退出 focus 后恢复 — 已是当前行为）
 
@@ -351,14 +359,18 @@ if (selectionPhase === 'selected') {
 [scene.ts](frontend/src/three/scene.ts)：
 - `beginSelect` 末尾：snapshot `prevZCurrent`，**不**立即写 `zCurrent`；改用 driver
 - RAF tick 内：
-  ```ts
+  
+
+```ts
   if (selectionPhase === 'selecting' || 'deselecting') {
     // 与相机飞入同曲线
     const targetZ = selectionPhase === 'selecting' ? movie.z : prevZCurrent_isUnneeded_useMovieZ
     const z = lerp(zStartSnapshot, targetZ, focusDriver.progress)
     useGalaxyInteractionStore.setState({ zCurrent: z })
   }
-  ```
+  
+
+```
   实际"stay" 语义：
   - selecting：`zStartSnapshot = prev zCurrent` → `targetZ = movie.z`
   - deselecting：起点 `movie.z` → 终点 `movie.z`（不动）；即 deselecting 不再改 zCurrent

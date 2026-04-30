@@ -90,7 +90,6 @@ export function attachGalaxyActiveMeshInteraction(options: {
     const s = useGalaxyInteractionStore.getState()
     return getSelectionMaskPickSet(s.selectedMovieId, s.focusNeighborIds, s.searchMode, s.selectionIds)
   }
-  let selectionMaskPickSet = maskPickFromState()
   const unsubMaskPick = useGalaxyInteractionStore.subscribe((state, prev) => {
     if (
       state.searchMode === prev.searchMode &&
@@ -101,12 +100,9 @@ export function attachGalaxyActiveMeshInteraction(options: {
     ) {
       return
     }
-    selectionMaskPickSet = getSelectionMaskPickSet(
-      state.selectedMovieId,
-      state.focusNeighborIds,
-      state.searchMode,
-      state.selectionIds,
-    )
+    const maskSize =
+      state.selectedMovieId !== null ? (state.focusNeighborIds?.length ?? 0) : (state.selectionIds?.length ?? 0)
+    console.log('[Interaction] selectionMaskPickSet refreshed | mode=', state.selectedMovieId !== null ? 2 : state.searchMode, '| size=', maskSize)
   })
   const sizeAttr = activeMesh.geometry.getAttribute('aSize') as THREE.InstancedBufferAttribute | undefined
   console.assert(!!sizeAttr, '[Interaction] active mesh must have aSize InstancedBufferAttribute')
@@ -153,6 +149,7 @@ export function attachGalaxyActiveMeshInteraction(options: {
     const R = selectionPlanet.lastRadius
     const tFocus = rayPositiveSphereFirstT(ray, mf.x, mf.y, mf.z, R)
     if (tFocus === null) return false
+    const selectionMaskPickSet = maskPickFromState()
     const pickedActive = pickClosestActiveMovieAlongRay({
       ray,
       movies,
@@ -169,6 +166,7 @@ export function attachGalaxyActiveMeshInteraction(options: {
   const pickAlongRay = (clientX: number, clientY: number, requireSlabInteraction: boolean) => {
     const st = useGalaxyInteractionStore.getState()
     const ray = rayFromClient(clientX, clientY)
+    const selectionMaskPickSet = maskPickFromState()
     return pickClosestActiveMovieAlongRay({
       ray,
       movies,
@@ -230,6 +228,7 @@ export function attachGalaxyActiveMeshInteraction(options: {
     const m = movies[picked.index]
     _worldProject.set(m.x, m.y, m.z)
     const anchor = worldToScreenCss(_worldProject, camera, domElement)
+    const selectionMaskPickSet = maskPickFromState()
     const rCss = computeActiveMeshScreenRadiusCss({
       movie: m,
       camera,
@@ -261,6 +260,9 @@ export function attachGalaxyActiveMeshInteraction(options: {
       return
     }
     const picked = pickAlongRay(e.clientX, e.clientY, true)
+    if (picked === null && useGalaxyInteractionStore.getState().selectedMovieId !== null) {
+      return
+    }
     const id = picked === null ? null : movies[picked.index].id
     useGalaxyInteractionStore.setState({ selectedMovieId: id })
   }

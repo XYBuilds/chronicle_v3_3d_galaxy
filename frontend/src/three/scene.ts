@@ -8,7 +8,13 @@ import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
 import { useSearchIndexStore } from '@/store/searchIndexStore'
 import type { Meta, Movie } from '@/types/galaxy'
 
-import { attachGalaxyCameraControls, clampGalaxyCameraXY, GALAXY_CAMERA_EULER, setFocusCameraPosition } from './camera'
+import {
+  applyFocusOrbitLookAt,
+  attachGalaxyCameraControls,
+  clampGalaxyCameraXY,
+  GALAXY_CAMERA_EULER,
+  setFocusOrbitCameraPosition,
+} from './camera'
 import { CONSTELLATION_SURFACE_GAP_WORLD, createConstellation } from './constellation'
 import { createGalaxyDualMeshes } from './galaxyMeshes'
 import { attachGalaxyActiveMeshInteraction } from './interaction'
@@ -330,7 +336,16 @@ export function mountGalaxyScene(
   const restCam = new THREE.Vector3()
   const fromCam = new THREE.Vector3()
   const toCam = new THREE.Vector3()
+  const tmpOrbitPos = new THREE.Vector3()
+  const deselectFromQuat = new THREE.Quaternion()
+  const deselectToQuat = new THREE.Quaternion().setFromEuler(GALAXY_CAMERA_EULER)
+  const orbitPivotVec = new THREE.Vector3()
   let inputLocked = false
+  /** true 当次 `selecting` 从宏观 `idle` 飞入；false = focus 内换星，飞入时 slerp 四元数保留视角。 */
+  let selectingEnteredFromMacro = true
+  const selectingStartQuat = new THREE.Quaternion()
+  const selectingEndQuat = new THREE.Quaternion()
+  const selectingQuatHelper = new THREE.Object3D()
 
   let pendingSelectInstanceIndex = 0
 
@@ -351,7 +366,12 @@ export function mountGalaxyScene(
       focusDriver.tick(nowMs)
       const p = focusDriver.progress
       camera.position.lerpVectors(fromCam, toCam, p)
-      camera.rotation.copy(GALAXY_CAMERA_EULER)
+      if (selectingEnteredFromMacro) {
+        camera.rotation.copy(GALAXY_CAMERA_EULER)
+      } else {
+        // focus 内换星：仅直线平移机位，朝向在飞行中保持不变；结束瞬时再对齐新 pivot（避免四元数插值绕圈）
+        camera.quaternion.copy(selectingStartQuat)
+      }
       uFocusTargetInstanceId.value = pendingSelectInstanceIndex
       uFocusCameraBlend.value = p
       if (!focusDriver.active) {
@@ -361,6 +381,9 @@ export function mountGalaxyScene(
         planet.mesh.visible = true
         planet.material.uniforms.uAlpha.value = 1
         camera.position.copy(toCam)
+        if (!selectingEnteredFromMacro) {
+          camera.quaternion.copy(selectingEndQuat)
+        }
         console.log('[Selection] phase=selected | dual mesh instance hidden | planet visible')
       }
       return
@@ -373,7 +396,7 @@ export function mountGalaxyScene(
       const p = focusDriver.progress
       const camWeight = 1 - p
       camera.position.lerpVectors(fromCam, toCam, camWeight)
-      camera.rotation.copy(GALAXY_CAMERA_EULER)
+      camera.quaternion.slerpQuaternions(deselectFromQuat, deselectToQuat, camWeight)
       uFocusTargetInstanceId.value = pendingSelectInstanceIndex
       uFocusCameraBlend.value = p
       if (!focusDriver.active) {
@@ -382,18 +405,27 @@ export function mountGalaxyScene(
         uFocusCameraBlend.value = 0
         planet.mesh.visible = false
         planet.material.uniforms.uAlpha.value = 0
+        camera.rotation.setFromQuaternion(deselectToQuat)
+        useGalaxyInteractionStore.setState({ focusOrbit: { yaw: 0, pitch: 0 } })
         console.log('[Selection] phase=idle | camera restored | dual mesh full')
       }
       return
     }
 
-    // selected — user may truck/pedestal; focused instance stays hidden on dual meshes
+    // selected — orbit camera (P13.3); focused instance stays hidden on dual meshes
     inputLocked = false
     uFocused.value = pendingSelectInstanceIndex
     uFocusTargetInstanceId.value = pendingSelectInstanceIndex
     uFocusCameraBlend.value = 1
     planet.mesh.visible = true
     planet.material.uniforms.uAlpha.value = 1
+    const mSel = movies[pendingSelectInstanceIndex]
+    if (mSel) {
+      const { yaw, pitch } = useGalaxyInteractionStore.getState().focusOrbit
+      setFocusOrbitCameraPosition(tmpOrbitPos, mSel, yaw, pitch)
+      camera.position.copy(tmpOrbitPos)
+      applyFocusOrbitLookAt(camera, mSel)
+    }
   }
 
   const syncSelectionPlanetWorldScale = () => {
@@ -428,7 +460,12 @@ export function mountGalaxyScene(
       { x: movie.x, y: movie.y, z: movie.z },
       stPick.focusNeighborRadius,
     )
-    useGalaxyInteractionStore.setState({ focusNeighborIds: neighborIds })
+    // 仅首次从宏观进入 focus 时对准默认朝向；在 focus 内换星保留 orbit，避免视角被拧回。
+    useGalaxyInteractionStore.setState(
+      selectionPhase === 'idle'
+        ? { focusNeighborIds: neighborIds, focusOrbit: { yaw: 0, pitch: 0 } }
+        : { focusNeighborIds: neighborIds },
+    )
     const maskPick = getSelectionMaskPickSet(
       movie.id,
       neighborIds,
@@ -436,7 +473,16 @@ export function mountGalaxyScene(
       stPick.selectionIds,
     )
     const { r, rActive } = resolveSelectionWorldRadius(movie, uZ.value, uZw.value, galaxy.activeMaterial, maskPick)
-    setFocusCameraPosition(toCam, movie)
+    const { yaw, pitch } = useGalaxyInteractionStore.getState().focusOrbit
+    setFocusOrbitCameraPosition(toCam, movie, yaw, pitch)
+    selectingEnteredFromMacro = selectionPhase === 'idle'
+    if (!selectingEnteredFromMacro) {
+      selectingStartQuat.copy(camera.quaternion)
+      // 飞入结束帧对齐到新 pivot（与保留 yaw/pitch 一致）；飞行过程中不用此四元数插值
+      selectingQuatHelper.position.copy(toCam)
+      selectingQuatHelper.lookAt(movie.x, movie.y, movie.z)
+      selectingEndQuat.copy(selectingQuatHelper.quaternion)
+    }
     const gu = galaxy.idleMaterial.uniforms
     planet.setFromMovie(movie, meta.genre_palette, r, {
       uLMin: (gu.uLMin as THREE.Uniform<number>).value,
@@ -460,6 +506,7 @@ export function mountGalaxyScene(
     uFocused.value = -1
     fromCam.copy(camera.position)
     toCam.copy(restCam)
+    deselectFromQuat.copy(camera.quaternion)
     focusDriver.setImmediate(1)
     focusDriver.reverse(DESELECT_MS)
     selectionPhase = 'deselecting'
@@ -796,11 +843,22 @@ export function mountGalaxyScene(
 
   const canvas = renderer.domElement
 
+  const getCameraMode = () => (selectionPhase === 'selected' ? 'orbit' : 'macro')
+  const getOrbitPivot = () => {
+    if (selectionPhase !== 'selected') return null
+    const m = movies[pendingSelectInstanceIndex]
+    if (!m) return null
+    orbitPivotVec.set(m.x, m.y, m.z)
+    return orbitPivotVec
+  }
+
   const detachControls = attachGalaxyCameraControls(camera, canvas, {
     zRange: meta.z_range,
     xyRange: meta.xy_range,
     getInputLocked: () => inputLocked,
     getMacroZWheel: macroZWheel,
+    getCameraMode,
+    getOrbitPivot,
   })
 
   const detachInteraction = attachGalaxyActiveMeshInteraction({
@@ -837,8 +895,8 @@ export function mountGalaxyScene(
     syncSelectionPlanetWorldScale()
     if (selectionPhase === 'idle') {
       camera.position.z = st.zCurrent - st.zCamDistance
+      clampGalaxyCameraXY(camera, meta.xy_range, 0.08)
     }
-    clampGalaxyCameraXY(camera, meta.xy_range, 0.08)
     const bridgeZ = selectionPhase === 'idle' ? st.zCurrent : camera.position.z + st.zCamDistance
     setGalaxyCameraZ(bridgeZ)
     const expectedPr = Math.min(window.devicePixelRatio, 2)

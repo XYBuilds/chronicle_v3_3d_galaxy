@@ -48,8 +48,10 @@
 
 ### **3.3 数据更新与同步**
 
-* **当前阶段**：使用 Kaggle 静态 CSV 数据集进行一次性全量处理，Python 管线本地手动执行，**不涉及后端服务与自动同步**。  
-* **未来规划**（见 §4 未来计划）：接入自动化抓取管线，支持每日增量同步与周期性全量重构。
+数据更新与同步的产品目标以 [`TMDB 电影宇宙 Data Pipeline.md`](./TMDB%20电影宇宙%20Data%20Pipeline.md) 为 SSOT。
+
+* **当前阶段**：前端消费静态 `galaxy_data.json.gz` / `galaxy_search_index.json.gz`，由 Python 管线生成后部署。  
+* **Phase 18+ 目标**：Supabase 作 source of truth；每日刷新已有电影投票/评分/热度并重导静态数据；每周或每月执行全量 refit，将新通过门槛的影片并入宇宙，并通过 Procrustes 对齐保持空间记忆稳定。前端仍不直接查询数据库。
 
 ## **4\. 未来计划 (Future Roadmap)**
 
@@ -57,5 +59,5 @@
 
 * **筛选 (Filter)**：在搜索之上叠加按 **年代区间 / 评分范围 / 国家 / 公司** 等条件的多维筛选，与 §3.2 select 会话语义合流。  
 * **聚光灯交互 (Spotlight)**：选择某个维度（如国家、制片公司）时，高亮该维度下的所有星球，其余星球降低透明度。提供维度级的"宏观X光"视角。  
-* **每日增量同步**：通过 GitHub Actions Cron 定时拉取 Kaggle TMDB Daily Updates，diff 新增 → 执行管线 → UMAP `.transform()` 追加新坐标 → 自动推送更新。  
-* **周期性宇宙重构**：支持定期（如每半年）的全量数据重算（`.fit_transform()`），以适应新兴流派和概念的诞生。
+* **自动化数据流（Phase 18+）**：通过 GitHub Actions Cron 定时拉取 Kaggle TMDB Daily Updates；每日刷新已存在影片的 vote/rating/popularity；新通过门槛的影片进入 pending 池。具体规则见 Data Pipeline SSOT。  
+* **周期性全量 refit（Phase 18+）**：每周或每月执行全量 `.fit_transform()`，合入 pending 新片，并用 v1 reference 做 Procrustes 对齐；不做前端 remap 动画，保持用户长期空间记忆稳定。

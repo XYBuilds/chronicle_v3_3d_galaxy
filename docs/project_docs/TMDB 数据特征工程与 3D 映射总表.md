@@ -1,5 +1,8 @@
 # **TMDB 数据特征工程与 3D 映射总表**
 
+> 本表是字段映射速查表，不再作为数据管线规则 SSOT。  
+> 清洗、embedding、UMAP、Z 轴、genre palette、自动化数据流与版本化规则，以 [`TMDB 电影宇宙 Data Pipeline.md`](./TMDB%20电影宇宙%20Data%20Pipeline.md) 为准。
+
 **架构黄金准则**：
 
 1. **降维克制**：送入 UMAP 的必须是描述电影“文化与内容本质”的绝对核心特征，严禁引入具有多重共线性（Multicollinearity）或高基数（High Cardinality）的噪音数据。  
@@ -11,16 +14,16 @@
 * **阶段 A（轻量化 / subsample 验证）**：`paraphrase-multilingual-MiniLM-L12-v2`，**384 维**；`sentence-transformers` \+ GPU 批编码。  
 * **阶段 B（全量 / 周期重构质量版）**：`paraphrase-multilingual-mpnet-base-v2`，**768 维**。  
 * **拼接与截断**：`Tagline:` / `Overview:` 前缀两行式拼接；无 tagline 则仅 `Overview:`；整段**从尾部截断**至默认 **3000 字符**；**L2 归一化**后进入后续特征融合与 UMAP。  
-* **完整条款**（批大小建议、**PyTorch CUDA / CPU 轮子安装**、`requirements` 锁定、版本语义）：见《TMDB 电影宇宙 Tech Spec》**§2.1.1**。
+* **完整条款**（批大小建议、**PyTorch CUDA / CPU 轮子安装**、`requirements` 锁定、版本语义）：见 [`TMDB 电影宇宙 Data Pipeline.md`](./TMDB%20电影宇宙%20Data%20Pipeline.md)。
 
-### **UMAP 主数据定稿（Phase 8）**
+### **UMAP 主数据定稿（Phase 18 基线）**
 
-* **当前 shipped `galaxy_data` 与脚本默认一致**：`n_neighbors=300`，`min_dist=0.4`，`metric=cosine`，`random_state=42`，**不**启用 DensMAP（`umap_projection.py` / `export_galaxy_json.py` / `run_pipeline.py` 默认 CLI）。
+* **当前 shipped `galaxy_data`**：`embedding_model=paraphrase-multilingual-MiniLM-L12-v2`（384d），`n_neighbors=300`，`min_dist=0.4`，`metric=cosine`，`random_state=42`，**启用 DensMAP**（`densmap=true`）。实际参数以 `galaxy_data.meta` 与 Data Pipeline SSOT 为准。
 
 ### **流派色相 H（Phase 8.1 · 数据资产）**
 
 * **目标**：L/C 由视觉层 uniform 调参，**H** 作为**每片**主流派索引的**可序列化**角度，避免 GPU 再解码 hex。  
-* **合同**：`meta.has_genre_hue === true` 时，每条 `movies[i]` 含 **`genre_hue` ∈ [0, 2π)（弧度）**；`genre_color`（RGB 或 palette hex）**并行保留**作 HUD 与回退。  
+* **合同**：`meta.has_genre_hue === true` 时，每条 `movies[i]` 含 **`genre_hue` ∈ [0, 2π)（弧度）**；`genre_color`（RGB 或 palette hex）**并行保留**作 HUD 与回退。Phase 18 起 palette 生成规则由 Data Pipeline SSOT 的 frozen palette 约束。  
 * **与映射表列「3D 材质」**：`galaxyIdle` / `galaxyActive` / `planet` 片元用 **hue + `uLMin`/`uLMax`/`uChroma`** 走 OKLab→sRGB；详见《Tech Spec》§1.1 与《Design Spec》§1.1。
 
 ### **核心映射矩阵规则表**

@@ -13,14 +13,13 @@
 
 ### **1.1 流派色板生成规则 (Genre Palette — OKLCH)**
 
-全项目统一使用 **OKLCH 色彩空间**。
+全项目统一使用 **OKLCH 色彩空间**。色板的**数据生成、冻结版本、`genre_hue` 导出与 `meta.genre_palette` 契约**以 [`TMDB 电影宇宙 Data Pipeline.md`](./TMDB%20电影宇宙%20Data%20Pipeline.md) 为 SSOT；本节仅描述视觉意图。
 
 * **Lightness (L)** 与 **Chroma (C)**：所有 genre 使用统一的 L 与 C 值（具体数值由视觉调试确定；初始建议 **L ≈ 0.75**、**C ≈ 0.14**）。  
 * **Hue (H) 分配**：  
-  * **步长**：`hueStep = 360 / N`（N = 数据集中实际出现的去重 genre 数量，由管线运行时从数据源算出，**不写死**），确保色相环等间距划分。  
-  * **Index → Hue**：`genreHue = hueStep × index`（index 从 0 开始）。**Phase 8.1**：管线同步导出 **`genre_hue`**（**弧度**，\(2\pi \times \mathrm{index}/N\) 或与 palette 序一致），GPU 与 `cos(hue)` / `sin(hue)` OKLab 构建一致；**hex `genre_palette`** 仍以 OKLCH→sRGB 供 HUD 色块。  
-  * **Index 分配策略（目标态）**：按每个 genre 的电影数量分配 index，目标是使**宇宙内所有星球的加权平均色相矢量和趋近零**（即整体视觉色彩重心接近消色差 / 中性灰）。具体而言，寻找一个 genre → index 的排列，最小化 \(\bigl|\sum_k c_k \cdot e^{i \cdot H_{\sigma(k)}}\bigr|\)，其中 \(c_k\) 为该 genre 的影片数量。  
-  * **现阶段简化**：若优化实现成本较高，先**随机分配** index（使用固定种子保证可复现），待全链路跑通后再迭代为按数量优化的版本。  
+  * **Phase 18+ 固定策略**：使用 frozen genre palette（`genre_palette_version`，当前计划为 `"v1"`），不再根据"本次数据中出现的 genre 集合"动态重排 hue，避免新增/缺失 genre 导致全图颜色漂移。  
+  * **Index → Hue**：管线同步导出 **`genre_hue`**（**弧度**，\(2\pi \times \mathrm{index}/N\)，与 frozen palette 序一致），GPU 与 `cos(hue)` / `sin(hue)` OKLab 构建一致；**hex `genre_palette`** 仍以 OKLCH→sRGB 供 HUD 色块。  
+  * **新 genre 策略**：若 TMDB 官方 genre 集合出现新增项，管线应显式失败并要求人工决定是否 bump `genre_palette_version`，不得静默重排。  
 * **sRGB 转换与 Gamut 安全**：管线中须将 OKLCH 转为 sRGB hex 后写入 `meta.genre_palette`。部分色相在高 Chroma 下可能溢出 sRGB gamut，转换时须做 **gamut clamp**（将 RGB 分量 clamp 到 \[0, 1\]）。若发现个别色相溢出严重，可将 C 全局微调至 **0.12** 保证全部 N 色 in-gamut。  
 * **版本化**：色板变更须 bump 宇宙数据版本号。
 

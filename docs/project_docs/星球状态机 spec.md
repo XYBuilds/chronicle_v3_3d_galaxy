@@ -134,7 +134,7 @@ Perlin focus 球在片元侧按 **`vNoise`** 与 **`uThresh[0..K−2]`**（**K**
 - **法线**：屏幕空间 **`cross(dFdx(vWorldPos), dFdy(vWorldPos))`** 与顶点输出的 **`vGeomNormalWorld`** 按 **`uFlatShadingMix`** 混合，再算 Lambert **`dot(N, uLightDir)`**。
 - **底色**：每档 **`uHue[i]`** + 运行时 **`uPerlinL`** + **`uPerlinChroma`**，在 OKLab 平面用 **cos/sin(hue)** 配 **L**（与 idle/active 语义一致）；线性 RGB **clamp** 至 **[0,1]** 后再 **sRGB**，避免低 **L** / 高 **C** 出色域导致片元异常着色。
 - **vote→L**：**`vote_average`** 经与 **`galaxyIdle.vert.glsl`** 相同的 **P10.1** 映射写入 **`uPerlinL`**；入场系数快照来自 **`galaxy.idleMaterial.uniforms`**（与 `scene.ts` **`beginSelect`** 一致）。
-- **hue**：**主 genre**（`movie.genres` 首个非空）若 JSON 含 **`movie.genre_hue`** 则该档直接用；其余档用 **`genreHueForGenreName`**（palette key 排序对齐 Python **`sorted(found)`**，**勿**用 `localeCompare` 排序）。
+- **hue**：**主 genre**（`movie.genres` 首个非空）若 JSON 含 **`movie.genre_hue`** 则该档直接用；其余档用 **`genreHueForGenreName`**。palette / `genre_hue` 的生成顺序以 [`TMDB 电影宇宙 Data Pipeline.md`](./TMDB%20电影宇宙%20Data%20Pipeline.md) 的 frozen palette 为准，前端不得自行重排。
 - **光照定稿**：**`uLightDir = normalize(0.5, 0.5, -0.1)`**，**`uAmbient = 0.95`**，**`uDiffuse = 0.55`**，**`uFlatShadingMix = 0.8`**（详见《视觉参数总表》§4）。
 
 **不透明化（P11.5 · 已实装）**：Perlin 材质现为 **`transparent: false`**、**`depthWrite: true`**、**`alphaTest: 0.01`**；`uAlpha` 在 `setOpacity()` 中按可见性走 **0/1 二态**，避免 focus 球在 bloom / 叠片场景出现透明边缘泄漏。
@@ -196,4 +196,5 @@ Perlin focus 球在片元侧按 **`vNoise`** 与 **`uThresh[0..K−2]`**（**K**
 | 2026-04-29 | Phase 12 P12.0 收口：§3.6 明确 select 会话下 **active 集合完全由 `selectionIds` 决定、与 viswindow 完全解耦**；focus 嵌套 ESC 仅取消 focus 而保留 select；连线开关仅 **`window.__galaxy`**（产品 HUD 无入口） |
 | 2026-04-29 | Phase 12 P12.9：§3.6 连线开关表述与实现对齐（`window.__galaxy.constellationEnabled`）；性能归档指针见《Phase 8 基线》**`## P12 入口/出口`** |
 | 2026-04-29 | Phase 12 P12.8：**§3.6.1** ESC 焦点栈实现表（`App.tsx` capture、`data-galaxy-search-input`、INFO Modal 排除） |
+| 2026-04-30 | Phase 18 文档同步：`genre_hue` / palette 顺序改由 Data Pipeline SSOT 的 frozen palette 管理 |
 | 2026-04-30 | **Phase 13 P13.0**：§3.4 表修订（邻域球、轨道相机、退出路径）；新增 **§3.4.5** 邻域 mask、**§3.4.6** 轨道相机；§3.6 **`uSelectionMode = 2`** 与 **focus×select（D1）** mask 替换语义 |

@@ -19,8 +19,8 @@ A 2.5D immersive movie-history archive: ~60K TMDB films rendered as a particle g
 ## Key Docs (read before major changes)
 
 - `docs/project_docs/TMDB 电影宇宙 Tech Spec.md` — authoritative implementation spec
+- `docs/project_docs/TMDB 电影宇宙 Data Pipeline.md` — data flow, cleaning, feature engineering, export, automation SSOT
 - `docs/project_docs/TMDB 电影宇宙 Design Spec.md` — visual & interaction rules
-- `docs/project_docs/TMDB 数据处理规则.md` — data filtering rules
 - `docs/project_docs/TMDB 数据特征工程与 3D 映射总表.md` — feature → rendering mapping
 - `docs/project_docs/TMDB 电影宇宙 PRD.md` — product requirements
 

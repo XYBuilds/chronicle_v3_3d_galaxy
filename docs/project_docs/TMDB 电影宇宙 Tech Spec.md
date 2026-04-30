@@ -149,12 +149,14 @@ Output
 
 ## **2\. 核心坐标生成算法 (Coordinate Generation)**
 
+> 数据源、清洗、特征工程、UMAP/DensMAP 参数、Z 轴、genre palette、自动化更新节奏与 Phase 18+ 部署流的 SSOT 迁移至 [`TMDB 电影宇宙 Data Pipeline.md`](./TMDB%20电影宇宙%20Data%20Pipeline.md)。本节仅保留前端/渲染所需的坐标生成心智模型；若与 Data Pipeline SSOT 冲突，以后者为准。
+
 ### **2.1 X/Y 平面生成 (UMAP 预计算)**
 
 二维语义坐标的 (X, Y) 在 Python 管线中**预计算**后写入 `galaxy_data.json`。**UMAP 实现后端**分为两条路径，由运行参数选择（`scripts/run_pipeline.py` 的 `--umap-backend` / `--cpu` 等），二者**不保证** bitwise 一致；**任意更换后端**须 bump 宇宙数据版本并在变更中注明。
 
 * **Backend: `umap-learn`（CPU，Windows 本地回退）**：在 **Windows** 侧 **`.venv`** 与 `pip` 依赖（`requirements.txt` → `requirements.cpu.txt`）上运行。适合小样本、无 NVIDIA GPU、或仅做清洗与联调。  
-* **Backend: RAPIDS cuML（GPU，WSL2 Ubuntu 主路径）**：在 **WSL2** 的 conda 环境 **`chronicle`**（由 `scripts/env/rapids_env.yml` 创建）中，通过 `cuml.manifold.UMAP` 计算，典型用于全量与 **DensMAP** 等需要 GPU 的超参；数据与代码宜放在 WSL 文件系统，产物可同步回 Windows 工作区见 `scripts/env/sync_artifacts_to_windows.sh`。
+* **Backend: RAPIDS cuML（GPU，WSL2 Ubuntu 主路径）**：在 **WSL2** 的 conda 环境 **`chronicle`**（由 `scripts/env/rapids_env.yml` 创建）中，通过 `cuml.manifold.UMAP` 计算；数据与代码宜放在 WSL 文件系统，产物可同步回 Windows 工作区见 `scripts/env/sync_artifacts_to_windows.sh`。注意：cuML 不支持 DensMAP；当 production 参数 `densmap=true` 时，管线使用 CPU `umap-learn` 路径。
 
 * **输入特征 (Input Features)**：  
   1. **剧情文本**：overview \+ tagline，通过 NLP 模型生成 Embeddings（**规范见下节 2.1.1**）。  
@@ -224,27 +226,18 @@ TMDB 中一条影片可出现 **任意多个**流派标签（按 API 给定顺�
   * 公式：Z \= 年份 \+ (当前日期在当年天数 \- 1\) / 当年总天数。  
 * **Z 轴不做归一化 / 缩放**：保留原始小数年份值（约 1900–2025，跨度 ~125），**不**将其压缩至 X/Y 同量级范围。这是有意为之——Z 轴远大于 X/Y 的跨度能营造"在时间长河中浏览"的纵深感，历史空白年代的空旷也应如实保留。前端相机的 near/far 平面与滚轮步进需适配此量级。  
 * **时间偏移噪音 (Temporal Jittering)**：识别占位符数据（如 YYYY-01-01），在 \[.0000, .9999\] 范围内注入小数偏移量，打散重叠节点。**不剔除占位符日期**——采用 Jitter 而非删除，保证这些影片仍然出现在宇宙中。  
-  * **可复现性要求**：Jitter 必须为**确定性**——以每部影片的 **TMDB `id`** 作为随机种子（例如 `rng = np.random.default_rng(seed=tmdb_id)`），保证同一影片在不同管线运行中获得相同的 Z 偏移。这是未来增量 `.transform()` 的前提——已有影片的 Z 坐标不可在重跑时漂移。
+  * **可复现性要求**：Jitter 必须为**确定性**——以每部影片的 **TMDB `id`** 作为随机种子（例如 `rng = np.random.default_rng(seed=tmdb_id)`），保证同一影片在不同管线运行中获得相同的 Z 偏移。Phase 18+ 即使改为周期性全量 `fit_transform`，同一影片的 Z 坐标也不可在重跑时漂移。
 
 ## **3\. 数据生命周期流水线 (Data Pipeline)**
 
-后端算法模块需遵循三个阶段的运行机制：
+数据生命周期与 Phase 18+ 自动化方案以 [`TMDB 电影宇宙 Data Pipeline.md`](./TMDB%20电影宇宙%20Data%20Pipeline.md) 为准。
 
-### **3.1 创世大爆炸 (全量初始化)**
+当前已确认方向：
 
-* 剔除缺失核心特征（简介、流派）的劣质数据。  
-* 投入全量数据执行 UMAP .fit\_transform() 计算初始 (X, Y) 坐标。  
-* **关键输出**：导出静态坐标库，并**深度序列化保存 UMAP 模型文件 (.pkl / .joblib)**。
-
-### **3.2 新星降临 (每日增量更新) — 未来计划，当前不实现**
-
-* 当前阶段使用 Kaggle 静态 CSV 做一次性全量处理，不涉及增量管线。  
-* 未来规划：定时拉取 Kaggle TMDB Daily Updates → diff 新增 → 执行裁剪 + embedding → 加载序列化 UMAP 模型执行 `.transform()` → 追加坐标，保障历史拓扑不变。
-
-### **3.3 宇宙重构 (周期性全量校准) — 未来计划，当前不实现**
-
-* 未来每半年或触发概念漂移时执行。丢弃旧 UMAP 模型，合并历史与增量数据，重新执行 `.fit_transform()`，刷新整个宇宙的拓扑骨架。  
-* **概念漂移触发条件（初步）**：TMDB genres 集合出现**新增流派**时，视为概念漂移的明确信号（原有 genres 编码维度不再匹配）。其他定量触发阈值暂未确定，留待积累增量数据后补充。
+* **初始化**：本地或 CI 全量清洗 → embedding → DensMAP/UMAP `fit_transform` → 导出静态 JSON.gz。
+* **每日刷新**：GitHub Actions 拉取 Kaggle daily update，更新已有电影的 `vote_count` / `vote_average` / `popularity`，重导静态 JSON.gz；每日任务不重算 UMAP 坐标。
+* **周度 / 月度 refit**：全量 `fit_transform`，合入 pending 新片，并用 v1 reference 做 Procrustes 对齐后写回当前坐标。
+* **不再依赖 UMAP `.pkl` 增量 transform**：当前 `umap_model.pkl` 体积大且受 pickle/numba ABI 影响，不作为 Phase 18+ 稳定管线依赖。
 
 ## **4\. 输出数据 Schema（Python → 前端契约）**
 
@@ -261,6 +254,8 @@ Python 管线的最终产物以 **`galaxy_data.json`**（及 gzip）为主；**P
 
 ### **4.2 `meta` 元数据块**
 
+数据版本、生成参数、genre palette 版本与自动化管线语义见 [`TMDB 电影宇宙 Data Pipeline.md`](./TMDB%20电影宇宙%20Data%20Pipeline.md)；本节仅定义前端消费的 JSON 字段契约。
+
 | 字段 | 类型 | 说明 |
 | :---- | :---- | :---- |
 | `version` | string | 宇宙数据版本号，格式 `YYYY.MM.DD` 或语义版本 |
@@ -269,7 +264,8 @@ Python 管线的最终产物以 **`galaxy_data.json`**（及 gzip）为主；**P
 | `embedding_model` | string | 所用 sentence-transformers 模型 HF ID |
 | `umap_params` | object | `{ n_neighbors, min_dist, metric, random_state, densmap, ... }` 实际使用的 UMAP 超参；**`random_state` 固定为 `42`**（见 §2.1）；**`densmap`** 为 **bool**（`true`/`false`），与 Phase 2.4 `umap_projection.py` 及导出入口是否传入 **`--densmap`** 一致，表示是否启用 DensMAP |
 | `genre_weight_ratio` | float | 流派权重公比（默认 ≈0.618） |
-| `genre_palette` | object | **genre 名 → sRGB hex 色值** 映射表，例如 `{ "Drama": "#E74C3C", ... }`。源色彩空间为 **OKLCH**（规则见 Design Spec §1.1），管线中转为 sRGB hex 后写入此处。**HUD swatch** 与兼容用途 |
+| `genre_palette` | object | **genre 名 → sRGB hex 色值** 映射表，例如 `{ "Drama": "#E74C3C", ... }`。源色彩空间为 **OKLCH**，Phase 18+ 由 frozen palette 生成；管线中转为 sRGB hex 后写入此处。**HUD swatch** 与兼容用途 |
+| `genre_palette_version` | string \| undefined | **Phase 18+**：frozen genre palette 版本，例如 `"v1"`；若 palette 重排或加入新 genre，必须 bump |
 | `has_genre_hue` | bool \| undefined | **Phase 8.1**：为 **`true`** 时，每条 `movies[i]` **应**含 **`genre_hue`**（弧度 \([0, 2\pi)\)），GPU 宏观/focus 路径优先消费 hue + 均匀 L/C；与 `genre_color` **双字段共存**直至下一大版本移除旧字段（须 bump 版本并回归） |
 | `has_search_index` | bool \| undefined | **Phase 12+**：为 **`true`** 时，静态目录中**应**存在 **`galaxy_search_index.json.gz`**（§4.5），且每条 `movies[i]` **应**含 **`title_normalized`**（§4.3）；前端据此启用 HUD 搜索（人名 / genre 联想）；缺失时搜索 UI disabled（见 Design Spec §4） |
 | `feature_weights` | object | `{ text: 1.0, genre: 1.0, lang: 1.0 }` §2.1.3 多模态融合的权重乘子 |
@@ -425,19 +421,26 @@ Vercel / Netlify / GitHub Pages（静态托管）
 
 ### **5.2 未来阶段（自动化数据管线）**
 
+Phase 18+ 的自动化部署目标以 [`TMDB 电影宇宙 Data Pipeline.md`](./TMDB%20电影宇宙%20Data%20Pipeline.md) 为准：
+
 ```
-[定时任务 / GitHub Actions Cron]
-    ↓ 每日
-拉取 Kaggle TMDB Daily Updates → diff 新增条目
+Kaggle Daily Updates
     ↓
-执行筛选 + embedding + UMAP .transform()
+GitHub Actions nightly / weekly jobs
     ↓
-追加至 galaxy_data.json → 推送至 CDN / 触发前端重新部署
+Supabase (source of truth)
+    ↓
+export galaxy_data.json.gz + galaxy_search_index.json.gz
+    ↓
+Cloudflare Pages
+    ↓
+Browser 一次性加载静态数据
 ```
 
-* 优先用 **GitHub Actions** 的定时 Cron 触发（免费、无需自建服务器），在 Action 中拉 Kaggle 数据并跑 Python 管线。  
-* 产物通过 `git push` 或上传至对象存储（如 R2 / S3），前端自动获取最新版本。  
-* **当前阶段不实现**，仅预留此架构方向。
+* **Supabase** 仅作 source of truth；前端不直接查询数据库。
+* **每日任务**只刷新已有电影的投票/评分/热度并重导静态 JSON。
+* **周度 / 月度任务**全量 `fit_transform`，合入 pending 新片，并用 v1 reference 做 Procrustes 对齐。
+* **Cloudflare Pages** 是 Phase 18 目标静态托管；GitHub Pages 保留为灰度备线。
 
 ## **6\. 项目目录结构**
 

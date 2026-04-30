@@ -4,7 +4,7 @@ overview: Phase 13 把 focus 从「看一颗星 + 抽屉」升级为「以焦点
 todos:
   - id: p130-spec
     content: P13.0 spec 升级（无代码）：状态机 / Design Spec / Tech Spec / 视觉参数总表 / PRD 同步 focus 邻域球 mask、轨道相机、Timeline snap；定义新 uniform / store 字段命名；Phase 8 基线加 P13.0 入口
-    status: pending
+    status: completed
   - id: p131-transition-driver
     content: P13.1 过渡曲线驱动器抽象（基础设施）：transitionDriver.ts；scene.ts applySelectionFrame 重构为通用 progress 通道；现有 focus 进出 1:1 行为保持（无视觉变化）
     status: pending
@@ -137,12 +137,12 @@ flowchart TD
 
 ### P13.0 决策表（已锁定 · 写入 spec）
 
-| #   | 决策项                                       | 选定方案                                              | 备注                                                                                                                                                                                                |
-| --- | -------------------------------------------- | ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| D1  | focus × person/genre select 嵌套时 mask 行为 | **A — focus 邻域 mask 替换 search mask**              | 退出 focus 后 RAF 检测 `selectedMovieId === null && searchMode in {person,genre}` → 自动恢复 search mask                                                                                            |
-| D2  | Timeline snap 是瞬时还是渐变                 | **渐变**                                              | 与相机飞入共用 `focusDriver.progress`；deselecting 时 zCurrent 不再回退（"stay at movie.z"）                                                                                                        |
-| D3  | focusNeighborRadius 默认值                   | **5 world units（初值，待扫参收口）**                 | Leva `__galaxy.focusNeighborRadius` 暴露；P13.6 决定最终默认值并写回 store                                                                                                                          |
-| D4  | focus 态滚轮行为                             | **noop（不响应）**                                    | Perlin 球屏幕尺寸严格映射 `vote_count`，相机与焦点星距离恒为 `FOCUS_PERLIN_CAMERA_STANDOFF=1`；不允许 dolly 改变此距离。`focusOrbit` 仅含 `{yaw, pitch}`，**无 `r` 字段**                            |
+| #   | 决策项                                       | 选定方案                                 | 备注                                                                                                                                                                      |
+| --- | -------------------------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D1  | focus × person/genre select 嵌套时 mask 行为 | **A — focus 邻域 mask 替换 search mask** | 退出 focus 后 RAF 检测 `selectedMovieId === null && searchMode in {person,genre}` → 自动恢复 search mask                                                                  |
+| D2  | Timeline snap 是瞬时还是渐变                 | **渐变**                                 | 与相机飞入共用 `focusDriver.progress`；deselecting 时 zCurrent 不再回退（"stay at movie.z"）                                                                              |
+| D3  | focusNeighborRadius 默认值                   | **5 world units（初值，待扫参收口）**    | Leva `__galaxy.focusNeighborRadius` 暴露；P13.6 决定最终默认值并写回 store                                                                                                |
+| D4  | focus 态滚轮行为                             | **noop（不响应）**                       | Perlin 球屏幕尺寸严格映射 `vote_count`，相机与焦点星距离恒为 `FOCUS_PERLIN_CAMERA_STANDOFF=1`；不允许 dolly 改变此距离。`focusOrbit` 仅含 `{yaw, pitch}`，**无 `r` 字段** |
 
 ### Phase 8 基线入口
 

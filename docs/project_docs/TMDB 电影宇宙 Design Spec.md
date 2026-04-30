@@ -40,21 +40,23 @@
 | **B — 条带内** | `inFocus` 高 | active 支路为主、可辨明暗 | **可** hover / click（实现上仅 **active**） |
 
   * **过渡**：**smoothstep**，非旧版 A/B `step` 硬切。  
-* 摄像机控制：  
+* 摄像机控制（**宏观 idle**；**focus 态**例外见 **§2.2 Phase 13**）：  
   * **摄像机轴线始终与 Z 轴平行**（无旋转、无倾斜；参数永远为 `Euler(0, π, 0, 'YXZ')`）。  
   * **滚轮**：沿 Z 轴（release\_date 时间纵深）前后穿梭；**宏观 idle 态下实际写入的是 `zCurrent`**，相机位置由 `zCurrent - zCamDistance` 驱动（Phase 5.1.5）。  
   * **拖拽**：仅执行 **truck**（水平平移）与 **pedestal**（垂直平移）——改变 Camera Position，**Rotation 恒定不变**；XY 位置被 `xy_range + padding` 约束。
 
-### **2.2 微观聚焦状态 (Selected)**
+### **2.2 微观聚焦状态 (Selected · Phase 13 起含「邻域探索」)**
 
 当用户明确**点击选中**某颗星球时，触发以下**分阶段过渡序列**：
 
-1. **相机推进**（生产 **`700 ms` 选中** / **`450 ms` 取消**，`easeOutCubic`；以《视觉参数总表》为准）：飞向 **固定物距** 的 focus 机位；轴线与 Z 平行。  
-2. **双 mesh 与 Perlin 切换**：飞入过程中，该影片在 **idle + active** 两 mesh 上 **instance 尺度归零**（`uFocusedInstanceId`）；**C 层**为 **`IcosahedronGeometry(1, 6)`** + **Perlin**（**P8.3**）：CPU 上 noise 分位数定 **4 段**面积比，片元 **硬分带** + 色相来自 **genre_hue** + L/C。旧版 `detail=4` / 单一 `uThreshold` 已废弃。  
+1. **相机推进**（生产 **`700 ms` 选中** / **`450 ms` 取消**，`easeOutCubic`；以《视觉参数总表》为准）：飞向 **固定物距** 的 focus 机位；**宏观段**轴线与 Z 平行。**Phase 13**：**`selected`** 阶段相机切换为**轨道相机**——绕焦点 world 位置（pivot）**偏航 / 俯仰**查看，**半径恒为 `FOCUS_PERLIN_CAMERA_STANDOFF`**；**滚轮不响应**（不推拉、不改变该距离），以保证 Perlin 球屏幕尺寸与 **`vote_count`** 严格对应。进入 / 退出 focus 时位姿与 **`uFocusCameraBlend`** 等由统一 **`transitionDriver`**（`focusDriver.progress`）驱动，含 **position lerp + quaternion slerp**（见 Tech Spec §1.4.2 / §1.4.3 与状态机 spec §3.4.6）。  
+2. **双 mesh 与 Perlin 切换**：飞入过程中，该影片在 **idle + active** 两 mesh 上 **instance 尺度归零**（`uFocusedInstanceId`）；**C 层**为 **`IcosahedronGeometry(1, 8)`** + **Perlin**（**P8.3 → P11.3**）：CPU 上 noise 分位数定面积比，片元 **分档** + 色相来自 **genre_hue** + L/C。旧版 `detail=4` / 单一 `uThreshold` 已废弃。  
 3. **档案抽屉滑出**（`easeOutCubic`，在 Perlin 稳定后）：侧边详情滑入。  
 4. **取消选中 / 回退**：时长见上，相机与 mesh 显隐由 `scene.ts` 状态机驱动。  
 
-* **环境景深重构**：未被选中的背景星球（无论远近）依然保持极简单色渲染，作为视觉背景，凸显主体。在视距窗口视图下等价于 §2.1 的 A 背景层。
+* **环境景深重构**：未被选中的背景星球（无论远近）依然保持极简单色渲染，作为视觉背景，凸显主体。在视距窗口视图下等价于 §2.1 的 A 背景层。**Phase 13**：**球形邻域**内的背景 / active 影片按 mask **可见且可拾取**（`uSelectionMode = 2`），用户可点击**邻域 active** 切换 focus；与 Phase 11.6 Perlin 球拾取优先级一致。
+
+* **Timeline 与年份**：进入 focus 时，时间轴读数与焦点片 **`movie.z`** 对齐（**渐变**或瞬时与相机飞入共用 `focusDriver.progress`，见 Tech Spec §1.4.1）；**退出 focus 后 `zCurrent` 保留在 `movie.z`**，不回退到进入前宏观漫游值。
 
 > **注**：飞入/退出毫秒数以《视觉参数总表》与 `scene.ts` 常量为**当前定稿**；若改动画须双处同步。
 
@@ -67,9 +69,9 @@
 在宏观漫游状态（层级零）下常驻显示的唯一 HUD 元素，为用户提供当前 Z 轴（时间纵深）的**位置感知**：
 
 * **形态**：屏幕边缘（建议左侧或底部）的**纵向 / 横向刻度条**，标注关键年份刻度。  
-* **当前位置标记**：高亮指示器显示**`zCurrent`**（Phase 5.1.5）——即用户当前关注的发行年，而非裸 `camera.position.z`。  
-  * 宏观 idle 态：Timeline 通过 `galaxyCameraZBridge` 订阅 `zCurrent`。  
-  * 非 idle（选中飞入 / 特写）：bridge 发布 `camera.position.z + zCamDistance` 作为「等效时间轴读数」，使指示器在飞入动画中不会卡在宏观 `zCurrent` 不动。  
+* **当前位置标记**：高亮指示器显示 **`zCurrent`**（Phase 5.1.5 / **Phase 13**）——即用户当前关注的发行年；**HUD 订阅 `bridgeZ = zCurrent`**（与 Tech Spec §1.4.1 单一路径一致）。  
+  * **宏观 idle 态**：`zCurrent` 由滚轮 / 时间轴与相机 **`zCurrent - zCamDistance`** 同步。  
+  * **focus 态及过渡**：`zCurrent` 与焦点 **`movie.z`** 对齐（可与飞入动画**渐变**）；**退出 focus 后 `zCurrent` 保留在 `movie.z`**。
 * **交互（可选 / 规划中）**：点击刻度或拖动 thumb 可快速跳转至对应年代，反向写入 `zCurrent`（相机跟随）——本阶段实现为纯被动指示即可；拖动交互作为 **Phase 5.3.1** 单独排期。  
 * **视觉基调**：极低存在感——半透明、细线、小字号，避免遮挡 3D 场景主体。具体视觉样式参照 Figma 设计稿。
 
@@ -128,7 +130,7 @@
 
 ## **4\. 搜索 UX（Phase 12 起 · UX SSOT）**
 
-本节为搜索功能的 **UX 单一事实源（SSOT）**：覆盖入口位置、控件、联想规则、ESC 焦点栈与状态嵌套行为。**数据契约**（管线字段、`galaxy_search_index.json.gz` Schema）以《Tech Spec》§4 为准；**渲染层语义**（selectionMask、focus×select 优先级）以《星球状态机 spec》§3.6 为准；**功能需求**（产品价值、用户旅程）以《PRD》§3 为准。**性能与 fps 归档**（含人名 60+ active、genre 大集合压力片段）见 [`Phase 8 基线 P8.0 性能与 P8.4 准入.md`](../benchmarks/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md) **`## P12 入口/出口`**。
+本节为搜索功能的 **UX 单一事实源（SSOT）**：覆盖入口位置、控件、联想规则、ESC 焦点栈与状态嵌套行为。**数据契约**（管线字段、`galaxy_search_index.json.gz` Schema）以《Tech Spec》§4 为准；**渲染层语义**（selectionMask、focus×select 优先级）以《星球状态机 spec》§3.6 为准；**功能需求**（产品价值、用户旅程）以《PRD》§3 为准。**性能与 fps 归档**（含人名 60+ active、genre 大集合压力片段）见 [`Phase 8 基线 P8.0 性能与 P8.4 准入.md`](../benchmarks/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md) **`## P12 入口/出口`** 与 **`## P13.0 入口`**（Phase 13 focus 邻域 + 轨道相机主战场）。
 
 顶部 **HUD** 搜索：与 3D 画布分层。数据来源为 `galaxy_data`（电影字段）+ 配套 `galaxy_search_index.json.gz`（人名 / genre 索引）。当 **`meta.has_search_index !== true`** 时，搜索框为 **disabled**，仅显示提示语，不阻塞画布。
 
@@ -210,6 +212,8 @@
 4. **`searchMode !== 'idle'`**（select 会话存在）：退出搜索 select 模式（清 `selectionIds` / `searchMode='idle'` / 清连线 / mask 归零）。
 
 未命中以上任一级时，**不**拦截 ESC。键盘 `↑↓Enter` 在搜索输入框聚焦且联想展开时仍优先消费（不与 ESC 冲突）。
+
+**与搜索栏清除（X）对齐**：搜索输入框右侧 **清除（X）** 在实现上须与 **§4.6 第 3 级**一致——当 **`selectedMovieId !== null`** 时，清除操作**同时**将 **`selectedMovieId → null`**（取消 focus），并保留 person/genre **select** 上下文（与 ESC 栈语义一致；详见 Phase 13 P13.6 收口）。
 
 ### **4.7 search × focus 嵌套**
 

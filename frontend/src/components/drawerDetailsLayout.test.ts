@@ -10,6 +10,7 @@ import {
   subsampleMovieHappiness,
   subsampleMovieKika,
   subsampleMovieMarthasVineyard,
+  subsampleMovieParadiseRoad,
 } from '@/storybook/fixtures/subsampleMovies'
 
 const slash = '/'
@@ -49,14 +50,14 @@ describe('buildDrawerDetailsFields', () => {
     expect(fields[1]?.value).toBe(slash)
   })
 
-  it('P14.6 group 4: hide when budget and revenue both unusable', () => {
+  it('P14.6 money group: hide when budget and revenue both unusable', () => {
     const m: Movie = { ...subsampleMovieMarthasVineyard, budget: 0, revenue: 0 }
     const fields = buildDrawerDetailsFields(m)
     expect(idsOf(fields)).not.toContain('budget')
     expect(idsOf(fields)).not.toContain('revenue')
   })
 
-  it('P14.6 group 4: slash for missing side when the other has money', () => {
+  it('P14.6 money group: slash for missing side when the other has money', () => {
     const m: Movie = subsampleMovieKika
     const fields = buildDrawerDetailsFields(m)
     const b = fields.find((f) => f.id === 'budget')
@@ -65,7 +66,7 @@ describe('buildDrawerDetailsFields', () => {
     expect(r?.value).toMatch(/\$/)
   })
 
-  it('P14.6 group 2 order: director, producers, writers', () => {
+  it('P14.6 credits order: director, producers, writers (after runtime/language and optional money)', () => {
     const fields = buildDrawerDetailsFields(subsampleMovieMarthasVineyard)
     const iDir = fields.findIndex((f) => f.id === 'director')
     const iProd = fields.findIndex((f) => f.id === 'producers')
@@ -75,7 +76,16 @@ describe('buildDrawerDetailsFields', () => {
     expect(iWriters).toBeGreaterThan(iProd)
   })
 
-  it('P14.6 group 3 omitted when DOP and composer empty', () => {
+  it('P14.6 money block appears before director when present', () => {
+    const fields = buildDrawerDetailsFields(subsampleMovieKika)
+    const iRevenue = fields.findIndex((f) => f.id === 'revenue')
+    const iDirector = fields.findIndex((f) => f.id === 'director')
+    expect(iRevenue).toBeGreaterThan(-1)
+    expect(iDirector).toBeGreaterThan(-1)
+    expect(iRevenue).toBeLessThan(iDirector)
+  })
+
+  it('P14.6 tech row omitted when DOP and composer empty', () => {
     const fields = buildDrawerDetailsFields(subsampleMovieHappiness)
     expect(idsOf(fields)).not.toContain('directorOfPhotography')
     expect(idsOf(fields)).not.toContain('musicComposer')
@@ -83,16 +93,26 @@ describe('buildDrawerDetailsFields', () => {
 })
 
 describe('buildDrawerDetailsGroups', () => {
-  it('splits credits into separate arrays so UI can break rows between groups', () => {
-    const g = buildDrawerDetailsGroups(subsampleMovieMarthasVineyard)
+  it('splits money / credits / tech so UI can break rows between groups', () => {
+    const g = buildDrawerDetailsGroups(subsampleMovieParadiseRoad)
     expect(g.group1).toHaveLength(2)
-    expect(g.group2.length).toBeGreaterThan(0)
+    expect(g.group2).toHaveLength(2)
+    expect(g.group2[0]?.id).toBe('budget')
+    expect(g.group2[1]?.id).toBe('revenue')
     expect(g.group3.length).toBeGreaterThan(0)
+    expect(g.group4.length).toBeGreaterThan(0)
     expect(g.group1[0]?.id).toBe('runtime')
     expect(g.group1[1]?.id).toBe('language')
   })
 
-  it('leaves group2 empty when no director, producers, or writers', () => {
+  it('Martha fixture: no money row when budget and revenue are 0; credits and tech still grouped', () => {
+    const g = buildDrawerDetailsGroups(subsampleMovieMarthasVineyard)
+    expect(g.group2).toHaveLength(0)
+    expect(g.group3.length).toBeGreaterThan(0)
+    expect(g.group4.length).toBeGreaterThan(0)
+  })
+
+  it('leaves credits group empty when no director, producers, or writers', () => {
     const m: Movie = {
       ...subsampleMovieHappiness,
       director: [],
@@ -100,7 +120,7 @@ describe('buildDrawerDetailsGroups', () => {
       writers: [],
     }
     const g = buildDrawerDetailsGroups(m)
-    expect(g.group2).toHaveLength(0)
+    expect(g.group3).toHaveLength(0)
     expect(g.group1).toHaveLength(2)
   })
 })

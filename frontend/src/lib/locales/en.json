@@ -82,9 +82,9 @@
       "language": "Language",
       "director": "Director",
       "writers": "Writers",
-      "directorOfPhotography": "Director of photography",
+      "directorOfPhotography": "Director of Photography",
       "producers": "Producers",
-      "composer": "Composer",
+      "composer": "Music Composer",
       "budget": "Budget",
       "revenue": "Revenue"
     },

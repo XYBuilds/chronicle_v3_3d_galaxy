@@ -1,7 +1,6 @@
 /**
- * P14.6 — Drawer **Details**: four groups with rules from Design Spec §P14.6.
- * Each group is rendered in its own `grid-cols-2` so the next group always starts on a new row
- * (“组与组之间仅换行”, no extra dividers).
+ * P14.6 — Drawer **Details**: stacked groups, each in its own `grid-cols-2` (forced line breaks).
+ * Order: Runtime+Language → Budget+Revenue (when any) → Director/Producers/Writers → DOP/Music Composer.
  */
 
 import type { Movie } from '@/types/galaxy'
@@ -24,13 +23,15 @@ export interface DrawerDetailField {
   value: string
 }
 
-/** Four logical groups; render each non-empty slice in a separate two-column grid for inter-group line breaks. */
+/** Four stacked groups for the Details section (see module docstring for order). */
 export interface DrawerDetailsGroups {
   /** Runtime + Language — always exactly two fields. */
   group1: readonly [DrawerDetailField, DrawerDetailField]
+  /** Budget + Revenue — 0 or 2 fields (hidden when both amounts are unusable, including 0). */
   group2: DrawerDetailField[]
+  /** Director, Producers, Writers — omit empty columns. */
   group3: DrawerDetailField[]
-  /** 0 or 2 fields when present. */
+  /** Director of Photography, Music Composer — omit empty columns. */
   group4: DrawerDetailField[]
 }
 
@@ -65,31 +66,31 @@ export function buildDrawerDetailsGroups(movie: Movie): DrawerDetailsGroups {
     },
   ]
 
+  const budgetStr = formatUsdPresent(movie.budget)
+  const revenueStr = formatUsdPresent(movie.revenue)
   const group2: DrawerDetailField[] = []
-  if (hasNameList(movie.director)) {
-    group2.push({ id: 'director', value: joinNames(movie.director) })
-  }
-  if (hasNameList(movie.producers)) {
-    group2.push({ id: 'producers', value: joinNames(movie.producers) })
-  }
-  if (hasNameList(movie.writers)) {
-    group2.push({ id: 'writers', value: joinNames(movie.writers) })
+  if (budgetStr != null || revenueStr != null) {
+    group2.push({ id: 'budget', value: budgetStr ?? slash })
+    group2.push({ id: 'revenue', value: revenueStr ?? slash })
   }
 
   const group3: DrawerDetailField[] = []
-  if (hasNameList(movie.director_of_photography)) {
-    group3.push({ id: 'directorOfPhotography', value: joinNames(movie.director_of_photography) })
+  if (hasNameList(movie.director)) {
+    group3.push({ id: 'director', value: joinNames(movie.director) })
   }
-  if (hasNameList(movie.music_composer)) {
-    group3.push({ id: 'musicComposer', value: joinNames(movie.music_composer) })
+  if (hasNameList(movie.producers)) {
+    group3.push({ id: 'producers', value: joinNames(movie.producers) })
+  }
+  if (hasNameList(movie.writers)) {
+    group3.push({ id: 'writers', value: joinNames(movie.writers) })
   }
 
   const group4: DrawerDetailField[] = []
-  const budgetStr = formatUsdPresent(movie.budget)
-  const revenueStr = formatUsdPresent(movie.revenue)
-  if (budgetStr != null || revenueStr != null) {
-    group4.push({ id: 'budget', value: budgetStr ?? slash })
-    group4.push({ id: 'revenue', value: revenueStr ?? slash })
+  if (hasNameList(movie.director_of_photography)) {
+    group4.push({ id: 'directorOfPhotography', value: joinNames(movie.director_of_photography) })
+  }
+  if (hasNameList(movie.music_composer)) {
+    group4.push({ id: 'musicComposer', value: joinNames(movie.music_composer) })
   }
 
   assert(group1[0]?.id === 'runtime' && group1[1]?.id === 'language', '[drawerDetailsLayout] group 1 order')

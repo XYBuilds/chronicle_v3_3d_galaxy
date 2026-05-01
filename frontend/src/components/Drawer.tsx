@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ExternalLink, Star, XIcon } from 'lucide-react'
+import { ExternalLink, Star } from 'lucide-react'
 
 import { GenreBadgesList } from '@/components/GenreBadgesList'
 import { AspectRatio } from '@/components/ui/aspect-ratio'
 import { buttonVariants } from '@/components/ui/button-variants'
+import { CloseButton } from '@/components/ui/close-button'
 import {
   Sheet,
   SheetClose,
@@ -128,14 +129,8 @@ export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailD
         style={{ ['--sheet-ease' as string]: SHEET_OPEN_EASE }}
       >
         <SheetClose
-          className={cn(
-            buttonVariants({ variant: 'ghost', size: 'icon-sm' }),
-            'absolute right-5 top-5 z-30 text-muted-foreground hover:text-foreground',
-          )}
-        >
-          <XIcon className="size-4" aria-hidden />
-          <span className="sr-only">{STRINGS.hud.close}</span>
-        </SheetClose>
+          render={<CloseButton variant="ghostLg" className="absolute right-5 top-5 z-30" />}
+        />
         <SheetHeader className="relative z-20 shrink-0 gap-0 border-b border-border/70 bg-popover px-6 pb-5 pt-7 text-left shadow-[0_6px_18px_-10px_color-mix(in_oklch,var(--foreground)_10%,transparent)] sm:px-7">
           <SheetTitle className="pr-10 text-2xl font-bold leading-tight tracking-tight text-foreground">{title}</SheetTitle>
           <SheetDescription className="sr-only">

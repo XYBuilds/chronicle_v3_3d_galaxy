@@ -10,7 +10,7 @@ todos:
     status: completed
   - id: p142-close-btn-token
     content: P14.2 CloseButton primitive + UI edge token：close-button.tsx variants（default/ghostSm/ghostLg）；index.css 加 --ui-edge-color/-strong/-stroke-width；Drawer 关闭与 SearchBar X 接入
-    status: pending
+    status: completed
   - id: p143-edge-align
     content: P14.3 hover ring × timeline 视觉对齐：HoverRing 与 Timeline 主线/刻度统一走 var(--ui-edge-color) + var(--ui-edge-stroke-width)；light/dark 验收
     status: pending

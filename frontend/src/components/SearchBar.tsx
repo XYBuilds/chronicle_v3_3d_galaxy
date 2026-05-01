@@ -7,9 +7,8 @@ import {
   useRef,
   useState,
 } from 'react'
-import { X } from 'lucide-react'
-
 import { buttonVariants } from '@/components/ui/button-variants'
+import { CloseButton } from '@/components/ui/close-button'
 import { STRINGS } from '@/lib/strings'
 import { cn } from '@/lib/utils'
 import {
@@ -346,17 +345,12 @@ export function SearchBar({ hasSearchIndex, movies }: SearchBarProps) {
             }}
           />
           {searchQuery.length > 0 && !isBlocked && (
-            <button
-              type="button"
-              className={cn(
-                buttonVariants({ variant: 'ghost', size: 'icon-xs' }),
-                'absolute right-1 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground',
-              )}
-              aria-label={STRINGS.searchBar.clear}
+            <CloseButton
+              variant="ghostSm"
+              label={STRINGS.searchBar.clear}
+              className="absolute right-1 top-1/2 -translate-y-1/2"
               onClick={onClear}
-            >
-              <X className="size-4" />
-            </button>
+            />
           )}
         </div>
 

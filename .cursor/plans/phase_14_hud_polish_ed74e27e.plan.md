@@ -1,16 +1,16 @@
 ---
 name: phase 14 hud polish
-overview: Phase 14 是 HUD/UI 抛光层，不动 3D 渲染管线与数据契约。核心：抽 string table 做全英语化（不引 i18n 框架）、抽 CloseButton primitive + UI edge design token（hover ring / timeline / close button 视觉统一）、加全屏切换按钮 + F 快捷键 + Cmd/Ctrl+K 聚焦搜索框、Drawer Details 四组排序与显隐规则（两栏一行 / 每组换行）+ Storybook 全覆盖、Timeline 横置变体（保留纵置默认 + URL query 切换）。
+overview: Phase 14 是 HUD/UI 抛光层，不动 3D 渲染管线与数据契约。核心：抽 string table（**`locales/en.json` + `strings.ts` → `STRINGS`**）做全英语化（不引 i18n 框架）、抽 CloseButton primitive + UI edge design token（hover ring / timeline / close button 视觉统一）、加全屏切换按钮 + F 快捷键 + Cmd/Ctrl+K 聚焦搜索框、Drawer Details 四组排序与显隐规则（两栏一行 / 每组换行）+ Storybook 全覆盖、Timeline 横置变体（保留纵置默认 + URL query 切换）。
 todos:
   - id: p140-spec
     content: P14.0 spec 升级（无代码）：Design Spec §3 / §3.1 / §3.x 加 string table SSOT、Timeline 双 orientation、CloseButton primitive、键盘快捷键节；视觉参数总表 §7 / §7a 加 UI edge token
     status: completed
   - id: p141-strings
-    content: P14.1 string table + 全英语化：抽 frontend/src/lib/strings.ts；扫描全 HUD 中文字面量替换为 STRINGS.xxx；不引 i18n 框架；infoCopy 重写英语版
+    content: P14.1 string table + 全英语化：`locales/en.json`（键值/模板）+ `strings.ts`（`STRINGS`）；HUD 中文字面量→`STRINGS`；`loadGalaxyGzip`/scene/Drawer/FocusLReference/FocusSizeReferenceRings 等用户可见英文；不引 i18n；infoCopy 从 STRINGS.info 再导出；实施报告 docs/reports/Phase 14.1 P14.1 HUD string table 与 en.json 实施报告.md
     status: completed
   - id: p142-close-btn-token
     content: P14.2 CloseButton primitive + UI edge token：close-button.tsx variants（default/ghostSm/ghostLg）；index.css 加 --ui-edge-color/-strong/-stroke-width；Drawer 关闭与 SearchBar X 接入
-    status: pending
+    status: completed
   - id: p143-edge-align
     content: P14.3 hover ring × timeline 视觉对齐：HoverRing 与 Timeline 主线/刻度统一走 var(--ui-edge-color) + var(--ui-edge-stroke-width)；light/dark 验收
     status: pending
@@ -42,7 +42,8 @@ isProject: false
 - 数据契约：**不变**
 - 渲染管线：**不变**
 - 涉及文件（预计）：
-  - 新建 `frontend/src/lib/strings.ts`（string table SSOT）
+  - 新建 `frontend/src/lib/locales/en.json`（英文文案键值 / `{{placeholder}}` SSOT）
+  - 新建 `frontend/src/lib/strings.ts`（`import en.json` → 导出 `STRINGS`，含插值函数）
   - 新建 `frontend/src/components/ui/close-button.tsx`（CloseButton primitive）
   - 新建 `frontend/src/hud/FullscreenButton.tsx`
   - [frontend/src/components/Loading.tsx](frontend/src/components/Loading.tsx)（英语化）
@@ -64,7 +65,7 @@ isProject: false
 
 | #   | 决策项                  | 选定方案                                                                                                                                 | 备注                                                                                                                                                      |
 | --- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| D1  | 全英语化实现策略        | **string table 常量表（不接 i18n 框架）**                                                                                                | 文件 `frontend/src/lib/strings.ts`，未来可作 en.json 种子                                                                                                 |
+| D1  | 全英语化实现策略        | **string table（不接 i18n 框架）**                                                                                                       | **`frontend/src/lib/locales/en.json`** 为英文 SSOT；**`strings.ts`** 聚合为 **`STRINGS`**；其它 locale 可复制 `en.json` 结构扩展                                                                 |
 | D2  | Timeline 横置交付形态   | **横置 + 纵置双变体共存**，URL `?timeline=horizontal\|vertical` 切换；默认沿用现有纵置                                                   | 后续 A/B 评估再决最终形态                                                                                                                                 |
 | D3  | 键盘快捷键集合          | **F = 全屏 + Cmd/Ctrl+K = 聚焦搜索框**（不上单 `/` 键避免与文本输入冲突）                                                                | ESC 焦点栈维持 Phase 12.8 §4.6                                                                                                                            |
 | D4  | 关闭按钮共用粒度        | **primitive + token 双管齐下**：抽 `CloseButton` 组件（variants）+ 抽 UI edge CSS token（hover ring / timeline / close button 视觉对齐） |                                                                                                                                                           |
@@ -113,7 +114,7 @@ flowchart TD
 
 ### Design Spec §3 增补
 
-- §3 头部声明：HUD 文案 SSOT 在 `frontend/src/lib/strings.ts`，所有文字字面量须来自该表；不在组件内写死字面量（除一次性 dev-only console.log）
+- §3 头部声明：HUD 英文文案 SSOT 在 **`frontend/src/lib/locales/en.json`**，运行时经 **`frontend/src/lib/strings.ts`** 的 **`STRINGS`** 引用；不在组件内写死可复用字面量（除一次性 dev-only console.log）
 - §3.1 Timeline 节加「**orientation 双变体**」子节：`vertical`（默认 / 现状）/ `horizontal`（底部居中、刻度朝下）；URL `?timeline=horizontal` 切换；二者外观规则与刻度算法共享
 - §3.x（新增）「Close 控件 primitive」：`CloseButton` variants `default` / `ghost-sm` / `ghost-lg`；图标 `lucide-react X`；颜色与线宽来自 UI edge token
 - §3.x（新增）「键盘快捷键」节：
@@ -141,9 +142,9 @@ flowchart TD
 
 ### 目标
 
-抽出全 HUD 文字字面量到 `frontend/src/lib/strings.ts`，并把现存中文字面量替换为英语 STRINGS.xxx 引用；**不引 i18n 框架**（react-i18next 等），未来若需多语言，本表可直接作为 `en.json` 种子。
+抽出全 HUD 用户可见字面量到 **`frontend/src/lib/locales/en.json`**，由 **`frontend/src/lib/strings.ts`** 导出 **`STRINGS`**（含 `{{key}}` 插值）；组件与部分非 React 模块（如 `loadGalaxyGzip.ts`、`three/scene.ts`、`FocusSizeReferenceRings.ts`）统一 `import { STRINGS } from '@/lib/strings'`。**不引 i18n 框架**（react-i18next 等）。**交付记录**：[`docs/reports/Phase 14.1 P14.1 HUD string table 与 en.json 实施报告.md`](../../docs/reports/Phase%2014.1%20P14.1%20HUD%20string%20table%20与%20en.json%20实施报告.md)。
 
-### 实施步骤
+### 实施步骤（归档 — 与代码一致）
 
 1. **审计**：rg 扫一遍 `frontend/src/**/*.{ts,tsx}` 中含中文字符 `[\u4e00-\u9fff]+` 的字面量（排除 console.log / 注释 / 文档）；常见命中位置：
    - [Loading.tsx](frontend/src/components/Loading.tsx) 三阶段「下载/解压/解析」
@@ -153,66 +154,19 @@ flowchart TD
    - [MovieTooltip.tsx](frontend/src/components/MovieTooltip.tsx)
    - [SearchBar.tsx](frontend/src/components/SearchBar.tsx) placeholder（Phase 16 会补三档专属，本 Phase 仅放泛用 placeholder）
 
-2. **strings.ts 结构**：
-   ```ts
-   export const STRINGS = {
-     loading: {
-       title: 'Loading galaxy data',
-       phaseDownload: 'Download',
-       phaseDecompress: 'Decompress',
-       phaseParse: 'Parse',
-     },
-     error: {
-       title: 'Could not load galaxy data',
-       retry: 'Retry',
-       localDevHint: 'Local dev: run the Python pipeline to generate ...',
-     },
-     drawer: {
-       cast: 'Cast',
-       director: 'Director',
-       directorOfPhotography: 'Director of Photography',
-       writers: 'Writers',
-       producers: 'Producers',
-       musicComposer: 'Music Composer',
-       overview: 'Overview',
-       tagline: 'Tagline',
-       releaseDate: 'Release date',
-       runtime: 'Runtime',
-       budget: 'Budget',
-       revenue: 'Revenue',
-       genres: 'Genres',
-       countries: 'Production countries',
-       companies: 'Production companies',
-       languages: 'Spoken languages',
-       imdb: 'IMDb',
-       tmdb: 'TMDB',
-     },
-     searchBar: {
-       placeholder: 'Search…',
-       clear: 'Clear',
-       noResults: 'No results',
-     },
-     hud: {
-       openInfo: 'Info',
-       toggleFullscreen: 'Toggle fullscreen (F)',
-       focusSearch: 'Focus search (Cmd/Ctrl+K)',
-       close: 'Close',
-     },
-     timeline: {
-       label: 'Timeline (release year)',
-     },
-   } as const
-   ```
+2. **落地形态**：**`en.json`** 存键值与 **`{{placeholder}}`** 模板；**`strings.ts`** `import en` 后导出 **`STRINGS`**（`interpolate()` 装配动态句）。顶层 namespace 以实现为准，含 `loading`、`galaxyData`、`error`、`searchBar`、`hud`、`timeline`、`info`、`scene`、`drawer`、`focusLReference`、`focusVoteReference` 等（见实施报告 §4）。
 
-3. **替换**：所有命中位置 import STRINGS 后替换；非平凡片段（如错误页 retry hint 含 `<code>` 标签）按 React 组件构造，文案部分仍走 STRINGS。
+3. **替换**：所有命中位置 `import { STRINGS } from '@/lib/strings'`；错误页等含 `<code>` 的段落仍拆 JSX，**字面量**来自 `STRINGS.error.*`。
 
-4. **`infoCopy.ts`**：直接重写为英语版（Phase 9.4 排版规则保留；段落标题与正文同源 typo 不变）。
+4. **`infoCopy.ts`**：从 **`STRINGS.info`** 再导出各常量（保持 `@/hud/infoCopy` import 路径）；**`InfoModal`** 副标题等直接引用 `STRINGS.info`。
 
 ### 验收
 
 - `rg '[\u4e00-\u9fff]' frontend/src/**/*.{ts,tsx}` 仅在 console.log / 注释 / `*.test.ts` / `*.stories.tsx` mock 数据中命中，非生产 UI
 - 三方主流程（loading / error / focus drawer）截图英语完整
 - Storybook 各 story 文案英语
+
+**实施报告（定稿）**：[`docs/reports/Phase 14.1 P14.1 HUD string table 与 en.json 实施报告.md`](../../docs/reports/Phase%2014.1%20P14.1%20HUD%20string%20table%20与%20en.json%20实施报告.md)
 
 ---
 
@@ -449,7 +403,7 @@ export function useTimelineOrientationFromQuery(): 'vertical' | 'horizontal' {
 - [Design Spec §3](docs/project_docs/TMDB%20电影宇宙%20Design%20Spec.md) 同步 P14.0 spec 变更
 - [视觉参数总表 §7 / §7a](docs/project_docs/视觉参数总表.md) 同步 token
 - 全局快捷键节加入 F / Cmd-K（与 ESC §4.6 并列）
-- 实施报告 P14.1 / P14.2 / P14.7 各一份（其它子节合并到 Phase 14 总报告）
+- 实施报告：**P14.1** 已有 [`Phase 14.1 P14.1 HUD string table 与 en.json 实施报告.md`](../../docs/reports/Phase%2014.1%20P14.1%20HUD%20string%20table%20与%20en.json%20实施报告.md)；P14.2 / P14.7 各一份（其它子节可合并到 Phase 14 总报告）
 - 回归清单：
   - Loading / Error 页英语完整
   - Drawer Details 四组规则（§P14.6）、关闭按钮、Tooltip / SearchBar / InfoModal 英语完整
@@ -465,7 +419,7 @@ export function useTimelineOrientationFromQuery(): 'vertical' | 'horizontal' {
 
 | 风险                                             | 影响 | 缓解                                                                               |
 | ------------------------------------------------ | ---- | ---------------------------------------------------------------------------------- |
-| string table 未来若接 i18n 需返工                | 低   | strings.ts 已按 namespace 组织；可直接转 `en.json`                                 |
+| string table 未来若接 i18n 需返工                | 低   | **`en.json`** 已为独立 locale 文件；`{{key}}` 可迁移为 i18next ICU；`strings.ts` 可换为 provider 装配层 |
 | UI edge token 切色与现有 chip / badge 不一致     | 低   | token 仅作用 hover ring / timeline / close button 三处；其它色块仍走 shadcn 语义类 |
 | Cmd-K 与浏览器 / OS 快捷键冲突                   | 中   | 仅在 capture 阶段处理；输入框聚焦时仍允许默认；mac Safari 测一遍                   |
 | 横置 Timeline 与 Phase 13 Timeline snap 渐变交互 | 中   | snap 路径不依赖 orientation；orientation 只影响视觉，store 字段不变                |
@@ -475,4 +429,4 @@ export function useTimelineOrientationFromQuery(): 'vertical' | 'horizontal' {
 - 所有 P14.0–P14.8 todos `completed`
 - 中文字符在生产 UI 路径上为 0（实现 `rg` 报告）
 - Storybook：`CloseButton` / Timeline 双向 / FullscreenButton；**Drawer Details 规则矩阵**（P14.6）story 完整
-- Design Spec / 视觉参数总表 / strings.ts 三方与代码一致
+- Design Spec / 视觉参数总表 / **`locales/en.json` + `strings.ts`（`STRINGS`）** 与代码一致

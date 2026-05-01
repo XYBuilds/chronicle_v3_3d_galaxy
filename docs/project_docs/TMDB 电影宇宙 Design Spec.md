@@ -57,7 +57,7 @@
 
 * **Timeline 与年份**：进入 focus 时，时间轴读数与焦点片 **`movie.z`** 对齐（**渐变**或瞬时与相机飞入共用 `focusDriver.progress`，见 Tech Spec §1.4.1）；**退出 focus 后 `zCurrent` 保留在 `movie.z`**，不回退到进入前宏观漫游值。
 
-* **focus 态图例（Phase 13.5）**：Perlin 球同心 **`vote_count` 档位参照圆环**（`frontend/src/three/FocusSizeReferenceRings.ts`）与 HUD **`FocusLReference`**（当前片 **OKLab L** 指针；**不**展示「Rating 0→10」标题）辅助解读尺度与亮度；显隐与 Perlin 球 / focus 过渡一致。
+* **focus 态图例（Phase 13.5）**：Perlin 球同心 **`vote_count` 档位参照圆环**（`frontend/src/three/FocusSizeReferenceRings.ts`）与 HUD **`FocusLReference`**（当前片 **OKLab L** 指针；**不**展示完整 **0→10** 分度标题轴；可展示**当前片评分一行**文案，与圆环 tier 标签同源走 **`STRINGS` / `locales/en.json`**，见 §3）辅助解读尺度与亮度；显隐与 Perlin 球 / focus 过渡一致。
 
 > **注**：飞入/退出毫秒数以《视觉参数总表》与 `scene.ts` 常量为**当前定稿**；若改动画须双处同步。
 
@@ -65,7 +65,7 @@
 
 所有 UI 元素属于前端 DOM 覆盖层，与底层 3D 画布分离。
 
-* **Phase 14 — HUD 文案 SSOT**：所有面向用户的 HUD **英文**字面量以 **`frontend/src/lib/strings.ts`** 常量表为单一事实源；**不在**各 React 组件内写死可复用文案（**例外**：一次性 **dev-only** **`console.log`** 等开发审计输出可保留字面量）。
+* **Phase 14 — HUD 文案 SSOT**：所有面向用户的 HUD **英文**字面量以 **`frontend/src/lib/locales/en.json`** 为**键值与模板**的单一事实源；运行时由 **`frontend/src/lib/strings.ts`** 聚合为 **`STRINGS`**（含 `{{key}}` 插值等），组件**仅**通过 `STRINGS` 引用。**不在**各 React 组件内写死可复用文案（**例外**：一次性 **dev-only** **`console.log`** 等开发审计输出可保留字面量）。
 
 ### **3.1 全局时间轴 (Timeline Indicator)**
 
@@ -128,7 +128,7 @@
 
 #### **3.4.3 Info 弹层（P9.4）**
 
-* **`InfoModal`** 内区块标题与正文排版与抽屉 **Overview 段** 同源：`text-[0.65rem] font-bold uppercase tracking-wider` + `text-sm leading-relaxed`；`infoCopy` 文案本身不在 Phase 9 替换。
+* **`InfoModal`** 内区块标题与正文排版与抽屉 **Overview 段** 同源：`text-[0.65rem] font-bold uppercase tracking-wider` + `text-sm leading-relaxed`；`infoCopy` 文案本身不在 Phase 9 替换。**Phase 14.1** 起：`infoCopy` 从 **`STRINGS.info`**（见 §3，`en.json`）再导出，保持 import 路径稳定。
 
 #### **3.4.4 URL `?theme=light|dark`（P9.5，Dev / 验收）**
 
@@ -138,7 +138,7 @@
 
 #### **3.4.5 Phase 14 — 文案语言与 dev / 验收**
 
-* **产品 HUD**：主体文案为 **英语**（以 `strings.ts` 为准，见 §3 头部 SSOT）。
+* **产品 HUD**：主体文案为 **英语**（以 **`locales/en.json`** + **`strings.ts`（`STRINGS`）** 为准，见 §3 头部 SSOT）。
 * **中文**：仅出现在**项目文档**（如本 Design Spec、Pipeline、报告）与 **dev 审计用 `console.log`** 中；**不**作为生产 HUD 用户可见字符串来源。
 
 ### **3.5 Close 控件 primitive（Phase 14）**

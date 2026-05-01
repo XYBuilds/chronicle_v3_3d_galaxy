@@ -25,7 +25,7 @@ todos:
     status: completed
   - id: p147-timeline-horizontal
     content: P14.7 Timeline 横置变体 + URL query：orientation prop（vertical 默认 / horizontal）；useTimelineOrientationFromQuery hook；Storybook 双 story
-    status: pending
+    status: completed
   - id: p1471-focus-l-reference-vertical
     content: P14.7.1（基于 P14.7 横置评审）FocusLReference：Rating 光谱条改垂直（低分在底、高分在上，与 voteNorm 映射一致）；整体移至视口内星球左侧；与横置 Timeline 不冲突验收
     status: completed

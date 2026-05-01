@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { Star } from 'lucide-react'
 
 import { srgb01FromHueAndVoteNorm, srgb01ToCss } from '@/lib/colorMath'
 import { STRINGS } from '@/lib/strings'
@@ -52,18 +53,19 @@ export function FocusLReference() {
 
   if (!movie || !snap || !style) return null
 
-  const ratingLine = STRINGS.focusLReference.ratingLine(movie.vote_average.toFixed(1))
+  const ratingStr = movie.vote_average.toFixed(1)
+  const pointerTopPct = 100 - style.pointerAlongPct
 
   return (
     <div
       className={cn(
-        'pointer-events-none fixed top-[min(46vh,44%)] z-[35] flex -translate-y-1/2 flex-row items-center gap-2 select-none',
-        'left-[max(0.75rem,calc(50vw-19rem))]',
+        'pointer-events-none fixed top-1/2 z-[35] flex -translate-y-1/2 flex-row items-stretch gap-4 select-none',
+        'left-[max(0.75rem,calc(50vw-22rem))]',
       )}
       role="img"
-      aria-label={STRINGS.focusLReference.ariaLabel(ratingLine, movie.title)}
+      aria-label={STRINGS.focusLReference.ariaLabel(ratingStr, movie.title)}
     >
-      <div className="relative flex h-44 w-2.5 shrink-0 flex-col-reverse overflow-hidden rounded-sm">
+      <div className="relative flex h-[min(70vh,28rem)] w-2.5 shrink-0 flex-col-reverse overflow-hidden">
         {style.stripeColors.map((bg, k) => (
           <div
             key={k}
@@ -73,12 +75,21 @@ export function FocusLReference() {
           />
         ))}
         <div
-          className="pointer-events-none absolute left-1/2 h-px w-5 -translate-x-1/2 bg-white"
-          style={{ bottom: `${style.pointerAlongPct}%` }}
+          className="pointer-events-none absolute left-1/2 h-1 w-5 -translate-x-1/2 -translate-y-1/2 bg-white"
+          style={{ top: `${pointerTopPct}%` }}
+          aria-hidden
         />
       </div>
-      <div className="max-w-[9rem] text-left text-[0.72rem] font-semibold leading-tight tracking-wide text-white/88 tabular-nums">
-        {ratingLine}
+      <div className="relative h-[min(70vh,28rem)] min-w-[4.5rem] shrink-0">
+        <div
+          className="pointer-events-none absolute left-0 flex flex-row items-center"
+          style={{ top: `${pointerTopPct}%`, transform: 'translateY(-50%)' }}
+        >
+          <span className="inline-flex items-center gap-0.5 text-[0.72rem] font-semibold tabular-nums text-white/88">
+            {ratingStr}
+            <Star className="size-3 fill-current" aria-hidden />
+          </span>
+        </div>
       </div>
     </div>
   )

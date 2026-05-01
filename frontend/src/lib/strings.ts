@@ -72,9 +72,8 @@ export const STRINGS = {
     links: en.drawer.links,
   },
   focusLReference: {
-    ratingLine: (rating: string) => interpolate(en.focusLReference.ratingLine, { rating }),
-    ariaLabel: (ratingLine: string, filmTitle: string) =>
-      interpolate(en.focusLReference.ariaLabel, { ratingLine, filmTitle }),
+    ariaLabel: (rating: string, filmTitle: string) =>
+      interpolate(en.focusLReference.ariaLabel, { rating, filmTitle }),
   },
   focusVoteReference: {
     tierLabels: en.focusVoteReference.tierLabels,

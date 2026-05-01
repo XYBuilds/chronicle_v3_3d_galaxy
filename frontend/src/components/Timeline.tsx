@@ -244,7 +244,7 @@ export function TimelineHud({
               <div
                 key={y}
                 className={cn(
-                  'absolute top-2 flex flex-col items-center transition-opacity duration-200',
+                  'absolute top-2 flex flex-col items-center',
                   interactive && 'pointer-events-auto cursor-pointer',
                 )}
                 style={{
@@ -336,7 +336,7 @@ export function TimelineHud({
             <div
               key={y}
               className={cn(
-                'absolute left-0 right-0 flex items-center justify-end pr-0.5 transition-opacity duration-200',
+                'absolute left-0 right-0 flex items-center justify-end pr-0.5',
                 interactive && 'pointer-events-auto cursor-pointer',
               )}
               style={{

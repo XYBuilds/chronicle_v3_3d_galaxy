@@ -22,10 +22,21 @@ type Story = StoryObj<typeof TimelineHud>
 
 const [zLo, zHi] = SUBSAMPLE_DECIMAL_Z_RANGE
 
+/** Default app orientation: bottom-centered horizontal axis. */
 export const Default: Story = {
   args: {
     zRange: [zLo, zHi],
     cameraZ: (zLo + zHi) / 2,
+    orientation: 'horizontal',
+  },
+}
+
+/** Left rail variant; `?timeline=vertical` in the app. */
+export const Vertical: Story = {
+  args: {
+    zRange: [zLo, zHi],
+    cameraZ: (zLo + zHi) / 2,
+    orientation: 'vertical',
   },
 }
 
@@ -59,7 +70,25 @@ function InteractiveHudHarness() {
   return <TimelineHud zRange={[zLo, zHi]} cameraZ={z} onZCurrentChange={onZCurrentChange} />
 }
 
-/** Drag the track or click ticks; thumb follows local `cameraZ` state (no WebGL). */
+/** Drag the track or click ticks (default horizontal axis). */
 export const Interactive: Story = {
   render: () => <InteractiveHudHarness />,
+}
+
+function InteractiveVerticalHarness() {
+  const [z, setZ] = useState((zLo + zHi) / 2)
+  const onZCurrentChange = useCallback((next: number) => setZ(next), [])
+  return (
+    <TimelineHud
+      orientation="vertical"
+      zRange={[zLo, zHi]}
+      cameraZ={z}
+      onZCurrentChange={onZCurrentChange}
+    />
+  )
+}
+
+/** Vertical rail drag/click (matches `?timeline=vertical`). */
+export const InteractiveVertical: Story = {
+  render: () => <InteractiveVerticalHarness />,
 }

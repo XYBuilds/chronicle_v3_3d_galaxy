@@ -46,7 +46,9 @@
     "close": "Close"
   },
   "timeline": {
-    "label": "Timeline (release year)"
+    "label": "Timeline (release year)",
+    "axisDescription": "Release-year axis from {{minYear}} to {{maxYear}}, view focus near {{focusYear}}",
+    "sliderAriaLabel": "Release-year focus"
   },
   "info": {
     "modalTitle": "About this experience",

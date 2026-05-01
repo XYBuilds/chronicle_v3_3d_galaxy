@@ -65,7 +65,7 @@ isProject: false
 
 | #   | 决策项                  | 选定方案                                                                                                                                 | 备注                                                                                                                                                      |
 | --- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| D1  | 全英语化实现策略        | **string table（不接 i18n 框架）**                                                                                                       | **`frontend/src/lib/locales/en.json`** 为英文 SSOT；**`strings.ts`** 聚合为 **`STRINGS`**；其它 locale 可复制 `en.json` 结构扩展                                                                 |
+| D1  | 全英语化实现策略        | **string table（不接 i18n 框架）**                                                                                                       | **`frontend/src/lib/locales/en.json`** 为英文 SSOT；**`strings.ts`** 聚合为 **`STRINGS`**；其它 locale 可复制 `en.json` 结构扩展                          |
 | D2  | Timeline 横置交付形态   | **横置 + 纵置双变体共存**，URL `?timeline=horizontal\|vertical` 切换；默认沿用现有纵置                                                   | 后续 A/B 评估再决最终形态                                                                                                                                 |
 | D3  | 键盘快捷键集合          | **F = 全屏 + Cmd/Ctrl+K = 聚焦搜索框**（不上单 `/` 键避免与文本输入冲突）                                                                | ESC 焦点栈维持 Phase 12.8 §4.6                                                                                                                            |
 | D4  | 关闭按钮共用粒度        | **primitive + token 双管齐下**：抽 `CloseButton` 组件（variants）+ 抽 UI edge CSS token（hover ring / timeline / close button 视觉对齐） |                                                                                                                                                           |
@@ -418,12 +418,12 @@ export function useTimelineOrientationFromQuery(): 'vertical' | 'horizontal' {
 
 ## 风险与回滚
 
-| 风险                                             | 影响 | 缓解                                                                               |
-| ------------------------------------------------ | ---- | ---------------------------------------------------------------------------------- |
+| 风险                                             | 影响 | 缓解                                                                                                    |
+| ------------------------------------------------ | ---- | ------------------------------------------------------------------------------------------------------- |
 | string table 未来若接 i18n 需返工                | 低   | **`en.json`** 已为独立 locale 文件；`{{key}}` 可迁移为 i18next ICU；`strings.ts` 可换为 provider 装配层 |
-| UI edge token 切色与现有 chip / badge 不一致     | 低   | DOM 用 `--ui-edge-*`，黑底环/轴用 `--ui-edge-canvas-*`（P14.3）；其它色块仍走 shadcn 语义类 |
-| Cmd-K 与浏览器 / OS 快捷键冲突                   | 中   | 仅在 capture 阶段处理；输入框聚焦时仍允许默认；mac Safari 测一遍                   |
-| 横置 Timeline 与 Phase 13 Timeline snap 渐变交互 | 中   | snap 路径不依赖 orientation；orientation 只影响视觉，store 字段不变                |
+| UI edge token 切色与现有 chip / badge 不一致     | 低   | DOM 用 `--ui-edge-*`，黑底环/轴用 `--ui-edge-canvas-*`（P14.3）；其它色块仍走 shadcn 语义类             |
+| Cmd-K 与浏览器 / OS 快捷键冲突                   | 中   | 仅在 capture 阶段处理；输入框聚焦时仍允许默认；mac Safari 测一遍                                        |
+| 横置 Timeline 与 Phase 13 Timeline snap 渐变交互 | 中   | snap 路径不依赖 orientation；orientation 只影响视觉，store 字段不变                                     |
 
 ## 出口准入
 

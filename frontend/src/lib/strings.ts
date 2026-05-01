@@ -1,0 +1,78 @@
+/**
+ * HUD copy SSOT (English). No i18n framework — this table can seed `en.json` later.
+ */
+
+export const STRINGS = {
+  loading: {
+    title: 'Loading galaxy data',
+    phaseDownload: 'Download',
+    phaseDecompress: 'Decompress',
+    phaseParse: 'Parse',
+  },
+  galaxyData: {
+    downloadProgress: (downloadedMb: string, totalMb: string) =>
+      `Downloaded ${downloadedMb} / ${totalMb}`,
+    downloadProgressPartial: (downloadedMb: string) => `Downloaded ${downloadedMb}`,
+    decompressingGzip: 'Decompressing gzip…',
+    parsingJson: 'Parsing JSON…',
+    gzipUnsupported:
+      '[GalaxyData] This browser cannot decompress gzip (DecompressionStream). Use Safari 16.4+, Chrome 80+, or Firefox 113+.',
+    networkErrorHint: ' (network error: check connectivity or reachability)',
+    requestFailed: (url: string, hint: string, detail: string) =>
+      `[GalaxyData] Request failed for ${url}${hint}: ${detail}`,
+    httpNotOk: (status: number, statusText: string, url: string, deployHintPath: string) =>
+      `[GalaxyData] HTTP ${status} ${statusText} — ${url} — ensure ${deployHintPath} is deployed`,
+    emptyResponseBody: '[GalaxyData] Empty response body',
+    jsonParseFailed: (detail: string) => `[GalaxyData] JSON parse failed: ${detail}`,
+  },
+  error: {
+    title: 'Could not load galaxy data',
+    retry: 'Retry',
+    localDevHintBeforeCode: 'Local dev: run the Python pipeline to generate ',
+    localDevBetweenCodes: ' (gitignored); export scripts also write ',
+    localDevHintAfterCode: ' for the frontend to load.',
+  },
+  searchBar: {
+    tabMovie: 'Titles',
+    tabPerson: 'People',
+    tabGenre: 'Genres',
+    noIndexInBundle: 'Search index not included in this data bundle (meta.has_search_index)',
+    indexNotExported: 'galaxy_search_index.json.gz was not exported',
+    indexLoading: 'Loading search index…',
+    indexLoadFailed: 'Failed to load search index',
+    indexNotReady: 'Search index not ready',
+    searchUnavailable: 'Search unavailable',
+    placeholderMovie: 'Search titles (≥3 chars)…',
+    placeholderPerson: 'Search cast & crew (≥3 chars)…',
+    placeholderGenre: 'Search genres (≥3 chars)…',
+    clear: 'Clear search',
+  },
+  hud: {
+    openInfo: 'Open info panel (placeholder content)',
+    toggleFullscreen: 'Toggle fullscreen (F)',
+    focusSearch: 'Focus search (Cmd/Ctrl+K)',
+    close: 'Close',
+  },
+  timeline: {
+    label: 'Timeline (release year)',
+  },
+  info: {
+    modalTitle: 'About this experience',
+    modalSubtitle: 'Placeholder panel: copy and links will be finalized before launch.',
+    introHeading: 'Overview',
+    introBody:
+      '(Placeholder) TMDB Movie Cosmos: ~60,000 films as a 2.5D particle galaxy; timeline, search (titles / people / genres), and multi-select highlighting. Product copy TBD.',
+    dataHeading: 'Data sources',
+    dataBody:
+      '(Placeholder) Attribution and references will be added at wrap-up; none listed here yet.',
+    stackHeading: 'Stack',
+    stackBody:
+      '(Placeholder) Vite + React + Three.js (instanced galaxy / post-processing), Zustand, gzip export pipeline. Summary TBD.',
+    linksHeading: 'Links',
+    linksBody: '(Placeholder) Links will be provided at wrap-up.',
+  },
+  scene: {
+    webgl2Required:
+      '[Scene] WebGL2 is required (`gl_InstanceID`, dual InstancedMesh pipeline). Upgrade the browser or enable hardware acceleration (Phase 7.2 baseline).',
+  },
+} as const

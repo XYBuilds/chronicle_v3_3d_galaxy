@@ -7,7 +7,7 @@ todos:
     status: completed
   - id: p141-strings
     content: P14.1 string table + 全英语化：抽 frontend/src/lib/strings.ts；扫描全 HUD 中文字面量替换为 STRINGS.xxx；不引 i18n 框架；infoCopy 重写英语版
-    status: pending
+    status: completed
   - id: p142-close-btn-token
     content: P14.2 CloseButton primitive + UI edge token：close-button.tsx variants（default/ghostSm/ghostLg）；index.css 加 --ui-edge-color/-strong/-stroke-width；Drawer 关闭与 SearchBar X 接入
     status: pending

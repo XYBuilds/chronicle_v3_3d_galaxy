@@ -10,6 +10,7 @@ import {
 import { X } from 'lucide-react'
 
 import { buttonVariants } from '@/components/ui/button-variants'
+import { STRINGS } from '@/lib/strings'
 import { cn } from '@/lib/utils'
 import {
   clearSearch,
@@ -229,15 +230,15 @@ export function SearchBar({ hasSearchIndex, movies }: SearchBarProps) {
 
   const disabledReason =
     !hasSearchIndex
-      ? '当前数据包未包含搜索索引（meta.has_search_index）'
+      ? STRINGS.searchBar.noIndexInBundle
       : indexStatus === 'skipped'
-        ? '未导出 galaxy_search_index.json.gz'
+        ? STRINGS.searchBar.indexNotExported
         : indexStatus === 'loading'
-          ? '正在加载搜索索引…'
+          ? STRINGS.searchBar.indexLoading
           : indexStatus === 'error'
-            ? (indexError ?? '搜索索引加载失败')
+            ? (indexError ?? STRINGS.searchBar.indexLoadFailed)
             : indexStatus !== 'ready'
-              ? '搜索索引未就绪'
+              ? STRINGS.searchBar.indexNotReady
               : null
 
   const isBlocked = disabledReason !== null
@@ -270,7 +271,11 @@ export function SearchBar({ hasSearchIndex, movies }: SearchBarProps) {
               aria-pressed={hudTab === tab}
               onClick={() => onTabChange(tab)}
             >
-              {tab === 'movie' ? '电影' : tab === 'person' ? '影人' : '流派'}
+              {tab === 'movie'
+                ? STRINGS.searchBar.tabMovie
+                : tab === 'person'
+                  ? STRINGS.searchBar.tabPerson
+                  : STRINGS.searchBar.tabGenre}
             </button>
           ))}
         </div>
@@ -289,12 +294,12 @@ export function SearchBar({ hasSearchIndex, movies }: SearchBarProps) {
             disabled={isBlocked}
             placeholder={
               isBlocked
-                ? disabledReason ?? '搜索不可用'
+                ? disabledReason ?? STRINGS.searchBar.searchUnavailable
                 : hudTab === 'movie'
-                  ? '搜索片名（≥3 字符）…'
+                  ? STRINGS.searchBar.placeholderMovie
                   : hudTab === 'person'
-                    ? '搜索演职员（≥3 字符）…'
-                    : '搜索流派（≥3 字符）…'
+                    ? STRINGS.searchBar.placeholderPerson
+                    : STRINGS.searchBar.placeholderGenre
             }
             className={cn(
               'h-9 w-full min-w-0 rounded-lg border border-input bg-background/80 px-3 pr-9 text-sm text-foreground outline-none',
@@ -347,7 +352,7 @@ export function SearchBar({ hasSearchIndex, movies }: SearchBarProps) {
                 buttonVariants({ variant: 'ghost', size: 'icon-xs' }),
                 'absolute right-1 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground',
               )}
-              aria-label="清除搜索"
+              aria-label={STRINGS.searchBar.clear}
               onClick={onClear}
             >
               <X className="size-4" />

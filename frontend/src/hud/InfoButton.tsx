@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Info } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import { STRINGS } from '@/lib/strings'
 import { InfoModal } from '@/hud/InfoModal'
 import { cn } from '@/lib/utils'
 
@@ -27,7 +28,7 @@ export function InfoButton() {
         onClick={() => setOpen(true)}
       >
         <Info className="size-[1.15rem]" aria-hidden />
-        <span className="sr-only">打开关于本体验的说明（占位内容）</span>
+        <span className="sr-only">{STRINGS.hud.openInfo}</span>
       </Button>
       <InfoModal open={open} onOpenChange={setOpen} />
     </>

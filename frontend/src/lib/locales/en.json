@@ -95,8 +95,7 @@
     }
   },
   "focusLReference": {
-    "ratingLine": "Rating = {{rating}}",
-    "ariaLabel": "{{ratingLine}} on OKLab L spectrum for {{filmTitle}}; ten bands at half-step ratings"
+    "ariaLabel": "{{rating}} out of 10 on OKLab L spectrum for {{filmTitle}}; ten bands at half-step ratings"
   },
   "focusVoteReference": {
     "tierLabels": [

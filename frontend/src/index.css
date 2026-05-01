@@ -45,10 +45,13 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
-  /* P14.2 — HUD edge: hover ring / timeline / close button (light surfaces) */
+  /* P14.2 — HUD edge: Drawer / SearchBar / DOM chrome (follows ?theme= / .dark) */
   --ui-edge-color: rgb(15 23 42 / 0.45);
   --ui-edge-color-strong: rgb(15 23 42 / 0.7);
   --ui-edge-stroke-width: 1px;
+  /* P14.x — Hover ring + Timeline sit on the black WebGL canvas only; lock to dark-theme edge */
+  --ui-edge-canvas-color: rgb(255 255 255 / 0.45);
+  --ui-edge-canvas-color-strong: rgb(255 255 255 / 0.7);
 }
 
 * {

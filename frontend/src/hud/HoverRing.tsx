@@ -4,7 +4,7 @@ import { hoverRingOuterRadiusPx } from './hoverRingLayout'
 
 /**
  * Annulus at **planet center** (screen px): inner opening follows silhouette radius + gap;
- * stroke color/width from `--ui-edge-*` tokens; no transition (instant on/off).
+ * Stroke on black canvas: `--ui-edge-canvas-color` + `--ui-edge-stroke-width`; no transition.
  */
 export function HoverRing() {
   const anchor = useGalaxyInteractionStore((s) => s.hoverAnchorCss)
@@ -23,7 +23,7 @@ export function HoverRing() {
         width: d,
         height: d,
         borderWidth: 'var(--ui-edge-stroke-width)',
-        borderColor: 'var(--ui-edge-color)',
+        borderColor: 'var(--ui-edge-canvas-color)',
         // Inner hole radius ≈ planetR + gap (border sits outside silhouette + gap)
         boxSizing: 'border-box',
       }}

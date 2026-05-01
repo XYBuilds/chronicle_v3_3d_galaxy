@@ -128,7 +128,7 @@ export function TimelineHud({ zRange, cameraZ, onZCurrentChange, className }: Ti
         className={cn(
           'relative min-h-0 flex-1',
           interactive &&
-            'pointer-events-auto cursor-grab touch-none active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ui-edge-color-strong)]',
+            'pointer-events-auto cursor-grab touch-none active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ui-edge-canvas-color-strong)]',
         )}
         role={interactive ? 'slider' : undefined}
         tabIndex={interactive ? 0 : undefined}
@@ -169,7 +169,7 @@ export function TimelineHud({ zRange, cameraZ, onZCurrentChange, className }: Ti
           className="pointer-events-none absolute bottom-0 left-1/2 top-0 -translate-x-1/2 rounded-full"
           style={{
             width: 'var(--ui-edge-stroke-width)',
-            backgroundColor: 'var(--ui-edge-color)',
+            backgroundColor: 'var(--ui-edge-canvas-color)',
           }}
           aria-hidden
         />
@@ -192,7 +192,7 @@ export function TimelineHud({ zRange, cameraZ, onZCurrentChange, className }: Ti
                   : undefined
               }
             >
-              <span className="font-mono text-[0.62rem] tabular-nums tracking-tight text-[color:var(--ui-edge-color)]">
+              <span className="font-mono text-[0.62rem] tabular-nums tracking-tight text-[color:var(--ui-edge-canvas-color)]">
                 {y}
               </span>
             </div>
@@ -206,11 +206,11 @@ export function TimelineHud({ zRange, cameraZ, onZCurrentChange, className }: Ti
             className="w-5 rounded-full"
             style={{
               height: 'var(--ui-edge-stroke-width)',
-              backgroundColor: 'var(--ui-edge-color-strong)',
-              boxShadow: '0 0 6px color-mix(in srgb, var(--ui-edge-color-strong) 35%, transparent)',
+              backgroundColor: 'var(--ui-edge-canvas-color-strong)',
+              boxShadow: '0 0 6px color-mix(in srgb, var(--ui-edge-canvas-color-strong) 35%, transparent)',
             }}
           />
-          <span className="font-mono text-[0.62rem] tabular-nums text-[color:var(--ui-edge-color-strong)]">
+          <span className="font-mono text-[0.62rem] tabular-nums text-[color:var(--ui-edge-canvas-color-strong)]">
             {labelYear}
           </span>
         </div>

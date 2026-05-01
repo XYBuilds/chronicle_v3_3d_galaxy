@@ -6,7 +6,7 @@ import { STRINGS } from '@/lib/strings'
 import { InfoModal } from '@/hud/InfoModal'
 import { cn } from '@/lib/utils'
 
-/** 右上角 INFO 入口：打开居中占位 Modal。 */
+/** 右上角 INFO 入口（全屏按钮左侧）：打开居中占位 Modal。 */
 export function InfoButton() {
   const [open, setOpen] = useState(false)
 
@@ -20,7 +20,7 @@ export function InfoButton() {
           'fixed z-40 size-10 border border-white/10 bg-black/45 text-white/85 shadow-md backdrop-blur-sm',
           'pointer-events-auto motion-safe:transition-[background-color,border-color,transform] motion-safe:duration-200',
           'hover:bg-black/55 hover:text-white focus-visible:ring-2 focus-visible:ring-white/30',
-          'right-3 top-3 sm:right-4 sm:top-4',
+          'right-[3.75rem] top-3 sm:right-16 sm:top-4',
         )}
         aria-haspopup="dialog"
         aria-expanded={open}

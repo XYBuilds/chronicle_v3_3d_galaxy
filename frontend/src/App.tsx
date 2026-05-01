@@ -8,7 +8,9 @@ import { MovieTooltip } from '@/components/MovieTooltip'
 import { Timeline } from '@/components/Timeline'
 import { HoverRing } from '@/hud/HoverRing'
 import { FocusLReference } from '@/hud/FocusLReference'
+import { FullscreenButton } from '@/hud/FullscreenButton'
 import { InfoButton } from '@/hud/InfoButton'
+import { isGalaxyFullscreenAvailable, toggleGalaxyFullscreen } from '@/hud/fullscreenApi'
 import { clearSearch, useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
 import { useGalaxyDataStore } from '@/store/galaxyDataStore'
 import { useSearchIndexStore } from '@/store/searchIndexStore'
@@ -43,9 +45,27 @@ function App() {
     void useSearchIndexStore.getState().hydrateFromGalaxyMeta(data.meta)
   }, [status, data])
 
-  /** Design Spec §4.6 — ESC 焦点栈（capture）：blur 搜索框 → 取消 focus → 退出 select；INFO Modal 内不交叠。 */
+  /** Design Spec §4.6 — ESC 焦点栈；§P14.4 — F 切换全屏（可编辑区焦点不劫持）。 */
   useEffect(() => {
     const onKeyDownCapture = (e: KeyboardEvent) => {
+      if (e.key === 'f' || e.key === 'F') {
+        const ae = document.activeElement
+        if (
+          ae instanceof HTMLInputElement ||
+          ae instanceof HTMLTextAreaElement ||
+          (ae instanceof HTMLElement && ae.isContentEditable)
+        ) {
+          return
+        }
+        if (!isGalaxyFullscreenAvailable()) return
+        e.preventDefault()
+        e.stopPropagation()
+        void toggleGalaxyFullscreen().catch(() => {
+          /* policy / gesture */
+        })
+        return
+      }
+
       if (e.key !== 'Escape') return
 
       const ae = document.activeElement
@@ -126,6 +146,7 @@ function App() {
       <HoverRing />
       <MovieTooltip />
       <InfoButton />
+      <FullscreenButton />
       <FocusLReference />
       <Timeline />
       <MovieDetailDrawer />

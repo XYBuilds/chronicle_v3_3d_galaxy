@@ -16,7 +16,7 @@ todos:
     status: completed
   - id: p144-fullscreen
     content: P14.4 FullscreenButton 组件 + F 快捷键：HUD 右上角；fullscreenchange 同步 icon；webkit 前缀兼容；F 仅在非 input 焦点生效
-    status: pending
+    status: completed
   - id: p145-cmdk-focus
     content: P14.5 Cmd/Ctrl+K 聚焦搜索框：App.tsx capture handler；data-galaxy-search-input focus；disabled 时 noop
     status: pending

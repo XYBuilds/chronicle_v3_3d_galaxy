@@ -2,6 +2,10 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { ExternalLink, Star } from 'lucide-react'
 
 import { GenreBadgesList } from '@/components/GenreBadgesList'
+import {
+  buildDrawerDetailsFields,
+  type DrawerDetailFieldId,
+} from '@/components/drawerDetailsLayout'
 import { AspectRatio } from '@/components/ui/aspect-ratio'
 import { buttonVariants } from '@/components/ui/button-variants'
 import { CloseButton } from '@/components/ui/close-button'
@@ -32,12 +36,6 @@ function formatVoteCount(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`
   return `${n}`
-}
-
-/** Present only when the pipeline has a positive USD amount (H5: hide missing money fields). */
-function formatUsdPresent(n: number): string | null {
-  if (!Number.isFinite(n) || n <= 0) return null
-  return new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)
 }
 
 /** Isolated poster + error state so remounting via `key` resets without an effect. */
@@ -76,6 +74,33 @@ const externalHudLinkClass = cn(
 
 const detailFieldLabelClass = 'text-xs font-semibold leading-snug text-foreground'
 
+function drawerDetailLabel(id: DrawerDetailFieldId): string {
+  switch (id) {
+    case 'runtime':
+      return STRINGS.drawer.details.runtime
+    case 'language':
+      return STRINGS.drawer.details.language
+    case 'director':
+      return STRINGS.drawer.details.director
+    case 'producers':
+      return STRINGS.drawer.details.producers
+    case 'writers':
+      return STRINGS.drawer.details.writers
+    case 'directorOfPhotography':
+      return STRINGS.drawer.details.directorOfPhotography
+    case 'musicComposer':
+      return STRINGS.drawer.details.composer
+    case 'budget':
+      return STRINGS.drawer.details.budget
+    case 'revenue':
+      return STRINGS.drawer.details.revenue
+    default: {
+      const _exhaustive: never = id
+      return _exhaustive
+    }
+  }
+}
+
 /** Scrollable body: keep scroll affordance, hide native scrollbar (trackpad / wheel / touch still work). */
 const drawerBodyScrollClass =
   'min-h-0 flex-1 overflow-y-auto overflow-x-hidden motion-safe:scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden'
@@ -88,27 +113,8 @@ export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailD
   const title = movie?.title ?? STRINGS.drawer.fallbackTitle
   const genrePalette = useGalaxyDataStore((s) => s.data?.meta.genre_palette) ?? null
 
-  const budgetStr = movie ? formatUsdPresent(movie.budget) : null
-  const revenueStr = movie ? formatUsdPresent(movie.revenue) : null
-  const runtimeMin = movie?.runtime ?? null
-  const showRuntime = runtimeMin != null
-  const showLanguage = movie != null && Boolean(movie.original_language?.trim())
-  const showDirector = movie != null && movie.director.length > 0
-  const showWriters = movie != null && movie.writers.length > 0
-  const showDop = movie != null && movie.director_of_photography.length > 0
-  const showProducers = movie != null && movie.producers.length > 0
-  const showComposer = movie != null && movie.music_composer.length > 0
-  const showMetaBlock =
-    movie != null &&
-    (showRuntime ||
-      showLanguage ||
-      showDirector ||
-      showWriters ||
-      showDop ||
-      showProducers ||
-      showComposer ||
-      budgetStr != null ||
-      revenueStr != null)
+  const detailFields = useMemo(() => (movie ? buildDrawerDetailsFields(movie) : []), [movie])
+  const showDetailsSection = movie != null
   const imdbIdTrimmed = movie?.imdb_id?.trim() ?? ''
   const showImdbLink = imdbIdTrimmed.length > 0
   const tmdbMovieUrl = movie != null ? `https://www.themoviedb.org/movie/${movie.id}` : ''
@@ -214,68 +220,18 @@ export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailD
               </section>
             ) : null}
 
-            {showMetaBlock ? (
+            {showDetailsSection ? (
               <section className="space-y-3">
                 <h3 className="text-[0.65rem] font-bold uppercase tracking-wider text-muted-foreground">
                   {STRINGS.drawer.sections.details}
                 </h3>
                 <div className="grid grid-cols-2 gap-x-8 gap-y-5 text-sm">
-                  {showRuntime ? (
-                    <div className="min-w-0">
-                      <div className={detailFieldLabelClass}>{STRINGS.drawer.details.runtime}</div>
-                      <div className="text-muted-foreground">
-                        {STRINGS.drawer.details.runtimeMinutes(runtimeMin)}
-                      </div>
+                  {detailFields.map((field) => (
+                    <div key={field.id} className="min-w-0">
+                      <div className={detailFieldLabelClass}>{drawerDetailLabel(field.id)}</div>
+                      <div className="text-muted-foreground">{field.value}</div>
                     </div>
-                  ) : null}
-                  {showLanguage ? (
-                    <div className="min-w-0">
-                      <div className={detailFieldLabelClass}>{STRINGS.drawer.details.language}</div>
-                      <div className="text-muted-foreground uppercase">{movie.original_language}</div>
-                    </div>
-                  ) : null}
-                  {showDirector ? (
-                    <div className="min-w-0">
-                      <div className={detailFieldLabelClass}>{STRINGS.drawer.details.director}</div>
-                      <div className="text-muted-foreground">{movie.director.join(', ')}</div>
-                    </div>
-                  ) : null}
-                  {showWriters ? (
-                    <div className="min-w-0">
-                      <div className={detailFieldLabelClass}>{STRINGS.drawer.details.writers}</div>
-                      <div className="text-muted-foreground">{movie.writers.join(', ')}</div>
-                    </div>
-                  ) : null}
-                  {showDop ? (
-                    <div className="min-w-0">
-                      <div className={detailFieldLabelClass}>{STRINGS.drawer.details.directorOfPhotography}</div>
-                      <div className="text-muted-foreground">{movie.director_of_photography.join(', ')}</div>
-                    </div>
-                  ) : null}
-                  {showProducers ? (
-                    <div className="min-w-0">
-                      <div className={detailFieldLabelClass}>{STRINGS.drawer.details.producers}</div>
-                      <div className="text-muted-foreground">{movie.producers.join(', ')}</div>
-                    </div>
-                  ) : null}
-                  {showComposer ? (
-                    <div className="min-w-0">
-                      <div className={detailFieldLabelClass}>{STRINGS.drawer.details.composer}</div>
-                      <div className="text-muted-foreground">{movie.music_composer.join(', ')}</div>
-                    </div>
-                  ) : null}
-                  {budgetStr != null ? (
-                    <div className="min-w-0">
-                      <div className={detailFieldLabelClass}>{STRINGS.drawer.details.budget}</div>
-                      <div className="text-muted-foreground">{budgetStr}</div>
-                    </div>
-                  ) : null}
-                  {revenueStr != null ? (
-                    <div className="min-w-0">
-                      <div className={detailFieldLabelClass}>{STRINGS.drawer.details.revenue}</div>
-                      <div className="text-muted-foreground">{revenueStr}</div>
-                    </div>
-                  ) : null}
+                  ))}
                 </div>
               </section>
             ) : null}

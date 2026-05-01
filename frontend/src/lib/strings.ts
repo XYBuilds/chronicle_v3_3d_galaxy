@@ -49,6 +49,7 @@ export const STRINGS = {
     votesLine: (count: string) => interpolate(en.drawer.votesLine, { count }),
     sections: en.drawer.sections,
     details: {
+      missingValue: en.drawer.details.missingValue,
       runtime: en.drawer.details.runtime,
       runtimeMinutes: (minutes: number | string) =>
         interpolate(en.drawer.details.runtimeMinutes, { minutes: String(minutes) }),

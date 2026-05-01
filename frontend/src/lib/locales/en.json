@@ -76,6 +76,7 @@
       "cast": "Cast"
     },
     "details": {
+      "missingValue": "/",
       "runtime": "Runtime",
       "runtimeMinutes": "{{minutes}} min",
       "language": "Language",

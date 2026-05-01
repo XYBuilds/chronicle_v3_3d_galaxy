@@ -88,3 +88,61 @@ export const Toggle: Story = {
     )
   },
 }
+
+// --- P14.6 Details: four groups, `/` placeholders, group 4 rules ---
+
+/** Group 1: runtime + language missing → both values `/`. Group 4 hidden (0/0 budget). */
+export const DetailsP14_Group1Slashes_Group4Hidden: Story = {
+  args: {
+    open: true,
+    onOpenChange: () => undefined,
+    movie: {
+      ...subsampleMovieHappiness,
+      runtime: null,
+      original_language: '   ',
+      budget: 0,
+      revenue: 0,
+    },
+  },
+}
+
+/** Group 1: runtime `0` must show `0 min`, not `/`. */
+export const DetailsP14_RuntimeZero: Story = {
+  args: {
+    open: true,
+    onOpenChange: () => undefined,
+    movie: { ...subsampleMovieHappiness, runtime: 0 },
+  },
+}
+
+/** Group 4: budget 0 → `/`, revenue positive → currency (Kika fixture). */
+export const DetailsP14_Group4BudgetSlash: Story = {
+  args: {
+    open: true,
+    onOpenChange: () => undefined,
+    movie: subsampleMovieKika,
+  },
+}
+
+/** Group 2: only writers (no director / producers) — odd cell wraps in `grid-cols-2`. */
+export const DetailsP14_Group2WritersOnly: Story = {
+  args: {
+    open: true,
+    onOpenChange: () => undefined,
+    movie: {
+      ...subsampleMovieHappiness,
+      director: [],
+      producers: [],
+      writers: ['Solo Writer'],
+    },
+  },
+}
+
+/** Group 2 full + group 3 present — many detail cells (Paradise Road). */
+export const DetailsP14_FullCreditsGrid: Story = {
+  args: {
+    open: true,
+    onOpenChange: () => undefined,
+    movie: subsampleMovieParadiseRoad,
+  },
+}

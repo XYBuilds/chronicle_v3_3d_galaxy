@@ -1,5 +1,6 @@
 import type { GalaxyGzipProgress } from '@/data/loadGalaxyGzip'
 import { Spinner } from '@/components/ui/spinner'
+import { STRINGS } from '@/lib/strings'
 import { cn } from '@/lib/utils'
 
 export interface LoadingProps {
@@ -23,7 +24,7 @@ function phaseActive(progress: GalaxyGzipProgress | null | undefined, phase: Gal
 /**
  * Full-screen centered loading overlay (shadcn Spinner) with optional gzip load progress.
  */
-export function Loading({ className, label = 'Loading galaxy data', progress }: LoadingProps) {
+export function Loading({ className, label = STRINGS.loading.title, progress }: LoadingProps) {
   const downloadRatio =
     progress?.phase === 'download' && progress.totalBytes !== null && progress.totalBytes > 0
       ? Math.min(1, progress.downloadedBytes / progress.totalBytes)
@@ -54,7 +55,7 @@ export function Loading({ className, label = 'Loading galaxy data', progress }: 
                 phaseDone(progress, 'download') && 'text-primary',
               )}
             >
-              下载
+              {STRINGS.loading.phaseDownload}
             </li>
             <li
               className={cn(
@@ -63,7 +64,7 @@ export function Loading({ className, label = 'Loading galaxy data', progress }: 
                 phaseDone(progress, 'decompress') && 'text-primary',
               )}
             >
-              解压
+              {STRINGS.loading.phaseDecompress}
             </li>
             <li
               className={cn(
@@ -71,7 +72,7 @@ export function Loading({ className, label = 'Loading galaxy data', progress }: 
                 phaseActive(progress, 'parse') && 'font-medium text-foreground',
               )}
             >
-              解析
+              {STRINGS.loading.phaseParse}
             </li>
           </ol>
           <div className="h-2 w-full overflow-hidden rounded-full bg-muted">

@@ -31,12 +31,12 @@ export function GalaxyThreeLayerLabLevaHost(props: GalaxyThreeLayerLabProps) {
   const [v, set] = useControls(
     'Galaxy · I2 (P7.3)',
     () => ({
-      zCurrent: { value: props.zCurrent, label: '宏观 · zCurrent', min: zLo, max: zHi, step: 0.02 },
-      zVisWindow: { value: props.zVisWindow, label: '宏观 · zVisWindow', min: 0.05, max: 8, step: 0.05 },
-      uActiveSizeMul: { value: props.uActiveSizeMul, label: '宏观 · uActiveSizeMul', min: 0.01, max: 2, step: 0.01 },
-      uBgSizeMul: { value: props.uBgSizeMul, label: '宏观 · uBgSizeMul', min: 0.0001, max: 1.5, step: 0.0001 },
-      uLMin: { value: props.uLMin, label: '宏观 · uLMin', min: 0.05, max: 0.6, step: 0.01 },
-      uLMax: { value: props.uLMax, label: '宏观 · uLMax', min: 0.4, max: 1.0, step: 0.01 },
+      zCurrent: { value: props.zCurrent, label: 'Macro · zCurrent', min: zLo, max: zHi, step: 0.02 },
+      zVisWindow: { value: props.zVisWindow, label: 'Macro · zVisWindow', min: 0.05, max: 8, step: 0.05 },
+      uActiveSizeMul: { value: props.uActiveSizeMul, label: 'Macro · uActiveSizeMul', min: 0.01, max: 2, step: 0.01 },
+      uBgSizeMul: { value: props.uBgSizeMul, label: 'Macro · uBgSizeMul', min: 0.0001, max: 1.5, step: 0.0001 },
+      uLMin: { value: props.uLMin, label: 'Macro · uLMin', min: 0.05, max: 0.6, step: 0.01 },
+      uLMax: { value: props.uLMax, label: 'Macro · uLMax', min: 0.4, max: 1.0, step: 0.01 },
       uHighRatingT: { value: props.uHighRatingT, label: 'P10.1 · uHighRatingT', min: 0.5, max: 0.98, step: 0.01 },
       uHighTierTRangeScale: {
         value: props.uHighTierTRangeScale,
@@ -63,8 +63,8 @@ export function GalaxyThreeLayerLabLevaHost(props: GalaxyThreeLayerLabProps) {
         value: props.uDistanceFalloffMode === 1,
         label: 'P10.2 · distance falloff on',
       },
-      uChroma: { value: props.uChroma, label: '宏观 · uChroma', min: 0.02, max: 0.35, step: 0.01 },
-      uSizeScale: { value: props.uSizeScale, label: '宏观 · uSizeScale', min: 0.05, max: 1.2, step: 0.01 },
+      uChroma: { value: props.uChroma, label: 'Macro · uChroma', min: 0.02, max: 0.35, step: 0.01 },
+      uSizeScale: { value: props.uSizeScale, label: 'Macro · uSizeScale', min: 0.05, max: 1.2, step: 0.01 },
       uFocusDimChroma: {
         value: props.uFocusDimChroma,
         label: 'P11.2 · uFocusDimChroma (C×)',

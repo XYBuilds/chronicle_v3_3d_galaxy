@@ -1,3 +1,5 @@
+import { STRINGS } from '@/lib/strings'
+
 export type GalaxyGzipLoadPhase = 'download' | 'decompress' | 'parse'
 
 export interface GalaxyGzipProgress {
@@ -34,7 +36,9 @@ async function readBodyWithProgress(
       chunks.push(value)
       downloadedBytes += value.byteLength
       const message =
-        totalBytes !== null ? `下载 ${mb(downloadedBytes)} / ${mb(totalBytes)}` : `已下载 ${mb(downloadedBytes)}`
+        totalBytes !== null
+          ? STRINGS.galaxyData.downloadProgress(mb(downloadedBytes), mb(totalBytes))
+          : STRINGS.galaxyData.downloadProgressPartial(mb(downloadedBytes))
       emit(onProgress, { phase: 'download', downloadedBytes, totalBytes, message })
     }
   }
@@ -49,9 +53,7 @@ async function readBodyWithProgress(
 
 async function gunzipBuffer(u8: Uint8Array): Promise<string> {
   if (typeof DecompressionStream === 'undefined') {
-    throw new Error(
-      '[GalaxyData] 当前浏览器不支持 gzip 解压（DecompressionStream）。请使用 Safari 16.4+、Chrome 80+ 或 Firefox 113+。',
-    )
+    throw new Error(STRINGS.galaxyData.gzipUnsupported)
   }
   const gzipStream = new DecompressionStream('gzip') as TransformStream<Uint8Array, Uint8Array>
   const stream = new ReadableStream<Uint8Array>({
@@ -77,9 +79,9 @@ export async function fetchGunzippedJson(
   try {
     res = await fetch(url)
   } catch (e) {
-    const hint = e instanceof TypeError ? '（网络错误：请检查网络或服务是否可达）' : ''
+    const hint = e instanceof TypeError ? STRINGS.galaxyData.networkErrorHint : ''
     throw new Error(
-      `[GalaxyData] 请求失败 ${url}${hint}: ${e instanceof Error ? e.message : String(e)}`,
+      STRINGS.galaxyData.requestFailed(url, hint, e instanceof Error ? e.message : String(e)),
     )
   }
 
@@ -87,9 +89,7 @@ export async function fetchGunzippedJson(
     const tail = url.includes('search_index')
       ? 'frontend/public/data/galaxy_search_index.json.gz'
       : 'frontend/public/data/galaxy_data.json.gz'
-    throw new Error(
-      `[GalaxyData] HTTP ${res.status} ${res.statusText} — ${url} — 请确认已部署 ${tail}`,
-    )
+    throw new Error(STRINGS.galaxyData.httpNotOk(res.status, res.statusText, url, tail))
   }
 
   const cl = res.headers.get('Content-Length')
@@ -97,7 +97,7 @@ export async function fetchGunzippedJson(
   const totalBytes = Number.isFinite(parsedLen) ? parsedLen : null
   const body = res.body
   if (!body) {
-    throw new Error('[GalaxyData] 响应无 body，无法读取')
+    throw new Error(STRINGS.galaxyData.emptyResponseBody)
   }
 
   const bytes = await readBodyWithProgress(body, totalBytes, onProgress)
@@ -108,7 +108,7 @@ export async function fetchGunzippedJson(
       phase: 'decompress',
       downloadedBytes: bytes.byteLength,
       totalBytes,
-      message: '解压 gzip…',
+      message: STRINGS.galaxyData.decompressingGzip,
     })
     text = await gunzipBuffer(bytes)
   } else {
@@ -119,12 +119,12 @@ export async function fetchGunzippedJson(
     phase: 'parse',
     downloadedBytes: bytes.byteLength,
     totalBytes,
-    message: '解析 JSON…',
+    message: STRINGS.galaxyData.parsingJson,
   })
 
   try {
     return JSON.parse(text) as unknown
   } catch (e) {
-    throw new Error(`[GalaxyData] JSON 解析失败: ${e instanceof Error ? e.message : String(e)}`)
+    throw new Error(STRINGS.galaxyData.jsonParseFailed(e instanceof Error ? e.message : String(e)))
   }
 }

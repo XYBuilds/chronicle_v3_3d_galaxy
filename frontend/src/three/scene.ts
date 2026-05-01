@@ -4,6 +4,7 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js'
 
 import { setGalaxyCameraZ } from '@/lib/galaxyCameraZBridge'
+import { STRINGS } from '@/lib/strings'
 import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
 import { useSearchIndexStore } from '@/store/searchIndexStore'
 import type { Meta, Movie } from '@/types/galaxy'
@@ -176,9 +177,7 @@ export function mountGalaxyScene(
 
   if (!renderer.capabilities.isWebGL2) {
     renderer.dispose()
-    throw new Error(
-      '[Scene] 需要 WebGL2（`gl_InstanceID` 与双 InstancedMesh 管线）。请升级浏览器或启用硬件加速；与 Phase 7.2 红线一致。',
-    )
+    throw new Error(STRINGS.scene.webgl2Required)
   }
 
   const gl = renderer.getContext()

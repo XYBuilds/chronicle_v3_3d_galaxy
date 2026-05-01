@@ -17,6 +17,7 @@ import {
   INFO_STACK_BODY,
   INFO_STACK_HEADING,
 } from '@/hud/infoCopy'
+import { STRINGS } from '@/lib/strings'
 
 export interface InfoModalProps {
   open: boolean
@@ -47,7 +48,7 @@ export function InfoModal({ open, onOpenChange }: InfoModalProps) {
             {INFO_MODAL_TITLE}
           </DialogTitle>
           <DialogDescription className="mt-2 text-sm font-medium leading-snug text-muted-foreground">
-            占位面板：文案与链接将在项目收尾阶段统一补全。
+            {STRINGS.info.modalSubtitle}
           </DialogDescription>
         </DialogHeader>
 

@@ -5,6 +5,7 @@ import {
   computeLogVoteRangeFromMovies,
   focusShellRadiiForVoteTiers,
 } from '@/lib/galaxyVoteSize'
+import { STRINGS } from '@/lib/strings'
 import type { Movie } from '@/types/galaxy'
 
 // ---------------------------------------------------------------------------
@@ -46,15 +47,6 @@ export const LABEL_SPRITE_WORLD_HEIGHT = 0.028
 /** Same stack as Tailwind `font-sans` / app UI (thinnest weight 100). */
 export const LABEL_UI_FONT_STACK =
   'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif'
-
-/** Vote tier labels (aligned with `FOCUS_VOTE_REFERENCE_TIERS` order). */
-const TIER_LABEL_TEXTS = [
-  '10 votes',
-  '100 votes',
-  '1,000 votes',
-  '10,000 votes',
-  '100,000 votes',
-] as const
 
 const LABEL_CANVAS_W = 720
 const LABEL_CANVAS_H = 112
@@ -170,9 +162,17 @@ export function createFocusSizeReferenceRings(movies: readonly Movie[]): FocusSi
   /** Fixed azimuth (rad) in ring local XY for all tiers — seeded by `movieId`. */
   let sharedLabelAzimuth = 0
 
+  const tierLabels = STRINGS.focusVoteReference.tierLabels
+  console.assert(
+    tierLabels.length === FOCUS_VOTE_REFERENCE_TIERS.length,
+    '[FocusSizeReferenceRings] tierLabels vs FOCUS_VOTE_REFERENCE_TIERS',
+    tierLabels.length,
+    FOCUS_VOTE_REFERENCE_TIERS.length,
+  )
+
   for (let i = 0; i < FOCUS_VOTE_REFERENCE_TIERS.length; i++) {
     rings.push(createRingMesh())
-    sprites.push(makeLabelSprite(TIER_LABEL_TEXTS[i]!))
+    sprites.push(makeLabelSprite(tierLabels[i]!))
     group.add(rings[i]!)
     group.add(sprites[i]!)
   }

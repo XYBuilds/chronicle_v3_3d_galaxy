@@ -12,6 +12,7 @@ import { InfoButton } from '@/hud/InfoButton'
 import { clearSearch, useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
 import { useGalaxyDataStore } from '@/store/galaxyDataStore'
 import { useSearchIndexStore } from '@/store/searchIndexStore'
+import { STRINGS } from '@/lib/strings'
 import { mountGalaxyScene } from '@/three/scene'
 
 import './App.css'
@@ -88,21 +89,21 @@ function App() {
   if (status === 'error') {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-6 text-center text-foreground">
-        <h1 className="text-lg font-medium">Could not load galaxy data</h1>
+        <h1 className="text-lg font-medium">{STRINGS.error.title}</h1>
         <p className="max-w-lg text-sm text-muted-foreground whitespace-pre-wrap">{errorMessage}</p>
         <p className="text-xs text-muted-foreground">
-          本地开发：运行 Python 管线生成{' '}
+          {STRINGS.error.localDevHintBeforeCode}
           <code className="rounded bg-muted px-1 py-0.5">frontend/public/data/galaxy_data.json</code>
-          （gitignore）；导出脚本会同步写入{' '}
+          {STRINGS.error.localDevBetweenCodes}
           <code className="rounded bg-muted px-1 py-0.5">galaxy_data.json.gz</code>
-          供前端加载。
+          {STRINGS.error.localDevHintAfterCode}
         </p>
         <button
           type="button"
           className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
           onClick={() => void fetchGalaxyData()}
         >
-          重试
+          {STRINGS.error.retry}
         </button>
       </div>
     )

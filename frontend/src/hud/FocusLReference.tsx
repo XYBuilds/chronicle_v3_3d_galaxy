@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 
 import { srgb01FromHueAndVoteNorm, srgb01ToCss } from '@/lib/colorMath'
+import { STRINGS } from '@/lib/strings'
 import { useGalaxyDataStore } from '@/store/galaxyDataStore'
 import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
 import type { Movie } from '@/types/galaxy'
@@ -51,7 +52,7 @@ export function FocusLReference() {
 
   if (!movie || !snap || !style) return null
 
-  const ratingTitle = `Rating = ${movie.vote_average.toFixed(1)}`
+  const ratingLine = STRINGS.focusLReference.ratingLine(movie.vote_average.toFixed(1))
 
   return (
     <div
@@ -60,10 +61,10 @@ export function FocusLReference() {
         'top-[min(70vh,calc(50%+11rem))] sm:top-[68vh]',
       )}
       role="img"
-      aria-label={`${ratingTitle} on OKLab L spectrum for ${movie.title}; ten bands at half-step ratings`}
+      aria-label={STRINGS.focusLReference.ariaLabel(ratingLine, movie.title)}
     >
       <div className="mb-1.5 text-center text-[0.72rem] font-semibold tracking-wide text-white/88 tabular-nums">
-        {ratingTitle}
+        {ratingLine}
       </div>
       <div className="relative flex h-2.5 w-full overflow-hidden">
         <div className="flex min-w-0 flex-1">

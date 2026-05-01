@@ -199,7 +199,7 @@ export function TimelineHud({
     return (
       <div
         className={cn(
-          // Match vertical rail extent: vertical uses h-[50vh] → horizontal uses w-[80vw]
+          // Horizontal rail width: `w-[50vw]` + max-width cap; vertical track uses `h-[80vh]` (see below).
           'pointer-events-none fixed bottom-8 left-1/2 z-30 flex h-24 w-[50vw] max-w-[calc(100vw-2rem)] -translate-x-1/2 select-none flex-col items-stretch sm:bottom-10',
           className,
         )}

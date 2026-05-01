@@ -42,14 +42,13 @@ function zToTrackLeftFraction(z: number, zMin: number, zMax: number): number {
   return zToTrackBottomFraction(z, zMin, zMax)
 }
 
-/** Normalized axis distance within which tick labels fade so they don’t clash with the thumb year (smoothstep). */
+/** Normalized axis distance (fraction of track): tick labels fade linearly within this radius of the thumb. */
 const TICK_LABEL_FADE_RADIUS_FRAC = 0.07
 
+/** Distance → opacity: 0 at thumb, 1 at or beyond `TICK_LABEL_FADE_RADIUS_FRAC` (linear). */
 function tickLabelOpacityNearThumb(tickFraction: number, thumbFraction: number): number {
   const d = Math.abs(tickFraction - thumbFraction)
-  if (d >= TICK_LABEL_FADE_RADIUS_FRAC) return 1
-  const t = d / TICK_LABEL_FADE_RADIUS_FRAC
-  return t * t * (3 - 2 * t)
+  return Math.min(1, d / TICK_LABEL_FADE_RADIUS_FRAC)
 }
 
 /** Map pointer Y to release-year Z: bottom = `zMin`, top = `zMax`. */
@@ -168,40 +167,40 @@ export function TimelineHud({
   const keyStepHandler =
     interactive && onZCurrentChange
       ? (e: React.KeyboardEvent<HTMLDivElement>) => {
-          const step = Math.max(1, Math.round((zMax - zMin) / 200))
-          if (orientation === 'vertical') {
-            if (e.key === 'ArrowUp' || e.key === 'ArrowRight') {
-              e.preventDefault()
-              onZCurrentChange(Math.min(zMax, cameraZ + step))
-            } else if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') {
-              e.preventDefault()
-              onZCurrentChange(Math.max(zMin, cameraZ - step))
-            }
-          } else {
-            if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
-              e.preventDefault()
-              onZCurrentChange(Math.min(zMax, cameraZ + step))
-            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
-              e.preventDefault()
-              onZCurrentChange(Math.max(zMin, cameraZ - step))
-            }
+        const step = Math.max(1, Math.round((zMax - zMin) / 200))
+        if (orientation === 'vertical') {
+          if (e.key === 'ArrowUp' || e.key === 'ArrowRight') {
+            e.preventDefault()
+            onZCurrentChange(Math.min(zMax, cameraZ + step))
+          } else if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') {
+            e.preventDefault()
+            onZCurrentChange(Math.max(zMin, cameraZ - step))
           }
-          if (e.key === 'Home') {
+        } else {
+          if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
             e.preventDefault()
-            onZCurrentChange(zMin)
-          } else if (e.key === 'End') {
+            onZCurrentChange(Math.min(zMax, cameraZ + step))
+          } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
             e.preventDefault()
-            onZCurrentChange(zMax)
+            onZCurrentChange(Math.max(zMin, cameraZ - step))
           }
         }
+        if (e.key === 'Home') {
+          e.preventDefault()
+          onZCurrentChange(zMin)
+        } else if (e.key === 'End') {
+          e.preventDefault()
+          onZCurrentChange(zMax)
+        }
+      }
       : undefined
 
   if (orientation === 'horizontal') {
     return (
       <div
         className={cn(
-          // Match vertical rail extent: vertical uses h-[80vh] → horizontal uses w-[80vw]
-          'pointer-events-none fixed bottom-8 left-1/2 z-30 flex h-24 w-[80vw] max-w-[calc(100vw-2rem)] -translate-x-1/2 select-none flex-col items-stretch sm:bottom-10',
+          // Match vertical rail extent: vertical uses h-[60vh] → horizontal uses w-[80vw]
+          'pointer-events-none fixed bottom-8 left-1/2 z-30 flex h-24 w-[60vw] max-w-[calc(100vw-2rem)] -translate-x-1/2 select-none flex-col items-stretch sm:bottom-10',
           className,
         )}
         role={interactive ? 'presentation' : 'img'}
@@ -212,7 +211,7 @@ export function TimelineHud({
           className={cn(
             'relative min-h-0 flex-1 w-full',
             interactive &&
-              'pointer-events-auto cursor-grab touch-none active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ui-edge-canvas-color-strong)]',
+            'pointer-events-auto cursor-grab touch-none active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ui-edge-canvas-color-strong)]',
           )}
           role={interactive ? 'slider' : undefined}
           tabIndex={interactive ? 0 : undefined}
@@ -257,9 +256,9 @@ export function TimelineHud({
                 onPointerDown={
                   interactive
                     ? (e) => {
-                        e.stopPropagation()
-                        onZCurrentChange?.(y)
-                      }
+                      e.stopPropagation()
+                      onZCurrentChange?.(y)
+                    }
                     : undefined
                 }
               >
@@ -304,7 +303,7 @@ export function TimelineHud({
         className={cn(
           'relative min-h-0 flex-1',
           interactive &&
-            'pointer-events-auto cursor-grab touch-none active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ui-edge-canvas-color-strong)]',
+          'pointer-events-auto cursor-grab touch-none active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ui-edge-canvas-color-strong)]',
         )}
         role={interactive ? 'slider' : undefined}
         tabIndex={interactive ? 0 : undefined}
@@ -349,9 +348,9 @@ export function TimelineHud({
               onPointerDown={
                 interactive
                   ? (e) => {
-                      e.stopPropagation()
-                      onZCurrentChange?.(y)
-                    }
+                    e.stopPropagation()
+                    onZCurrentChange?.(y)
+                  }
                   : undefined
               }
             >

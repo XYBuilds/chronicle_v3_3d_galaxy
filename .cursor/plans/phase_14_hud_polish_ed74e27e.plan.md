@@ -4,7 +4,7 @@ overview: Phase 14 是 HUD/UI 抛光层，不动 3D 渲染管线与数据契约�
 todos:
   - id: p140-spec
     content: P14.0 spec 升级（无代码）：Design Spec §3 / §3.1 / §3.x 加 string table SSOT、Timeline 双 orientation、CloseButton primitive、键盘快捷键节；视觉参数总表 §7 / §7a 加 UI edge token
-    status: pending
+    status: completed
   - id: p141-strings
     content: P14.1 string table + 全英语化：抽 frontend/src/lib/strings.ts；扫描全 HUD 中文字面量替换为 STRINGS.xxx；不引 i18n 框架；infoCopy 重写英语版
     status: pending

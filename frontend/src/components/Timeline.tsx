@@ -128,7 +128,7 @@ export function TimelineHud({ zRange, cameraZ, onZCurrentChange, className }: Ti
         className={cn(
           'relative min-h-0 flex-1',
           interactive &&
-            'pointer-events-auto cursor-grab touch-none active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25',
+            'pointer-events-auto cursor-grab touch-none active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ui-edge-color-strong)]',
         )}
         role={interactive ? 'slider' : undefined}
         tabIndex={interactive ? 0 : undefined}
@@ -166,7 +166,11 @@ export function TimelineHud({ zRange, cameraZ, onZCurrentChange, className }: Ti
         }
       >
         <div
-          className="pointer-events-none absolute bottom-0 left-1/2 top-0 w-px -translate-x-1/2 rounded-full bg-white/[0.12]"
+          className="pointer-events-none absolute bottom-0 left-1/2 top-0 -translate-x-1/2 rounded-full"
+          style={{
+            width: 'var(--ui-edge-stroke-width)',
+            backgroundColor: 'var(--ui-edge-color)',
+          }}
           aria-hidden
         />
         {ticks.map((y) => {
@@ -188,7 +192,7 @@ export function TimelineHud({ zRange, cameraZ, onZCurrentChange, className }: Ti
                   : undefined
               }
             >
-              <span className="font-mono text-[0.62rem] tabular-nums tracking-tight text-white/[0.38]">
+              <span className="font-mono text-[0.62rem] tabular-nums tracking-tight text-[color:var(--ui-edge-color)]">
                 {y}
               </span>
             </div>
@@ -198,8 +202,17 @@ export function TimelineHud({ zRange, cameraZ, onZCurrentChange, className }: Ti
           className="pointer-events-none absolute left-0 right-0 flex flex-col items-center gap-0.5"
           style={{ bottom: `${thumbT * 100}%`, transform: 'translateY(50%)' }}
         >
-          <div className="h-px w-5 rounded-full bg-white/[0.55] shadow-[0_0_6px_rgba(255,255,255,0.25)]" />
-          <span className="font-mono text-[0.62rem] tabular-nums text-white/[0.72]">{labelYear}</span>
+          <div
+            className="w-5 rounded-full"
+            style={{
+              height: 'var(--ui-edge-stroke-width)',
+              backgroundColor: 'var(--ui-edge-color-strong)',
+              boxShadow: '0 0 6px color-mix(in srgb, var(--ui-edge-color-strong) 35%, transparent)',
+            }}
+          />
+          <span className="font-mono text-[0.62rem] tabular-nums text-[color:var(--ui-edge-color-strong)]">
+            {labelYear}
+          </span>
         </div>
       </div>
     </div>

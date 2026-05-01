@@ -33,10 +33,10 @@
   * 状态在 Zustand 中维护；**拾取**以 **active mesh** + 世界球逻辑为准（Tech Spec §1.5）。  
 * **与旧 A/B「点大小」的对应（心智模型）**：条带外可见性主要由 **idle** 支路 + **`uBgSizeMul`** 体现；条带内由 **active** 支路 + **`uActiveSizeMul`** 体现；**初值** `uSizeScale=0.3`，`uActiveSizeMul=0.02`，`uBgSizeMul=0.002`（以《视觉参数总表》与 `galaxyMeshes.ts` 为准）。
 
-| 层 | 定义 | 视觉 | 交互 |
-| :---- | :---- | :---- | :---- |
-| **A — 背景感** | 条带外 `inFocus` 低 | idle 支路为主、较淡较小 | 不作为主拾取层 |
-| **B — 条带内** | `inFocus` 高 | active 支路为主、可辨明暗 | **可** hover / click（实现上仅 **active**） |
+| 层             | 定义                | 视觉                      | 交互                                        |
+| :------------- | :------------------ | :------------------------ | :------------------------------------------ |
+| **A — 背景感** | 条带外 `inFocus` 低 | idle 支路为主、较淡较小   | 不作为主拾取层                              |
+| **B — 条带内** | `inFocus` 高        | active 支路为主、可辨明暗 | **可** hover / click（实现上仅 **active**） |
 
   * **过渡**：**smoothstep**，非旧版 A/B `step` 硬切。  
 * 摄像机控制（**宏观 idle**；**focus 态**例外见 **§2.2 Phase 13**）：  
@@ -66,7 +66,6 @@
 所有 UI 元素属于前端 DOM 覆盖层，与底层 3D 画布分离。
 
 * **Phase 14 — HUD 文案 SSOT**：所有面向用户的 HUD **英文**字面量以 **`frontend/src/lib/locales/en.json`** 为**键值与模板**的单一事实源；运行时由 **`frontend/src/lib/strings.ts`** 聚合为 **`STRINGS`**（含 `{{key}}` 插值等），组件**仅**通过 `STRINGS` 引用。**不在**各 React 组件内写死可复用文案（**例外**：一次性 **dev-only** **`console.log`** 等开发审计输出可保留字面量）。
-* **P14.1 实施报告（定稿）**：[`docs/reports/Phase 14.1 P14.1 HUD string table 与 en.json 实施报告.md`](../reports/Phase%2014.1%20P14.1%20HUD%20string%20table%20与%20en.json%20实施报告.md) — 归档最终决策、代码接入面、`rg` 验收命令及 **Timeline `aria-label`** 等未收口项。
 
 ### **3.1 全局时间轴 (Timeline Indicator)**
 
@@ -147,7 +146,7 @@
 * **组件**：**`CloseButton`**，实现路径 **`frontend/src/components/ui/close-button.tsx`**。
 * **Variants**：**`default`**（带边框的方形按钮）/ **`ghost-sm`** / **`ghost-lg`**（轻量幽灵态，尺寸分档）。
 * **图标**：**`lucide-react`** 的 **`X`**；**`aria-label`** 等可访问性文案走 **`STRINGS`**（与 §3 SSOT 一致）。
-* **视觉**：**DOM 壳层**上的 **`CloseButton`** 等与 **`?theme=light|dark`** 验收走 **`--ui-edge-*`**；**叠在黑 WebGL 画布上**的 **Hover ring**、**Timeline** 主线/刻度走 **`--ui-edge-canvas-*`**（固定浅描边，不随浅色 HUD 变为深灰细线）。线宽统一 **`--ui-edge-stroke-width`**。详见《视觉参数总表》**§7 / §7a**。
+* **视觉**：普通态边框与线宽与 **hover 环**、**Timeline** 主线对齐，统一消费 **UI edge CSS token**（见《视觉参数总表》**§7a**）。
 
 ### **3.6 全局键盘快捷键（Phase 14 · HUD）**
 

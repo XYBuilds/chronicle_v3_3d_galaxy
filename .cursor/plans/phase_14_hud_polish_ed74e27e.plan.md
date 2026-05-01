@@ -12,8 +12,8 @@ todos:
     content: P14.2 CloseButton primitive + UI edge token：close-button.tsx variants（default/ghostSm/ghostLg）；index.css 加 --ui-edge-color/-strong/-stroke-width；Drawer 关闭与 SearchBar X 接入
     status: completed
   - id: p143-edge-align
-    content: P14.3 hover ring × timeline 视觉对齐：线宽 var(--ui-edge-stroke-width)；黑底画布上颜色 var(--ui-edge-canvas-*)，DOM 壳 CloseButton 等仍 var(--ui-edge-*)；与 P14.1 报告 §10 边界一致
-    status: completed
+    content: P14.3 hover ring × timeline 视觉对齐：HoverRing 与 Timeline 主线/刻度统一走 var(--ui-edge-color) + var(--ui-edge-stroke-width)；light/dark 验收
+    status: pending
   - id: p144-fullscreen
     content: P14.4 FullscreenButton 组件 + F 快捷键：HUD 右上角；fullscreenchange 同步 icon；webkit 前缀兼容；F 仅在非 input 焦点生效
     status: pending
@@ -240,7 +240,7 @@ export function CloseButton({ variant, label, className, ...rest }: CloseButtonP
 ### 验收
 
 - Drawer 关闭、SearchBar X 视觉一致（除 size variant）；Storybook 三个 variants 各一个 story
-- token 修改 **`--ui-edge-color`** 可一键调 **DOM 壳**（Drawer / SearchBar 等）细线色；**黑底画布**上 **Hover ring / Timeline** 调 **`--ui-edge-canvas-*`**
+- token 修改 `--ui-edge-color` 即可一键调全 HUD edge 色
 
 ---
 
@@ -248,19 +248,19 @@ export function CloseButton({ variant, label, className, ...rest }: CloseButtonP
 
 ### 目标
 
-[hud/HoverRing.tsx](frontend/src/hud/HoverRing.tsx) 与 [components/Timeline.tsx](frontend/src/components/Timeline.tsx) 主线 / 刻度的线宽与颜色与 P14.2 token 体系统一；二者同屏为同一视觉家族。
+[hud/HoverRing.tsx](frontend/src/hud/HoverRing.tsx) 与 [components/Timeline.tsx](frontend/src/components/Timeline.tsx) 主线 / 刻度的 stroke 宽度与颜色统一来自 P14.2 token；二者放在一起看视觉上「同一个家族」。
 
-### 实施（定稿）
+### 实施
 
-- [hud/hoverRingLayout.ts](frontend/src/hud/hoverRingLayout.ts)：`readUiEdgeStrokeWidthPx()` 解析 **`--ui-edge-stroke-width`**，供外半径与 tooltip offset 布局。
-- **HoverRing**：`borderWidth` / 描边色使用 **`var(--ui-edge-stroke-width)`** + **`var(--ui-edge-canvas-color)`**（叠黑底画布，**不**随 `?theme=light` 切到深灰）。
-- **Timeline**：主线、刻度字、thumb、focus ring 使用 **`--ui-edge-canvas-*`** + **`--ui-edge-stroke-width`**。
-- **DOM 壳** **`CloseButton`** 等仍用 **`--ui-edge-color`** / **`--ui-edge-color-strong`**（见 `index.css`）。
+- [hud/hoverRingLayout.ts](frontend/src/hud/hoverRingLayout.ts) 中 `HOVER_RING_STROKE_PX = 1` 改为读 `--ui-edge-stroke-width`（CSS 注入，不通过 JS 常量）；如必须 JS 常量，在 hud 内部加一层 token 解析
+- HoverRing 的 `<svg>` `stroke="var(--ui-edge-color)"` 与 `stroke-width="var(--ui-edge-stroke-width)"`
+- Timeline 的 track 主线、刻度线同样切到 `var(--ui-edge-color)` + `var(--ui-edge-stroke-width)`
+- hover/focus 增强态用 `--ui-edge-color-strong`
 
 ### 验收
 
-- hover ring 与 Timeline 主线：**同线宽 token**、**同为画布浅描边**（与 Drawer 关闭钮在 light theme 下可不同，属预期）。
-- `?theme=light`：画布上环/时间轴仍为浅线；DOM HUD 细线随 `--ui-edge-*` 变化。
+- 在 hover state（光标停留某 active 球，hover ring 显示）与 idle Timeline 同屏截图：ring 描边与 timeline 主线在 px 级别同色同宽
+- 切 light / dark theme 各看一组（`?theme=light` / `?theme=dark`），token 切换正确
 
 ---
 

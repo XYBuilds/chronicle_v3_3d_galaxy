@@ -30,7 +30,7 @@ todos:
     content: P14.7.1（基于 P14.7 横置评审）FocusLReference：Rating 光谱条改垂直（低分在底、高分在上，与 voteNorm 映射一致）；整体移至视口内星球左侧；与横置 Timeline 不冲突验收
     status: completed
   - id: p148-doc-sync
-    content: P14.8 文档同步 + 回归：Design Spec / 视觉参数总表 / 实施报告；rg 中文字符审计；Storybook 截图存档；与 Phase 13 focus 体验联调回归
+    content: P14.8 文档同步 + 回归：Design Spec / 视觉参数总表；rg 中文字符审计；
     status: pending
 isProject: false
 ---
@@ -433,7 +433,6 @@ export function useTimelineOrientationFromQuery(): 'vertical' | 'horizontal' {
 - [Design Spec §3](docs/project_docs/TMDB%20电影宇宙%20Design%20Spec.md) 同步 P14.0 spec 变更
 - [视觉参数总表 §7 / §7a](docs/project_docs/视觉参数总表.md) 同步 token
 - 全局快捷键节加入 F / Cmd-K（与 ESC §4.6 并列）
-- 实施报告：**P14.1** 已有 [`Phase 14.1 P14.1 HUD string table 与 en.json 实施报告.md`](../../docs/reports/Phase%2014.1%20P14.1%20HUD%20string%20table%20与%20en.json%20实施报告.md)；**P14.3** [`Phase 14.3 P14.3 hover ring 与 Timeline UI edge 对齐实施报告.md`](../../docs/reports/Phase%2014.3%20P14.3%20hover%20ring%20与%20Timeline%20UI%20edge%20对齐实施报告.md)；P14.2 / P14.7 各一份（其它子节可合并到 Phase 14 总报告）
 - 回归清单：
   - Loading / Error 页英语完整
   - Drawer Details 四组规则（§P14.6）、关闭按钮、Tooltip / SearchBar / InfoModal 英语完整

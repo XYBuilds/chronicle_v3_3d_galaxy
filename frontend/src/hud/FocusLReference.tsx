@@ -22,7 +22,7 @@ function primaryHueRad(movie: Movie, palette: Record<string, string>): number {
 
 /**
  * P13.5 — Focus-only OKLab L legend: primary-genre hue spectrum + pointer from `vote_average`.
- * Placed below the on-screen planet region (upper-mid viewport).
+ * P14.7.1 — Vertical spectrum to the left of the on-screen planet (horizontal Timeline 视觉评审后).
  */
 export function FocusLReference() {
   const selectedMovieId = useGalaxyInteractionStore((s) => s.selectedMovieId)
@@ -46,8 +46,8 @@ export function FocusLReference() {
     }
     console.assert(stripeColors.length === 10, '[FocusLReference] stripe count', stripeColors.length)
     const ratingNorm = Math.max(0, Math.min(1, movie.vote_average / 10))
-    const pointerLeftPct = ratingNorm * 100
-    return { stripeColors, pointerLeftPct }
+    const pointerAlongPct = ratingNorm * 100
+    return { stripeColors, pointerAlongPct }
   }, [movie, snap, data])
 
   if (!movie || !snap || !style) return null
@@ -57,30 +57,28 @@ export function FocusLReference() {
   return (
     <div
       className={cn(
-        'pointer-events-none fixed left-1/2 z-[35] w-[min(22rem,calc(100vw-2rem))] -translate-x-1/2 select-none',
-        'top-[min(70vh,calc(50%+11rem))] sm:top-[68vh]',
+        'pointer-events-none fixed top-[min(46vh,44%)] z-[35] flex -translate-y-1/2 flex-row items-center gap-2 select-none',
+        'left-[max(0.75rem,calc(50vw-19rem))]',
       )}
       role="img"
       aria-label={STRINGS.focusLReference.ariaLabel(ratingLine, movie.title)}
     >
-      <div className="mb-1.5 text-center text-[0.72rem] font-semibold tracking-wide text-white/88 tabular-nums">
-        {ratingLine}
-      </div>
-      <div className="relative flex h-2.5 w-full overflow-hidden">
-        <div className="flex min-w-0 flex-1">
-          {style.stripeColors.map((bg, k) => (
-            <div
-              key={k}
-              className="min-h-0 min-w-0 flex-1"
-              style={{ backgroundColor: bg }}
-              aria-hidden
-            />
-          ))}
-        </div>
+      <div className="relative flex h-44 w-2.5 shrink-0 flex-col-reverse overflow-hidden rounded-sm">
+        {style.stripeColors.map((bg, k) => (
+          <div
+            key={k}
+            className="min-h-0 min-w-0 flex-1"
+            style={{ backgroundColor: bg }}
+            aria-hidden
+          />
+        ))}
         <div
-          className="pointer-events-none absolute top-1/2 h-4 w-px -translate-x-1/2 -translate-y-1/2 bg-white"
-          style={{ left: `${style.pointerLeftPct}%` }}
+          className="pointer-events-none absolute left-1/2 h-px w-5 -translate-x-1/2 bg-white"
+          style={{ bottom: `${style.pointerAlongPct}%` }}
         />
+      </div>
+      <div className="max-w-[9rem] text-left text-[0.72rem] font-semibold leading-tight tracking-wide text-white/88 tabular-nums">
+        {ratingLine}
       </div>
     </div>
   )

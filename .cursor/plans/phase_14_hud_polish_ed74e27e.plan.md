@@ -1,6 +1,6 @@
 ---
 name: phase 14 hud polish
-overview: Phase 14 是 HUD/UI 抛光层，不动 3D 渲染管线与数据契约。核心：抽 string table（**`locales/en.json` + `strings.ts` → `STRINGS`**）做全英语化（不引 i18n 框架）、抽 CloseButton primitive + UI edge design token（hover ring / timeline / close button 视觉统一）、加全屏切换按钮 + F 快捷键 + Cmd/Ctrl+K 聚焦搜索框、Drawer Details 四组排序与显隐规则（两栏一行 / 每组换行）+ Storybook 全覆盖、Timeline 横置变体（保留纵置默认 + URL query 切换）。
+overview: Phase 14 是 HUD/UI 抛光层，不动 3D 渲染管线与数据契约。核心：抽 string table（**`locales/en.json` + `strings.ts` → `STRINGS`**）做全英语化（不引 i18n 框架）、抽 CloseButton primitive + UI edge design token（hover ring / timeline / close button 视觉统一）、加全屏切换按钮 + F 快捷键 + Cmd/Ctrl+K 聚焦搜索框、Drawer Details 四组排序与显隐规则（两栏一行 / 每组换行）+ Storybook 全覆盖、Timeline 横置变体（保留纵置默认 + URL query 切换）、**P14.7.1** Focus 态 Rating（OKLab L）参考条改垂直并置于星球左侧（横置 Timeline 视觉评审后续）。
 todos:
   - id: p140-spec
     content: P14.0 spec 升级（无代码）：Design Spec §3 / §3.1 / §3.x 加 string table SSOT、Timeline 双 orientation、CloseButton primitive、键盘快捷键节；视觉参数总表 §7 / §7a 加 UI edge token
@@ -26,6 +26,9 @@ todos:
   - id: p147-timeline-horizontal
     content: P14.7 Timeline 横置变体 + URL query：orientation prop（vertical 默认 / horizontal）；useTimelineOrientationFromQuery hook；Storybook 双 story
     status: pending
+  - id: p1471-focus-l-reference-vertical
+    content: P14.7.1（基于 P14.7 横置评审）FocusLReference：Rating 光谱条改垂直（低分在底、高分在上，与 voteNorm 映射一致）；整体移至视口内星球左侧；与横置 Timeline 不冲突验收
+    status: completed
   - id: p148-doc-sync
     content: P14.8 文档同步 + 回归：Design Spec / 视觉参数总表 / 实施报告；rg 中文字符审计；Storybook 截图存档；与 Phase 13 focus 体验联调回归
     status: pending
@@ -38,7 +41,7 @@ isProject: false
 
 ## 范围
 
-- 子节点：P14.0 → P14.8
+- 子节点：P14.0 → P14.8（含 **P14.7.1** 紧跟 P14.7）
 - 数据契约：**不变**
 - 渲染管线：**不变**
 - 涉及文件（预计）：
@@ -53,6 +56,7 @@ isProject: false
   - [frontend/src/components/MovieTooltip.tsx](frontend/src/components/MovieTooltip.tsx)（英语化）
   - [frontend/src/components/SearchBar.tsx](frontend/src/components/SearchBar.tsx)（placeholder 英语化 + X 接 CloseButton）
   - [frontend/src/components/Timeline.tsx](frontend/src/components/Timeline.tsx)（接 `orientation` prop + URL query 钩子）
+  - [frontend/src/hud/FocusLReference.tsx](frontend/src/hud/FocusLReference.tsx)（**P14.7.1**：Focus 态垂直 Rating 光谱 + 星球左侧布局）
   - [frontend/src/hud/InfoButton.tsx](frontend/src/hud/InfoButton.tsx) / [InfoModal.tsx](frontend/src/hud/InfoModal.tsx) / [infoCopy.ts](frontend/src/hud/infoCopy.ts)（英语化）
   - [frontend/src/hud/HoverRing.tsx](frontend/src/hud/HoverRing.tsx) / [hoverRingLayout.ts](frontend/src/hud/hoverRingLayout.ts)（P14.3：线宽 `--ui-edge-stroke-width` + 画布色 `--ui-edge-canvas-*`）
   - [frontend/src/hooks/useThemeFromQuery.ts](frontend/src/hooks/useThemeFromQuery.ts)（参照模式新建 `useTimelineOrientationFromQuery`）
@@ -83,6 +87,7 @@ flowchart TD
     P145["P14.5 Cmd/Ctrl+K 聚焦搜索框"]
     P146["P14.6 Drawer Details 四组 + Storybook"]
     P147["P14.7 Timeline 横置变体 + URL query"]
+    P1471["P14.7.1 Focus Rating 参考垂直 + 星球左侧"]
     P148["P14.8 文档同步 + 回归"]
 
     P140 --> P141
@@ -97,7 +102,8 @@ flowchart TD
     P144 --> P148
     P145 --> P148
     P146 --> P148
-    P147 --> P148
+    P147 --> P1471
+    P1471 --> P148
 ```
 
 依赖说明：
@@ -107,6 +113,7 @@ flowchart TD
 - **P14.4** 同时用 string table（按钮 aria-label / 提示）与 CloseButton 风格的 IconButton primitive
 - **P14.5 / P14.6** 独立小改，可与 P14.1 / P14.2 并行
 - **P14.7** Timeline 双变体只用 string table（年份本身无需翻译，但 aria-label 走 strings）
+- **P14.7.1** 依赖 P14.7 横置落地后的 HUD 留白与视觉评审；仅改 `FocusLReference` 布局与条方向，不改 shader / 数据
 
 ---
 
@@ -399,6 +406,28 @@ export function useTimelineOrientationFromQuery(): 'vertical' | 'horizontal' {
 
 ---
 
+## P14.7.1 Focus 态 Rating 参考（FocusLReference）垂直 + 星球左侧
+
+> **背景**：在 **P14.7** 将 Timeline 改为横置（底部）并通过视觉评审后，原置于星球**下方**的横向 OKLab L / `vote_average` 参考条与横置时间轴在垂直方向上「抢空间」、且与星球关系不清晰。本子节为评审后追加，**不**改 3D、不改编码映射，仅调整 HUD。
+
+### 目标
+
+- [hud/FocusLReference.tsx](frontend/src/hud/FocusLReference.tsx)：**光谱条由水平改为垂直**（10 档色带仍对应 `voteNorm = (k+0.5)/10`，与 shader 一致；**低分在底、高分在上**，连续指针 `vote_average/10` 沿纵轴定位）。
+- **位置**：整体移至视口内**星球左侧**（相对画面中心向左偏移的固定/半固定布局，避免与底部横置 Timeline、与右侧 Drawer 抢位）。
+- **文案**：仍用 `STRINGS.focusLReference`；`aria-label` 行为不变。
+
+### 验收
+
+- Film focus 下：垂直条 + 横向指针线 + 评分文案可读；与 **横置 Timeline** 同框无重叠或可读性明显下降。
+- `?timeline=vertical`（若仍支持）：左侧纵轨与 Focus 参考条间距可接受（允许后续微调 token 化偏移）。
+- 窄屏：`left`/`max-w` 不挤出屏幕外。
+
+### 依赖
+
+- **P14.7** 完成或可与本任务同分支联调（本变更逻辑上在横置评审之后）。
+
+---
+
 ## P14.8 文档同步 + 回归
 
 - [Design Spec §3](docs/project_docs/TMDB%20电影宇宙%20Design%20Spec.md) 同步 P14.0 spec 变更
@@ -413,6 +442,7 @@ export function useTimelineOrientationFromQuery(): 'vertical' | 'horizontal' {
   - Cmd-K 聚焦不与文本输入冲突
   - URL `?timeline=horizontal` 验收
   - Phase 13 已落地的 focus 体验在英语化后无回归
+  - **P14.7.1**：FocusLReference 垂直条 + 星球左侧与横置 Timeline / Drawer 同框验收
 
 ---
 

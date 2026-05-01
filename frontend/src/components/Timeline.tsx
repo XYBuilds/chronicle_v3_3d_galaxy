@@ -83,7 +83,7 @@ export interface TimelineHudProps {
    * (Phase 5.3.1). Omit in passive / Storybook previews.
    */
   onZCurrentChange?: (z: number) => void
-  /** P14.7: vertical = left rail (default); horizontal = bottom-centered bar, ticks below. */
+  /** P14.7: horizontal = bottom-centered bar (default); vertical = left rail. */
   orientation?: TimelineOrientation
   className?: string
 }
@@ -96,7 +96,7 @@ export function TimelineHud({
   zRange,
   cameraZ,
   onZCurrentChange,
-  orientation = 'vertical',
+  orientation = 'horizontal',
   className,
 }: TimelineHudProps) {
   const [zMinRaw, zMaxRaw] = zRange
@@ -386,7 +386,7 @@ export interface TimelineProps {
 }
 
 /** Wired HUD: reads `meta.z_range` and live `zCurrent` from the galaxy scene bridge. */
-export function Timeline({ orientation = 'vertical' }: TimelineProps) {
+export function Timeline({ orientation = 'horizontal' }: TimelineProps) {
   const zRange = useGalaxyDataStore((s) => s.data?.meta.z_range)
   const cameraZ = useSyncExternalStore(subscribeGalaxyCameraZ, getGalaxyCameraZ, getGalaxyCameraZ)
 

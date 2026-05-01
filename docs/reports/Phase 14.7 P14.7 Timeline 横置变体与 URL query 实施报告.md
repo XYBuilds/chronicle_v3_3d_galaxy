@@ -11,9 +11,9 @@
 
 ### 1.1 目标
 
-- **纵置（默认）**：保持既有左侧年份轴交互与视觉（底部 = `z_min`，顶部 = `z_max`）。
-- **横置（可选）**：底部居中主轴为**左右方向**，**左 = `z_min`，右 = `z_max`**；刻度在轴**下方**；与纵置共享 `yearTickList` 等逻辑与 P14.3 画布 edge token。
-- **URL 切换**：通过查询参数 **`?timeline=vertical|horizontal`** 在首屏解析朝向；缺省或非法值 → **纵置**。
+- **横置（默认）**：底部居中主轴为**左右方向**，**左 = `z_min`，右 = `z_max`**；刻度在轴**下方**；与纵置共享 `yearTickList` 等逻辑与 P14.3 画布 edge token。
+- **纵置（可选）**：左侧年份轴（底部 = `z_min`，顶部 = `z_max`），与早期版本默认形态一致，现由 **`?timeline=vertical`** 或显式 `orientation` 选用。
+- **URL 切换**：通过查询参数 **`?timeline=vertical|horizontal`** 在首屏解析朝向；**缺省或非法值 → 横置**。
 - **无障碍与文案**：外层轴描述、滑块 `aria-label` 走 **`STRINGS.timeline`**（`en.json` → `strings.ts`）。
 
 ### 1.2 范围边界
@@ -29,9 +29,9 @@
 
 | 编号 | 决策项 | 最终方案 |
 | ---- | ------ | -------- |
-| **D1** | 默认朝向 | **`vertical`**；未传 `orientation` 或 URL 无合法参数时均为纵置。 |
-| **D2** | URL 参数名与取值 | 参数名 **`timeline`**；允许 **`horizontal`**、**`vertical`**；其它 → 纵置。 |
-| **D3** | Query 读取时机与实现 | 使用 **`useState` 惰性初始化**读取 `window.location.search`，避免在 **`useEffect` 内同步 `setState`** 触发 ESLint `react-hooks/set-state-in-effect`。SSR 安全：`typeof window === 'undefined'` → **`vertical`**。 |
+| **D1** | 默认朝向 | **`horizontal`**；未传 `orientation` 或 URL 无合法参数时均为横置。 |
+| **D2** | URL 参数名与取值 | 参数名 **`timeline`**；允许 **`horizontal`**、**`vertical`**；其它 → **横置**（与组件默认一致）。 |
+| **D3** | Query 读取时机与实现 | 使用 **`useState` 惰性初始化**读取 `window.location.search`，避免在 **`useEffect` 内同步 `setState`** 触发 ESLint `react-hooks/set-state-in-effect`。SSR 安全：`typeof window === 'undefined'` → **`horizontal`**。 |
 | **D4** | 横轴几何映射 | 指针 **`clientX`** + 轨道 **`getBoundingClientRect().width`**：`zFromClientX`；thumb 位置用与纵轴相同的归一化分数 **`zToTrackLeftFraction`**（与 `zToTrackBottomFraction` 同式）。 |
 | **D5** | 键盘 | 纵轴：**↑/→** 增大 Z，**↓/←** 减小 Z；横轴：**→/↑** 增大 Z，**←/↓** 减小 Z；**Home / End** 两端。 |
 | **D6** | 画布 edge token | 横纵一律沿用 P14.3：**`--ui-edge-canvas-color`**、**`--ui-edge-canvas-color-strong`**、**`--ui-edge-stroke-width`**。 |
@@ -75,7 +75,7 @@ TimelineHud( orientation, zRange, cameraZ, onZCurrentChange )
 | `frontend/src/App.tsx` | `useTimelineOrientationFromQuery()` → **`<Timeline orientation={…} />`**。 |
 | `frontend/src/lib/locales/en.json` | **`timeline.axisDescription`**（`{{minYear}}` 等）、**`timeline.sliderAriaLabel`**。 |
 | `frontend/src/lib/strings.ts` | **`STRINGS.timeline.axisDescription(...)`** 插值导出。 |
-| `frontend/src/components/Timeline.stories.tsx` | **`Default`**（显式 `vertical`）、**`Horizontal`**、**`Interactive`**、**`InteractiveHorizontal`** 等。 |
+| `frontend/src/components/Timeline.stories.tsx` | **`Default`**（横置）、**`Vertical`**、**`Interactive`**（默认横轴拖拽）、**`InteractiveVertical`**、**`CameraAtMinZ`** / **`WideZSpan`** 等（未写 `orientation` 时继承组件默认 **横置**）。 |
 
 ---
 
@@ -86,8 +86,11 @@ TimelineHud( orientation, zRange, cameraZ, onZCurrentChange )
 | 主题 | 内容 |
 | ---- | ---- |
 | 核心功能 | `orientation` + **`?timeline=`** 钩子 + **`STRINGS.timeline`** + Storybook 横纵 story。 |
+| **默认横置**（产品迭代） | **`Timeline` / `TimelineHud` 默认 `orientation: 'horizontal'`**；**`useTimelineOrientationFromQuery`** 在缺省/非法 query 时返回 **`horizontal`**。 |
 | 横轴宽度 / 对齐感 | 由较窄上限 **`min(92vw, 36rem)`** 调整为与「主轴占视口比例」对齐的思路（曾用 **`80vw`**，后续提交调整为 **`50vw`** + `max-w-[calc(100vw-2rem)]`）。 |
 | Thumb 与刻度 | 当前年 **`font-semibold`**；刻度在 thumb 附近 **线性透明度**；曾移除 **`transition-opacity`**；fade 由 smoothstep 改为**纯线性** **`min(1, d/R)`**。 |
+
+**默认朝向修订**：曾以纵置为 URL / props 默认值（与 Phase 14 计划初稿「默认 vertical」一致）；现统一改为 **横置默认**，报告 **§2 D1–D3**、**§7** 以修订后为准。
 
 ---
 
@@ -104,11 +107,11 @@ TimelineHud( orientation, zRange, cameraZ, onZCurrentChange )
 
 ## 7. 验收口径
 
-1. **默认无 query**：Timeline 为**纵置**，行为与 P14.7 前一致（除共用 `STRINGS` / 刻度 fade / thumb 字重等全局微调）。
-2. **`?timeline=horizontal`**：底部横轴可拖拽 / 点击轨道 / 点刻度；左旧右新；当前年指示与纵置语义一致。
-3. **`?timeline=vertical`**：显式纵置。
-4. **非法值**：等价于默认纵置。
-5. **Storybook**：**Timeline / Horizontal**、**InteractiveHorizontal** 可独立验收；无银河数据时 **`TimelineHud`** 即可。
+1. **默认无 query**：Timeline 为**横置**（底部主轴）。
+2. **`?timeline=horizontal`**：横置（与默认一致，可省略）。
+3. **`?timeline=vertical`**：左侧纵轴。
+4. **非法值**：等价于默认 **横置**。
+5. **Storybook**：**Timeline / Default**（横）、**Vertical**、**Interactive**、**InteractiveVertical**；无银河数据时 **`TimelineHud`** 即可。
 6. **构建**：`frontend` 下 **`tsc`** / **`npm run build`** 通过。
 7. **无障碍**：滑块具备合理 **`aria-*`**；外层 **`aria-label`** 为英文模板句。
 
@@ -126,7 +129,6 @@ TimelineHud( orientation, zRange, cameraZ, onZCurrentChange )
 ## 9. 已知说明
 
 - **URL 与朝向**：当前仅在组件挂载时用 **`useState` 初始化函数**读取一次 query；**不**监听 `popstate` / `hashchange`。用户手动改地址栏后需刷新页面才会更新朝向（与计划初稿一致，无 SPA 路由）。
-- **源码注释**：若出现「竖轴 `h-[50vh]`」等字样，以 **`Timeline.tsx` 内实际 class**（纵轴 **`h-[80vh]`**）为准，避免文档与注释漂移。
 
 ---
 

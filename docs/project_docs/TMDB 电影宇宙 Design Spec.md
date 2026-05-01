@@ -33,10 +33,10 @@
   * 状态在 Zustand 中维护；**拾取**以 **active mesh** + 世界球逻辑为准（Tech Spec §1.5）。  
 * **与旧 A/B「点大小」的对应（心智模型）**：条带外可见性主要由 **idle** 支路 + **`uBgSizeMul`** 体现；条带内由 **active** 支路 + **`uActiveSizeMul`** 体现；**初值** `uSizeScale=0.3`，`uActiveSizeMul=0.02`，`uBgSizeMul=0.002`（以《视觉参数总表》与 `galaxyMeshes.ts` 为准）。
 
-| 层 | 定义 | 视觉 | 交互 |
-| :---- | :---- | :---- | :---- |
-| **A — 背景感** | 条带外 `inFocus` 低 | idle 支路为主、较淡较小 | 不作为主拾取层 |
-| **B — 条带内** | `inFocus` 高 | active 支路为主、可辨明暗 | **可** hover / click（实现上仅 **active**） |
+| 层             | 定义                | 视觉                      | 交互                                        |
+| :------------- | :------------------ | :------------------------ | :------------------------------------------ |
+| **A — 背景感** | 条带外 `inFocus` 低 | idle 支路为主、较淡较小   | 不作为主拾取层                              |
+| **B — 条带内** | `inFocus` 高        | active 支路为主、可辨明暗 | **可** hover / click（实现上仅 **active**） |
 
   * **过渡**：**smoothstep**，非旧版 A/B `step` 硬切。  
 * 摄像机控制（**宏观 idle**；**focus 态**例外见 **§2.2 Phase 13**）：  
@@ -146,7 +146,7 @@
 * **组件**：**`CloseButton`**，实现路径 **`frontend/src/components/ui/close-button.tsx`**。
 * **Variants**：**`default`**（带边框的方形按钮）/ **`ghost-sm`** / **`ghost-lg`**（轻量幽灵态，尺寸分档）。
 * **图标**：**`lucide-react`** 的 **`X`**；**`aria-label`** 等可访问性文案走 **`STRINGS`**（与 §3 SSOT 一致）。
-* **视觉**：普通态边框与线宽与 **hover 环**、**Timeline** 主线对齐，统一消费 **UI edge CSS token**（见《视觉参数总表》**§7a**）。
+* **视觉**：**`CloseButton`** 的边框线宽与 **hover 环 / Timeline** 同属 **UI edge** 线宽语义（**`--ui-edge-stroke-width`**，见《视觉参数总表》**§7**、**§7a**）。**颜色**：按钮叠在 **DOM 壳层**，使用随主题变化的 **`--ui-edge-color` / `--ui-edge-color-strong`**；**HoverRing** 与 **Timeline** 仅叠在 **黑色 WebGL 画布**上，使用 **`:root` 固定**的 **`--ui-edge-canvas-color` / `--ui-edge-canvas-color-strong`**（与 **§3.4.4**「画布可保持深色底」一致，避免 `?theme=light` 时环与轴变成浅灰细线导致对比度错误）。
 
 ### **3.6 全局键盘快捷键（Phase 14 · HUD）**
 

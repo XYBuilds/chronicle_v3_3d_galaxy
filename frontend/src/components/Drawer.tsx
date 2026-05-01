@@ -3,7 +3,8 @@ import { ExternalLink, Star } from 'lucide-react'
 
 import { GenreBadgesList } from '@/components/GenreBadgesList'
 import {
-  buildDrawerDetailsFields,
+  buildDrawerDetailsGroups,
+  type DrawerDetailField,
   type DrawerDetailFieldId,
 } from '@/components/drawerDetailsLayout'
 import { AspectRatio } from '@/components/ui/aspect-ratio'
@@ -72,6 +73,9 @@ const externalHudLinkClass = cn(
   'h-6 rounded-full px-2 text-[0.68rem] text-muted-foreground hover:text-foreground',
 )
 
+const detailsGroupGridClass = 'grid grid-cols-2 gap-x-8 gap-y-5 text-sm'
+const detailsGroupsStackClass = 'flex flex-col gap-y-5 text-sm'
+
 const detailFieldLabelClass = 'text-xs font-semibold leading-snug text-foreground'
 
 function drawerDetailLabel(id: DrawerDetailFieldId): string {
@@ -101,6 +105,19 @@ function drawerDetailLabel(id: DrawerDetailFieldId): string {
   }
 }
 
+function DrawerDetailCells({ fields }: { fields: readonly DrawerDetailField[] }) {
+  return (
+    <>
+      {fields.map((field) => (
+        <div key={field.id} className="min-w-0">
+          <div className={detailFieldLabelClass}>{drawerDetailLabel(field.id)}</div>
+          <div className="text-muted-foreground">{field.value}</div>
+        </div>
+      ))}
+    </>
+  )
+}
+
 /** Scrollable body: keep scroll affordance, hide native scrollbar (trackpad / wheel / touch still work). */
 const drawerBodyScrollClass =
   'min-h-0 flex-1 overflow-y-auto overflow-x-hidden motion-safe:scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden'
@@ -113,7 +130,7 @@ export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailD
   const title = movie?.title ?? STRINGS.drawer.fallbackTitle
   const genrePalette = useGalaxyDataStore((s) => s.data?.meta.genre_palette) ?? null
 
-  const detailFields = useMemo(() => (movie ? buildDrawerDetailsFields(movie) : []), [movie])
+  const detailGroups = useMemo(() => (movie ? buildDrawerDetailsGroups(movie) : null), [movie])
   const showDetailsSection = movie != null
   const imdbIdTrimmed = movie?.imdb_id?.trim() ?? ''
   const showImdbLink = imdbIdTrimmed.length > 0
@@ -225,13 +242,29 @@ export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailD
                 <h3 className="text-[0.65rem] font-bold uppercase tracking-wider text-muted-foreground">
                   {STRINGS.drawer.sections.details}
                 </h3>
-                <div className="grid grid-cols-2 gap-x-8 gap-y-5 text-sm">
-                  {detailFields.map((field) => (
-                    <div key={field.id} className="min-w-0">
-                      <div className={detailFieldLabelClass}>{drawerDetailLabel(field.id)}</div>
-                      <div className="text-muted-foreground">{field.value}</div>
-                    </div>
-                  ))}
+                <div className={detailsGroupsStackClass}>
+                  {detailGroups ? (
+                    <>
+                      <div className={detailsGroupGridClass}>
+                        <DrawerDetailCells fields={detailGroups.group1} />
+                      </div>
+                      {detailGroups.group2.length > 0 ? (
+                        <div className={detailsGroupGridClass}>
+                          <DrawerDetailCells fields={detailGroups.group2} />
+                        </div>
+                      ) : null}
+                      {detailGroups.group3.length > 0 ? (
+                        <div className={detailsGroupGridClass}>
+                          <DrawerDetailCells fields={detailGroups.group3} />
+                        </div>
+                      ) : null}
+                      {detailGroups.group4.length > 0 ? (
+                        <div className={detailsGroupGridClass}>
+                          <DrawerDetailCells fields={detailGroups.group4} />
+                        </div>
+                      ) : null}
+                    </>
+                  ) : null}
                 </div>
               </section>
             ) : null}

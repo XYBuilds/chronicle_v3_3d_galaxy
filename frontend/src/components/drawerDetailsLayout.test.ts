@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import { buildDrawerDetailsFields, formatUsdPresent } from '@/components/drawerDetailsLayout'
+import {
+  buildDrawerDetailsFields,
+  buildDrawerDetailsGroups,
+  formatUsdPresent,
+} from '@/components/drawerDetailsLayout'
 import type { Movie } from '@/types/galaxy'
 import {
   subsampleMovieHappiness,
@@ -75,5 +79,28 @@ describe('buildDrawerDetailsFields', () => {
     const fields = buildDrawerDetailsFields(subsampleMovieHappiness)
     expect(idsOf(fields)).not.toContain('directorOfPhotography')
     expect(idsOf(fields)).not.toContain('musicComposer')
+  })
+})
+
+describe('buildDrawerDetailsGroups', () => {
+  it('splits credits into separate arrays so UI can break rows between groups', () => {
+    const g = buildDrawerDetailsGroups(subsampleMovieMarthasVineyard)
+    expect(g.group1).toHaveLength(2)
+    expect(g.group2.length).toBeGreaterThan(0)
+    expect(g.group3.length).toBeGreaterThan(0)
+    expect(g.group1[0]?.id).toBe('runtime')
+    expect(g.group1[1]?.id).toBe('language')
+  })
+
+  it('leaves group2 empty when no director, producers, or writers', () => {
+    const m: Movie = {
+      ...subsampleMovieHappiness,
+      director: [],
+      producers: [],
+      writers: [],
+    }
+    const g = buildDrawerDetailsGroups(m)
+    expect(g.group2).toHaveLength(0)
+    expect(g.group1).toHaveLength(2)
   })
 })

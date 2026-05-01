@@ -1,6 +1,7 @@
 /**
- * P14.6 — Drawer **Details** grid: four groups, column order, and “no data” rules (Design Spec §P14.6).
- * Returns a flat list of fields in visual order for `grid-cols-2` (left-to-right, then wrap).
+ * P14.6 — Drawer **Details**: four groups with rules from Design Spec §P14.6.
+ * Each group is rendered in its own `grid-cols-2` so the next group always starts on a new row
+ * (“组与组之间仅换行”, no extra dividers).
  */
 
 import type { Movie } from '@/types/galaxy'
@@ -23,6 +24,16 @@ export interface DrawerDetailField {
   value: string
 }
 
+/** Four logical groups; render each non-empty slice in a separate two-column grid for inter-group line breaks. */
+export interface DrawerDetailsGroups {
+  /** Runtime + Language — always exactly two fields. */
+  group1: readonly [DrawerDetailField, DrawerDetailField]
+  group2: DrawerDetailField[]
+  group3: DrawerDetailField[]
+  /** 0 or 2 fields when present. */
+  group4: DrawerDetailField[]
+}
+
 /** Present only when the pipeline has a positive USD amount (P14.6: 0 / null / missing = no). */
 export function formatUsdPresent(n: number | null | undefined): string | null {
   if (n == null || !Number.isFinite(n) || n <= 0) return null
@@ -38,55 +49,57 @@ function joinNames(arr: readonly string[]): string {
   return arr.map((s) => s.trim()).filter(Boolean).join(', ')
 }
 
-/**
- * Ordered fields for the Details section. Group 1 always contributes two cells; group 4 appears only
- * when at least one of budget/revenue is a positive finite USD amount.
- */
-export function buildDrawerDetailsFields(movie: Movie): DrawerDetailField[] {
+export function buildDrawerDetailsGroups(movie: Movie): DrawerDetailsGroups {
   const slash = STRINGS.drawer.details.missingValue
-  const out: DrawerDetailField[] = []
 
-  // Group 1 — always
   const rt = movie.runtime
-  out.push({
-    id: 'runtime',
-    value: rt == null ? slash : STRINGS.drawer.details.runtimeMinutes(rt),
-  })
   const lang = movie.original_language?.trim() ?? ''
-  out.push({
-    id: 'language',
-    value: lang.length > 0 ? lang.toUpperCase() : slash,
-  })
+  const group1: readonly [DrawerDetailField, DrawerDetailField] = [
+    {
+      id: 'runtime',
+      value: rt == null ? slash : STRINGS.drawer.details.runtimeMinutes(rt),
+    },
+    {
+      id: 'language',
+      value: lang.length > 0 ? lang.toUpperCase() : slash,
+    },
+  ]
 
-  // Group 2 — skip empty columns
+  const group2: DrawerDetailField[] = []
   if (hasNameList(movie.director)) {
-    out.push({ id: 'director', value: joinNames(movie.director) })
+    group2.push({ id: 'director', value: joinNames(movie.director) })
   }
   if (hasNameList(movie.producers)) {
-    out.push({ id: 'producers', value: joinNames(movie.producers) })
+    group2.push({ id: 'producers', value: joinNames(movie.producers) })
   }
   if (hasNameList(movie.writers)) {
-    out.push({ id: 'writers', value: joinNames(movie.writers) })
+    group2.push({ id: 'writers', value: joinNames(movie.writers) })
   }
 
-  // Group 3
+  const group3: DrawerDetailField[] = []
   if (hasNameList(movie.director_of_photography)) {
-    out.push({ id: 'directorOfPhotography', value: joinNames(movie.director_of_photography) })
+    group3.push({ id: 'directorOfPhotography', value: joinNames(movie.director_of_photography) })
   }
   if (hasNameList(movie.music_composer)) {
-    out.push({ id: 'musicComposer', value: joinNames(movie.music_composer) })
+    group3.push({ id: 'musicComposer', value: joinNames(movie.music_composer) })
   }
 
-  // Group 4 — hide whole group when both are “no”
+  const group4: DrawerDetailField[] = []
   const budgetStr = formatUsdPresent(movie.budget)
   const revenueStr = formatUsdPresent(movie.revenue)
   if (budgetStr != null || revenueStr != null) {
-    out.push({ id: 'budget', value: budgetStr ?? slash })
-    out.push({ id: 'revenue', value: revenueStr ?? slash })
+    group4.push({ id: 'budget', value: budgetStr ?? slash })
+    group4.push({ id: 'revenue', value: revenueStr ?? slash })
   }
 
-  assert(out[0]?.id === 'runtime' && out[1]?.id === 'language', '[drawerDetailsLayout] group 1 order')
-  return out
+  assert(group1[0]?.id === 'runtime' && group1[1]?.id === 'language', '[drawerDetailsLayout] group 1 order')
+  return { group1, group2, group3, group4 }
+}
+
+/** Flattened field order (e.g. tests); UI should prefer {@link buildDrawerDetailsGroups} for layout. */
+export function buildDrawerDetailsFields(movie: Movie): DrawerDetailField[] {
+  const g = buildDrawerDetailsGroups(movie)
+  return [...g.group1, ...g.group2, ...g.group3, ...g.group4]
 }
 
 function assert(cond: boolean, msg: string): asserts cond {

@@ -45,9 +45,28 @@ function App() {
     void useSearchIndexStore.getState().hydrateFromGalaxyMeta(data.meta)
   }, [status, data])
 
-  /** Design Spec §4.6 — ESC 焦点栈；§P14.4 — F 切换全屏（可编辑区焦点不劫持）。 */
+  /** Design Spec §4.6 — ESC 焦点栈；§P14.4 — F 全屏；§P14.5 — Cmd/Ctrl+K 聚焦搜索。 */
   useEffect(() => {
     const onKeyDownCapture = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        const searchInput = document.querySelector<HTMLInputElement>('input[data-galaxy-search-input]')
+        if (!searchInput || searchInput.disabled) return
+
+        const ae = document.activeElement
+        const inOtherEditable =
+          (ae instanceof HTMLInputElement ||
+            ae instanceof HTMLTextAreaElement ||
+            (ae instanceof HTMLElement && ae.isContentEditable)) &&
+          !(ae instanceof HTMLInputElement && ae.hasAttribute('data-galaxy-search-input'))
+        if (inOtherEditable) return
+
+        e.preventDefault()
+        e.stopPropagation()
+        searchInput.focus()
+        searchInput.select()
+        return
+      }
+
       if (e.key === 'f' || e.key === 'F') {
         const ae = document.activeElement
         if (

@@ -19,7 +19,7 @@ todos:
     status: completed
   - id: p145-cmdk-focus
     content: P14.5 Cmd/Ctrl+K 聚焦搜索框：App.tsx capture handler；data-galaxy-search-input focus；disabled 时 noop
-    status: pending
+    status: completed
   - id: p146-drawer-reorder
     content: P14.6 Drawer Details 四组逻辑 + Storybook：组1 Runtime|Language（永显；无数据「/」；Runtime=0 视为有）；组2–4 见 §P14.6；Drawer.stories 覆盖各组合
     status: pending

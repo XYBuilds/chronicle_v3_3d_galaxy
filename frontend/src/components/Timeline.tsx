@@ -42,6 +42,16 @@ function zToTrackLeftFraction(z: number, zMin: number, zMax: number): number {
   return zToTrackBottomFraction(z, zMin, zMax)
 }
 
+/** Normalized axis distance within which tick labels fade so they don’t clash with the thumb year (smoothstep). */
+const TICK_LABEL_FADE_RADIUS_FRAC = 0.07
+
+function tickLabelOpacityNearThumb(tickFraction: number, thumbFraction: number): number {
+  const d = Math.abs(tickFraction - thumbFraction)
+  if (d >= TICK_LABEL_FADE_RADIUS_FRAC) return 1
+  const t = d / TICK_LABEL_FADE_RADIUS_FRAC
+  return t * t * (3 - 2 * t)
+}
+
 /** Map pointer Y to release-year Z: bottom = `zMin`, top = `zMax`. */
 function zFromClientY(clientY: number, rect: DOMRectReadOnly, zMin: number, zMax: number): number {
   const span = zMax - zMin
@@ -190,7 +200,8 @@ export function TimelineHud({
     return (
       <div
         className={cn(
-          'pointer-events-none fixed bottom-8 left-1/2 z-30 flex h-24 w-[min(92vw,36rem)] -translate-x-1/2 select-none flex-col items-stretch sm:bottom-10',
+          // Match vertical rail extent: vertical uses h-[80vh] → horizontal uses w-[80vw]
+          'pointer-events-none fixed bottom-8 left-1/2 z-30 flex h-24 w-[80vw] max-w-[calc(100vw-2rem)] -translate-x-1/2 select-none flex-col items-stretch sm:bottom-10',
           className,
         )}
         role={interactive ? 'presentation' : 'img'}
@@ -229,14 +240,20 @@ export function TimelineHud({
           />
           {ticks.map((y) => {
             const f = zToTrackLeftFraction(y, zMin, zMax)
+            const tickOpacity = tickLabelOpacityNearThumb(f, thumbT)
             return (
               <div
                 key={y}
                 className={cn(
-                  'absolute top-2 flex flex-col items-center',
+                  'absolute top-2 flex flex-col items-center transition-opacity duration-200',
                   interactive && 'pointer-events-auto cursor-pointer',
                 )}
-                style={{ left: `${f * 100}%`, transform: 'translateX(-50%)' }}
+                style={{
+                  left: `${f * 100}%`,
+                  transform: 'translateX(-50%)',
+                  opacity: tickOpacity,
+                  pointerEvents: interactive && tickOpacity < 0.25 ? 'none' : undefined,
+                }}
                 onPointerDown={
                   interactive
                     ? (e) => {
@@ -264,7 +281,7 @@ export function TimelineHud({
                 boxShadow: '0 0 6px color-mix(in srgb, var(--ui-edge-canvas-color-strong) 35%, transparent)',
               }}
             />
-            <span className="font-mono text-[0.62rem] tabular-nums text-[color:var(--ui-edge-canvas-color-strong)]">
+            <span className="font-mono text-[0.62rem] font-semibold tabular-nums text-[color:var(--ui-edge-canvas-color-strong)]">
               {labelYear}
             </span>
           </div>
@@ -315,14 +332,20 @@ export function TimelineHud({
         />
         {ticks.map((y) => {
           const f = zToTrackBottomFraction(y, zMin, zMax)
+          const tickOpacity = tickLabelOpacityNearThumb(f, thumbT)
           return (
             <div
               key={y}
               className={cn(
-                'absolute left-0 right-0 flex items-center justify-end pr-0.5',
+                'absolute left-0 right-0 flex items-center justify-end pr-0.5 transition-opacity duration-200',
                 interactive && 'pointer-events-auto cursor-pointer',
               )}
-              style={{ bottom: `${f * 100}%`, transform: 'translateY(50%)' }}
+              style={{
+                bottom: `${f * 100}%`,
+                transform: 'translateY(50%)',
+                opacity: tickOpacity,
+                pointerEvents: interactive && tickOpacity < 0.25 ? 'none' : undefined,
+              }}
               onPointerDown={
                 interactive
                   ? (e) => {
@@ -350,7 +373,7 @@ export function TimelineHud({
               boxShadow: '0 0 6px color-mix(in srgb, var(--ui-edge-canvas-color-strong) 35%, transparent)',
             }}
           />
-          <span className="font-mono text-[0.62rem] tabular-nums text-[color:var(--ui-edge-canvas-color-strong)]">
+          <span className="font-mono text-[0.62rem] font-semibold tabular-nums text-[color:var(--ui-edge-canvas-color-strong)]">
             {labelYear}
           </span>
         </div>

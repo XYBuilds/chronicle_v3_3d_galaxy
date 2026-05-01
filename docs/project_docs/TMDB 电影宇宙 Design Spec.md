@@ -65,6 +65,8 @@
 
 所有 UI 元素属于前端 DOM 覆盖层，与底层 3D 画布分离。
 
+* **Phase 14 — HUD 文案 SSOT**：所有面向用户的 HUD **英文**字面量以 **`frontend/src/lib/strings.ts`** 常量表为单一事实源；**不在**各 React 组件内写死可复用文案（**例外**：一次性 **dev-only** **`console.log`** 等开发审计输出可保留字面量）。
+
 ### **3.1 全局时间轴 (Timeline Indicator)**
 
 在宏观漫游状态（层级零）下常驻显示的唯一 HUD 元素，为用户提供当前 Z 轴（时间纵深）的**位置感知**：
@@ -75,6 +77,11 @@
   * **focus 态及过渡**：`zCurrent` 与焦点 **`movie.z`** 对齐（可与飞入动画**渐变**）；**退出 focus 后 `zCurrent` 保留在 `movie.z`**。
 * **交互（可选 / 规划中）**：点击刻度或拖动 thumb 可快速跳转至对应年代，反向写入 `zCurrent`（相机跟随）——本阶段实现为纯被动指示即可；拖动交互作为 **Phase 5.3.1** 单独排期。  
 * **视觉基调**：极低存在感——半透明、细线、小字号，避免遮挡 3D 场景主体。具体视觉样式参照 Figma 设计稿。
+
+#### **3.1.1 Orientation 双变体（Phase 14）**
+
+* **`Timeline` 形态**：支持 **`orientation`** 属性：**`vertical`**（**默认**，与当前实现一致：纵向刻度条）与 **`horizontal`**（底部居中横置刻度条，**刻度朝下**）。
+* **URL 切换**：开发 / 验收可通过 **`?timeline=horizontal`** 或 **`?timeline=vertical`** 切换；两种 orientation **共享**关键年份刻度算法与「视觉基调」规则（细线、低对比、不抢主体）。
 
 ### **3.2 Tooltip (悬停层)**
 
@@ -128,6 +135,26 @@
 * **用途**：开发或验收时快速查看 HUD 在亮 / 暗 CSS 变量下的表现。  
 * **行为**：App 挂载时读取 `theme` query；命中 `light` 或 `dark` 时设置 **`document.documentElement.dataset.theme`**，并与 Tailwind **`dark` class** 联动（见 `useThemeFromQuery`）；无参数时维持默认暗色 HUD。  
 * **画布**：**不要求** Three.js 场景、星空或 Bloom 随浅色主题重算；画布可保持深色底，与浅色 HUD 并存仅作工程验收场景。
+
+#### **3.4.5 Phase 14 — 文案语言与 dev / 验收**
+
+* **产品 HUD**：主体文案为 **英语**（以 `strings.ts` 为准，见 §3 头部 SSOT）。
+* **中文**：仅出现在**项目文档**（如本 Design Spec、Pipeline、报告）与 **dev 审计用 `console.log`** 中；**不**作为生产 HUD 用户可见字符串来源。
+
+### **3.5 Close 控件 primitive（Phase 14）**
+
+* **组件**：**`CloseButton`**，实现路径 **`frontend/src/components/ui/close-button.tsx`**。
+* **Variants**：**`default`**（带边框的方形按钮）/ **`ghost-sm`** / **`ghost-lg`**（轻量幽灵态，尺寸分档）。
+* **图标**：**`lucide-react`** 的 **`X`**；**`aria-label`** 等可访问性文案走 **`STRINGS`**（与 §3 SSOT 一致）。
+* **视觉**：普通态边框与线宽与 **hover 环**、**Timeline** 主线对齐，统一消费 **UI edge CSS token**（见《视觉参数总表》**§7a**）。
+
+### **3.6 全局键盘快捷键（Phase 14 · HUD）**
+
+以下快捷键在 **App 级** 全局监听（与 §4 搜索 combobox 内 **`↓`/`↑`/`Enter`/`Tab`** 等**不重复登记**同一键位语义；实现以源码为准）：
+
+* **`F`**：**切换浏览器全屏**（**仅当**焦点不在 **`input` / `textarea` / `contenteditable`** 等文本输入控件内时生效，避免打断输入）。
+* **`Cmd` + `K`（macOS）** / **`Ctrl` + `K`（Windows / Linux）**：聚焦顶部搜索框；当搜索因 **`meta.has_search_index !== true`** 而 **disabled** 时 **noop**。
+* **`Esc`**：**焦点栈**与状态回退维持 **§4.6**（Phase 12.8）不变。
 
 ## **4\. 搜索 UX（Phase 12 起 · UX SSOT）**
 

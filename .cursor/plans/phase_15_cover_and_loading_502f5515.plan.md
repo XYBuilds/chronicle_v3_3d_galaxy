@@ -3,7 +3,7 @@ name: phase 15 cover and loading
 overview: Phase 15 把首屏加载从「下载/解压/解析」三段扩展为「下载/解压/解析/Search index hydrate」四段，并把目前在 useEffect 里延迟加载的搜索索引提前到首屏 Loading 阶段；Loading 完成后改为「极简封面 + Start 按钮」覆盖层，用户点击后才挂载 Three.js 主场景。目标：用户进入应用前一切就绪，运行时无任何「等待」。
 todos:
   - id: p150-spec
-    content: P15.0 spec 升级（无代码）：Tech Spec §1.4.7 改写为四阶段 + Cover；Design Spec §3.5 Cover-with-Start；PRD §3.1 层级零加 Start 步骤；strings.ts 准备 cover.* 键（与 Phase 14 同步）
+    content: P15.0 spec 升级（无代码）：Tech Spec §1.4.7 改写为四阶段 + Cover；Design Spec §3.5 Cover-with-Start；PRD §3.1 层级零加 Start 步骤；`locales/en.json` 加 `cover.*` 键并在 `strings.ts` 导出（与 Phase 14 P14.1 SSOT 一致）
     status: pending
   - id: p151-load-orchestration
     content: P15.1 加载顺序整合 + 四阶段进度：Loading.tsx 接 indexStatus / mode props；ol 扩为四项（download/decompress/parse/index）；App.tsx hydrate 提前到 status=ready 后立即调用；galaxy-loading / galaxy-error / index-loading 三个渲染分支走通
@@ -91,7 +91,7 @@ spinner，显示 Start CTA。用户点击 Start 后再 mount Three.js 场景（�
 ### Design Spec §3 增 §3.5「Cover-with-Start」节
 
 - 极简风格：Loading.tsx 同一覆盖层，spinner 隐去，进度条保留勾选完成状态
-- 文案：标题 `STRINGS.cover.title`（Phase 14 string table 加 `cover.title = 'Ready'` / `cover.subtitle = 'Press Start to enter the universe'` 等）；最终文案在 P15.0 决定，写入 strings.ts
+- 文案：标题 `STRINGS.cover.title`（在 **`en.json`** 增加 `cover.title` / `cover.subtitle` 等，**`strings.ts`** 挂到 `STRINGS.cover`）；最终文案在 P15.0 决定
 - Start 按钮：`<button>` 走 shadcn variant primary 或自定义 ghost-with-glow；`autoFocus` 让 Enter / Space 也可触发
 - 键盘可达：Enter / Space 等同点击；Esc 不响应（无可关闭对象）
 - a11y：role="dialog" + `aria-labelledby`；按钮 `aria-label`

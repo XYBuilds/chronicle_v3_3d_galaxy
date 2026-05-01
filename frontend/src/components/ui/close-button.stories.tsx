@@ -29,3 +29,7 @@ export const GhostSm: Story = {
 export const GhostLg: Story = {
   args: { variant: 'ghostLg' },
 }
+
+export const Secondary: Story = {
+  args: { variant: 'secondary' },
+}

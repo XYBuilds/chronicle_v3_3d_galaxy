@@ -6,7 +6,7 @@ todos:
     content: P16.0 spec 升级（无代码）：Design Spec §4.1/§4.3/§4.4/§4.5 差异化 zCurrent + placeholder + 已知限制；状态机 spec §3.2.1 active 材质双路径；视觉参数总表 §2 / Tech Spec §1.1 同步切换矩阵
     status: pending
   - id: p161-placeholder
-    content: P16.1 三档 placeholder hint：strings.ts 扩 searchBar.placeholder.{movie,person,genre,disabled}；SearchBar.tsx 按 searchMode 切换；无索引走 disabled 文案
+    content: P16.1 三档 placeholder hint：`en.json` 扩 `searchBar.placeholderMovie` 等（或嵌套 `searchBar.placeholder.*`）；`strings.ts` 同步 `STRINGS`；SearchBar.tsx 按 tab 切换；无索引走 disabled 文案
     status: pending
   - id: p162-zcurrent-snap
     content: P16.2 差异化 zCurrent 联动：复用 P13.1 driver 构造 zCurrentDriver；搜人名 → animateZCurrentTo(min z, 700ms)；搜电影继承 P13.4；genre 不动；切人中途 driver.cancel + start
@@ -22,7 +22,7 @@ isProject: false
 
 # Phase 16 — 搜索体验完善
 
-> 接 Phase 12（搜索基础设施）+ Phase 13（focus 体验重构）+ Phase 14（HUD 抛光）+ Phase 15（封面/载入）。本 Phase **复用** P13.1 `transitionDriver`、P14.1 `strings.ts` 与 P11.1 alpha 渐变路径，不动数据契约。
+> 接 Phase 12（搜索基础设施）+ Phase 13（focus 体验重构）+ Phase 14（HUD 抛光）+ Phase 15（封面/载入）。本 Phase **复用** P13.1 `transitionDriver`、P14.1 **`locales/en.json` + `strings.ts`（`STRINGS`）** 与 P11.1 alpha 渐变路径，不动数据契约。
 
 ## 范围
 
@@ -32,7 +32,7 @@ isProject: false
 - 搜索 UX：**保留** Design Spec §4 既有契约，仅补 placeholder + 差异化 zCurrent 联动
 - 涉及文件（预计）：
   - [frontend/src/components/SearchBar.tsx](frontend/src/components/SearchBar.tsx)（placeholder + 联想点击 handler 内 zCurrent 写入）
-  - [frontend/src/lib/strings.ts](frontend/src/lib/strings.ts)（Phase 14 已建；本 phase 加 `searchBar.placeholder.{movie,person,genre}`）
+  - [frontend/src/lib/locales/en.json](frontend/src/lib/locales/en.json) + [frontend/src/lib/strings.ts](frontend/src/lib/strings.ts)（P14.1 已建；本 phase 扩展 `searchBar` 下 placeholder 键并装配到 `STRINGS`）
   - [frontend/src/three/scene.ts](frontend/src/three/scene.ts)（active 材质渲染路径切换；监听 searchMode × selectedMovieId）
   - [frontend/src/three/galaxyMeshes.ts](frontend/src/three/galaxyMeshes.ts)（如需暴露 active material 切换 helper）
   - [frontend/src/store/galaxyInteractionStore.ts](frontend/src/store/galaxyInteractionStore.ts)（如需新增 `setZCurrentAnimated` helper 或在 SearchBar 内直接驱动 transitionDriver）
@@ -45,7 +45,7 @@ isProject: false
 
 | #   | 决策项                         | 选定方案                                                                                                                                                                                                                     | 备注                                                                                                                |
 | --- | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| D1  | 三档 placeholder 文案          | **movie**: `Search movie titles…` / **person**: `Director / Producer / Cast …` / **genre**: `Drama / Comedy / Thriller …`                                                                                                    | 写入 strings.ts；切 segment 时同步切 placeholder                                                                    |
+| D1  | 三档 placeholder 文案          | **movie**: `Search movie titles…` / **person**: `Director / Producer / Cast …` / **genre**: `Drama / Comedy / Thriller …`                                                                                                    | 写入 **`en.json`**（SSOT）并在 **`strings.ts`** 暴露；切 tab 时同步切 placeholder                                  |
 | D2  | 搜电影 zCurrent 行为           | 进 focus（继承 P13.4 zCurrent snap 到 movie.z 的 transition）                                                                                                                                                                | 不需要在 P16 新写逻辑；仅在 spec 中明确这点                                                                         |
 | D3  | 搜人名 zCurrent 行为           | snap 到 `min(movie.z over selectionIds)`（最早 active）；走 P13.1 transitionDriver 与电影飞入同节奏（700ms easeOutCubic）                                                                                                    | 用户原话「最早的 active 星星」                                                                                      |
 | D4  | 搜 genre zCurrent 行为         | **不动**；zCurrent 保持点击前位置                                                                                                                                                                                            | 与状态机 spec §3.6 一致：`viswindowDisabled` 时视觉无反馈                                                           |
@@ -106,34 +106,26 @@ flowchart TD
 
 ## P16.1 三档 placeholder hint
 
-### strings.ts 扩充
+### `en.json` / `strings.ts` 扩充
 
-[frontend/src/lib/strings.ts](frontend/src/lib/strings.ts)（Phase 14 P14.1 建立）补：
+在 [frontend/src/lib/locales/en.json](frontend/src/lib/locales/en.json) 的 `searchBar` 下增加占位键（与现有 `placeholderMovie` 等并列或改为嵌套 `placeholder.*`，由实现选定）；[frontend/src/lib/strings.ts](frontend/src/lib/strings.ts) 将对应字段挂到 **`STRINGS.searchBar`**。示例（`en.json` 片段）：
 
-```ts
-export const STRINGS = {
-  // ...
-  searchBar: {
-    placeholder: {
-      movie: 'Search movie titles…',
-      person: 'Director / Producer / Cast …',
-      genre: 'Drama / Comedy / Thriller …',
-      disabled: 'Search index unavailable',
-    },
-    clear: 'Clear',
-    noResults: 'No results',
-  },
-  // ...
+```json
+"searchBar": {
+  "placeholderMovie": "Search movie titles…",
+  "placeholderPerson": "Director / Producer / Cast …",
+  "placeholderGenre": "Drama / Comedy / Thriller …",
+  "placeholderDisabled": "Search index unavailable"
 }
 ```
 
 ### SearchBar 改造
 
 [frontend/src/components/SearchBar.tsx](frontend/src/components/SearchBar.tsx)：
-- 当前 placeholder 取自一个静态字符串；改为按 `searchMode` 切换：
+- 当前 placeholder 取自 `STRINGS.searchBar`；改为按 HUD tab / `searchMode` 切换（键名以实现为准）：
   - `'idle'` → 取 movie 默认（用户未点 segment 时多见）
-  - `'movie' | 'person' | 'genre'` → 对应 STRINGS.searchBar.placeholder[mode]
-  - 搜索 disabled（`!hasSearchIndex`）→ STRINGS.searchBar.placeholder.disabled
+  - `'movie' | 'person' | 'genre'` → 对应 `STRINGS.searchBar` 下各档文案
+  - 搜索 disabled（`!hasSearchIndex`）→ disabled 专用键
 - 切换 segment 时（Design Spec §4.1：会清空 query）placeholder 立即生效（受控属性，无需动画）
 
 ### 验收

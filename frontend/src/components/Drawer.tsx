@@ -129,7 +129,7 @@ export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailD
         style={{ ['--sheet-ease' as string]: SHEET_OPEN_EASE }}
       >
         <SheetClose
-          render={<CloseButton variant="ghostLg" className="absolute right-5 top-5 z-30" />}
+          render={<CloseButton variant="secondary" className="absolute right-5 top-5 z-30" />}
         />
         <SheetHeader className="relative z-20 shrink-0 gap-0 border-b border-border/70 bg-popover px-6 pb-5 pt-7 text-left shadow-[0_6px_18px_-10px_color-mix(in_oklch,var(--foreground)_10%,transparent)] sm:px-7">
           <SheetTitle className="pr-10 text-2xl font-bold leading-tight tracking-tight text-foreground">{title}</SheetTitle>
@@ -153,29 +153,29 @@ export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailD
               </div>
 
               <div className="mt-4 flex flex-wrap items-center gap-2">
-              {movie.genres.length > 0 ? (
-                <GenreBadgesList genres={movie.genres} genrePalette={genrePalette} />
-              ) : null}
-              <a
-                href={tmdbMovieUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={externalHudLinkClass}
-              >
-                {STRINGS.drawer.links.tmdb}
-                <ExternalLink className="size-3.5 opacity-80" aria-hidden />
-              </a>
-              {showImdbLink ? (
+                {movie.genres.length > 0 ? (
+                  <GenreBadgesList genres={movie.genres} genrePalette={genrePalette} />
+                ) : null}
                 <a
-                  href={`https://www.imdb.com/title/${encodeURIComponent(imdbIdTrimmed)}/`}
+                  href={tmdbMovieUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className={externalHudLinkClass}
                 >
-                  {STRINGS.drawer.links.imdb}
+                  {STRINGS.drawer.links.tmdb}
                   <ExternalLink className="size-3.5 opacity-80" aria-hidden />
                 </a>
-              ) : null}
+                {showImdbLink ? (
+                  <a
+                    href={`https://www.imdb.com/title/${encodeURIComponent(imdbIdTrimmed)}/`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={externalHudLinkClass}
+                  >
+                    {STRINGS.drawer.links.imdb}
+                    <ExternalLink className="size-3.5 opacity-80" aria-hidden />
+                  </a>
+                ) : null}
               </div>
             </>
           ) : null}

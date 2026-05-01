@@ -1,160 +1,161 @@
-# Phase 14.1 — HUD string table、全英语化与 `en.json` 实施报告（定稿）
+# Phase 14.1 — HUD 文案 SSOT、全英语化：最终决策与操作报告（定稿）
 
-本文档为 Phase 14 子项 **P14.1** 的**最终决策**、**已落地操作**与**验收口径**归档，供评审、回归与后续多语言扩展对齐。  
-关联计划：`.cursor/plans/phase_14_hud_polish_ed74e27e.plan.md`（`p141-strings`：**completed**）。  
-产品规范：《TMDB 电影宇宙 Design Spec》**§2.2**（focus 图例与 `STRINGS` / `en.json`）、**§3**（HUD 文案 SSOT）、**§3.4.3**（`infoCopy` 与 `STRINGS.info`）、**§3.4.5**（英文主体与中文边界）。
+本文档汇总 Phase 14 子项 **P14.1**（string table + 全英语化）的**最终锁定决策**、**已执行操作**、**代码接入面**与**验收口径**，作为评审与回归的单一归档。  
+**代码 SSOT**：`frontend/src/lib/locales/en.json` + `frontend/src/lib/strings.ts`（`STRINGS`）。
 
----
-
-## 1. 背景与范围
-
-### 1.1 目标
-
-在**不改动** 3D 渲染管线、`galaxy_data` / 搜索索引**数据契约**的前提下：
-
-- 将 HUD / 壳层**产品 UI 字面量**统一为**英文**；
-- 抽离为可维护的 **string table**，避免散落在各组件中的魔法字符串；
-- **不引入** react-i18next 等 i18n **运行时**框架（与 Phase 14 决策 **D1** 一致）。
-
-### 1.2 范围边界
-
-| 纳入 P14.1 | 不纳入（刻意排除） |
-|------------|-------------------|
-| 加载态、数据拉取错误串、全局错误页、搜索 HUD、INFO 面板、`infoCopy` 路径、Drawer 区块标题与 Details 标签、外链按钮文案、WebGL2 抛错、焦点参照（L 条 / vote 圆环 tier）等**产品 UI** | TMDB 导出中的**内容数据**（片名、简介、演职员姓名、`spoken_languages` 原文等）——保持数据源语言，不由本字典「翻译」 |
-| `loadGalaxyGzip` 等面向用户的进度 / 错误文案 | 纯调试 `console.log`、代码注释、文档正文中的中文 |
+| 关联 | 路径或说明 |
+|------|------------|
+| Phase 14 计划 | `.cursor/plans/phase_14_hud_polish_ed74e27e.plan.md`（`p141-strings`：**completed**） |
+| 产品规范 | 《TMDB 电影宇宙 Design Spec》**§3**（HUD 文案 SSOT）、**§2.2**（focus 图例与 `STRINGS`）、**§3.4.3**（`infoCopy`）、**§3.4.5**（英文主体边界） |
+| 仓库规则 | `.cursor/rules/project-overview.mdc`（Frontend HUD 英文文案一行） |
 
 ---
 
-## 2. 最终锁定决策
+## 1. 执行摘要
+
+- **目标**：在**不改动** 3D 渲染管线与 `galaxy_data` / 搜索索引**数据契约**的前提下，将**产品 HUD** 用户可见字面量统一为**英文**，并集中到可 diff、可扩展的 **string table**。  
+- **手段**：**不接** react-i18next 等 i18n 框架；**`en.json`** 存键值与 `{{placeholder}}` 模板；**`strings.ts`** 装配 **`STRINGS`**（含插值函数）；业务代码 **`import { STRINGS } from '@/lib/strings'`**。  
+- **`infoCopy`**：从 **`STRINGS.info`** 再导出，保留 `@/hud/infoCopy` 导入路径，避免双处维护。  
+- **边界**：TMDB **内容数据**（片名、简介、演职员名等）不翻译；**`console.log` / 注释 / 项目文档** 中文允许；**Timeline** 部分 `aria-label` 仍为内联英文（与 `STRINGS.timeline` 未完全收敛，见 **§7**）。
+
+---
+
+## 2. 最终锁定决策总表
 
 | 编号 | 决策项 | 最终方案 |
 |------|--------|----------|
-| **D1** | UI 语言策略 | **单一英文界面**；字典作为未来多 locale（如 `zh-CN.json`）的**结构模板**，本阶段不接 i18n 框架。 |
-| **D2** | SSOT 分层 | **键值与英文模板**存 **`frontend/src/lib/locales/en.json`**；**运行时聚合与插值**在 **`frontend/src/lib/strings.ts`** 导出 **`STRINGS`**；业务代码**只 import `STRINGS`**（与 Design Spec §3 一致）。 |
-| **D3** | 插值格式 | 模板使用 **`{{key}}`**，由 `strings.ts` 内 **`interpolate()`** 替换；调用方将数值等转为 `string`（如 HTTP status）。 |
-| **D4** | `infoCopy.ts` | **不再维护独立英文段落文件**：从 **`STRINGS.info`** 再导出各常量，保留 **`@/hud/infoCopy`** 导入路径，降低 `InfoModal` 等调用方改动面（相对原计划「整文件手写英语版」的**工程化折中**，效果等价：单一文案源仍为 `en.json`）。 |
-| **D5** | Drawer / 焦点 HUD | 海报占位、Sheet 描述、章节标题、Details 字段、TMDB/IMDb 链接、vote 行模板、**FocusLReference** 评分行与 `aria-label`、**FocusSizeReferenceRings** 五档 **tier** 标签均进入 **`en.json`**，经 `STRINGS.drawer` / `STRINGS.focusLReference` / `STRINGS.focusVoteReference` 暴露。 |
-| **D6** | 与 Phase 计划关系 | 对应计划条目 **P14.1**；与 **P14.0**（Design Spec §3 等已写明 SSOT）对齐后交付。 |
-| **D7** | Tooltip / Timeline | **MovieTooltip**：仅展示动态片名与 `genres[0]` 标签，**无**独立产品 UI 句柄，不要求走 `STRINGS`。**Timeline**：`en.json` 已预留 **`STRINGS.timeline.label`**；组件内 **`aria-label`** 仍有**内联英文**模板字符串（与 SSOT 未完全收敛，可列入 **P14.8** 小修或后续统一）。 |
+| **D1** | UI 语言 | **单一英文产品 HUD**；其它 locale 可日后复制 `en.json` 结构扩展。 |
+| **D2** | SSOT 分层 | **键值与英文模板** → **`frontend/src/lib/locales/en.json`**；**运行时聚合与插值** → **`frontend/src/lib/strings.ts`** → **`STRINGS`**。业务代码**只**依赖 `STRINGS`（与 Design Spec §3 一致）。 |
+| **D3** | i18n 框架 | **不引入**；避免 Phase 14 范围膨胀。 |
+| **D4** | 插值格式 | 模板使用 **`{{key}}`**；`strings.ts` 内私有 **`interpolate(template, vars)`**；调用方将数值等转为 `string`。 |
+| **D5** | `infoCopy.ts` | **不再维护独立英文段落**：从 **`STRINGS.info`** 再导出各 `INFO_*` 常量。 |
+| **D6** | Drawer / 焦点 HUD | 海报 / Sheet 描述 / 章节 / Details 标签 / 外链 / 票数模板、**FocusLReference** 评分行与 `aria-label`、**FocusSizeReferenceRings** tier 标签均进入 **`en.json`**。 |
+| **D7** | MovieTooltip | **不**走 `STRINGS`：仅动态片名 + `genres[0]`，无独立产品句柄。 |
+| **D8** | Timeline 文案 | **`en.json`** 已预留 **`timeline.label`**；**`Timeline.tsx`** 主 `aria-label` 等仍为**内联英文**模板字符串——建议 **P14.8** 或后续小改收口到 `STRINGS`。 |
 
 ---
 
-## 3. 架构说明（落地形态）
+## 3. 架构与数据流
 
 ```
 locales/en.json  ──import──►  strings.ts
        │                         │
        │                         ├── interpolate("{{x}}", …)
-       │                         └── export const STRINGS = { … }
+       │                         └── export const STRINGS = { … } as const
                                        │
-                    App / Drawer / SearchBar / Loading / …
+                    App / Drawer / SearchBar / Loading / loadGalaxyGzip / …
                                        │
                               import { STRINGS } from '@/lib/strings'
-```
 
-- **`en.json`**：便于 diff、审阅与将来复制为 `zh-CN.json` 等同级文件。  
-- **`strings.ts`**：保证 TypeScript 侧**稳定 API**（函数型字段与 `as const` 推断），避免在 JSX 中散落插值逻辑。
+hud/infoCopy.ts ──import STRINGS.info──► 再导出 INFO_*（兼容既有 import）
+```
 
 ---
 
-## 4. 实施操作清单
-
-### 4.1 核心文件
+## 4. 核心文件与职责
 
 | 路径 | 职责 |
 |------|------|
-| `frontend/src/lib/locales/en.json` | 英文文案与 `{{placeholder}}` 模板（**可编辑 SSOT**）。 |
-| `frontend/src/lib/strings.ts` | 导入 `en.json`，组装 `STRINGS`（含插值函数）。 |
-| `frontend/src/hud/infoCopy.ts` | 从 `STRINGS.info` **再导出**，兼容既有 `INFO_*` 常量引用。 |
-
-### 4.2 已接入 `STRINGS` 的源码模块（仓库现状）
-
-以下路径为 `import { STRINGS } from '@/lib/strings'`（或经 `infoCopy`）的**生产路径**汇总：
-
-| 领域 | 文件 |
-|------|------|
-| 加载 UI | `components/Loading.tsx` |
-| 数据拉取 | `data/loadGalaxyGzip.ts` |
-| 全局壳 / 错误页 | `App.tsx` |
-| 搜索 HUD | `components/SearchBar.tsx` |
-| INFO | `hud/InfoModal.tsx`（部分）、`hud/InfoButton.tsx`、`hud/infoCopy.ts` |
-| 详情抽屉 | `components/Drawer.tsx` |
-| 场景初始化 | `three/scene.ts`（WebGL2 不可用） |
-| 焦点参照 | `hud/FocusLReference.tsx`、`three/FocusSizeReferenceRings.ts` |
-| Storybook 辅助 | `storybook/GalaxyThreeLayerLabLevaHost.tsx`（与 HUD 英语验收一致的 Leva 标签） |
-
-**说明**：`components/ui/close-button.tsx` 使用 **`STRINGS.hud.close`** 为默认 **`aria-label`**，属 **P14.2** 关闭按钮 primitive，依赖 P14.1 已落地的 **`hud` 命名空间**。
-
-### 4.3 `STRINGS` / `en.json` 顶层命名空间
-
-与 `en.json` 根键一一对应（便于复制新 locale）：
-
-| 键 | 用途摘要 |
-|----|----------|
-| `loading` | 全屏加载标题与三阶段（Download / Decompress / Parse） |
-| `galaxyData` | gzip 进度、解压/解析、网络与 HTTP 错误等（含插值） |
-| `error` | 数据加载失败页标题、重试、本地开发说明（拆段以配合 `<code>` 穿插） |
-| `searchBar` | Tab 文案、禁用原因、三档 placeholder、`clear` 等 |
-| `hud` | 通用 HUD（INFO `sr-only`、关闭、`toggleFullscreen` / `focusSearch` 等**预留/后续快捷键**文案） |
-| `timeline` | 时间轴辅助文案（**字典已备**；与 `Timeline.tsx` 内联 `aria-label` 的完全对齐见 **§2 D7**） |
-| `info` | INFO Modal 各区块标题与正文 |
-| `scene` | WebGL2 不可用时的用户可见错误 |
-| `drawer` | `fallbackTitle`、`posterAlt`、Sheet 描述、`sections`、`details`、`links`、`votesLine` 等 |
-| `focusLReference` | 评分行模板、`aria-label` 模板 |
-| `focusVoteReference` | `tierLabels` 字符串数组（五档；与 `FOCUS_VOTE_REFERENCE_TIERS` 长度断言一致） |
+| `frontend/src/lib/locales/en.json` | 英文键值与 `{{placeholder}}` 模板（**可编辑 SSOT**）。 |
+| `frontend/src/lib/strings.ts` | 导入 `en.json`，导出 **`STRINGS`**（函数字段负责插值）。 |
+| `frontend/src/hud/infoCopy.ts` | 从 **`STRINGS.info`** 再导出 **`INFO_*`**。 |
 
 ---
 
-## 5. 验收与回归
+## 5. `STRINGS` / `en.json` 顶层命名空间
 
-### 5.1 构建与测试
+与 `en.json` 根键一致（便于复制 `zh-CN.json` 等镜像文件）：
 
-- `cd frontend && npm run build`（`tsc -b` + `vite build`）通过。  
-- `npm run test`（Vitest）通过（以当时 CI / 本地为准）。
+| 根键 | 用途摘要 |
+|------|----------|
+| `loading` | 全屏加载标题与三阶段（Download / Decompress / Parse） |
+| `galaxyData` | 下载进度、解压/解析、gzip 不支持、网络/HTTP/JSON 错误等（多数字段为插值函数） |
+| `error` | 数据加载失败标题、Retry、本地开发说明（拆段以配合 `<code>` 路径片段） |
+| `searchBar` | Tab、索引不可用说明、三档 placeholder、`clear` 等 |
+| `hud` | INFO / 关闭 / 全屏与搜索快捷键等 **aria** 与 sr-only 文案（部分能力在 P14.4 / P14.5 落地） |
+| `timeline` | 预留 **`label`**（与组件内联 `aria-label` 的完全对齐见 **§2 D8**） |
+| `info` | Info Modal 各区块标题与占位正文 |
+| `scene` | WebGL2 不可用时的用户可见错误 |
+| `drawer` | `fallbackTitle`、`posterAlt`、Sheet 描述、`sections`、`details`、`links`、`votesLine` 等 |
+| `focusLReference` | 评分行、`aria-label` 模板 |
+| `focusVoteReference` | **`tierLabels`** 字符串数组（与 `FOCUS_VOTE_REFERENCE_TIERS` 长度一致，源码中带断言） |
 
-### 5.2 文案审计（中文字符）
+---
 
-计划口径：
+## 6. 生产代码接入清单（`STRINGS` 引用面）
+
+以下模块存在 **`import { STRINGS } from '@/lib/strings'`**（截至本报告定稿的仓库状态）：
+
+| 领域 | 文件 |
+|------|------|
+| 加载 UI | `frontend/src/components/Loading.tsx` |
+| 数据拉取 | `frontend/src/data/loadGalaxyGzip.ts` |
+| 全局壳 / 错误页 | `frontend/src/App.tsx` |
+| 搜索 HUD | `frontend/src/components/SearchBar.tsx` |
+| INFO | `frontend/src/hud/InfoModal.tsx`、`frontend/src/hud/InfoButton.tsx` |
+| `infoCopy` 桥 | `frontend/src/hud/infoCopy.ts` |
+| 详情抽屉 | `frontend/src/components/Drawer.tsx` |
+| 场景初始化 | `frontend/src/three/scene.ts` |
+| 焦点参照 | `frontend/src/hud/FocusLReference.tsx`、`frontend/src/three/FocusSizeReferenceRings.ts` |
+| Close 控件（P14.2） | `frontend/src/components/ui/close-button.tsx`（默认 **`aria-label`** → **`STRINGS.hud.close`**） |
+
+**说明**：**`CloseButton`** 属 **P14.2**，依赖 P14.1 已落地的 **`hud`** 命名空间；本清单仅反映当前依赖关系。
+
+---
+
+## 7. 已知未收口与后续建议
+
+| 项 | 说明 | 建议阶段 |
+|----|------|----------|
+| **Timeline `aria-label`** | 组件内仍为内联英文（见 `Timeline.tsx`） | **P14.8** 文档/小修或独立 chore：改为消费 `STRINGS.timeline.*` |
+
+---
+
+## 8. 验收与回归
+
+### 8.1 构建
+
+```bash
+cd frontend && npm run build
+```
+
+### 8.2 中文字符审计（生产 UI）
 
 ```bash
 rg '[\u4e00-\u9fff]' frontend/src --glob '*.ts' --glob '*.tsx'
 ```
 
-**期望**：生产 UI 路径无用户可见中文；**允许**命中：`console.log`、注释、测试、Storybook fixture 中模拟数据等。
+**期望**：用户可见字面量不在生产路径以中文呈现；**允许**：`console.log`、注释、测试、Storybook mock 等。
 
-### 5.3 主流程人工 spot-check
+### 8.3 主流程 spot-check
 
-- **Loading**：三阶段英文与进度条文案。  
-- **Error**：无数据 / 拉取失败页标题、Retry、本地开发提示中的路径片段。  
-- **Search**：三 Tab、三档 placeholder、禁用态说明、清除按钮 **`aria-label`**。  
-- **Drawer**：区块标题、Details 标签、外链、海报占位。  
-- **INFO**：`InfoModal` 标题与占位正文。  
-- **Focus**：L 参照与 vote 圆环 tier 英文。
+Loading → Error（含 Retry 与本地提示）→ Search（三 Tab / placeholder / 禁用说明）→ Drawer（区块与 Details）→ INFO → Focus（L 条与 vote 圆环 tier）。
 
 ---
 
-## 6. 与 Phase 14 内计划条文的差异（记录）
+## 9. 与计划条文的差异（工程记录）
 
-| 计划原文（摘要） | 落地调整 | 原因 |
-|------------------|----------|------|
-| 全部字面量在 `strings.ts` 内联常量 | 英文词条迁至 **`en.json`**，由 `strings.ts` 装配 | 更易审阅、diff 与多语言镜像 |
-| `infoCopy.ts` 直接重写英语版 | **`infoCopy` 再导出 `STRINGS.info`** | 保持 import 面稳定，避免双处维护 |
-| `MovieTooltip` 等列入审计列表 | Tooltip **无**独立产品句柄（仅数据字段） | 与「仅 UI 英语化」边界一致 |
-
----
-
-## 7. 后续扩展（非 P14.1 交付）
-
-- 新增 **`locales/zh-CN.json`** 等：复制 `en.json` 结构翻译值；在加载层按 locale 选择 JSON 再装配 `STRINGS`（或未来接 i18n 库）。  
-- 若引入 **react-i18next**：可将 `en.json` 注册为资源包；`{{key}}` 需评估与库插值语法的迁移成本。  
-- **Timeline `aria-label`**：建议改为消费 **`STRINGS.timeline`**（或细分键），在 **P14.8 文档同步 / 小修** 中收口。
+| 计划/直觉表述 | 落地调整 | 原因 |
+|---------------|----------|------|
+| 文案散落在 `strings.ts` 常量 | 迁至 **`en.json`**，由 `strings.ts` 装配 | 易审阅、易做第二 locale |
+| `infoCopy` 整文件手写英文化 | **`STRINGS.info` 再导出** | 单一文案源、稳定 import 面 |
+| Storybook Leva 等走 `STRINGS` | **未**在 `GalaxyThreeLayerLabLevaHost.tsx` 接入 `STRINGS` | 该文件为 dev 调参英文标签，与产品 HUD SSOT 解耦 |
 
 ---
 
-## 8. 修订记录
+## 10. 与 P14.2 / P14.3 的边界（避免混淆）
+
+| Phase | 内容 | 与 P14.1 关系 |
+|-------|------|----------------|
+| **P14.2** | `CloseButton`、`--ui-edge-*`（DOM 壳层细线） | 消费 **`STRINGS.hud.close`** |
+| **P14.3** | Hover ring、Timeline 与 UI edge **视觉对齐**；黑底画布上环与时间轴使用 **`--ui-edge-canvas-*`**（固定浅描边），与 **`?theme=light`** 下 DOM 的 **`--ui-edge-*`** 区分 | **非** P14.1 文案范围；见《视觉参数总表》**§7 / §7a** |
+
+---
+
+## 11. 修订记录
 
 | 日期 | 说明 |
 |------|------|
-| 2026-05-01 | 初稿：P14.1 决策、`en.json` 拆分、Drawer / 焦点参照纳入 SSOT。 |
-| 2026-05-01 | **定稿**：补充 D7（Timeline/MovieTooltip）、架构图式、全文件清单、验收命令、与计划差异表、后续收口项；与 Design Spec §3 / §3.4.3 / §3.4.5 交叉引用。 |
-| 2026-05-01 | **文档同步**：Design Spec §2.2（focus 图例与 `STRINGS`）、§3 / §3.4.3 / §3.4.5 已写明 **`en.json` + `strings.ts`**；`.cursor/plans` 中 Phase 14 / 15 / 16 与 HUD 文案相关表述已对齐；`.cursor/rules/project-overview.mdc` 增补 Frontend HUD SSOT 一行。 |
+| 2026-05-01 | 初稿 / 定稿循环：决策、`en.json` 拆分、Drawer / 焦点参照纳入 SSOT。 |
+| 2026-05-01 | **定稿归档**：合并「最终决策 + 操作」单报告；接入清单与 `rg` 命令对齐当前仓库；修正 **Leva Storybook 未使用 `STRINGS`** 的表述；补充 **D8**、**§10** 与 **P14.2/P14.3** 边界。 |
+| 2026-05-01 | **文档联动**：Design Spec §3 增加本报告指针；视觉参数总表 **§7 / §7a** 同步 hover 环布局与 **canvas** token；Phase 14 计划中 **P14.3** 标为 completed。 |

@@ -66,6 +66,7 @@
 所有 UI 元素属于前端 DOM 覆盖层，与底层 3D 画布分离。
 
 * **Phase 14 — HUD 文案 SSOT**：所有面向用户的 HUD **英文**字面量以 **`frontend/src/lib/locales/en.json`** 为**键值与模板**的单一事实源；运行时由 **`frontend/src/lib/strings.ts`** 聚合为 **`STRINGS`**（含 `{{key}}` 插值等），组件**仅**通过 `STRINGS` 引用。**不在**各 React 组件内写死可复用文案（**例外**：一次性 **dev-only** **`console.log`** 等开发审计输出可保留字面量）。
+* **P14.1 实施报告（定稿）**：[`docs/reports/Phase 14.1 P14.1 HUD string table 与 en.json 实施报告.md`](../reports/Phase%2014.1%20P14.1%20HUD%20string%20table%20与%20en.json%20实施报告.md) — 归档最终决策、代码接入面、`rg` 验收命令及 **Timeline `aria-label`** 等未收口项。
 
 ### **3.1 全局时间轴 (Timeline Indicator)**
 
@@ -146,7 +147,7 @@
 * **组件**：**`CloseButton`**，实现路径 **`frontend/src/components/ui/close-button.tsx`**。
 * **Variants**：**`default`**（带边框的方形按钮）/ **`ghost-sm`** / **`ghost-lg`**（轻量幽灵态，尺寸分档）。
 * **图标**：**`lucide-react`** 的 **`X`**；**`aria-label`** 等可访问性文案走 **`STRINGS`**（与 §3 SSOT 一致）。
-* **视觉**：普通态边框与线宽与 **hover 环**、**Timeline** 主线对齐，统一消费 **UI edge CSS token**（见《视觉参数总表》**§7a**）。
+* **视觉**：**DOM 壳层**上的 **`CloseButton`** 等与 **`?theme=light|dark`** 验收走 **`--ui-edge-*`**；**叠在黑 WebGL 画布上**的 **Hover ring**、**Timeline** 主线/刻度走 **`--ui-edge-canvas-*`**（固定浅描边，不随浅色 HUD 变为深灰细线）。线宽统一 **`--ui-edge-stroke-width`**。详见《视觉参数总表》**§7 / §7a**。
 
 ### **3.6 全局键盘快捷键（Phase 14 · HUD）**
 

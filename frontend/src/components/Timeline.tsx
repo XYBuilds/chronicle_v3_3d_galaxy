@@ -199,8 +199,8 @@ export function TimelineHud({
     return (
       <div
         className={cn(
-          // Match vertical rail extent: vertical uses h-[60vh] → horizontal uses w-[80vw]
-          'pointer-events-none fixed bottom-8 left-1/2 z-30 flex h-24 w-[60vw] max-w-[calc(100vw-2rem)] -translate-x-1/2 select-none flex-col items-stretch sm:bottom-10',
+          // Match vertical rail extent: vertical uses h-[50vh] → horizontal uses w-[80vw]
+          'pointer-events-none fixed bottom-8 left-1/2 z-30 flex h-24 w-[50vw] max-w-[calc(100vw-2rem)] -translate-x-1/2 select-none flex-col items-stretch sm:bottom-10',
           className,
         )}
         role={interactive ? 'presentation' : 'img'}

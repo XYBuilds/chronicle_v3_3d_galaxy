@@ -26,6 +26,16 @@ export const Default: Story = {
   args: {
     zRange: [zLo, zHi],
     cameraZ: (zLo + zHi) / 2,
+    orientation: 'vertical',
+  },
+}
+
+/** P14.7: bottom-centered axis, ticks below, left = oldest year. */
+export const Horizontal: Story = {
+  args: {
+    zRange: [zLo, zHi],
+    cameraZ: (zLo + zHi) / 2,
+    orientation: 'horizontal',
   },
 }
 
@@ -62,4 +72,21 @@ function InteractiveHudHarness() {
 /** Drag the track or click ticks; thumb follows local `cameraZ` state (no WebGL). */
 export const Interactive: Story = {
   render: () => <InteractiveHudHarness />,
+}
+
+function InteractiveHorizontalHarness() {
+  const [z, setZ] = useState((zLo + zHi) / 2)
+  const onZCurrentChange = useCallback((next: number) => setZ(next), [])
+  return (
+    <TimelineHud
+      orientation="horizontal"
+      zRange={[zLo, zHi]}
+      cameraZ={z}
+      onZCurrentChange={onZCurrentChange}
+    />
+  )
+}
+
+export const InteractiveHorizontal: Story = {
+  render: () => <InteractiveHorizontalHarness />,
 }

@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react'
 import { MovieDetailDrawer } from '@/components/Drawer'
 import { SearchBar } from '@/components/SearchBar'
 import { useThemeFromQuery } from '@/hooks/useThemeFromQuery'
+import { useTimelineOrientationFromQuery } from '@/hooks/useTimelineOrientationFromQuery'
 import { Loading } from '@/components/Loading'
 import { MovieTooltip } from '@/components/MovieTooltip'
 import { Timeline } from '@/components/Timeline'
@@ -21,6 +22,7 @@ import './App.css'
 
 function App() {
   useThemeFromQuery()
+  const timelineOrientation = useTimelineOrientationFromQuery()
   const status = useGalaxyDataStore((s) => s.status)
   const data = useGalaxyDataStore((s) => s.data)
   const errorMessage = useGalaxyDataStore((s) => s.errorMessage)
@@ -167,7 +169,7 @@ function App() {
       <InfoButton />
       <FullscreenButton />
       <FocusLReference />
-      <Timeline />
+      <Timeline orientation={timelineOrientation} />
       <MovieDetailDrawer />
     </main>
   )

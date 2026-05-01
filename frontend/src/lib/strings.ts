@@ -36,7 +36,15 @@ export const STRINGS = {
   error: en.error,
   searchBar: en.searchBar,
   hud: en.hud,
-  timeline: en.timeline,
+  timeline: {
+    ...en.timeline,
+    axisDescription: (minYear: number, maxYear: number, focusYear: number) =>
+      interpolate(en.timeline.axisDescription, {
+        minYear: String(minYear),
+        maxYear: String(maxYear),
+        focusYear: String(focusYear),
+      }),
+  },
   info: en.info,
   scene: en.scene,
   drawer: {

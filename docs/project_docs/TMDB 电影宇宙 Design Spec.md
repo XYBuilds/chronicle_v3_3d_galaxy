@@ -57,7 +57,7 @@
 
 * **Timeline 与年份**：进入 focus 时，时间轴读数与焦点片 **`movie.z`** 对齐（**渐变**或瞬时与相机飞入共用 `focusDriver.progress`，见 Tech Spec §1.4.1）；**退出 focus 后 `zCurrent` 保留在 `movie.z`**，不回退到进入前宏观漫游值。
 
-* **focus 态图例（Phase 13.5）**：Perlin 球同心 **`vote_count` 档位参照圆环**（`frontend/src/three/FocusSizeReferenceRings.ts`）与 HUD **`FocusLReference`**（当前片 **OKLab L** 指针；**不**展示完整 **0→10** 分度标题轴；可展示**当前片评分一行**文案，与圆环 tier 标签同源走 **`STRINGS` / `locales/en.json`**，见 §3）辅助解读尺度与亮度；显隐与 Perlin 球 / focus 过渡一致。
+* **focus 态图例（Phase 13.5 + Phase 14.7.1）**：Perlin 球同心 **`vote_count` 档位参照圆环**（`frontend/src/three/FocusSizeReferenceRings.ts`）与 HUD **`FocusLReference`**（主流派色相上的 **rating→亮度** 参照：**Phase 14.7.1** 起为**竖直色带**（低分在底、高分在上，与 shader 中 **`voteNorm`** 分档一致）+ 横向指针线 + **当前片评分一行**文案；整体布局在视口内**星球左侧**，避免与**横置 Timeline**（§3.1.1）、右侧 Drawer 抢位。**不**展示完整 **0→10** 分度标题轴；文案与圆环 tier 标签同源走 **`STRINGS` / `locales/en.json`**（见 §3）。显隐与 Perlin 球 / focus 过渡一致。
 
 > **注**：飞入/退出毫秒数以《视觉参数总表》与 `scene.ts` 常量为**当前定稿**；若改动画须双处同步。
 
@@ -72,7 +72,7 @@
 在宏观漫游状态（层级零）下常驻显示的唯一 HUD 元素，为用户提供当前 Z 轴（时间纵深）的**位置感知**：
 
 * **形态**：屏幕边缘（建议左侧或底部）的**纵向 / 横向刻度条**，标注关键年份刻度。  
-* **当前位置标记**：高亮指示器显示 **`zCurrent`**（Phase 5.1.5 / **Phase 13**）——即用户当前关注的发行年；**HUD 订阅 `bridgeZ = zCurrent`**（与 Tech Spec §1.4.1 单一路径一致）。**Phase 13.5**：focus 态底部可并列 **`FocusLReference`**（L 指针），与时间轴、Info 按钮布局避免遮挡（以实现对齐为准）。  
+* **当前位置标记**：高亮指示器显示 **`zCurrent`**（Phase 5.1.5 / **Phase 13**）——即用户当前关注的发行年；**HUD 订阅 `bridgeZ = zCurrent`**（与 Tech Spec §1.4.1 单一路径一致）。**Focus 态 `FocusLReference`**（§2.2）：**Phase 14.7.1** 起置于**星球左侧**竖条，与 **`?timeline=horizontal`** 底部横轴、右上角 **Info / 全屏**控件分工，避免重叠或可读性明显下降（窄屏以实现对齐为准）。  
   * **宏观 idle 态**：`zCurrent` 由滚轮 / 时间轴与相机 **`zCurrent - zCamDistance`** 同步。  
   * **focus 态及过渡**：`zCurrent` 与焦点 **`movie.z`** 对齐（可与飞入动画**渐变**）；**退出 focus 后 `zCurrent` 保留在 `movie.z`**。
 * **交互（可选 / 规划中）**：点击刻度或拖动 thumb 可快速跳转至对应年代，反向写入 `zCurrent`（相机跟随）——本阶段实现为纯被动指示即可；拖动交互作为 **Phase 5.3.1** 单独排期。  
@@ -110,6 +110,7 @@
 * **Tagline**：`blockquote` 风格，左侧 `border-l-2`，斜体、muted。  
 * **Overview**：区块标题 `text-[0.65rem] font-bold uppercase tracking-wider text-muted-foreground`；正文 `text-sm leading-relaxed`。  
 * **Details**：两列网格 `grid-cols-2`；字段名小标题与值层次区分（标签 `font-semibold` 档、值 `text-muted-foreground`）；实现细节以 `Drawer.tsx` 为准。  
+* **Details 四组显隐（Phase 14.6）**：仅约束 **Details** 小标题下的元数据网格（Overview / Cast / 外链等不重排）。**组 1** Runtime → Language：**整组永远渲染**；单栏无有效数据时**值**显示斜杠占位 `/`；**Runtime = 0 分钟视为有**，须正常展示。**组 2** Director → Producers → Writers、**组 3** Director of Photography → Music Composer：逐栏判断，无数据则**该栏不渲染**；组内三栏或两栏尽缺则**整组不出现**。**组 4** Budget → Revenue：单栏无（含 **`0`** / `null` / `undefined` / 缺失）则该栏值为 `/`；两栏皆无则**整组不渲染**。栏从左到右填满一行再换行；组与组之间仅换行，不增分割线。完整判定表见仓库 **`.cursor/plans/phase_14_hud_polish_ed74e27e.plan.md`** §P14.6（与 Storybook **`Drawer.stories`** 对照验收）。  
 * **Cast**：`sm` 及以上双列编号列表（序号 + `truncate` 人名），窄屏单列。  
 * **Sheet 骨架**：保留 shadcn `Sheet` / `SheetContent` / `AspectRatio`；**`SHEET_OPEN_EASE`**（Phase 4.3）时序不改。  
 * **六人字段**：在 `director` / `writers` / `cast` 之外展示 **`director_of_photography`**、**`producers`**、**`music_composer`**；对应数组为空时 **整块不渲染**。  
@@ -148,12 +149,14 @@
 * **图标**：**`lucide-react`** 的 **`X`**；**`aria-label`** 等可访问性文案走 **`STRINGS`**（与 §3 SSOT 一致）。
 * **视觉**：**`CloseButton`** 的边框线宽与 **hover 环 / Timeline** 同属 **UI edge** 线宽语义（**`--ui-edge-stroke-width`**，见《视觉参数总表》**§7**、**§7a**）。**颜色**：按钮叠在 **DOM 壳层**，使用随主题变化的 **`--ui-edge-color` / `--ui-edge-color-strong`**；**HoverRing** 与 **Timeline** 仅叠在 **黑色 WebGL 画布**上，使用 **`:root` 固定**的 **`--ui-edge-canvas-color` / `--ui-edge-canvas-color-strong`**（与 **§3.4.4**「画布可保持深色底」一致，避免 `?theme=light` 时环与轴变成浅灰细线导致对比度错误）。
 
-### **3.6 全局键盘快捷键（Phase 14 · HUD）**
+### **3.6 全局键盘快捷键与全屏控件（Phase 14 · HUD）**
+
+* **全屏按钮**：HUD 右上角 **`FullscreenButton`**（`frontend/src/hud/FullscreenButton.tsx`；**`lucide-react`** Maximize / Minimize），与 **Info** 同列；监听 **`fullscreenchange`** / **`webkitfullscreenchange`** 同步图标；行为与下述 **`F`** 一致（Safari 等需 **webkit** 前缀检测时以源码为准）。
 
 以下快捷键在 **App 级** 全局监听（与 §4 搜索 combobox 内 **`↓`/`↑`/`Enter`/`Tab`** 等**不重复登记**同一键位语义；实现以源码为准）：
 
 * **`F`**：**切换浏览器全屏**（**仅当**焦点不在 **`input` / `textarea` / `contenteditable`** 等文本输入控件内时生效，避免打断输入）。
-* **`Cmd` + `K`（macOS）** / **`Ctrl` + `K`（Windows / Linux）**：聚焦顶部搜索框；当搜索因 **`meta.has_search_index !== true`** 而 **disabled** 时 **noop**。
+* **`Cmd` + `K`（macOS）** / **`Ctrl` + `K`（Windows / Linux）**：聚焦顶部搜索框（`input[data-galaxy-search-input]`）；当搜索因 **`meta.has_search_index !== true`** 而 **disabled** 时 **noop**；与 combobox 内输入 **不冲突**（未在输入框内劫持同一键位语义）。
 * **`Esc`**：**焦点栈**与状态回退维持 **§4.6**（Phase 12.8）不变。
 
 ## **4\. 搜索 UX（Phase 12 起 · UX SSOT）**

@@ -23,7 +23,7 @@ function primaryHueRad(movie: Movie, palette: Record<string, string>): number {
 
 /**
  * P13.5 — Focus-only OKLab L legend: primary-genre hue spectrum + pointer from `vote_average`.
- * P14.7.1 — Vertical spectrum to the left of the on-screen planet (horizontal Timeline 视觉评审后).
+ * P14.7.1 — Vertical spectrum to the left of the on-screen planet (after horizontal Timeline layout review).
  */
 export function FocusLReference() {
   const selectedMovieId = useGalaxyInteractionStore((s) => s.selectedMovieId)
@@ -38,7 +38,7 @@ export function FocusLReference() {
   const style = useMemo(() => {
     if (!movie || !snap || !data) return null
     const hue = primaryHueRad(movie, data.meta.genre_palette)
-    /** 10 档：rating 0.5, 1.5, …, 9.5 → `voteNorm` = (k+0.5)/10（与 shader `voteNorm` 一致）。 */
+    /** Ten rating bins: 0.5, 1.5, …, 9.5 → voteNorm = (k+0.5)/10 (matches shader voteNorm). */
     const stripeColors: string[] = []
     for (let k = 0; k < 10; k++) {
       const voteNorm = (k + 0.5) / 10

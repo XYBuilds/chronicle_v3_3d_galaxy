@@ -31,7 +31,7 @@ todos:
     status: completed
   - id: p148-doc-sync
     content: P14.8 文档同步 + 回归：Design Spec / 视觉参数总表；rg 中文字符审计；
-    status: pending
+    status: completed
 isProject: false
 ---
 

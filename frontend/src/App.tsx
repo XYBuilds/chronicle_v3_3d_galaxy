@@ -145,8 +145,8 @@ function App() {
       <SearchBar hasSearchIndex={hasSearchIndex} movies={data.movies} />
       <HoverRing />
       <MovieTooltip />
-      <FullscreenButton />
       <InfoButton />
+      <FullscreenButton />
       <FocusLReference />
       <Timeline />
       <MovieDetailDrawer />

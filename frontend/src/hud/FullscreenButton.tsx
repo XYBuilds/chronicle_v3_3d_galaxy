@@ -15,7 +15,7 @@ function syncFullscreenState(): boolean {
   return getGalaxyFullscreenElement() !== null
 }
 
-/** HUD 右上角全屏切换（位于 Info 左侧）；图标随 fullscreenchange / webkitfullscreenchange 同步。 */
+/** HUD 右上角全屏切换（最靠右，Info 在其左侧）；图标随 fullscreenchange / webkitfullscreenchange 同步。 */
 export function FullscreenButton() {
   const [supported, setSupported] = useState(() =>
     typeof document !== 'undefined' ? isGalaxyFullscreenAvailable() : false,
@@ -53,7 +53,7 @@ export function FullscreenButton() {
         'fixed z-40 size-10 border border-white/10 bg-black/45 text-white/85 shadow-md backdrop-blur-sm',
         'pointer-events-auto motion-safe:transition-[background-color,border-color,transform] motion-safe:duration-200',
         'hover:bg-black/55 hover:text-white focus-visible:ring-2 focus-visible:ring-white/30',
-        'right-[3.75rem] top-3 sm:right-16 sm:top-4',
+        'right-3 top-3 sm:right-4 sm:top-4',
       )}
       aria-pressed={isFullscreen}
       aria-label={STRINGS.hud.toggleFullscreen}

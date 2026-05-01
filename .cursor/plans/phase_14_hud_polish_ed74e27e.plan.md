@@ -12,8 +12,8 @@ todos:
     content: P14.2 CloseButton primitive + UI edge token：close-button.tsx variants（default/ghostSm/ghostLg）；index.css 加 --ui-edge-color/-strong/-stroke-width；Drawer 关闭与 SearchBar X 接入
     status: completed
   - id: p143-edge-align
-    content: P14.3 hover ring × timeline 视觉对齐：HoverRing 与 Timeline 主线/刻度统一走 var(--ui-edge-color) + var(--ui-edge-stroke-width)；light/dark 验收
-    status: pending
+    content: P14.3 hover ring × timeline 视觉对齐：线宽 --ui-edge-stroke-width + 布局 readUiEdgeStrokeWidthPx；黑底 HUD 用 --ui-edge-canvas-color*；报告 docs/reports/Phase 14.3 …实施报告.md
+    status: completed
   - id: p144-fullscreen
     content: P14.4 FullscreenButton 组件 + F 快捷键：HUD 右上角；fullscreenchange 同步 icon；webkit 前缀兼容；F 仅在非 input 焦点生效
     status: pending
@@ -54,7 +54,7 @@ isProject: false
   - [frontend/src/components/SearchBar.tsx](frontend/src/components/SearchBar.tsx)（placeholder 英语化 + X 接 CloseButton）
   - [frontend/src/components/Timeline.tsx](frontend/src/components/Timeline.tsx)（接 `orientation` prop + URL query 钩子）
   - [frontend/src/hud/InfoButton.tsx](frontend/src/hud/InfoButton.tsx) / [InfoModal.tsx](frontend/src/hud/InfoModal.tsx) / [infoCopy.ts](frontend/src/hud/infoCopy.ts)（英语化）
-  - [frontend/src/hud/HoverRing.tsx](frontend/src/hud/HoverRing.tsx) / [hoverRingLayout.ts](frontend/src/hud/hoverRingLayout.ts)（接 UI edge token）
+  - [frontend/src/hud/HoverRing.tsx](frontend/src/hud/HoverRing.tsx) / [hoverRingLayout.ts](frontend/src/hud/hoverRingLayout.ts)（P14.3：线宽 `--ui-edge-stroke-width` + 画布色 `--ui-edge-canvas-*`）
   - [frontend/src/hooks/useThemeFromQuery.ts](frontend/src/hooks/useThemeFromQuery.ts)（参照模式新建 `useTimelineOrientationFromQuery`）
   - [frontend/src/index.css](frontend/src/index.css)（UI edge design token）
   - [docs/project_docs/TMDB 电影宇宙 Design Spec.md](docs/project_docs/TMDB%20电影宇宙%20Design%20Spec.md) §3 / §3.1 / §3.4 同步
@@ -240,7 +240,7 @@ export function CloseButton({ variant, label, className, ...rest }: CloseButtonP
 ### 验收
 
 - Drawer 关闭、SearchBar X 视觉一致（除 size variant）；Storybook 三个 variants 各一个 story
-- token 修改 `--ui-edge-color` 即可一键调全 HUD edge 色
+- token：**DOM** 细线调 **`--ui-edge-color*`**；**黑底** hover 环 / Timeline 调 **`--ui-edge-canvas-color*`**（见 **P14.3** 报告）
 
 ---
 
@@ -248,19 +248,20 @@ export function CloseButton({ variant, label, className, ...rest }: CloseButtonP
 
 ### 目标
 
-[hud/HoverRing.tsx](frontend/src/hud/HoverRing.tsx) 与 [components/Timeline.tsx](frontend/src/components/Timeline.tsx) 主线 / 刻度的 stroke 宽度与颜色统一来自 P14.2 token；二者放在一起看视觉上「同一个家族」。
+[hud/HoverRing.tsx](frontend/src/hud/HoverRing.tsx) 与 [components/Timeline.tsx](frontend/src/components/Timeline.tsx) 主线 / 刻度 / 当前年指示的**线宽与颜色**与 P14.2 UI edge 体系统一；二者同屏时属同一「细线家族」。
 
-### 实施
+### 实施（定稿，与代码一致）
 
-- [hud/hoverRingLayout.ts](frontend/src/hud/hoverRingLayout.ts) 中 `HOVER_RING_STROKE_PX = 1` 改为读 `--ui-edge-stroke-width`（CSS 注入，不通过 JS 常量）；如必须 JS 常量，在 hud 内部加一层 token 解析
-- HoverRing 的 `<svg>` `stroke="var(--ui-edge-color)"` 与 `stroke-width="var(--ui-edge-stroke-width)"`
-- Timeline 的 track 主线、刻度线同样切到 `var(--ui-edge-color)` + `var(--ui-edge-stroke-width)`
-- hover/focus 增强态用 `--ui-edge-color-strong`
+- [hud/hoverRingLayout.ts](frontend/src/hud/hoverRingLayout.ts)：删除 `HOVER_RING_STROKE_PX`；新增 **`readUiEdgeStrokeWidthPx()`** 解析 **`--ui-edge-stroke-width`**；**`hoverRingOuterRadiusPx` / `hoverTooltipSideOffsetPx`** 使用该值。
+- **HoverRing**：`div` + **`border`**（非 SVG）；**`borderWidth: var(--ui-edge-stroke-width)`**；**`borderColor: var(--ui-edge-canvas-color)`**（仅黑底画布）。
+- **Timeline**：主轴、刻度字、thumb、glow、当前年字色、`focus-visible` ring → **`--ui-edge-canvas-color*`** + **`--ui-edge-stroke-width`**。
+- [frontend/src/index.css](frontend/src/index.css)：**`:root`** 增加 **`--ui-edge-canvas-color` / `--ui-edge-canvas-color-strong`**（固定半透明白，不随 `?theme=light` 与 DOM 的 `--ui-edge-color` 混用）。
+- **归档**：[`docs/reports/Phase 14.3 P14.3 hover ring 与 Timeline UI edge 对齐实施报告.md`](../../docs/reports/Phase%2014.3%20P14.3%20hover%20ring%20与%20Timeline%20UI%20edge%20对齐实施报告.md)；《视觉参数总表》**§7 / §7a**、Design Spec **§3.5** 已同步。
 
 ### 验收
 
-- 在 hover state（光标停留某 active 球，hover ring 显示）与 idle Timeline 同屏截图：ring 描边与 timeline 主线在 px 级别同色同宽
-- 切 light / dark theme 各看一组（`?theme=light` / `?theme=dark`），token 切换正确
+- hover ring 与 Timeline 主线 **px 级**同宽、同「白系半透明」家族色（画布 token）。
+- **`?theme=light`**：DOM 上的 **CloseButton** 等仍可随 `--ui-edge-color*` 变化；**环 + Timeline** 仍为黑底可读细线。
 
 ---
 
@@ -403,11 +404,11 @@ export function useTimelineOrientationFromQuery(): 'vertical' | 'horizontal' {
 - [Design Spec §3](docs/project_docs/TMDB%20电影宇宙%20Design%20Spec.md) 同步 P14.0 spec 变更
 - [视觉参数总表 §7 / §7a](docs/project_docs/视觉参数总表.md) 同步 token
 - 全局快捷键节加入 F / Cmd-K（与 ESC §4.6 并列）
-- 实施报告：**P14.1** 已有 [`Phase 14.1 P14.1 HUD string table 与 en.json 实施报告.md`](../../docs/reports/Phase%2014.1%20P14.1%20HUD%20string%20table%20与%20en.json%20实施报告.md)；P14.2 / P14.7 各一份（其它子节可合并到 Phase 14 总报告）
+- 实施报告：**P14.1** 已有 [`Phase 14.1 P14.1 HUD string table 与 en.json 实施报告.md`](../../docs/reports/Phase%2014.1%20P14.1%20HUD%20string%20table%20与%20en.json%20实施报告.md)；**P14.3** [`Phase 14.3 P14.3 hover ring 与 Timeline UI edge 对齐实施报告.md`](../../docs/reports/Phase%2014.3%20P14.3%20hover%20ring%20与%20Timeline%20UI%20edge%20对齐实施报告.md)；P14.2 / P14.7 各一份（其它子节可合并到 Phase 14 总报告）
 - 回归清单：
   - Loading / Error 页英语完整
   - Drawer Details 四组规则（§P14.6）、关闭按钮、Tooltip / SearchBar / InfoModal 英语完整
-  - hover ring 与 timeline 同色同宽（dark + light）
+  - hover ring 与 timeline 同色同宽（**画布 `--ui-edge-canvas-*`**）；`?theme=light` 下 DOM 与画布 edge 分工正确
   - 全屏按钮 + F 快捷键全链路
   - Cmd-K 聚焦不与文本输入冲突
   - URL `?timeline=horizontal` 验收
@@ -420,7 +421,7 @@ export function useTimelineOrientationFromQuery(): 'vertical' | 'horizontal' {
 | 风险                                             | 影响 | 缓解                                                                               |
 | ------------------------------------------------ | ---- | ---------------------------------------------------------------------------------- |
 | string table 未来若接 i18n 需返工                | 低   | **`en.json`** 已为独立 locale 文件；`{{key}}` 可迁移为 i18next ICU；`strings.ts` 可换为 provider 装配层 |
-| UI edge token 切色与现有 chip / badge 不一致     | 低   | token 仅作用 hover ring / timeline / close button 三处；其它色块仍走 shadcn 语义类 |
+| UI edge token 切色与现有 chip / badge 不一致     | 低   | DOM 用 `--ui-edge-*`，黑底环/轴用 `--ui-edge-canvas-*`（P14.3）；其它色块仍走 shadcn 语义类 |
 | Cmd-K 与浏览器 / OS 快捷键冲突                   | 中   | 仅在 capture 阶段处理；输入框聚焦时仍允许默认；mac Safari 测一遍                   |
 | 横置 Timeline 与 Phase 13 Timeline snap 渐变交互 | 中   | snap 路径不依赖 orientation；orientation 只影响视觉，store 字段不变                |
 

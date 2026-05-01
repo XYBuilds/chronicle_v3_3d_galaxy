@@ -15,6 +15,7 @@ import {
 import { useGalaxyDataStore } from '@/store/galaxyDataStore'
 import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
 import type { Movie } from '@/types/galaxy'
+import { STRINGS } from '@/lib/strings'
 import { cn } from '@/lib/utils'
 
 /** easeOutCubic — open ~300ms, close ~450ms (Phase 4.3). */
@@ -46,7 +47,7 @@ function DrawerPoster({ posterUrl, title }: { posterUrl: string; title: string }
   return show ? (
     <img
       src={trimmed}
-      alt={`Poster for ${title}`}
+      alt={STRINGS.drawer.posterAlt(title)}
       className="absolute inset-0 size-full object-cover"
       loading="lazy"
       decoding="async"
@@ -55,7 +56,7 @@ function DrawerPoster({ posterUrl, title }: { posterUrl: string; title: string }
   ) : (
     <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary/20 via-accent to-secondary text-muted-foreground">
       <span className="rounded-md border border-border/60 bg-background/10 px-3 py-2 text-[0.65rem] font-bold uppercase tracking-wider backdrop-blur-sm">
-        Poster image
+        {STRINGS.drawer.posterPlaceholder}
       </span>
     </div>
   )
@@ -83,7 +84,7 @@ const drawerBodyScrollClass =
  * Use {@link MovieDetailDrawer} in the app; use this in Storybook with mock props.
  */
 export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailDrawerHudProps) {
-  const title = movie?.title ?? 'Film'
+  const title = movie?.title ?? STRINGS.drawer.fallbackTitle
   const genrePalette = useGalaxyDataStore((s) => s.data?.meta.genre_palette) ?? null
 
   const budgetStr = movie ? formatUsdPresent(movie.budget) : null
@@ -133,12 +134,14 @@ export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailD
           )}
         >
           <XIcon className="size-4" aria-hidden />
-          <span className="sr-only">Close</span>
+          <span className="sr-only">{STRINGS.hud.close}</span>
         </SheetClose>
         <SheetHeader className="relative z-20 shrink-0 gap-0 border-b border-border/70 bg-popover px-6 pb-5 pt-7 text-left shadow-[0_6px_18px_-10px_color-mix(in_oklch,var(--foreground)_10%,transparent)] sm:px-7">
           <SheetTitle className="pr-10 text-2xl font-bold leading-tight tracking-tight text-foreground">{title}</SheetTitle>
           <SheetDescription className="sr-only">
-            {movie ? `${movie.title}, released ${movie.release_date}.` : 'No film selected.'}
+            {movie
+              ? STRINGS.drawer.sheetDescription(movie.title, formatReleaseDate(movie.release_date))
+              : STRINGS.drawer.sheetDescriptionEmpty}
           </SheetDescription>
           {movie && movie.original_title && movie.original_title !== movie.title ? (
             <p className="mt-2 text-sm font-medium leading-snug text-muted-foreground">{movie.original_title}</p>
@@ -150,7 +153,7 @@ export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailD
                   <Star className="size-3 fill-current" aria-hidden />
                   <span className="tabular-nums">{movie.vote_average.toFixed(1)}</span>
                 </span>
-                <span>{formatVoteCount(movie.vote_count)} votes</span>
+                <span>{STRINGS.drawer.votesLine(formatVoteCount(movie.vote_count))}</span>
                 <span className="text-foreground">{formatReleaseDate(movie.release_date)}</span>
               </div>
 
@@ -164,7 +167,7 @@ export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailD
                 rel="noopener noreferrer"
                 className={externalHudLinkClass}
               >
-                TMDB
+                {STRINGS.drawer.links.tmdb}
                 <ExternalLink className="size-3.5 opacity-80" aria-hidden />
               </a>
               {showImdbLink ? (
@@ -174,7 +177,7 @@ export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailD
                   rel="noopener noreferrer"
                   className={externalHudLinkClass}
                 >
-                  IMDb
+                  {STRINGS.drawer.links.imdb}
                   <ExternalLink className="size-3.5 opacity-80" aria-hidden />
                 </a>
               ) : null}
@@ -209,66 +212,72 @@ export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailD
 
             {showOverview ? (
               <section className="space-y-3">
-                <h3 className="text-[0.65rem] font-bold uppercase tracking-wider text-muted-foreground">Overview</h3>
+                <h3 className="text-[0.65rem] font-bold uppercase tracking-wider text-muted-foreground">
+                  {STRINGS.drawer.sections.overview}
+                </h3>
                 <p className="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap">{overviewText}</p>
               </section>
             ) : null}
 
             {showMetaBlock ? (
               <section className="space-y-3">
-                <h3 className="text-[0.65rem] font-bold uppercase tracking-wider text-muted-foreground">Details</h3>
+                <h3 className="text-[0.65rem] font-bold uppercase tracking-wider text-muted-foreground">
+                  {STRINGS.drawer.sections.details}
+                </h3>
                 <div className="grid grid-cols-2 gap-x-8 gap-y-5 text-sm">
                   {showRuntime ? (
                     <div className="min-w-0">
-                      <div className={detailFieldLabelClass}>Runtime</div>
-                      <div className="text-muted-foreground">{runtimeMin} min</div>
+                      <div className={detailFieldLabelClass}>{STRINGS.drawer.details.runtime}</div>
+                      <div className="text-muted-foreground">
+                        {STRINGS.drawer.details.runtimeMinutes(runtimeMin)}
+                      </div>
                     </div>
                   ) : null}
                   {showLanguage ? (
                     <div className="min-w-0">
-                      <div className={detailFieldLabelClass}>Language</div>
+                      <div className={detailFieldLabelClass}>{STRINGS.drawer.details.language}</div>
                       <div className="text-muted-foreground uppercase">{movie.original_language}</div>
                     </div>
                   ) : null}
                   {showDirector ? (
                     <div className="min-w-0">
-                      <div className={detailFieldLabelClass}>Director</div>
+                      <div className={detailFieldLabelClass}>{STRINGS.drawer.details.director}</div>
                       <div className="text-muted-foreground">{movie.director.join(', ')}</div>
                     </div>
                   ) : null}
                   {showWriters ? (
                     <div className="min-w-0">
-                      <div className={detailFieldLabelClass}>Writers</div>
+                      <div className={detailFieldLabelClass}>{STRINGS.drawer.details.writers}</div>
                       <div className="text-muted-foreground">{movie.writers.join(', ')}</div>
                     </div>
                   ) : null}
                   {showDop ? (
                     <div className="min-w-0">
-                      <div className={detailFieldLabelClass}>Director of photography</div>
+                      <div className={detailFieldLabelClass}>{STRINGS.drawer.details.directorOfPhotography}</div>
                       <div className="text-muted-foreground">{movie.director_of_photography.join(', ')}</div>
                     </div>
                   ) : null}
                   {showProducers ? (
                     <div className="min-w-0">
-                      <div className={detailFieldLabelClass}>Producers</div>
+                      <div className={detailFieldLabelClass}>{STRINGS.drawer.details.producers}</div>
                       <div className="text-muted-foreground">{movie.producers.join(', ')}</div>
                     </div>
                   ) : null}
                   {showComposer ? (
                     <div className="min-w-0">
-                      <div className={detailFieldLabelClass}>Composer</div>
+                      <div className={detailFieldLabelClass}>{STRINGS.drawer.details.composer}</div>
                       <div className="text-muted-foreground">{movie.music_composer.join(', ')}</div>
                     </div>
                   ) : null}
                   {budgetStr != null ? (
                     <div className="min-w-0">
-                      <div className={detailFieldLabelClass}>Budget</div>
+                      <div className={detailFieldLabelClass}>{STRINGS.drawer.details.budget}</div>
                       <div className="text-muted-foreground">{budgetStr}</div>
                     </div>
                   ) : null}
                   {revenueStr != null ? (
                     <div className="min-w-0">
-                      <div className={detailFieldLabelClass}>Revenue</div>
+                      <div className={detailFieldLabelClass}>{STRINGS.drawer.details.revenue}</div>
                       <div className="text-muted-foreground">{revenueStr}</div>
                     </div>
                   ) : null}
@@ -278,7 +287,9 @@ export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailD
 
             {showCast ? (
               <section className="space-y-3">
-                <h3 className="text-[0.65rem] font-bold uppercase tracking-wider text-muted-foreground">Cast</h3>
+                <h3 className="text-[0.65rem] font-bold uppercase tracking-wider text-muted-foreground">
+                  {STRINGS.drawer.sections.cast}
+                </h3>
                 <div className="grid grid-cols-1 gap-x-8 gap-y-2.5 sm:grid-cols-2">
                   {movie.cast.map((name, i) => (
                     <div key={`${name}-${i}`} className="flex min-w-0 items-baseline gap-2">

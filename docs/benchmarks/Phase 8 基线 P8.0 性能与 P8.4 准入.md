@@ -200,6 +200,8 @@
 
 **2026-05-02（本仓库 P16 出口登记）**
 
+**手测结论（补记）**：下文 **第 2 节「手测回归清单」** 已由维护者在本机 **逐项通过**（三路径 **`zCurrent`**、`Drama` / person 深度、focus 嵌套与 **ESC** 出栈、Cover / Loading / HUD 无回归；与 [`.cursor/plans/phase_16_search_refinements_22478218.plan.md`](../../.cursor/plans/phase_16_search_refinements_22478218.plan.md) P16.4 出口口径一致）。
+
 1. **重跑压力片段（与 `## P12 入口/出口` §B 同操作说明）**  
    - **search · genre（大集合）**：顶部 **genre** 分段 → 联想选 **`Drama`**（或当前数据包 **count 最大**的一档）→ 稳态约 **5 s** Performance；**P16** 额外验收：**大量 active 前后遮挡正确**（select 单态走路径 **A**：opaque + **`depthWrite`**，见《星球状态机 spec》§3.2.1）。**fps** 与 §P12 表备注一致：相对 idle 中位数 **≥ ~95%** 为通过参考。  
    - **search · person（Christopher Nolan）**：顶部 **person** 分段 → 联想选 **Christopher Nolan**（或 **`movie_ids.length` ≥ 60** 的等价影人）→ 稳态约 **5 s**；验收：**深度顺序正确**、**Timeline 在约 700 ms 内平滑对齐选区最早 `movie.z`**（Design Spec §4.4）、**星座连线**（默认开）无异常；**fps** 门槛同上。
@@ -211,7 +213,7 @@
    - **focus 嵌套 person/genre**：邻域 mask（P13.2）+ 非目标 active **alpha** 渐变（P11.1）正常；**退出 focus** 后回到 select 单态 → **opaque 路径 A** 恢复；**ESC** 出栈与 Design Spec §4.6 一致。  
    - **Cover / Loading / Phase 14 HUD** 等既有体验无回归。
 
-3. **数值表**：下列二线与 §P12 **B** 表同列含义；**留空**表示待维护者在本机补录（与 **`## P13 出口`** 习惯一致）。补录后与 **§P8.0.1 idle** 或 §P12 已填值对比 **≥ ~95%** 为通过参考。
+3. **数值表**：下列二线与 §P12 **B** 表同列含义；**留空**表示 DevTools Performance 数值仍**可选补录**（手测已通过；若将来要归档 fps 与 §P8.0.1 逐项对照，再填入）。补录后与 **§P8.0.1 idle** 或 §P12 已填值对比 **≥ ~95%** 为通过参考。
 
 | 片段 | 操作说明 | GPU time（ms / frame，中位数） | JS Main（ms / frame） | Long tasks（>50 ms，次数） | fps 中位数 | 备注 |
 |------|----------|--------------------------------|----------------------|-----------------------------|------------|------|

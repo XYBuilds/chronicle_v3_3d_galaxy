@@ -7,7 +7,7 @@ todos:
     status: completed
   - id: p161-placeholder
     content: P16.1 三档 placeholder hint：`en.json` 扩 `searchBar.placeholderMovie` 等（或嵌套 `searchBar.placeholder.*`）；`strings.ts` 同步 `STRINGS`；SearchBar.tsx 按 tab 切换；无索引走 disabled 文案
-    status: pending
+    status: completed
   - id: p162-zcurrent-snap
     content: P16.2 差异化 zCurrent 联动：复用 P13.1 driver 构造 zCurrentDriver；搜人名 → animateZCurrentTo(min z, 700ms)；搜电影继承 P13.4；genre 不动；切人中途 driver.cancel + start
     status: pending

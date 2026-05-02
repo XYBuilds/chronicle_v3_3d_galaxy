@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { MovieDetailDrawer } from '@/components/Drawer'
 import { SearchBar } from '@/components/SearchBar'
@@ -30,6 +30,10 @@ function App() {
   const fetchGalaxyData = useGalaxyDataStore((s) => s.fetchGalaxyData)
   const indexStatus = useSearchIndexStore((s) => s.status)
   const canvasHostRef = useRef<HTMLDivElement>(null)
+  const animateZCurrentRef = useRef<((z: number, durationMs?: number) => void) | null>(null)
+  const animateZCurrentTo = useCallback((z: number, durationMs?: number) => {
+    animateZCurrentRef.current?.(z, durationMs)
+  }, [])
 
   const indexHydrationTerminal =
     indexStatus === 'ready' || indexStatus === 'skipped' || indexStatus === 'error'
@@ -64,7 +68,11 @@ function App() {
     const el = canvasHostRef.current
     if (!el) return
     const mount = mountGalaxyScene(el, data.meta, data.movies)
-    return () => mount.dispose()
+    animateZCurrentRef.current = mount.controller.animateZCurrentTo
+    return () => {
+      animateZCurrentRef.current = null
+      mount.dispose()
+    }
   }, [started, status, data, indexHydrationTerminal])
 
   useEffect(() => {
@@ -235,7 +243,7 @@ function App() {
         className="fixed inset-0 h-dvh w-full bg-black"
         aria-label="Galaxy WebGL canvas host"
       />
-      <SearchBar hasSearchIndex={hasSearchIndex} movies={data.movies} />
+      <SearchBar hasSearchIndex={hasSearchIndex} movies={data.movies} animateZCurrentTo={animateZCurrentTo} />
       <HoverRing />
       <MovieTooltip />
       <InfoButton />

@@ -34,6 +34,8 @@ export type SearchHudTab = 'movie' | 'person' | 'genre'
 export interface SearchBarProps {
   hasSearchIndex: boolean
   movies: readonly Movie[]
+  /** P16.2 — scene-owned eased timeline drift when selecting a person (earliest `movie.z` in selection). */
+  animateZCurrentTo?: (z: number, durationMs?: number) => void
 }
 
 type ResultRow = {
@@ -78,7 +80,7 @@ function sortIdsByRelease(ids: readonly number[], movieById: ReadonlyMap<number,
   })
 }
 
-export function SearchBar({ hasSearchIndex, movies }: SearchBarProps) {
+export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchBarProps) {
   const searchQuery = useGalaxyInteractionStore((s) => s.searchQuery)
   const indexStatus = useSearchIndexStore((s) => s.status)
   const searchIndex = useSearchIndexStore((s) => s.data)
@@ -196,12 +198,25 @@ export function SearchBar({ hasSearchIndex, movies }: SearchBarProps) {
             searchQuery: q,
           })
           setDebouncedQuery(q)
+          const zs = ids
+            .map((id) => movieById.get(id)?.z)
+            .filter((z): z is number => typeof z === 'number' && Number.isFinite(z))
+          if (zs.length === 0) {
+            console.warn('[Search] person select: no finite z for selectionIds', {
+              key: s.personKey,
+              idsLen: ids.length,
+            })
+          } else {
+            const zMin = Math.min(...zs)
+            animateZCurrentTo?.(zMin, 700)
+          }
         }
       } else if (s.kind === 'genre' && searchIndex) {
         const g = searchIndex.genres[s.genreName]
         if (g) {
           const ids = sortIdsByRelease(g.movie_ids, movieById)
           const q = `${s.genreName} (${g.count})`
+          // P16.2 — keep zCurrent (viswindow disabled for genre select; Design Spec §4.5).
           console.log('[Search] genre select', { genre: s.genreName, count: g.count, selectionLen: ids.length })
           useGalaxyInteractionStore.setState({
             searchMode: 'genre',
@@ -216,7 +231,7 @@ export function SearchBar({ hasSearchIndex, movies }: SearchBarProps) {
       setListOpen(false)
       setHighlightIndex(-1)
     },
-    [movieById, searchIndex],
+    [animateZCurrentTo, movieById, searchIndex],
   )
 
   const onClear = useCallback(() => {

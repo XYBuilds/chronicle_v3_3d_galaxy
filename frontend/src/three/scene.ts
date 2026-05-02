@@ -1010,6 +1010,8 @@ export function mountGalaxyScene(
         uHighTierTRangeScale: uHighTierTRangeScale.value,
         uLightnessRatingExponent: uLightnessRatingExponent.value,
         uChroma: uChroma.value,
+        uHuntGamma: uHuntGammaU.value,
+        uHuntApplyMask: uHuntApplyMaskU.value,
       }
       const snapJson = JSON.stringify(snap)
       if (snapJson !== lastFocusLightSnapJson) {

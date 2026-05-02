@@ -16,6 +16,10 @@ export interface FocusLightnessSnap {
   uHighTierTRangeScale: number
   uLightnessRatingExponent: number
   uChroma: number
+  /** P17.2 — same as galaxy `uHuntGamma` (HUD legend mirrors active vert Hunt). */
+  uHuntGamma: number
+  /** P17.2 — same as galaxy `uHuntApplyMask`; bit 1 = active Hunt (FocusLReference uses this). */
+  uHuntApplyMask: number
 }
 
 /** Phase 4.1 — Raycaster-driven HUD prep: hover / selection ids (TMDB `Movie.id`). */

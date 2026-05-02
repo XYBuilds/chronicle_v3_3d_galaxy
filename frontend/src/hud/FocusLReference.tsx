@@ -38,7 +38,7 @@ export function FocusLReference() {
   const style = useMemo(() => {
     if (!movie || !snap || !data) return null
     const hue = primaryHueRad(movie, data.meta.genre_palette)
-    /** Ten rating bins: 0.5, 1.5, …, 9.5 → voteNorm = (k+0.5)/10 (matches shader voteNorm). */
+    /** Ten rating bins: 0.5, 1.5, …, 9.5 → voteNorm = (k+0.5)/10; P17.2 chroma uses Hunt(active) like `galaxyActive.vert.glsl`. */
     const stripeColors: string[] = []
     for (let k = 0; k < 10; k++) {
       const voteNorm = (k + 0.5) / 10

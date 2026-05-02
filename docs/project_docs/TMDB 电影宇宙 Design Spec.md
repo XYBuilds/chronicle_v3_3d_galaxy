@@ -144,6 +144,7 @@
 
 ### **3.5 Cover-with-Start（Phase 15）**
 
+* **与加载态分工**：**`mode='loading'`** 时根容器为 **`role="status"`**（忙状态）；**`mode='await-start'`** 时为 **`role="dialog"`**（Cover）。详见 **`frontend/src/components/Loading.tsx`**。  
 * **范围**：**极简**。首屏**全程**（含 gzip 三阶段与索引阶段）**不**展示独立 **Spinner** 与进度区上方的**标题行**文案——加载叙事完全由 **四阶段 `ol` + 分段进度条**（以及可选的 gzip / 索引 **`footerMessage`**）承担。四阶段完成后进入 **Cover**，仍用**同一全屏覆盖层**；**进度条保持满格/终态**（第四阶段在 **`skipped`** / **`error`** 时按 token 灰显或 destructive，与 Tech Spec §1.4.7 一致）。**不**加品牌大标题、副提示长句、教程或额外视觉编码说明。  
 * **文案（SSOT）**：**`STRINGS.cover`** 仅含 **`title`**、**`start`**、**`startAriaLabel`**（**`locales/en.json` → `strings.ts`**，与 §3.4.5 一致）。**`cover.title`** 在 Cover 态以 **`sr-only` 标题**供读屏；根容器同时设 **`aria-label`**（与 `Loading` 的 `label` prop 对齐，实现中 Cover 为「Ready」）。**无**独立副文案键。  
 * **Start 按钮**：原生 **`<button type="button">`**，**吸底**（视口**下方** `shrink-0` 区域，与上方 **`flex-1` 进度区**分离）；样式走 **primary**；**`autoFocus`**，**Enter** / **Space** 默认可触发。  

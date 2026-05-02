@@ -9,7 +9,7 @@
   * **3D 画布**：原生 **Three.js**（非 R3F / TresJS 等声明式封装），直接控制渲染循环、`InstancedMesh` + 自定义 ShaderMaterial、后处理与**非标准**轴平行相机。理由：~60K 实例双 mesh + focus 高模球体、性能敏感，原生 Three.js 可避免中间层抽象泄漏。  
   * **HUD / UI 层**：**React**（DOM 覆盖层），负责 Tooltip、档案详情抽屉、Loading 页面等。  
   * **状态桥接**：React ↔ Three.js 通过**轻量状态管理**（如 Zustand）通信——Three.js 写入选中/悬停状态，React 读取并渲染 UI；React 写入搜索/导航指令，Three.js 执行相机动画。  
-* **数据加载策略**：前端启动时**一次性加载**全量坐标与属性数据（静态 JSON 或等价格式），配合 **Loading 页面**等待加载完成后再初始化 3D 场景。
+* **数据加载策略**：前端启动时**一次性加载**全量坐标与属性数据（静态 JSON 或等价格式），经 **四阶段 Loading**（含搜索索引 hydrate，见 **§1.4.7**）后进入 **Cover**；用户点击 **Start** 后再初始化 3D 场景（**WebGL** 与双 `InstancedMesh` 挂载）。
 
 ### **1.1 前端渲染架构（Phase 8：双 `InstancedMesh` + focus Perlin 球）**
 
@@ -135,10 +135,20 @@ Output
 3. **parse** — `JSON.parse` + 类型校验。  
 4. **index** — **`galaxy_search_index.json.gz`** hydrate（`meta.has_search_index === true` 时执行；为 **`false`** 时本阶段直接 **`status='skipped'`**，不阻塞）。
 
+**Hydrate 与 3D mount 时序（实现契约）**：**`App.tsx`** 在 **`galaxyDataStore.status === 'ready'`** 且 **`data`** 已解析可用时，于 **`useEffect`** 中**立即**调用 **`useSearchIndexStore.getState().hydrateFromGalaxyMeta(data.meta)`**——与 UI 的 **`index-loading`** / 第四阶段进度展示**并行**，**不**等待用户点击 **Start**；**`mountGalaxyScene`**（创建 **`WebGLRenderer`**、GPU buffer）**仅**在本地 **`started === true`**（用户手势触发 **`setStarted(true)`**）**且**索引 hydrate 已达终态（**`ready` / `skipped` / `error`**）后执行。Cover 阶段 **`WebGLRenderingContext` 数量为 0**；点击 **Start** 后增至 **1**（DevTools 验收）。
+
 四阶段**全部完成**（含 **`skipped`**）后进入 **Cover-await-start** 状态：保留 Loading **同一覆盖层**；**不**再使用独立 **Spinner** 与进度区**标题行**（加载阶段与 Cover 均**以四阶段 `ol` + 进度条**为主叙事；索引 loading 时可在条下显示 **`footerMessage`**）。**Start** 按钮置于视口**下方**；用户**点击 Start**（或聚焦按钮后 **Enter** / **Space**）后再 **mount Three.js 场景**（首次创建 `WebGLRenderer` 与 GPU buffer）。**`App.tsx`** 以本地 **`started`** 状态门闩：仅 **`started === true`** 时挂载主场景。失败处理：
 
 * **`galaxy_data`** 的 download / decompress / parse **任一失败** → **错误页 + Retry**（与现状一致）；**不**进入 Cover。  
 * **`galaxy_search_index`** 失败 → 第四阶段标 **`Failed`**，用户仍**可点 Start** 进入应用；搜索框 **disabled**（与 Phase 12 §4.8「无索引退化」一致）。
+
+#### **1.4.7a P15.3 回归验收**
+
+* **主路径**：刷新 → 四阶段 Loading → Cover（**Start**）→ 进入宏观漫游；**Phase 13 focus**、**Phase 14** 全屏 / HUD 等已落地行为在 **Start 之后**无回归。  
+* **`galaxy_data` 失败**：仅错误页 + **Retry**，**不**出现 Cover。  
+* **搜索索引**：**`skipped`**（无索引包）与 **`error`**（fetch/解析失败）时第四阶段分别显示 **Skipped** / **Failed**，仍可 **Start**；入场后搜索 **disabled**（与 Phase 12 §4.8 一致）。  
+* **可重复性**：整页刷新可重复完整链路；**`started`** 仅在当前文档生命周期内为 **`true`**（重载即重置）。  
+* **历史导航**：本应用为**无路由状态的 SPA**（无 `react-router` 级会话）；浏览器后退/前进若触发整页重载则重新走加载；同页内不产生「离开 Cover 再返回」的路由态。
 
 ### **1.5 交互拾取（Phase 8.4：active `InstancedMesh` + 世界球；Phase 12：search 多选与 mask 对齐）**
 

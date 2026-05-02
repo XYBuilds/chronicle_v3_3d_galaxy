@@ -4,7 +4,7 @@ overview: Phase 15 把首屏加载从「下载/解压/解析」三段扩展为�
 todos:
   - id: p150-spec
     content: P15.0 spec 升级（无代码）：Tech Spec §1.4.7 改写为四阶段 + Cover；Design Spec §3.5 Cover-with-Start；PRD §3.1 层级零加 Start 步骤；`locales/en.json` 加 `cover.*` 键并在 `strings.ts` 导出（与 Phase 14 P14.1 SSOT 一致）
-    status: pending
+    status: completed
   - id: p151-load-orchestration
     content: P15.1 加载顺序整合 + 四阶段进度：Loading.tsx 接 indexStatus / mode props；ol 扩为四项（download/decompress/parse/index）；App.tsx hydrate 提前到 status=ready 后立即调用；galaxy-loading / galaxy-error / index-loading 三个渲染分支走通
     status: pending

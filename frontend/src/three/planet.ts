@@ -208,7 +208,7 @@ export function createSelectionPlanet(): SelectionPlanetHandle {
       uPerlinChroma: { value: 0.15 },
       /** P17.2 — Hunt reference L (same as galaxy `uLMax`); synced from dual-mesh uniforms each frame. */
       uLMax: { value: 1.0 },
-      uHuntGamma: { value: 1.0 },
+      uHuntGamma: { value: 0.3 },
       uHuntApplyMask: { value: 7 },
       uMeshWorldPos: { value: uMeshWorldPos },
       uLightDir: { value: uLightDir },

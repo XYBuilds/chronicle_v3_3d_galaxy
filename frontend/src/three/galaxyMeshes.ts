@@ -89,49 +89,49 @@ function makeSharedUniforms(
   return {
     disposeSelectionMaskTexture,
     uniforms: {
-    uPixelRatio: { value: pixelRatio },
-    uZCurrent: { value: 0 },
-    uZVisWindow: { value: 1 },
-    uSizeScale: { value: DEFAULT_GALAXY_U_SIZE_SCALE },
-    uActiveSizeMul: { value: 0.02 },
-    uBgSizeMul: { value: 0.002 },
-    uLMin: { value: 0.2 },
-    uLMax: { value: 1.0 },
-    uHighRatingT: { value: 0.85 },
-    uHighTierTRangeScale: { value: 0.4 },
-    uLightnessRatingExponent: { value: 3.0 },
-    /** P17.1 — Z-axis camera standoff (world years); distance-L reference `d0 = max(uZCamDistance, ε)`. */
-    uZCamDistance: { value: 30 },
-    /** P17.1 — lower clamp on `pow(d0/d, 2/3)` so stars nearer than the reference plane do not blow past vote L. */
-    uDistanceLightnessFloor: { value: 0.08 },
-    uChroma: { value: 0.15 },
-    /** P17.2 — Hunt exponent γ (shared idle / active / Perlin). */
-    uHuntGamma: { value: 1.0 },
-    /** P17.2 — bit 0 = idle vert, bit 1 = active vert, bit 2 = perlin frag; default 0b111 = 7. */
-    uHuntApplyMask: { value: 7 },
-    /** P17.2 — focus-neighborhood hover: instance id for full alpha; -1 = none. */
-    uHoveredInstanceId: { value: -1 },
-    uFocusedInstanceId: { value: -1 },
-    /** P11.1 — focus fly-in/out: same eased progress as camera lerp (scene.ts). */
-    uFocusCameraBlend: { value: 0 },
-    /** P11.1 — instance id of the movie being focused (-1 = no focus transition). */
-    uFocusTargetInstanceId: { value: -1 },
-    /** P11.1 / P13.6 — non-target active alpha at focus blend=1 (tuned down from 0.1 for dense neighbor sphere). */
-    uFocusNonTargetActiveAlpha: { value: 0.08 },
-    /** P11.2 — idle focus dim: chroma × this when dim (OKLab a,b scale with C). Phase 17 default 1 = off (Hunt in P17.2). */
-    uFocusDimChroma: { value: 1.0 },
-    /** P11.2 — idle focus dim: multiply OKLab L by this (with chroma mult below). */
-    uFocusDimL: { value: 1 },
-    /** P11.2 — 0 = focus-field dim; 1 = reserved (selectionMask); both behave identically until wired. */
-    uFocusDimMode: { value: 0 },
-    /** P12.5 — R8 per-instance mask packed in a 2D atlas (each dimension ≤ gl.MAX_TEXTURE_SIZE). */
-    uSelectionMask: { value: selectionMaskTex },
-    uSelectionCount: { value: 0 },
-    /** 0 = timeline vis slab; 1 = search mask (`selectionIds`); 2 = focus spherical neighborhood (`focusNeighborIds`). */
-    uSelectionMode: { value: 0 },
-    uMovieCount: { value: movieCount },
-    uSelectionAtlasWidth: { value: atlasW },
-    uSelectionAtlasHeight: { value: atlasH },
+      uPixelRatio: { value: pixelRatio },
+      uZCurrent: { value: 0 },
+      uZVisWindow: { value: 1 },
+      uSizeScale: { value: DEFAULT_GALAXY_U_SIZE_SCALE },
+      uActiveSizeMul: { value: 0.02 },
+      uBgSizeMul: { value: 0.002 },
+      uLMin: { value: 0.2 },
+      uLMax: { value: 1.0 },
+      uHighRatingT: { value: 0.85 },
+      uHighTierTRangeScale: { value: 0.4 },
+      uLightnessRatingExponent: { value: 3.0 },
+      /** P17.1 — Z-axis camera standoff (world years); distance-L reference `d0 = max(uZCamDistance, ε)`. */
+      uZCamDistance: { value: 30 },
+      /** P17.1 — lower clamp on `pow(d0/d, 2/3)` so stars nearer than the reference plane do not blow past vote L. */
+      uDistanceLightnessFloor: { value: 0.5 },
+      uChroma: { value: 0.18 },
+      /** P17.2 — Hunt exponent γ (shared idle / active / Perlin). */
+      uHuntGamma: { value: 0.3 },
+      /** P17.2 — bit 0 = idle vert, bit 1 = active vert, bit 2 = perlin frag; default 0b111 = 7. */
+      uHuntApplyMask: { value: 7 },
+      /** P17.2 — focus-neighborhood hover: instance id for full alpha; -1 = none. */
+      uHoveredInstanceId: { value: -1 },
+      uFocusedInstanceId: { value: -1 },
+      /** P11.1 — focus fly-in/out: same eased progress as camera lerp (scene.ts). */
+      uFocusCameraBlend: { value: 0 },
+      /** P11.1 — instance id of the movie being focused (-1 = no focus transition). */
+      uFocusTargetInstanceId: { value: -1 },
+      /** P11.1 / P13.6 — non-target active alpha at focus blend=1 (tuned down from 0.1 for dense neighbor sphere). */
+      uFocusNonTargetActiveAlpha: { value: 0.08 },
+      /** P11.2 — idle focus dim: chroma × this when dim (OKLab a,b scale with C). Phase 17 default 1 = off (Hunt in P17.2). */
+      uFocusDimChroma: { value: 1.0 },
+      /** P11.2 — idle focus dim: multiply OKLab L by this (with chroma mult below). */
+      uFocusDimL: { value: 1 },
+      /** P11.2 — 0 = focus-field dim; 1 = reserved (selectionMask); both behave identically until wired. */
+      uFocusDimMode: { value: 0 },
+      /** P12.5 — R8 per-instance mask packed in a 2D atlas (each dimension ≤ gl.MAX_TEXTURE_SIZE). */
+      uSelectionMask: { value: selectionMaskTex },
+      uSelectionCount: { value: 0 },
+      /** 0 = timeline vis slab; 1 = search mask (`selectionIds`); 2 = focus spherical neighborhood (`focusNeighborIds`). */
+      uSelectionMode: { value: 0 },
+      uMovieCount: { value: movieCount },
+      uSelectionAtlasWidth: { value: atlasW },
+      uSelectionAtlasHeight: { value: atlasH },
     },
   }
 }

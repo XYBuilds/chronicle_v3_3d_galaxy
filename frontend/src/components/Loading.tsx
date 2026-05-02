@@ -184,7 +184,7 @@ export function Loading({
       ) : null}
 
       {mode === 'await-start' && onStart ? (
-        <div className="flex flex-col items-center gap-3">
+        <div className="mt-2 flex flex-col items-center gap-3">
           <p id="cover-subtitle" className="text-sm text-muted-foreground">
             {STRINGS.cover.subtitle}
           </p>

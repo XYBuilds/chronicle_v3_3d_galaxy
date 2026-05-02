@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { MovieDetailDrawer } from '@/components/Drawer'
 import { SearchBar } from '@/components/SearchBar'
@@ -34,15 +34,18 @@ function App() {
   const indexHydrationTerminal =
     indexStatus === 'ready' || indexStatus === 'skipped' || indexStatus === 'error'
 
-  type AppLoadPhase = 'galaxy-loading' | 'galaxy-error' | 'index-loading' | 'main'
+  const [started, setStarted] = useState(false)
+
+  type AppLoadPhase = 'galaxy-loading' | 'galaxy-error' | 'index-loading' | 'await-start' | 'started'
 
   const phase: AppLoadPhase = useMemo(() => {
     if (status === 'loading' || status === 'idle') return 'galaxy-loading'
     if (status === 'error') return 'galaxy-error'
     if (status === 'ready' && data !== null && !indexHydrationTerminal) return 'index-loading'
-    if (status === 'ready' && data !== null && indexHydrationTerminal) return 'main'
+    if (status === 'ready' && data !== null && indexHydrationTerminal && !started) return 'await-start'
+    if (status === 'ready' && data !== null && indexHydrationTerminal && started) return 'started'
     return 'galaxy-loading'
-  }, [status, data, indexHydrationTerminal])
+  }, [status, data, indexHydrationTerminal, started])
 
   useEffect(() => {
     if (phase !== 'index-loading' || !data) return
@@ -57,12 +60,12 @@ function App() {
   }, [fetchGalaxyData])
 
   useEffect(() => {
-    if (status !== 'ready' || !data || !indexHydrationTerminal) return
+    if (!started || status !== 'ready' || !data || !indexHydrationTerminal) return
     const el = canvasHostRef.current
     if (!el) return
     const mount = mountGalaxyScene(el, data.meta, data.movies)
     return () => mount.dispose()
-  }, [status, data, indexHydrationTerminal])
+  }, [started, status, data, indexHydrationTerminal])
 
   useEffect(() => {
     if (status !== 'ready' || !data) return
@@ -192,7 +195,26 @@ function App() {
     )
   }
 
-  if (data === null) {
+  if (phase === 'await-start' && data !== null) {
+    const coverIndexStatus =
+      indexStatus === 'skipped' ? 'skipped' : indexStatus === 'error' ? 'error' : 'ready'
+    return (
+      <Loading
+        mode="await-start"
+        label={STRINGS.cover.title}
+        progress={null}
+        gzipDone
+        indexStatus={coverIndexStatus}
+        onStart={() => {
+          setStarted(true)
+          console.log('[App] Cover Start — mounting WebGL scene')
+        }}
+      />
+    )
+  }
+
+  if (phase !== 'started' || data === null) {
+    console.warn('[App] unexpected branch before main scene', { phase, status, hasData: data !== null })
     return (
       <Loading
         mode="loading"

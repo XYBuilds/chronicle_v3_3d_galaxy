@@ -7,7 +7,7 @@ todos:
     status: completed
   - id: p151-load-orchestration
     content: P15.1 加载顺序整合 + 四阶段进度：Loading.tsx 接 indexStatus / mode props；ol 扩为四项（download/decompress/parse/index）；App.tsx hydrate 提前到 status=ready 后立即调用；galaxy-loading / galaxy-error / index-loading 三个渲染分支走通
-    status: pending
+    status: completed
   - id: p152-cover-start
     content: P15.2 Cover 模式 + Start 按钮：Loading.tsx mode='await-start' 隐 spinner / 显 Start CTA；App.tsx 增 started state，3D scene mount 仅在 setStarted(true) 后发生；autoFocus 按钮与 Enter/Space 键盘可达；Storybook 3 个 Cover stories（ready/skipped/failed）
     status: pending

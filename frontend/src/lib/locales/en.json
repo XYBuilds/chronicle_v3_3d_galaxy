@@ -4,7 +4,9 @@
     "phaseDownload": "Download",
     "phaseDecompress": "Decompress",
     "phaseParse": "Parse",
-    "phaseIndex": "Search index"
+    "phaseIndex": "Search index",
+    "phaseIndexSkipped": "Search index — skipped",
+    "phaseIndexFailed": "Search index — failed"
   },
   "cover": {
     "title": "Ready",

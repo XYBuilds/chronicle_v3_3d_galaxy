@@ -4,7 +4,7 @@ overview: Phase 16 完善 Phase 12 已落地的搜索体验：补三档 placehol
 todos:
   - id: p160-spec
     content: P16.0 spec 升级（无代码）：Design Spec §4.1/§4.3/§4.4/§4.5 差异化 zCurrent + placeholder + 已知限制；状态机 spec §3.2.1 active 材质双路径；视觉参数总表 §2 / Tech Spec §1.1 同步切换矩阵
-    status: pending
+    status: completed
   - id: p161-placeholder
     content: P16.1 三档 placeholder hint：`en.json` 扩 `searchBar.placeholderMovie` 等（或嵌套 `searchBar.placeholder.*`）；`strings.ts` 同步 `STRINGS`；SearchBar.tsx 按 tab 切换；无索引走 disabled 文案
     status: pending
@@ -45,7 +45,7 @@ isProject: false
 
 | #   | 决策项                         | 选定方案                                                                                                                                                                                                                     | 备注                                                                                                                |
 | --- | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| D1  | 三档 placeholder 文案          | **movie**: `Search movie titles…` / **person**: `Director / Producer / Cast …` / **genre**: `Drama / Comedy / Thriller …`                                                                                                    | 写入 **`en.json`**（SSOT）并在 **`strings.ts`** 暴露；切 tab 时同步切 placeholder                                  |
+| D1  | 三档 placeholder 文案          | **movie**: `Search movie titles…` / **person**: `Director / Producer / Cast …` / **genre**: `Drama / Comedy / Thriller …`                                                                                                    | 写入 **`en.json`**（SSOT）并在 **`strings.ts`** 暴露；切 tab 时同步切 placeholder                                   |
 | D2  | 搜电影 zCurrent 行为           | 进 focus（继承 P13.4 zCurrent snap 到 movie.z 的 transition）                                                                                                                                                                | 不需要在 P16 新写逻辑；仅在 spec 中明确这点                                                                         |
 | D3  | 搜人名 zCurrent 行为           | snap 到 `min(movie.z over selectionIds)`（最早 active）；走 P13.1 transitionDriver 与电影飞入同节奏（700ms easeOutCubic）                                                                                                    | 用户原话「最早的 active 星星」                                                                                      |
 | D4  | 搜 genre zCurrent 行为         | **不动**；zCurrent 保持点击前位置                                                                                                                                                                                            | 与状态机 spec §3.6 一致：`viswindowDisabled` 时视觉无反馈                                                           |

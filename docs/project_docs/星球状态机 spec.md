@@ -45,11 +45,23 @@ inFocus = smoothstep(zLo - W, zLo, aZ) × (1 - smoothstep(zHi, zHi + W, aZ))
 
 | 维度 | 约定 |
 |------|------|
-| **z 范围** | `inFocus > 0` 的条带及其 ±W 过渡区 |
-| **大小** | `sActive` 见上；mesh：`IcosahedronGeometry(1, 1)`，`alphaTest: 0.01`、`depthWrite: true` |
+| **z 范围** | `inFocus > 0` 的条带及其 ±W 过渡区（select 会话下由 mask 重写，见 **§3.6**） |
+| **大小** | `sActive` 见上；mesh：`IcosahedronGeometry(1, 1)`，**`alphaTest: 0.01`**；**`transparent` / `depthWrite`** 运行时以 **§3.2.1** 双路径为准（`galaxyMeshes.ts` 构造初值为路径 **B**） |
 | **色彩** | 与 idle 同源 hue/L/C；当前 `galaxyActive.frag` 为 **vColor 直通**；Lambert + rim 为计划内增强（原 P8.5 范围，已改轨以源码为准） |
 | **可交互性** | 主拾取；可选 `inFocus > 0.5` 门控 + 第二近邻容差（由 P8.2 结论定） |
 | **进入/退出** | 连续，与 idle 互补叠加；**不得**在过渡区出现「双实心球」过曝（P8.5 硬验收） |
+
+#### 3.2.1 active 材质双路径（Phase 16）
+
+**动机**：路径 **B**（透明、不写深度）下，`person` / `genre` **select 单态**大量 active 同帧 **alpha≈1** 时，透明排序会导致远处球体错误压在近处之上。**Phase 16** 在 **`scene.ts` RAF** 内按 store 组合切换 **`galaxyActive` ShaderMaterial** 的 GPU 状态（**无**第二套 mesh 为默认路径）。
+
+| 路径 | 条件（Zustand） | `transparent` | `depthWrite` | `alphaTest` | 备注 |
+|------|-----------------|---------------|--------------|-------------|------|
+| **A — opaque（select 单态）** | **`searchMode ∈ { 'person', 'genre' }`** 且 **`selectedMovieId === null`** | `false` | `true` | `0.01` | 仅 mask 内实例 **`sActive > 0`** 的片元参与深度；大量 active 时前后遮挡正确 |
+| **B — transparent（默认）** | 其余所有情况：idle、`movie` 未点联想、`movie`+focus、**focus 嵌套 person/genre**（`selectedMovieId !== null`）等 | `true` | `false` | `0.01` | 保留 **Phase 11.1** **`vFocusAlphaMult`** / **`uFocusCameraBlend`** 的非目标 active **alpha** 渐变能力 |
+
+* **切换**：由 **`scene.ts`** 每帧读取 **`searchMode` × `selectedMovieId`**，仅在 **`transparent` / `depthWrite`** 与目标路径不一致时设置 **`material.needsUpdate = true`**（触发 shader 重编译；用户操作边界上频率极低）。切换**无**时间插值动画。  
+* **与 P11.1 兼容**：路径 **A** 下 select 单态片元 **alpha 恒为 1**（mask 外 **`sActive = 0`** 已丢弃），与 opaque 深度写入无冲突；路径 **B** 下 focus 飞入/保持/飞出仍走 **§3.4.3**。
 
 ### 3.3 hover
 
@@ -194,6 +206,7 @@ Perlin focus 球在片元侧按 **`vNoise`** 与 **`uThresh[0..K−2]`**（**K**
 | 2026-04-29 | P11.7 文档收口：§3.5 标注 **P11.5 不透明化已实装**；新增 **§3.5.2** focus 态拾取分流（P11.6）定稿描述 |
 | 2026-04-29 | Phase 12 P12.0：**§1** 表格 **`select` 转正**；**§3.6** 重写为正式态（selectionMask、`viswindowDisabled`、与 focus 优先级、连线摘要） |
 | 2026-04-29 | Phase 12 P12.0 收口：§3.6 明确 select 会话下 **active 集合完全由 `selectionIds` 决定、与 viswindow 完全解耦**；focus 嵌套 ESC 仅取消 focus 而保留 select；连线开关仅 **`window.__galaxy`**（产品 HUD 无入口） |
+| 2026-05-02 | Phase 16 P16.0：新增 **§3.2.1 active 材质双路径**（select 单态 opaque + depthWrite；其余 transparent + P11.1）；§3.2 表格与 `galaxyMeshes` 初值对齐并引用 §3.2.1 |
 | 2026-04-29 | Phase 12 P12.9：§3.6 连线开关表述与实现对齐（`window.__galaxy.constellationEnabled`）；性能归档指针见《Phase 8 基线》**`## P12 入口/出口`** |
 | 2026-04-29 | Phase 12 P12.8：**§3.6.1** ESC 焦点栈实现表（`App.tsx` capture、`data-galaxy-search-input`、INFO Modal 排除） |
 | 2026-04-30 | Phase 18 文档同步：`genre_hue` / palette 顺序改由 Data Pipeline SSOT 的 frozen palette 管理 |

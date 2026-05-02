@@ -10,7 +10,8 @@ uniform float uLMax;
 uniform float uHighRatingT;
 uniform float uHighTierTRangeScale;
 uniform float uLightnessRatingExponent;
-uniform float uDistanceFalloffK;
+uniform float uZCamDistance;
+uniform float uDistanceLightnessFloor;
 uniform float uChroma;
 uniform int uFocusedInstanceId;
 uniform float uFocusDimChroma;
@@ -26,8 +27,6 @@ attribute float voteNorm;
 attribute float aSize;
 
 varying vec3 vColor;
-varying float vInFocus;
-varying float vDistFalloff;
 
 void main() {
   float aZ = instanceMatrix[3][2];
@@ -57,16 +56,11 @@ void main() {
 
   if (sIdle < 1e-6) {
     gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
-    vInFocus = inFocus;
-    vDistFalloff = 1.0;
     return;
   }
 
   vec3 scaled = position * sIdle;
   vec4 mvPosition = modelViewMatrix * instanceMatrix * vec4(scaled, 1.0);
-  // P10.2 — Z-only falloff beyond visible slab upper edge; [uZCurrent, zHi] stays at 1.0
-  float dz = max(0.0, aZ - zHi);
-  vDistFalloff = 1.0 / (1.0 + uDistanceFalloffK * dz * dz);
   gl_Position = projectionMatrix * mvPosition;
 
   float t = clamp(voteNorm, 0.0, 1.0);
@@ -74,16 +68,21 @@ void main() {
     ? t
     : uHighRatingT + (t - uHighRatingT) * uHighTierTRangeScale;
   float tPow = pow(tCompressed, uLightnessRatingExponent);
-  float L_base = mix(uLMin, uLMax, tPow);
+  float L_star = mix(uLMin, uLMax, tPow);
+
+  float d0 = max(uZCamDistance, 1e-3);
+  float camPlaneZ = uZCurrent - uZCamDistance;
+  float d = max(abs(aZ - camPlaneZ), 1e-3);
+  float distanceMul = clamp(pow(d0 / d, 2.0 / 3.0), uDistanceLightnessFloor, 1.0);
+  float L_distance = L_star * distanceMul;
+
   float C_base = uChroma;
-  // P11.2 — dim non-focused idle only: L× uFocusDimL, C× uFocusDimChroma. Active mesh unchanged (P11.1 alpha).
   bool modeAllowsDim = (uFocusDimMode == 0) || (uFocusDimMode == 1);
   bool dimEligible = modeAllowsDim && (uFocusedInstanceId >= 0) && !isFocused;
   float dimMix = dimEligible ? 1.0 : 0.0;
-  float L = mix(L_base, L_base * uFocusDimL, dimMix);
+  float L = mix(L_distance, L_distance * uFocusDimL, dimMix);
   float C = mix(C_base, C_base * uFocusDimChroma, dimMix);
   float a = C * cos(hue);
   float labB = C * sin(hue);
   vColor = linear_to_srgb(oklab_to_linear_srgb(vec3(L, a, labB)));
-  vInFocus = inFocus;
 }

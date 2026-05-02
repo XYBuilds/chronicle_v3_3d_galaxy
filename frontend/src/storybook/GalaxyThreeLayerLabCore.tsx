@@ -25,10 +25,10 @@ export interface GalaxyThreeLayerLabProps {
   uHighTierTRangeScale: number
   /** P10.1 — `uLightnessRatingExponent`. */
   uLightnessRatingExponent: number
-  /** P10.2 — `1/(1+k·d²)` falloff (`uDistanceFalloffK`). */
-  uDistanceFalloffK: number
-  /** P10.2 — `0` off, `1` on (`uDistanceFalloffMode`). */
-  uDistanceFalloffMode: number
+  /** P17.1 — camera standoff for distance-L `d0` + store sync (`uZCamDistance`). */
+  uZCamDistance: number
+  /** P17.1 — idle distance-L floor clamp (`uDistanceLightnessFloor`). */
+  uDistanceLightnessFloor: number
   /** OKLCH chroma (`uChroma`). */
   uChroma: number
   /** Global world scale for dual mesh (`uSizeScale`; former Points scale × mesh calib). */
@@ -76,8 +76,8 @@ export function GalaxyThreeLayerLabCore(props: GalaxyThreeLayerLabProps) {
     uHighRatingT,
     uHighTierTRangeScale,
     uLightnessRatingExponent,
-    uDistanceFalloffK,
-    uDistanceFalloffMode,
+    uZCamDistance,
+    uDistanceLightnessFloor,
     uChroma,
     uSizeScale,
     postProcessBloom,
@@ -111,7 +111,7 @@ export function GalaxyThreeLayerLabCore(props: GalaxyThreeLayerLabProps) {
     const m = mountHandle.current
     if (!m) return
 
-    useGalaxyInteractionStore.setState({ zCurrent, zVisWindow, selectedMovieId })
+    useGalaxyInteractionStore.setState({ zCurrent, zVisWindow, zCamDistance: uZCamDistance, selectedMovieId })
 
     const gm = m.galaxyMaterial
     gm.uniforms.uActiveSizeMul.value = uActiveSizeMul
@@ -121,8 +121,8 @@ export function GalaxyThreeLayerLabCore(props: GalaxyThreeLayerLabProps) {
     gm.uniforms.uHighRatingT.value = uHighRatingT
     gm.uniforms.uHighTierTRangeScale.value = uHighTierTRangeScale
     gm.uniforms.uLightnessRatingExponent.value = uLightnessRatingExponent
-    gm.uniforms.uDistanceFalloffK.value = uDistanceFalloffK
-    gm.uniforms.uDistanceFalloffMode.value = uDistanceFalloffMode === 0 ? 0 : 1
+    gm.uniforms.uZCamDistance.value = uZCamDistance
+    gm.uniforms.uDistanceLightnessFloor.value = uDistanceLightnessFloor
     gm.uniforms.uChroma.value = uChroma
     gm.uniforms.uSizeScale.value = uSizeScale
     gm.uniforms.uFocusDimChroma.value = uFocusDimChroma
@@ -147,8 +147,8 @@ export function GalaxyThreeLayerLabCore(props: GalaxyThreeLayerLabProps) {
     uHighRatingT,
     uHighTierTRangeScale,
     uLightnessRatingExponent,
-    uDistanceFalloffK,
-    uDistanceFalloffMode,
+    uZCamDistance,
+    uDistanceLightnessFloor,
     uChroma,
     uSizeScale,
     uFocusDimChroma,

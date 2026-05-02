@@ -100,9 +100,10 @@ function makeSharedUniforms(
     uHighRatingT: { value: 0.85 },
     uHighTierTRangeScale: { value: 0.4 },
     uLightnessRatingExponent: { value: 3.0 },
-    /** P10.2 — falloff uses `(max(0, aZ - (uZCurrent+uZVisWindow)))^2` in world Z (decimal years). */
-    uDistanceFalloffK: { value: 0.0001 },
-    uDistanceFalloffMode: { value: 1 },
+    /** P17.1 — Z-axis camera standoff (world years); distance-L reference `d0 = max(uZCamDistance, ε)`. */
+    uZCamDistance: { value: 30 },
+    /** P17.1 — lower clamp on `pow(d0/d, 2/3)` so stars nearer than the reference plane do not blow past vote L. */
+    uDistanceLightnessFloor: { value: 0.08 },
     uChroma: { value: 0.15 },
     uFocusedInstanceId: { value: -1 },
     /** P11.1 — focus fly-in/out: same eased progress as camera lerp (scene.ts). */
@@ -111,8 +112,8 @@ function makeSharedUniforms(
     uFocusTargetInstanceId: { value: -1 },
     /** P11.1 / P13.6 — non-target active alpha at focus blend=1 (tuned down from 0.1 for dense neighbor sphere). */
     uFocusNonTargetActiveAlpha: { value: 0.08 },
-    /** P11.2 — idle focus dim: chroma × this when dim (OKLab a,b scale with C). */
-    uFocusDimChroma: { value: 0.7 },
+    /** P11.2 — idle focus dim: chroma × this when dim (OKLab a,b scale with C). Phase 17 default 1 = off (Hunt in P17.2). */
+    uFocusDimChroma: { value: 1.0 },
     /** P11.2 — idle focus dim: multiply OKLab L by this (with chroma mult below). */
     uFocusDimL: { value: 1 },
     /** P11.2 — 0 = focus-field dim; 1 = reserved (selectionMask); both behave identically until wired. */
@@ -174,21 +175,22 @@ export function createGalaxyDualMeshes(
     '[GalaxyMeshes] P10.1 rating→L remap uniforms must be positive / HIGH_T in (0,1)',
   )
   console.assert(
-    sharedUniforms.uDistanceFalloffK.value >= 0,
-    '[GalaxyMeshes] P10.2 uDistanceFalloffK must be non-negative',
+    (sharedUniforms.uZCamDistance.value as number) > 0,
+    '[GalaxyMeshes] P17.1 uZCamDistance must be positive',
   )
-  const dfm = sharedUniforms.uDistanceFalloffMode.value as number
-  console.assert(dfm === 0 || dfm === 1, '[GalaxyMeshes] P10.2 uDistanceFalloffMode must be 0 or 1')
+  const dlf = sharedUniforms.uDistanceLightnessFloor.value as number
+  console.assert(dlf > 0 && dlf <= 1, '[GalaxyMeshes] P17.1 uDistanceLightnessFloor must be in (0, 1]')
   console.log(
-    `[GalaxyMeshes] P10.1 L-remap uLMin=${sharedUniforms.uLMin.value} uLMax=${sharedUniforms.uLMax.value} uHighRatingT=${sharedUniforms.uHighRatingT.value} uHighTierTRangeScale=${sharedUniforms.uHighTierTRangeScale.value} uLightnessRatingExponent=${sharedUniforms.uLightnessRatingExponent.value} | P10.2 uDistanceFalloffK=${sharedUniforms.uDistanceFalloffK.value} uDistanceFalloffMode=${dfm} | P11.2 uFocusDimChroma=${sharedUniforms.uFocusDimChroma.value} uFocusDimL=${sharedUniforms.uFocusDimL.value} uFocusDimMode=${sharedUniforms.uFocusDimMode.value}`,
+    `[GalaxyMeshes] P10.1 L-remap uLMin=${sharedUniforms.uLMin.value} uLMax=${sharedUniforms.uLMax.value} uHighRatingT=${sharedUniforms.uHighRatingT.value} uHighTierTRangeScale=${sharedUniforms.uHighTierTRangeScale.value} uLightnessRatingExponent=${sharedUniforms.uLightnessRatingExponent.value} | P17.1 uZCamDistance=${sharedUniforms.uZCamDistance.value} uDistanceLightnessFloor=${dlf} | P11.2 uFocusDimChroma=${sharedUniforms.uFocusDimChroma.value} uFocusDimL=${sharedUniforms.uFocusDimL.value} uFocusDimMode=${sharedUniforms.uFocusDimMode.value}`,
   )
 
   const idleMaterial = new THREE.ShaderMaterial({
     uniforms: sharedUniforms,
     vertexShader: galaxyIdleVertexShader,
     fragmentShader: galaxyIdleFragmentShader,
-    transparent: true,
-    depthWrite: false,
+    /** P17.1 — opaque idle + depth write fixes same-layer transparent sort artifacts. */
+    transparent: false,
+    depthWrite: true,
     depthTest: true,
     blending: THREE.NormalBlending,
   })

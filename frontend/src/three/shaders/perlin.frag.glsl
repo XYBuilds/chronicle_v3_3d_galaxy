@@ -3,6 +3,9 @@
 uniform float uHue[8];
 uniform float uPerlinL;
 uniform float uPerlinChroma;
+uniform float uLMax;
+uniform float uHuntGamma;
+uniform int uHuntApplyMask;
 uniform float uAlpha;
 
 uniform float uThresh[7];
@@ -32,6 +35,10 @@ vec3 hueToOkSrgb(float hue, float L, float C) {
 void main() {
   float n = vNoise;
 
+  float C_perlin = (uHuntApplyMask & 4) != 0
+    ? applyHuntChroma(uPerlinL, uLMax, uPerlinChroma, uHuntGamma)
+    : uPerlinChroma;
+
   float bandIdx = 0.0;
   bandIdx += step(0.5, uCutCount) * step(uThresh[0], n);
   bandIdx += step(1.5, uCutCount) * step(uThresh[1], n);
@@ -41,14 +48,14 @@ void main() {
   bandIdx += step(5.5, uCutCount) * step(uThresh[5], n);
   bandIdx += step(6.5, uCutCount) * step(uThresh[6], n);
 
-  vec3 col0 = hueToOkSrgb(uHue[0], uPerlinL, uPerlinChroma);
-  vec3 col1 = hueToOkSrgb(uHue[1], uPerlinL, uPerlinChroma);
-  vec3 col2 = hueToOkSrgb(uHue[2], uPerlinL, uPerlinChroma);
-  vec3 col3 = hueToOkSrgb(uHue[3], uPerlinL, uPerlinChroma);
-  vec3 col4 = hueToOkSrgb(uHue[4], uPerlinL, uPerlinChroma);
-  vec3 col5 = hueToOkSrgb(uHue[5], uPerlinL, uPerlinChroma);
-  vec3 col6 = hueToOkSrgb(uHue[6], uPerlinL, uPerlinChroma);
-  vec3 col7 = hueToOkSrgb(uHue[7], uPerlinL, uPerlinChroma);
+  vec3 col0 = hueToOkSrgb(uHue[0], uPerlinL, C_perlin);
+  vec3 col1 = hueToOkSrgb(uHue[1], uPerlinL, C_perlin);
+  vec3 col2 = hueToOkSrgb(uHue[2], uPerlinL, C_perlin);
+  vec3 col3 = hueToOkSrgb(uHue[3], uPerlinL, C_perlin);
+  vec3 col4 = hueToOkSrgb(uHue[4], uPerlinL, C_perlin);
+  vec3 col5 = hueToOkSrgb(uHue[5], uPerlinL, C_perlin);
+  vec3 col6 = hueToOkSrgb(uHue[6], uPerlinL, C_perlin);
+  vec3 col7 = hueToOkSrgb(uHue[7], uPerlinL, C_perlin);
 
   vec3 baseCol =
     col0 * (1.0 - step(1.0, bandIdx)) +

@@ -206,6 +206,10 @@ export function createSelectionPlanet(): SelectionPlanetHandle {
       uHue: { value: uHueArray },
       uPerlinL: { value: 0.55 },
       uPerlinChroma: { value: 0.15 },
+      /** P17.2 — Hunt reference L (same as galaxy `uLMax`); synced from dual-mesh uniforms each frame. */
+      uLMax: { value: 1.0 },
+      uHuntGamma: { value: 1.0 },
+      uHuntApplyMask: { value: 7 },
       uMeshWorldPos: { value: uMeshWorldPos },
       uLightDir: { value: uLightDir },
       /** P11.4 定稿：`lit = baseCol × (uAmbient + uDiffuse × lambert)` */

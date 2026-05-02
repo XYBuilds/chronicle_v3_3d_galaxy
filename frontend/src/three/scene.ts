@@ -58,6 +58,10 @@ interface GalaxyColorDebug {
   lightnessRatingExponent: number
   /** P17.1 — lower clamp on idle distance-L multiplier `pow(d0/d, 2/3)` (`uDistanceLightnessFloor`). */
   distanceLightnessFloor: number
+  /** P17.2 — Hunt γ (shared with active + Perlin). */
+  huntGamma: number
+  /** P17.2 — Hunt layer mask 0–7 (bits: idle / active / perlin). */
+  huntApplyMask: number
   chroma: number
   /** P11.1 / P13.6 — alpha of non-target active stars when focus blend = 1 (default 0.08). */
   focusNonTargetActiveAlpha: number
@@ -267,6 +271,7 @@ export function mountGalaxyScene(
   const uFocusDimL = galUniforms.uFocusDimL as THREE.Uniform<number>
   const uFocusDimMode = galUniforms.uFocusDimMode as THREE.Uniform<number>
   const uZCamDistUniform = galUniforms.uZCamDistance as THREE.Uniform<number>
+  const uHoveredInstanceId = galUniforms.uHoveredInstanceId as THREE.Uniform<number>
   uZ.value = zCurrent
   uZw.value = zVisWindow
   uZCamDistUniform.value = useGalaxyInteractionStore.getState().zCamDistance
@@ -648,6 +653,8 @@ export function mountGalaxyScene(
   const uHighTierTRangeScale = galUniforms.uHighTierTRangeScale as THREE.Uniform<number>
   const uLightnessRatingExponent = galUniforms.uLightnessRatingExponent as THREE.Uniform<number>
   const uDistanceLightnessFloorU = galUniforms.uDistanceLightnessFloor as THREE.Uniform<number>
+  const uHuntGammaU = galUniforms.uHuntGamma as THREE.Uniform<number>
+  const uHuntApplyMaskU = galUniforms.uHuntApplyMask as THREE.Uniform<number>
   const uChroma = galUniforms.uChroma as THREE.Uniform<number>
 
   const pointScaleDebug: GalaxyPointScaleDebug = {
@@ -717,6 +724,18 @@ export function mountGalaxyScene(
     set distanceLightnessFloor(value: number) {
       uDistanceLightnessFloorU.value = THREE.MathUtils.clamp(value, 0.02, 1)
     },
+    get huntGamma() {
+      return uHuntGammaU.value
+    },
+    set huntGamma(value: number) {
+      uHuntGammaU.value = THREE.MathUtils.clamp(value, 0, 3)
+    },
+    get huntApplyMask() {
+      return uHuntApplyMaskU.value
+    },
+    set huntApplyMask(value: number) {
+      uHuntApplyMaskU.value = Math.round(THREE.MathUtils.clamp(value, 0, 7))
+    },
     get chroma() {
       return uChroma.value
     },
@@ -750,7 +769,7 @@ export function mountGalaxyScene(
     },
     log() {
       console.log(
-        `[Galaxy] OKLCH+P10.1 uLMin=${uLMin.value} uLMax=${uLMax.value} uHighRatingT=${uHighRatingT.value} uHighTierTRangeScale=${uHighTierTRangeScale.value} uLightnessRatingExponent=${uLightnessRatingExponent.value} uChroma=${uChroma.value} | P17.1 uDistanceLightnessFloor=${uDistanceLightnessFloorU.value} (uZCamDistance sync via store) | P11.1 uFocusNonTargetActiveAlpha=${uFocusNonTargetActiveAlpha.value} | P11.2 uFocusDimChroma=${uFocusDimChroma.value} uFocusDimL=${uFocusDimL.value} uFocusDimMode=${uFocusDimMode.value}`,
+        `[Galaxy] OKLCH+P10.1 uLMin=${uLMin.value} uLMax=${uLMax.value} uHighRatingT=${uHighRatingT.value} uHighTierTRangeScale=${uHighTierTRangeScale.value} uLightnessRatingExponent=${uLightnessRatingExponent.value} uChroma=${uChroma.value} | P17.1 uDistanceLightnessFloor=${uDistanceLightnessFloorU.value} (uZCamDistance sync via store) | P17.2 uHuntGamma=${uHuntGammaU.value} uHuntApplyMask=${uHuntApplyMaskU.value} | P11.1 uFocusNonTargetActiveAlpha=${uFocusNonTargetActiveAlpha.value} | P11.2 uFocusDimChroma=${uFocusDimChroma.value} uFocusDimL=${uFocusDimL.value} uFocusDimMode=${uFocusDimMode.value}`,
       )
     },
   }
@@ -945,6 +964,16 @@ export function mountGalaxyScene(
     uZ.value = st.zCurrent
     uZw.value = st.zVisWindow
     uZCamDistUniform.value = st.zCamDistance
+    {
+      const hid = st.hoveredMovieId
+      uHoveredInstanceId.value = hid === null ? -1 : movieIdToIndex.get(hid) ?? -1
+    }
+    {
+      const pu = planet.material.uniforms
+      ;(pu.uHuntGamma as THREE.Uniform<number>).value = uHuntGammaU.value
+      ;(pu.uHuntApplyMask as THREE.Uniform<number>).value = uHuntApplyMaskU.value
+      ;(pu.uLMax as THREE.Uniform<number>).value = uLMax.value
+    }
     syncSelectionPlanetWorldScale()
 
     const ringsPhaseActive =

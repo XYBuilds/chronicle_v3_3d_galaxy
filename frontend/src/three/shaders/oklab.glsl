@@ -12,6 +12,20 @@ vec3 linear_to_srgb(vec3 rgb) {
   return mix(low, high, step(vec3(0.0031308), rgb));
 }
 
+/**
+ * Hunt-style chroma scaling: C drops with L to mimic perceptual desaturation
+ * under low lightness. Returns C_new in same units as C_base.
+ *
+ * - L_actual: current sample lightness (e.g. P17.1 L_distance for idle)
+ * - L_ref:    reference lightness — typically uLMax (top-rated star)
+ * - C_base:   reference chroma at full lightness (e.g. uChroma)
+ * - gamma:    exponent (1.0 = linear; 0.5 = gentler; 1.5+ = aggressive)
+ */
+float applyHuntChroma(float L_actual, float L_ref, float C_base, float gamma) {
+  float t = clamp(L_actual / max(L_ref, 1e-4), 0.0, 1.0);
+  return C_base * pow(t, gamma);
+}
+
 vec3 oklab_to_linear_srgb(vec3 lab) {
   float l_ = lab.x + 0.3963377774 * lab.y + 0.2158037573 * lab.z;
   float m_ = lab.x - 0.1055613458 * lab.y - 0.0638541728 * lab.z;

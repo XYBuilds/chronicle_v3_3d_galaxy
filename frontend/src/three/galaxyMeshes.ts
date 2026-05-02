@@ -105,6 +105,12 @@ function makeSharedUniforms(
     /** P17.1 — lower clamp on `pow(d0/d, 2/3)` so stars nearer than the reference plane do not blow past vote L. */
     uDistanceLightnessFloor: { value: 0.08 },
     uChroma: { value: 0.15 },
+    /** P17.2 — Hunt exponent γ (shared idle / active / Perlin). */
+    uHuntGamma: { value: 1.0 },
+    /** P17.2 — bit 0 = idle vert, bit 1 = active vert, bit 2 = perlin frag; default 0b111 = 7. */
+    uHuntApplyMask: { value: 7 },
+    /** P17.2 — focus-neighborhood hover: instance id for full alpha; -1 = none. */
+    uHoveredInstanceId: { value: -1 },
     uFocusedInstanceId: { value: -1 },
     /** P11.1 — focus fly-in/out: same eased progress as camera lerp (scene.ts). */
     uFocusCameraBlend: { value: 0 },
@@ -181,7 +187,7 @@ export function createGalaxyDualMeshes(
   const dlf = sharedUniforms.uDistanceLightnessFloor.value as number
   console.assert(dlf > 0 && dlf <= 1, '[GalaxyMeshes] P17.1 uDistanceLightnessFloor must be in (0, 1]')
   console.log(
-    `[GalaxyMeshes] P10.1 L-remap uLMin=${sharedUniforms.uLMin.value} uLMax=${sharedUniforms.uLMax.value} uHighRatingT=${sharedUniforms.uHighRatingT.value} uHighTierTRangeScale=${sharedUniforms.uHighTierTRangeScale.value} uLightnessRatingExponent=${sharedUniforms.uLightnessRatingExponent.value} | P17.1 uZCamDistance=${sharedUniforms.uZCamDistance.value} uDistanceLightnessFloor=${dlf} | P11.2 uFocusDimChroma=${sharedUniforms.uFocusDimChroma.value} uFocusDimL=${sharedUniforms.uFocusDimL.value} uFocusDimMode=${sharedUniforms.uFocusDimMode.value}`,
+    `[GalaxyMeshes] P10.1 L-remap uLMin=${sharedUniforms.uLMin.value} uLMax=${sharedUniforms.uLMax.value} uHighRatingT=${sharedUniforms.uHighRatingT.value} uHighTierTRangeScale=${sharedUniforms.uHighTierTRangeScale.value} uLightnessRatingExponent=${sharedUniforms.uLightnessRatingExponent.value} | P17.1 uZCamDistance=${sharedUniforms.uZCamDistance.value} uDistanceLightnessFloor=${dlf} | P17.2 uHuntGamma=${sharedUniforms.uHuntGamma.value} uHuntApplyMask=${sharedUniforms.uHuntApplyMask.value} | P11.2 uFocusDimChroma=${sharedUniforms.uFocusDimChroma.value} uFocusDimL=${sharedUniforms.uFocusDimL.value} uFocusDimMode=${sharedUniforms.uFocusDimMode.value}`,
   )
 
   const idleMaterial = new THREE.ShaderMaterial({

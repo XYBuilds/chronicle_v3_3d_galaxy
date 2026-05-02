@@ -12,6 +12,9 @@ uniform float uHighRatingT;
 uniform float uHighTierTRangeScale;
 uniform float uLightnessRatingExponent;
 uniform float uChroma;
+uniform float uHuntGamma;
+uniform int uHuntApplyMask;
+uniform int uHoveredInstanceId;
 uniform int uFocusedInstanceId;
 uniform float uFocusCameraBlend;
 uniform int uFocusTargetInstanceId;
@@ -70,14 +73,19 @@ void main() {
     ? t
     : uHighRatingT + (t - uHighRatingT) * uHighTierTRangeScale;
   float tPow = pow(tCompressed, uLightnessRatingExponent);
-  float L = mix(uLMin, uLMax, tPow);
-  float a = uChroma * cos(hue);
-  float labB = uChroma * sin(hue);
-  vColor = linear_to_srgb(oklab_to_linear_srgb(vec3(L, a, labB)));
+  float L_base = mix(uLMin, uLMax, tPow);
+  float C_base_after_hunt = (uHuntApplyMask & 2) != 0
+    ? applyHuntChroma(L_base, uLMax, uChroma, uHuntGamma)
+    : uChroma;
+  float a = C_base_after_hunt * cos(hue);
+  float labB = C_base_after_hunt * sin(hue);
+  vColor = linear_to_srgb(oklab_to_linear_srgb(vec3(L_base, a, labB)));
 
   bool isFocusTarget =
     (uFocusTargetInstanceId >= 0) && (gl_InstanceID == uFocusTargetInstanceId);
   float blend = clamp(uFocusCameraBlend, 0.0, 1.0);
   float dimAlpha = mix(1.0, uFocusNonTargetActiveAlpha, blend);
-  vFocusAlphaMult = isFocusTarget ? 1.0 : dimAlpha;
+  bool isHovered = (uHoveredInstanceId >= 0) && (gl_InstanceID == uHoveredInstanceId);
+  bool hoverAlphaOverride = (uSelectionMode == 2) && isHovered;
+  vFocusAlphaMult = (isFocusTarget || hoverAlphaOverride) ? 1.0 : dimAlpha;
 }

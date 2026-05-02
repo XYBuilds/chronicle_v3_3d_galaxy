@@ -13,7 +13,7 @@ todos:
     status: completed
   - id: p163-active-dual-path
     content: P16.3 active 材质双路径切换（修 genre 深度 bug）：scene.ts RAF 检测 inSelectOnly → transparent/depthWrite 切换 + needsUpdate；P11.1 alpha 渐变路径在 focus / focus嵌套下保留；备选方案 B（双 mesh）仅当主方案出问题时启用
-    status: pending
+    status: completed
   - id: p164-doc-sync
     content: P16.4 文档同步 + 回归：Design Spec §4 · 状态机 spec §3.2.1 · 视觉参数总表 · Tech Spec §1.1 同步；Phase 8 基线 P16 出口（重跑 Drama / Christopher Nolan 压力片段）；实施报告；三路径联动 × focus 嵌套 × 退出出栈手测
     status: pending

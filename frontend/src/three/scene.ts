@@ -929,6 +929,19 @@ export function mountGalaxyScene(
       useGalaxyInteractionStore.setState({ zCurrent: zNext })
     }
     const st = useGalaxyInteractionStore.getState()
+    // P16.3 — active material dual path (state machine §3.2.1): select-only person/genre uses
+    // opaque + depthWrite so many full-alpha actives sort by depth; focus / idle keep transparent
+    // for P11.1 vFocusAlphaMult gradients.
+    const inSelectOnly =
+      (st.searchMode === 'person' || st.searchMode === 'genre') && st.selectedMovieId === null
+    const wantOpaque = inSelectOnly
+    const activeMat = galaxy.activeMaterial
+    if (activeMat.transparent !== !wantOpaque || activeMat.depthWrite !== wantOpaque) {
+      activeMat.transparent = !wantOpaque
+      activeMat.depthWrite = wantOpaque
+      activeMat.needsUpdate = true
+      console.log('[Active material]', wantOpaque ? 'opaque (select-only)' : 'transparent (default)')
+    }
     // P12.6 / P13.2 — person/genre mask vs focus spherical neighborhood vs timeline slab
     const selectionDrawMode =
       st.selectedMovieId !== null ? 2 : st.searchMode === 'person' || st.searchMode === 'genre' ? 1 : 0

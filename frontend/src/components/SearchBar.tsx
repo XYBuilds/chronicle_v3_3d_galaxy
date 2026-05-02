@@ -293,7 +293,7 @@ export function SearchBar({ hasSearchIndex, movies }: SearchBarProps) {
             disabled={isBlocked}
             placeholder={
               isBlocked
-                ? disabledReason ?? STRINGS.searchBar.searchUnavailable
+                ? STRINGS.searchBar.placeholderDisabled
                 : hudTab === 'movie'
                   ? STRINGS.searchBar.placeholderMovie
                   : hudTab === 'person'

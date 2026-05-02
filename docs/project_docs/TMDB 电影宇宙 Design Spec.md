@@ -144,11 +144,11 @@
 
 ### **3.5 Cover-with-Start（Phase 15）**
 
-* **范围**：**极简**。Loading 四阶段完成后保留**同一全屏覆盖层**；Spinner **隐藏**，**进度条保留**已完成勾选状态（第四阶段在 **`skipped`** / **`error`** 时按 token 灰显或 destructive，与 Tech Spec §1.4.7 一致）。**不**加品牌大标题、教程或额外视觉编码说明。  
-* **文案**：标题 **`STRINGS.cover.title`**、副文案 **`STRINGS.cover.subtitle`**（**`locales/en.json`** 的 **`cover.*`**，经 **`strings.ts`** 导出为 **`STRINGS.cover`**，与 §3.4.5 / Phase 14 **SSOT** 一致）。  
-* **Start 按钮**：原生 **`<button type="button">`**；样式走 **primary**（或项目约定的 ghost-with-glow）；**`autoFocus`**，使 **Enter** / **Space** 默认可触发点击。  
+* **范围**：**极简**。首屏**全程**（含 gzip 三阶段与索引阶段）**不**展示独立 **Spinner** 与进度区上方的**标题行**文案——加载叙事完全由 **四阶段 `ol` + 分段进度条**（以及可选的 gzip / 索引 **`footerMessage`**）承担。四阶段完成后进入 **Cover**，仍用**同一全屏覆盖层**；**进度条保持满格/终态**（第四阶段在 **`skipped`** / **`error`** 时按 token 灰显或 destructive，与 Tech Spec §1.4.7 一致）。**不**加品牌大标题、副提示长句、教程或额外视觉编码说明。  
+* **文案（SSOT）**：**`STRINGS.cover`** 仅含 **`title`**、**`start`**、**`startAriaLabel`**（**`locales/en.json` → `strings.ts`**，与 §3.4.5 一致）。**`cover.title`** 在 Cover 态以 **`sr-only` 标题**供读屏；根容器同时设 **`aria-label`**（与 `Loading` 的 `label` prop 对齐，实现中 Cover 为「Ready」）。**无**独立副文案键。  
+* **Start 按钮**：原生 **`<button type="button">`**，**吸底**（视口**下方** `shrink-0` 区域，与上方 **`flex-1` 进度区**分离）；样式走 **primary**；**`autoFocus`**，**Enter** / **Space** 默认可触发。  
 * **键盘**：**Enter** / **Space** 等同点击；**Esc** **不**关闭 Cover（无可关闭语义）。  
-* **可访问性**：根容器 **`role="dialog"`**，**`aria-labelledby`** / **`aria-describedby`** 绑定标题与副文案（可用 visually hidden 标题满足 SR）；按钮 **`aria-label`** 与可见文案一致或补强。
+* **可访问性**：Cover 时根容器 **`role="dialog"`**、**`aria-labelledby="cover-title"`**（对应该 **visually hidden** 的 `h1`）；**不**再设 **`aria-describedby`**（无可见/独立副文段）。按钮 **`aria-label`** 走 **`STRINGS.cover.startAriaLabel`**。
 
 ### **3.6 Close 控件 primitive（Phase 14）**
 

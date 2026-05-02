@@ -4,7 +4,7 @@ overview: Phase 17 升级整体色彩、深度与交互系统：上线 Hunt 效�
 todos:
   - id: p170-spec
     content: P17.0 spec 升级（无代码）：状态机 / 视觉参数总表 / Tech Spec / Design Spec 同步 Hunt 全层 + idle opaque/depthWrite + 距离-L 替代 P10.2 + P11.2 默认禁用 + zCamDistance 运行时可调 + 滚轮双模式
-    status: pending
+    status: completed
   - id: p171-idle-depth-distance-lightness
     content: P17.1 idle 遮挡修复 + 距离-L：移除 idle alpha 控制；idleMaterial transparent=false/depthWrite=true；移除旧 P10.2 uDistanceFalloffK / uDistanceFalloffMode 参与；新增 L(d)=Lmax*(d0/d)^(2/3)，d0=观测平面参考距离（默认 zCamDistance，非数学 0）
     status: pending
@@ -52,13 +52,13 @@ isProject: false
 | D1  | Hunt 应用范围               | **全层 idle + active + Perlin**                                                                                               | 三层共享 `uHuntGamma`；perlin.frag 内共享 hue + 同一 L → 同一 C_new                                             |
 | D2  | Hunt 公式形式               | `C_new = C_base × clamp(L_actual / L_ref, 0, 1)^γ`                                                                            | `L_ref` = `uLMax`（满分电影 L 端点，与现状参考一致）；`C_base` = 现 `uChroma`；γ 默认 `1.0` 起步，Leva 扫参后定 |
 | D3  | P11.2 idle 降 C/L 处置      | **禁用**（默认 `uFocusDimChroma=1.0` / `uFocusDimL=1.0`）                                                                     | 不删 uniform；通过默认值生效。Leva 仍可调；Phase 11.2 spec 标注「Phase 17 起 Hunt 接管语义，默认值保留乘子=1」  |
-| D4  | 旧 P10.2 距离衰减处置       | **移除 / 废弃** `uDistanceFalloffK` + `uDistanceFalloffMode` 对 idle/active 颜色或 alpha 的参与                              | Hunt 不再与旧 P10.2 并存；远处视觉由距离-L + Hunt 承担                                                         |
+| D4  | 旧 P10.2 距离衰减处置       | **移除 / 废弃** `uDistanceFalloffK` + `uDistanceFalloffMode` 对 idle/active 颜色或 alpha 的参与                               | Hunt 不再与旧 P10.2 并存；远处视觉由距离-L + Hunt 承担                                                          |
 | D5  | Alt + 滚轮放大机制          | **Dolly-to-cursor**：改 `zCamDistance`（推近 / 拉远），同时偏移 camera.x/y 让光标 NDC 命中世界点不变；fov 不变；zCurrent 不变 | 触摸板 pinch（`e.ctrlKey=true`，无键盘修饰）也走该分支；mac Cmd 不触发                                          |
 | D6  | dolly 安全区                | `zCamDistance ∈ [2, 300]`                                                                                                     | MIN=2 避免相机进入 zCurrent 平面（`near=0.05` 还有余量）；MAX=300 避免 far culling 大量 active                  |
 | D7  | dolly 影响 viswindow 视觉吗 | **不影响**：viswindow 视觉仍由 zCurrent / zVisWindow 驱动；dolly 只改物理距离与可视范围（屏幕投影 size 自然变化）             | Timeline 指针位置不动                                                                                           |
-| D8  | idle 遮挡修复               | **彻底移除 idle 透明度控制**，idle 材质默认 `transparent=false` / `depthWrite=true` / `depthTest=true`                        | 修复 idle 层同类透明排序遮挡问题；片元输出 `alpha=1.0`，不再依赖 `vInFocus` 或距离调 alpha                     |
-| D9  | 距离-L 公式                 | `L_distance = L_star × clamp(pow(d0 / max(d, eps), 2.0/3.0), L_floor, 1.0)`                                                    | `L_star` 为 vote/Hunt 前该星应有 L；`d0` **不是数学 0**，定义为观测平面参考距离，默认运行时 `zCamDistance`      |
-| D10 | 距离 d 定义                 | 初版采用 **Z 轴相机距离** `d = abs(aZ - cameraZ)`，不是完整欧氏距离                                                           | 避免同一 z 平面屏幕边缘因 XY 距离变暗；若后续想要真实空间衰减再另开视觉评估                                    |
+| D8  | idle 遮挡修复               | **彻底移除 idle 透明度控制**，idle 材质默认 `transparent=false` / `depthWrite=true` / `depthTest=true`                        | 修复 idle 层同类透明排序遮挡问题；片元输出 `alpha=1.0`，不再依赖 `vInFocus` 或距离调 alpha                      |
+| D9  | 距离-L 公式                 | `L_distance = L_star × clamp(pow(d0 / max(d, eps), 2.0/3.0), L_floor, 1.0)`                                                   | `L_star` 为 vote/Hunt 前该星应有 L；`d0` **不是数学 0**，定义为观测平面参考距离，默认运行时 `zCamDistance`      |
+| D10 | 距离 d 定义                 | 初版采用 **Z 轴相机距离** `d = abs(aZ - cameraZ)`，不是完整欧氏距离                                                           | 避免同一 z 平面屏幕边缘因 XY 距离变暗；若后续想要真实空间衰减再另开视觉评估                                     |
 
 ## 执行顺序
 
@@ -220,12 +220,12 @@ uZCamDistance.value = st.zCamDistance
 
 ### 可能损失的视觉效果
 
-| 原效果 | Phase 17 处置 | 损失 / 变化 |
-| ------ | ------------- | ----------- |
-| idle 半透明星尘叠层 | 下线 | 背景会更"实"，少一些雾状空气感 |
-| `vInFocus` 控 alpha 的窗缘软边 | 下线 | 窗缘过渡更多依赖 idle/active 的尺寸互补；可能变硬 |
-| 多颗 idle 半透明混色 | 下线 | 改为深度正确遮挡，颜色不再靠 alpha 叠亮 |
-| 旧 P10.2 距离暗化 | 被距离-L 取代 | P17.1 先只变暗；P17.2 Hunt 再同步降饱和，视觉更统一但更"物理化" |
+| 原效果                         | Phase 17 处置 | 损失 / 变化                                                     |
+| ------------------------------ | ------------- | --------------------------------------------------------------- |
+| idle 半透明星尘叠层            | 下线          | 背景会更"实"，少一些雾状空气感                                  |
+| `vInFocus` 控 alpha 的窗缘软边 | 下线          | 窗缘过渡更多依赖 idle/active 的尺寸互补；可能变硬               |
+| 多颗 idle 半透明混色           | 下线          | 改为深度正确遮挡，颜色不再靠 alpha 叠亮                         |
+| 旧 P10.2 距离暗化              | 被距离-L 取代 | P17.1 先只变暗；P17.2 Hunt 再同步降饱和，视觉更统一但更"物理化" |
 
 ### 验收
 
@@ -480,10 +480,10 @@ if (selectionPhase === 'idle') {
 | --------------------------------------------------------------- | ---- | ------------------------------------------------------------------------------------------- |
 | Hunt 让低分电影几乎消色 → 用户感觉"颜色少了"                    | 中   | γ Leva 调整；保守起步 γ=0.5（更温和）；mask 单层关闭对照                                    |
 | Perlin frag Hunt 改色后与 idle/active 在 focus 嵌套时连续性破裂 | 低   | mask bit 2 单独控制 Perlin Hunt；如不一致先关 Perlin Hunt（mask=3）                         |
-| `d0` 被误实现为数学 0                                           | 高   | 代码 assert / console.log：`d0 > 0`；以 `zCamDistance` 作为参考距离                           |
-| idle opaque 失去半透明雾感、窗缘变硬                            | 中   | 明确作为 P17 新视觉；用距离-L floor、Hunt γ、`uBgSizeMul` 扫参，不恢复 idle alpha             |
-| 使用欧氏距离导致屏幕边缘同 z 星变暗                             | 中   | 初版使用 Z 轴相机距离；欧氏距离只作为未来视觉实验                                            |
-| idle 写 depth 后前景 idle 遮住后景 active，搜索/聚焦可读性下降   | 中   | P17.1 验收覆盖 search select / focus；必要时压低 selection/focus 态 idle 尺寸或 L             |
+| `d0` 被误实现为数学 0                                           | 高   | 代码 assert / console.log：`d0 > 0`；以 `zCamDistance` 作为参考距离                         |
+| idle opaque 失去半透明雾感、窗缘变硬                            | 中   | 明确作为 P17 新视觉；用距离-L floor、Hunt γ、`uBgSizeMul` 扫参，不恢复 idle alpha           |
+| 使用欧氏距离导致屏幕边缘同 z 星变暗                             | 中   | 初版使用 Z 轴相机距离；欧氏距离只作为未来视觉实验                                           |
+| idle 写 depth 后前景 idle 遮住后景 active，搜索/聚焦可读性下降  | 中   | P17.1 验收覆盖 search select / focus；必要时压低 selection/focus 态 idle 尺寸或 L           |
 | dolly-to-cursor NDC 在边角不稳定                                | 低   | clamp + 速度 magnitude 限制；如发现严重抖动降级为"以屏幕中心为锚点"                         |
 | zCamDistance 运行时变化与 Phase 5.1.5 假设冲突影响 Timeline 等  | 中   | Timeline bridgeZ 已在 Phase 13 改为 `bridgeZ = zCurrent`，与 zCamDistance 解耦；spec 已声明 |
 | Alt + wheel 与浏览器 / OS 快捷键冲突                            | 低   | `e.preventDefault()` + 仅在 canvas 区域触发；mac 系统级 Alt+wheel 无标准映射                |

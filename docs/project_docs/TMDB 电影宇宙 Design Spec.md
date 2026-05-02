@@ -7,7 +7,7 @@
 * **天体体积 (Size)**：映射 vote\_count（评价人数）。  
   * 规则：使用**对数缩放 (Log Scale)**。爆款呈现为巨大恒星，长尾呈现为微小星尘。  
 * **内核亮度（OKLab Lightness / L）**：映射 vote\_average（评分，1–10 分）。  
-  * 规则：宏观星系 shader 内由 **rating→L** 曲线（Phase 10.1：`uLMin`/`uLMax`、分段压缩与非线性）驱动 **OKLab L**，高分片更亮、低分片更暗。**屏幕空间 Bloom** 不是当前产品的默认外观（生产默认不挂 `UnrealBloomPass`；本地可调 `window.__bloom`，见 Tech Spec §1.2）。  
+  * 规则：宏观星系 shader 内由 **rating→L** 曲线（Phase 10.1：`uLMin`/`uLMax`、分段压缩与非线性）得到 **L_star**，再经 **Phase 17 距离-L**（观测深度相对 **`zCamDistance`** 参考面的 **\(2/3\)** 次幂衰减，见《视觉参数总表》）得到 **L_distance**，最后由 **Hunt 效应** 令色度 **C** 随 **L** 同步衰减（**`C_new ∝ (L/uLMax)^γ`**），模拟远处低光照下「变暗且降饱和」的感知；**idle 层不再用片元透明度**表达远近（opaque + depthWrite，见状态机 spec §3.1）。**屏幕空间 Bloom** 不是当前产品的默认外观（生产默认不挂 `UnrealBloomPass`；本地可调 `window.__bloom`，见 Tech Spec §1.2）。  
 * **星系色彩 (Color)**：映射 genres（流派）。  
   * 规则：基础颜色由第一顺位主类别 genres\[0\] 决定，以保持大星团的纯粹色彩秩序。
 
@@ -29,7 +29,7 @@
 
 * 渲染层级：全部 ~60K 影片为**两份** **`InstancedMesh`**（**idle** `Icosahedron(1,0)` + **active** `Icosahedron(1,1)`），同实例矩阵与 hue / vote / size；条带内 **`inFocus`** 用 **smoothstep**（`W = zVisWindow × 0.2`）驱动 **互补尺度**（详见 [`星球状态机 spec.md`](星球状态机%20spec.md) 与 Tech Spec §1.1）。**非**单 `Points` 主路径。  
 * **视距窗口（Phase 5.1.5 · 方案 1）**：在时间轴 Z 上定义闭区间 **`[zCurrent, zCurrent + zVisWindow]`**：  
-  * **`zCurrent`**、**`zVisWindow`**、**`zCamDistance = 30`** 含义不变（见 Tech Spec §1.4.1）。  
+  * **`zCurrent`**、**`zVisWindow`**、**`zCamDistance`**：前两者语义不变；**`zCamDistance` 默认仍为 30**，**Phase 17 起**为**运行时可调**物理后退距离（Alt/Ctrl + 滚轮 dolly，clamp **[2,300]**），详见 Tech Spec §1.4.1 / §1.4.3。  
   * 状态在 Zustand 中维护；**拾取**以 **active mesh** + 世界球逻辑为准（Tech Spec §1.5）。  
 * **与旧 A/B「点大小」的对应（心智模型）**：条带外可见性主要由 **idle** 支路 + **`uBgSizeMul`** 体现；条带内由 **active** 支路 + **`uActiveSizeMul`** 体现；**初值** `uSizeScale=0.3`，`uActiveSizeMul=0.02`，`uBgSizeMul=0.002`（以《视觉参数总表》与 `galaxyMeshes.ts` 为准）。
 
@@ -41,7 +41,7 @@
   * **过渡**：**smoothstep**，非旧版 A/B `step` 硬切。  
 * 摄像机控制（**宏观 idle**；**focus 态**例外见 **§2.2 Phase 13**）：  
   * **摄像机轴线始终与 Z 轴平行**（无旋转、无倾斜；参数永远为 `Euler(0, π, 0, 'YXZ')`）。  
-  * **滚轮**：沿 Z 轴（release\_date 时间纵深）前后穿梭；**宏观 idle 态下实际写入的是 `zCurrent`**，相机位置由 `zCurrent - zCamDistance` 驱动（Phase 5.1.5）。  
+  * **滚轮（双模式，Phase 17）**：**无修饰键**——沿 Z 轴（release\_date 时间纵深）前后穿梭；**宏观 idle 态下写入 `zCurrent`**，相机 **`z = zCurrent - zCamDistance`**（Phase 5.1.5 macro）。**Alt 或 Ctrl + 滚轮**——**dolly-to-cursor**：只改 **`zCamDistance`**（及相机 XY 保持光标下世界点），**不改 `zCurrent`**；**focus 会话**内滚轮（含本模式）**noop**（Tech Spec §1.4.3）。  
   * **拖拽**：仅执行 **truck**（水平平移）与 **pedestal**（垂直平移）——改变 Camera Position，**Rotation 恒定不变**；XY 位置被 `xy_range + padding` 约束。
 
 ### **2.2 微观聚焦状态 (Selected · Phase 13 起含「邻域探索」)**

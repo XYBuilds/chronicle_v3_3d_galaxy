@@ -36,8 +36,8 @@ inFocus = smoothstep(zLo - W, zLo, aZ) × (1 - smoothstep(zHi, zHi + W, aZ))
 | 维度 | 约定 |
 |------|------|
 | **z 范围** | 全 `aZ`；视觉上条带外更小更淡（由 `inFocus` 低驱动 `sIdle`） |
-| **大小** | `sIdle` 见上；P8.4 mesh：`IcosahedronGeometry(1, 0)`，材质 `transparent: true`、`depthWrite: false` |
-| **色彩** | P8.1 后 hue + uniform `uLMin/uLMax/uChroma`（OKLab→sRGB）；本 spec 不绑死 L/C 数值 |
+| **大小** | `sIdle` 见上；P8.4 mesh：`IcosahedronGeometry(1, 0)`；**Phase 17 起**：idle 材质 **`transparent: false`**、**`depthWrite: true`**、**`depthTest: true`**（opaque 深度路径，修复同类半透明排序遮挡） |
+| **色彩** | **Phase 17 起**：`vote_average` 经 **P10.1** 得 **`L_star`** → **距离-L** 得 **`L_distance`**（Z 轴观测距离与 `uZCamDistance` 参考面，公式见《视觉参数总表》§2；**不**再用片元 alpha 表达远近）→ **Hunt** 色度衰减 **`C_new = C_base × clamp(L_distance / uLMax, 0, 1)^γ`**（`C_base` 即 `uChroma` 标量 × hue 的 a,b 分量；`γ` = `uHuntGamma`）；再 OKLab→sRGB。**旧 P10.2** `uDistanceFalloffK` / `uDistanceFalloffMode` **不再**参与 idle 颜色或 alpha（Phase 17 废弃） |
 | **可交互性** | 不作为主拾取层（P8.4：Raycaster **仅** active mesh） |
 | **进入/退出** | 随 `uZCurrent` / `aZ` 连续变化；无独立时间轴动画 |
 
@@ -47,7 +47,7 @@ inFocus = smoothstep(zLo - W, zLo, aZ) × (1 - smoothstep(zHi, zHi + W, aZ))
 |------|------|
 | **z 范围** | `inFocus > 0` 的条带及其 ±W 过渡区（select 会话下由 mask 重写，见 **§3.6**） |
 | **大小** | `sActive` 见上；mesh：`IcosahedronGeometry(1, 1)`，**`alphaTest: 0.01`**；**`transparent` / `depthWrite`** 运行时以 **§3.2.1** 双路径为准（`galaxyMeshes.ts` 构造初值为路径 **B**） |
-| **色彩** | 与 idle 同源 hue/L/C；当前 `galaxyActive.frag` 为 **vColor 直通**；Lambert + rim 为计划内增强（原 P8.5 范围，已改轨以源码为准） |
+| **色彩** | 与 idle 同源 hue/L/C；**Phase 17 起** active 顶点路径同样接入 **Hunt**（与 idle 共享 `uHuntGamma` / `uHuntApplyMask` 的 **active 位**）；当前 `galaxyActive.frag` 为 **vColor 直通**；Lambert + rim 为计划内增强（原 P8.5 范围，已改轨以源码为准） |
 | **可交互性** | 主拾取；可选 `inFocus > 0.5` 门控 + 第二近邻容差（由 P8.2 结论定） |
 | **进入/退出** | 连续，与 idle 互补叠加；**不得**在过渡区出现「双实心球」过曝（P8.5 硬验收） |
 
@@ -83,21 +83,21 @@ inFocus = smoothstep(zLo - W, zLo, aZ) × (1 - smoothstep(zHi, zHi + W, aZ))
 | **可交互性** | 抽屉/详情；**邻域内 active** 可点击**切换 focus**（仍经 Phase 11.6 拾取分流与 Perlin 球优先级）；**退出 focus** 仅 **ESC**、档案抽屉关闭、搜索栏清除（**X**）——**不**再支持「点击画布空白」退出（与 Design Spec §4.6 一致） |
 | **进入/退出** | 相机动画时长沿用现 `SELECT_MS` / `DESELECT_MS`（数值以《视觉参数总表》为准）；P8.4 起 `flyToFocus` 使用**物理距离常数** `FOCUS_CAM_DIST`；**Phase 13 起**进出 focus 的相机位姿与 **`uFocusCameraBlend`** 等通道由统一 **`transitionDriver`**（`focusDriver.progress`）驱动；**selected** 段为**轨道相机**（§3.4.6） |
 
-#### 3.4.1 focus 视觉降级（Phase 11.2 · **idle 层**）
+#### 3.4.1 focus 视觉降级（Phase 11.2 · **idle 层**；**Phase 17 默认禁用**）
 
 **范围**：仅 **`galaxyIdle.vert.glsl`（背景 idle 球）**。**active** 层的 chroma/L **不因本条改变**；非目标 **active** 的视觉弱化由 **§3.4.3（P11.1）** 的片元 **alpha** 与 **`uFocusCameraBlend`** 负责。
 
 当 `uFocusedInstanceId >= 0` 且当前实例**不是**焦点实例时，在 idle 顶点着色器内对已有 **`L_base` / `C_base`** 做**乘子**混合（非焦点 idle「降饱和 / 可选压亮度」）；**焦点实例**在 idle 上 **`sIdle = 0`**（双 mesh 常规策略），本条主要针对**其余** idle。
 
 - 令 `dimEligible = (uFocusedInstanceId >= 0) && !isFocused`，`dimMix = dimEligible ? 1.0 : 0.0`（mode=0 下；mode=1 见下节；shader 内对 `uFocusDimMode` 0/1 暂与 0 等价至 `selectionMask` 落地）。
-- `L_base`：与 `galaxyIdle.vert.glsl` 中 **P10.1** 对 `voteNorm` 的压缩 + `pow` + `mix(uLMin, uLMax, ·)` 一致（**非**简单 `mix(voteNorm)`）。
+- `L_base`：与 `galaxyIdle.vert.glsl` 中 **P10.1** 对 `voteNorm` 的压缩 + `pow` + `mix(uLMin, uLMax, ·)` 一致（**非**简单 `mix(voteNorm)`）；**Phase 17** 起 idle 主视觉的「远处变暗 / 降饱和」由 **§3.1** 的 **距离-L + Hunt** 承担。
 - `C_base = uChroma`（球体色度标量，与 a,b 的 `cos/sin(hue)` 相乘）。
 - **降级后（乘子，非绝对 L）**：
   - `L = mix(L_base, L_base * uFocusDimL, dimMix)`
   - `C = mix(C_base, C_base * uFocusDimChroma, dimMix)`
   - 再 `a = C*cos(hue)`，`b = C*sin(hue)`，OKLab→sRGB。
 
-**定稿默认**（`galaxyMeshes.ts` / 实施报告）：`uFocusDimChroma = 0.7`（相对原 chroma 的倍率）、`uFocusDimL = 1`（相对 `L_base` 的倍率；为 **1** 时表示 focus 时仅靠饱和度弱化、**不压明度**）。退出 focus（`uFocusedInstanceId === -1`）后无 `dimMix`。
+**定稿默认**（`galaxyMeshes.ts` / 实施报告）：**Phase 17 起** **`uFocusDimChroma = 1.0`**、**`uFocusDimL = 1.0`**——乘子等价于**关闭**本条路径，避免与 Hunt 双重压 C/L；Leva / `__galaxyColor` 仍可调。**Phase 11 历史默认**曾为 `uFocusDimChroma = 0.7`、`uFocusDimL = 1`；spec 标注 **Phase 17 起 Hunt 接管「非焦点背景相对变暗/降饱和」语义，P11.2 接口保留、默认乘子 = 1**。退出 focus（`uFocusedInstanceId === -1`）后无 `dimMix`。
 
 #### 3.4.2 focus 暗化 vs selection 高亮（`uFocusDimMode` 双开关）
 
@@ -131,7 +131,7 @@ inFocus = smoothstep(zLo - W, zLo, aZ) × (1 - smoothstep(zHi, zHi + W, aZ))
 - **朝向**：恒 **`lookAt(pivot)`**。
 - **`selecting` / `deselecting`**：与抽屉/非目标 alpha 等一致，经 **`transitionDriver`** 同时对**世界坐标位置**（`lerpVectors`）与**四元数**（`slerp`）插值，自宏观机位过渡到轨道机位或反向。
 - **`selectionPhase === 'idle'`**（无 focus）：恢复 **`GALAXY_CAMERA_EULER`**；**`focusOrbit.yaw` / `focusOrbit.pitch` 重置为 `0`**（**不含**径向 **`r`** 字段）。
-- **滚轮**：整条 focus 相关相位（与单片 `selectedMovieId` 关联的 **`selecting` / `selected` / `deselecting`**）内滚轮 **noop**（不推进 `zCurrent`、不 dolly `camera.position.z`、不改变 standoff），以保证 Perlin 球屏幕尺寸严格映射 **`vote_count`**（见 Tech Spec §1.4.3）。
+- **滚轮**：整条 focus 相关相位（与单片 `selectedMovieId` 关联的 **`selecting` / `selected` / `deselecting`**）内滚轮 **noop**（不推进 `zCurrent`、不 dolly `camera.position.z`、不改变 standoff），以保证 Perlin 球屏幕尺寸严格映射 **`vote_count`**（见 Tech Spec §1.4.3）。**Phase 17**：含 **Alt / Ctrl + 滚轮** 的 **dolly-to-cursor**（改 `zCamDistance`）在 focus 态同样 **noop**（与 P13.3 一致，保护 Perlin 距离恒定）。
 
 ### 3.5 Perlin 球 · 阶梯地形（Phase 11.3 起）
 
@@ -144,7 +144,7 @@ Perlin focus 球在片元侧按 **`vNoise`** 与 **`uThresh[0..K−2]`**（**K**
 #### 3.5.1 Perlin 片元着色与光照（Phase 11.4 · **已实装**）
 
 - **法线**：屏幕空间 **`cross(dFdx(vWorldPos), dFdy(vWorldPos))`** 与顶点输出的 **`vGeomNormalWorld`** 按 **`uFlatShadingMix`** 混合，再算 Lambert **`dot(N, uLightDir)`**。
-- **底色**：每档 **`uHue[i]`** + 运行时 **`uPerlinL`** + **`uPerlinChroma`**，在 OKLab 平面用 **cos/sin(hue)** 配 **L**（与 idle/active 语义一致）；线性 RGB **clamp** 至 **[0,1]** 后再 **sRGB**，避免低 **L** / 高 **C** 出色域导致片元异常着色。
+- **底色**：每档 **`uHue[i]`** + 运行时 **`uPerlinL`** + **`uPerlinChroma`**，在 OKLab 平面用 **cos/sin(hue)** 配 **L**（与 idle/active 语义一致）；线性 RGB **clamp** 至 **[0,1]** 后再 **sRGB**，避免低 **L** / 高 **C** 出色域导致片元异常着色。**Phase 17**：在合成 `hueToOkSrgb(...)` 前可先令 **`C_new = uPerlinChroma × clamp(uPerlinL / uLMax, 0, 1)^γ`**（`γ` = **`uHuntGamma`**，与双 mesh 共享）；**仅当 `uHuntApplyMask` 的 Perlin 位（约定：bit 2，即 `mask & 4 != 0`）置位时**应用 Hunt；idle / active 分别为 **bit 0 / bit 1**，彼此独立可调。
 - **vote→L**：**`vote_average`** 经与 **`galaxyIdle.vert.glsl`** 相同的 **P10.1** 映射写入 **`uPerlinL`**；入场系数快照来自 **`galaxy.idleMaterial.uniforms`**（与 `scene.ts` **`beginSelect`** 一致）。
 - **hue**：**主 genre**（`movie.genres` 首个非空）若 JSON 含 **`movie.genre_hue`** 则该档直接用；其余档用 **`genreHueForGenreName`**。palette / `genre_hue` 的生成顺序以 [`TMDB 电影宇宙 Data Pipeline.md`](./TMDB%20电影宇宙%20Data%20Pipeline.md) 的 frozen palette 为准，前端不得自行重排。
 - **光照定稿**：**`uLightDir = normalize(0.5, 0.5, -0.1)`**，**`uAmbient = 0.95`**，**`uDiffuse = 0.55`**，**`uFlatShadingMix = 0.8`**（详见《视觉参数总表》§4）。
@@ -213,3 +213,4 @@ Perlin focus 球在片元侧按 **`vNoise`** 与 **`uThresh[0..K−2]`**（**K**
 | 2026-04-30 | **Phase 13 P13.0**：§3.4 表修订（邻域球、轨道相机、退出路径）；新增 **§3.4.5** 邻域 mask、**§3.4.6** 轨道相机；§3.6 **`uSelectionMode = 2`** 与 **focus×select（D1）** mask 替换语义 |
 | 2026-05-01 | **Phase 13 P13.7**：文档与 Phase 8 基线收口；§3.4.3 **`uFocusNonTargetActiveAlpha`** 默认与代码对齐为 **0.08**（P13.6）；性能三线未重录时见 [`Phase 8 基线 P8.0 性能与 P8.4 准入.md`](../benchmarks/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md) **`## P13 出口`** |
 | 2026-05-02 | **Phase 16 P16.4**：[`Phase 8 基线`](../benchmarks/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md) 新增 **`## P16 出口`**（复跑 §P12 **B** 压力片段 `Drama` / Christopher Nolan + 手测回归清单）；与 §3.2.1 active 双路径验收交叉引用 |
+| 2026-05-03 | **Phase 17 P17.0（spec）**：§3.1 idle 色彩链改为 **L_star → 距离-L → Hunt** + opaque/depthWrite；§3.2 active 加 Hunt；§3.4.1 P11.2 **默认 1.0/1.0** 与 Hunt 语义分工；§3.5.1 Perlin Hunt + **`uHuntApplyMask` bit2**；§3.4.6 focus 滚轮 noop 含 Alt/Ctrl dolly |

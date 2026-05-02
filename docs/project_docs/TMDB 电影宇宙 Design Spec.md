@@ -184,6 +184,7 @@
 
 * **位置**：`fixed` 贴顶居中，`top-4`、`left-1/2` + `-translate-x-1/2`；`z-index` 高于画布且低于系统级 modal（实现约定 **`z-[90]`**）；容器 **`max-w-lg`**、水平内边距防贴边。
 * **分段**：三档 **`movie` / `person` / `genre`**（segmented control：`Tabs` 或三键 ToggleGroup）。**切换分段时清空** query + 联想，避免跨模式残留。
+* **输入框 placeholder（Phase 16 · HUD 文案 SSOT）**：面向用户的占位符以 **`frontend/src/lib/locales/en.json`** 为键值 SSOT，经 **`strings.ts`** 聚合为 **`STRINGS.searchBar`**；组件按当前分段 / 索引可用性切换，**不**在 JSX 内写死。**三档精确字符串（D1）**：**`movie`** → `Search movie titles…`；**`person`** → `Director / Producer / Cast …`；**`genre`** → `Drama / Comedy / Thriller …`。未点分段、或实现将「空闲」视为 movie 档时，取 **movie** 档文案。**`meta.has_search_index !== true`** 时输入 **disabled**，占位符为 **`Search index unavailable`**。切换分段时 placeholder **立即**随控属性更新（无需过渡动画）。
 * **输入框**：单行文本；右侧 **清除按钮（X）**，一键清空 query 并收起联想；点击 X **同时退出**当前 select 会话（清 `selectionIds`，见 §4.7）。
 * **联想面板**：输入框下方浮动列表（`Popover` 或自建 `<ul>`）。
 
@@ -209,7 +210,7 @@
 * **格式化（Format）**：行内布局语义为 **`Title`** + **`原始标题`** + **`(YYYY)`** + **`Genre0`**（即 **`genres[0]`**；`YYYY` 取 `release_date` 前 4 字符）。  
   * **去重**：若 **`original_title`** 与 **`title`** 相同或为空，**不再重复**展示原始标题段。
 * **高亮（Highlight）**：用忽略大小写正则在最终展示字符串上匹配 query，命中子串用语义 mark（`<mark>` + `bg-primary/30` 等）包裹。
-* **点击行为**：`useGalaxyInteractionStore.setState({ selectedMovieId: id })`，复用现有 focus 链路；**不进入** `select` 会话；输入框 query 替换为该电影联想格式化标签（`Title [Original] (YYYY) Genre0`）。
+* **点击行为**：`useGalaxyInteractionStore.setState({ selectedMovieId: id })`，复用现有 focus 链路；**不进入** `select` 会话；输入框 query 替换为该电影联想格式化标签（`Title [Original] (YYYY) Genre0`）。**`zCurrent`（Timeline）**：上述 `setState` 触发 **Phase 13.4** 既定过渡——**`zCurrent` 自动对齐到该片 `movie.z`**（与相机飞入等同节奏的 **`transitionDriver`** 标量）；搜索层 **无需**再写独立 zCurrent 写入逻辑。
 
 ### **4.4 联想：人名（`person`）**
 
@@ -219,7 +220,7 @@
 * **排序**：第一维度 prefix **优于** contains；第二维度为 **`movie_ids.length`** **降序**（参演越多越靠前）。
 * **格式**：展示 **全名**（索引内 **`full`**）；可选追加 **`role_mask`** 角色标签（位定义见 Tech Spec §4.5）。
 * **高亮**：在 `full` 上用同一忽略大小写正则匹配 query，规则同 §4.3。
-* **点击行为**：写入 store —— `searchMode='person'`、`selectionIds=people[name].movie_ids`、**`selectionPersonKey=name`**（normalized key，供 `scene.ts` 在 RAF 中读取该人 `movie_roles` 拆三组连线，见 §4.4a）、`selectedMovieId=null`、`constellationEnabled` 走 Leva 默认（默认 `true`）；输入框 query 替换为 `people[name].full`。
+* **点击行为**：写入 store —— `searchMode='person'`、`selectionIds=people[name].movie_ids`、**`selectionPersonKey=name`**（normalized key，供 `scene.ts` 在 RAF 中读取该人 `movie_roles` 拆三组连线，见 §4.4a）、`selectedMovieId=null`、`constellationEnabled` 走 Leva 默认（默认 `true`）；输入框 query 替换为 `people[name].full`。**`zCurrent`（Timeline）**：与写入 `selectionIds` / `searchMode='person'` **同帧**，**额外**驱动 **`zCurrent`** 经与 **Phase 13.1** **`focusDriver` / `zCurrentDriver`** 同节奏的 **`transitionDriver` 曲线**（**`700 ms`**、**`easeOutCubic`**）渐变到 **`min(movie.z over selectionIds)`**（选区内按发行年**最早**的 active 所在 Z，即「最早的 active 星星」语义）。若 `selectionIds` 为空（不应发生）则 **noop**（实现可 `console.warn`）。
 
 ### **4.4a 人名星座连线（Phase 12.7 · 三组职位链）**
 
@@ -240,7 +241,7 @@
 * **过滤**：对 **全部 genre**（与 `meta.genre_palette` 键集合一致）做忽略大小写**前缀**与**包含**匹配。
 * **排序**：第一维度 prefix **优于** contains；**第二维度按该 genre 在数据集中的 `count`（电影数）降序**（管线侧产出，见 Tech Spec §4.5）。
 * **格式**：展示 genre 字符串；高亮规则同 §4.3。
-* **点击行为**：`searchMode='genre'`、`selectionIds = movies 中含该 genre 的 id 列表`、**`selectionPersonKey=null`**（清掉人名上下文）、`selectedMovieId=null`、连线不开启；输入框 query 替换为 `GenreName (count)`。
+* **点击行为**：`searchMode='genre'`、`selectionIds = movies 中含该 genre 的 id 列表`、**`selectionPersonKey=null`**（清掉人名上下文）、`selectedMovieId=null`、连线不开启；输入框 query 替换为 `GenreName (count)`。**`zCurrent`（Timeline）**：**不修改** **`zCurrent`**，保持用户点击联想前的宏观时间关注点；与《星球状态机 spec》**§3.6** 一致——select 会话下 **`viswindow` 条带对 active 集合无视觉反馈**，不要求 Timeline 为流派大集合「滚动到条带中心」。
 
 ### **4.6 ESC 焦点栈（全局 keydown，自上而下匹配第一级即处理并 `preventDefault`）**
 
@@ -266,3 +267,7 @@
 
 * `meta.has_search_index !== true` 时：搜索框 **disabled**；即便用户尝试切换 `person` / `genre` 分段也禁用提示。
 * 即使无 `title_normalized`，电影名搜索仍可通过运行时对 `title` / `original_title` 做忽略大小写子串实现，**作为最简退化**；但此时不保证多语言 fold（如重音去敏）。
+
+### **4.9 已知限制（Phase 16）**
+
+* **person select 下 active 的屏幕可读性**：多 active 跨越较大 Z 范围时，因宏观相机距离、**P11.1** 非目标 active 的 alpha 渐变等，部分 distant active 在屏幕上的**投影尺度与对比**可能不如用户直觉中的「每颗星都同样醒目」。**A.5.1.3 决策**：本阶段**不**立项修复人名模式下 active 球体「屏幕大小不可读」类问题（工程量与方案优雅性权衡，**保留现状**）。

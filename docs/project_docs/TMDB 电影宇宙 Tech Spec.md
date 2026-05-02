@@ -135,7 +135,7 @@ Output
 3. **parse** — `JSON.parse` + 类型校验。  
 4. **index** — **`galaxy_search_index.json.gz`** hydrate（`meta.has_search_index === true` 时执行；为 **`false`** 时本阶段直接 **`status='skipped'`**，不阻塞）。
 
-四阶段**全部完成**（含 **`skipped`**）后进入 **Cover-await-start** 状态：保留 Loading **同一覆盖层**，**隐藏** Spinner，显示 **Start** CTA。用户**点击 Start** 后再 **mount Three.js 场景**（首次创建 `WebGLRenderer` 与 GPU buffer）。失败处理：
+四阶段**全部完成**（含 **`skipped`**）后进入 **Cover-await-start** 状态：保留 Loading **同一覆盖层**；**不**再使用独立 **Spinner** 与进度区**标题行**（加载阶段与 Cover 均**以四阶段 `ol` + 进度条**为主叙事；索引 loading 时可在条下显示 **`footerMessage`**）。**Start** 按钮置于视口**下方**；用户**点击 Start**（或聚焦按钮后 **Enter** / **Space**）后再 **mount Three.js 场景**（首次创建 `WebGLRenderer` 与 GPU buffer）。**`App.tsx`** 以本地 **`started`** 状态门闩：仅 **`started === true`** 时挂载主场景。失败处理：
 
 * **`galaxy_data`** 的 download / decompress / parse **任一失败** → **错误页 + Retry**（与现状一致）；**不**进入 Cover。  
 * **`galaxy_search_index`** 失败 → 第四阶段标 **`Failed`**，用户仍**可点 Start** 进入应用；搜索框 **disabled**（与 Phase 12 §4.8「无索引退化」一致）。

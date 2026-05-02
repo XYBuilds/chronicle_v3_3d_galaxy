@@ -4,6 +4,8 @@
 关联计划：`.cursor/plans/phase_15_cover_and_loading_502f5515.plan.md`（`p151-load-orchestration`：**completed**）。  
 上层产品叙述：Phase 15 总览（首屏四阶段 + Cover-with-Start）；本报告**仅覆盖 P15.1 已交付范围**。
 
+> **与 P15.2 的关系**：P15.2 已落地 **`started`** 状态与「用户点 **Start** 后才 **`mountGalaxyScene`**」。本文件 §2 表中 **D5–D6** 保留 **P15.1 当时**的口径（main / 自动挂载）；**当前**门闩与 UI 定稿以 **`docs/reports/Phase 15.2 P15.2 Cover Start 与首屏 UI 定稿 实施报告.md`** 及《Tech Spec》§1.4.7 为准。
+
 ---
 
 ## 1. 背景与范围

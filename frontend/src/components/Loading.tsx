@@ -1,5 +1,4 @@
 import type { GalaxyGzipProgress } from '@/data/loadGalaxyGzip'
-import { Spinner } from '@/components/ui/spinner'
 import { STRINGS } from '@/lib/strings'
 import { cn } from '@/lib/utils'
 
@@ -20,7 +19,7 @@ export interface LoadingProps {
   gzipDone?: boolean
   /** Search index hydrate status (fourth step indicator). */
   indexStatus?: LoadingIndexStatus
-  /** P15.2 — when `await-start`, spinner hidden + Start CTA shown. */
+  /** P15.2 — when `await-start`, Start CTA pinned to bottom of viewport. */
   mode?: LoadingMode
   /** P15.2 — Start button click handler. */
   onStart?: () => void
@@ -75,8 +74,7 @@ function indexRowLabel(indexStatus: LoadingIndexStatus): string {
 }
 
 /**
- * Full-screen centered loading overlay (shadcn Spinner) with gzip load progress
- * and optional fourth step for search index hydrate (Phase 15).
+ * Full-screen loading overlay: gzip + search-index progress (four steps) and optional Cover Start.
  */
 export function Loading({
   className,
@@ -111,83 +109,78 @@ export function Loading({
       aria-busy={busy}
       aria-label={label}
       aria-labelledby={mode === 'await-start' ? 'cover-title' : undefined}
-      aria-describedby={mode === 'await-start' && onStart ? 'cover-subtitle' : undefined}
       className={cn(
-        'fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-background/80 px-6 text-foreground backdrop-blur-sm',
+        'fixed inset-0 z-50 flex min-h-0 flex-col bg-background/80 text-foreground backdrop-blur-sm',
         className,
       )}
     >
-      {mode === 'await-start' ? (
-        <h1 id="cover-title" className="sr-only">
-          {STRINGS.cover.title}
-        </h1>
-      ) : null}
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 px-6">
+        {mode === 'await-start' ? (
+          <h1 id="cover-title" className="sr-only">
+            {STRINGS.cover.title}
+          </h1>
+        ) : null}
 
-      {mode === 'loading' ? <Spinner className="size-10 text-primary" aria-hidden /> : null}
-      <p className="text-sm text-muted-foreground">{label}</p>
-
-      {showSteps ? (
-        <div className="flex w-full max-w-md flex-col gap-3">
-          <ol className="flex justify-between gap-1 text-[11px] text-muted-foreground sm:gap-2 sm:text-xs">
-            <li
-              className={cn(
-                'flex-1 text-center',
-                gzipPhaseActive(progress, 'download', effectiveGzipDone) && 'font-medium text-foreground',
-                gzipPhaseDone(progress, 'download', effectiveGzipDone) && 'text-primary',
-              )}
-            >
-              {STRINGS.loading.phaseDownload}
-            </li>
-            <li
-              className={cn(
-                'flex-1 text-center',
-                gzipPhaseActive(progress, 'decompress', effectiveGzipDone) && 'font-medium text-foreground',
-                gzipPhaseDone(progress, 'decompress', effectiveGzipDone) && 'text-primary',
-              )}
-            >
-              {STRINGS.loading.phaseDecompress}
-            </li>
-            <li
-              className={cn(
-                'flex-1 text-center',
-                gzipPhaseActive(progress, 'parse', effectiveGzipDone) && 'font-medium text-foreground',
-                gzipPhaseDone(progress, 'parse', effectiveGzipDone) && 'text-primary',
-              )}
-            >
-              {STRINGS.loading.phaseParse}
-            </li>
-            <li
-              className={cn(
-                'flex-1 text-center',
-                indexActive && 'font-medium text-foreground',
-                indexDoneStyle && 'text-primary',
-                indexSkippedStyle && 'text-muted-foreground opacity-70',
-                indexErrorStyle && 'font-medium text-destructive',
-              )}
-            >
-              {indexRowLabel(indexStatus)}
-            </li>
-          </ol>
-          <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-            <div
-              className={cn(
-                'h-full rounded-full bg-primary transition-[width] duration-150 ease-out',
-                indeterminate && 'animate-pulse',
-              )}
-              style={{ width: `${Math.round(widthPct)}%` }}
-            />
+        {showSteps ? (
+          <div className="flex w-full max-w-md flex-col gap-3">
+            <ol className="flex justify-between gap-1 text-[11px] text-muted-foreground sm:gap-2 sm:text-xs">
+              <li
+                className={cn(
+                  'flex-1 text-center',
+                  gzipPhaseActive(progress, 'download', effectiveGzipDone) && 'font-medium text-foreground',
+                  gzipPhaseDone(progress, 'download', effectiveGzipDone) && 'text-primary',
+                )}
+              >
+                {STRINGS.loading.phaseDownload}
+              </li>
+              <li
+                className={cn(
+                  'flex-1 text-center',
+                  gzipPhaseActive(progress, 'decompress', effectiveGzipDone) && 'font-medium text-foreground',
+                  gzipPhaseDone(progress, 'decompress', effectiveGzipDone) && 'text-primary',
+                )}
+              >
+                {STRINGS.loading.phaseDecompress}
+              </li>
+              <li
+                className={cn(
+                  'flex-1 text-center',
+                  gzipPhaseActive(progress, 'parse', effectiveGzipDone) && 'font-medium text-foreground',
+                  gzipPhaseDone(progress, 'parse', effectiveGzipDone) && 'text-primary',
+                )}
+              >
+                {STRINGS.loading.phaseParse}
+              </li>
+              <li
+                className={cn(
+                  'flex-1 text-center',
+                  indexActive && 'font-medium text-foreground',
+                  indexDoneStyle && 'text-primary',
+                  indexSkippedStyle && 'text-muted-foreground opacity-70',
+                  indexErrorStyle && 'font-medium text-destructive',
+                )}
+              >
+                {indexRowLabel(indexStatus)}
+              </li>
+            </ol>
+            <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+              <div
+                className={cn(
+                  'h-full rounded-full bg-primary transition-[width] duration-150 ease-out',
+                  indeterminate && 'animate-pulse',
+                )}
+                style={{ width: `${Math.round(widthPct)}%` }}
+              />
+            </div>
+            {footerMessage ? (
+              <p className="text-center text-xs text-muted-foreground">{footerMessage}</p>
+            ) : null}
           </div>
-          {footerMessage ? (
-            <p className="text-center text-xs text-muted-foreground">{footerMessage}</p>
-          ) : null}
-        </div>
-      ) : null}
+        ) : null}
+      </div>
 
       {mode === 'await-start' && onStart ? (
-        <div className="flex flex-col items-center gap-3">
-          <p id="cover-subtitle" className="text-sm text-muted-foreground">
-            {STRINGS.cover.subtitle}
-          </p>
+        <div className="flex shrink-0 justify-center px-6 pb-10 pt-4">
           <button
             type="button"
             autoFocus

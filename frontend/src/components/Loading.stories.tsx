@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 
 import { Loading } from './Loading'
+import { STRINGS } from '@/lib/strings'
 
 const meta: Meta<typeof Loading> = {
   title: 'Loading',
@@ -56,5 +57,41 @@ export const PhaseSearchIndexFailed: Story = {
     progress: null,
     gzipDone: true,
     indexStatus: 'error',
+  },
+}
+
+/** Cover — fourth step complete (ready); spinner hidden, Start CTA (matches App await-start). */
+export const CoverAwaitStart: Story = {
+  args: {
+    mode: 'await-start',
+    label: STRINGS.cover.title,
+    progress: null,
+    gzipDone: true,
+    indexStatus: 'ready',
+    onStart: () => {},
+  },
+}
+
+/** Cover — bundle without search index (fourth step skipped). */
+export const CoverIndexSkipped: Story = {
+  args: {
+    mode: 'await-start',
+    label: STRINGS.cover.title,
+    progress: null,
+    gzipDone: true,
+    indexStatus: 'skipped',
+    onStart: () => {},
+  },
+}
+
+/** Cover — search index hydrate failed; user can still enter (search disabled at runtime). */
+export const CoverIndexFailed: Story = {
+  args: {
+    mode: 'await-start',
+    label: STRINGS.cover.title,
+    progress: null,
+    gzipDone: true,
+    indexStatus: 'error',
+    onStart: () => {},
   },
 }

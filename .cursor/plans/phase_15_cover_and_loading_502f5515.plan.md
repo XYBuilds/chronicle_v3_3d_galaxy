@@ -10,7 +10,7 @@ todos:
     status: completed
   - id: p152-cover-start
     content: P15.2 Cover 模式 + Start 按钮：Loading.tsx mode='await-start' 隐 spinner / 显 Start CTA；App.tsx 增 started state，3D scene mount 仅在 setStarted(true) 后发生；autoFocus 按钮与 Enter/Space 键盘可达；Storybook 3 个 Cover stories（ready/skipped/failed）
-    status: pending
+    status: completed
   - id: p153-doc-sync
     content: P15.3 文档同步 + 回归：Tech Spec §1.4.7 / Design Spec §3.5 / PRD §3.1 写入；实施报告；DevTools 验收 3D mount 时机；galaxy-error / index-error / index-skipped 三条异常路径手测
     status: pending

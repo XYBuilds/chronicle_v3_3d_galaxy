@@ -10,7 +10,6 @@
   },
   "cover": {
     "title": "Ready",
-    "subtitle": "Press Start to enter the galaxy. Graphics initialize on first click.",
     "start": "Start",
     "startAriaLabel": "Start — enter the galaxy and initialize graphics"
   },

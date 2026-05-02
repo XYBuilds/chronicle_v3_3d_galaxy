@@ -15,7 +15,7 @@ todos:
     content: P16.3 active 材质双路径切换（修 genre 深度 bug）：scene.ts RAF 检测 inSelectOnly → transparent/depthWrite 切换 + needsUpdate；P11.1 alpha 渐变路径在 focus / focus嵌套下保留；备选方案 B（双 mesh）仅当主方案出问题时启用
     status: completed
   - id: p164-doc-sync
-    content: P16.4 文档同步 + 回归：Design Spec §4 · 状态机 spec §3.2.1 · 视觉参数总表 · Tech Spec §1.1 同步；Phase 8 基线 P16 出口（重跑 Drama / Christopher Nolan 压力片段）；实施报告；三路径联动 × focus 嵌套 × 退出出栈手测
+    content: P16.4 文档同步 + 回归：Design Spec §4 · 状态机 spec §3.2.1 · 视觉参数总表 · Tech Spec §1.1 同步；Phase 8 基线 P16 出口（重跑 Drama / Christopher Nolan 压力片段）；三路径联动 × focus 嵌套 × 退出出栈手测
     status: pending
 isProject: false
 ---
@@ -268,7 +268,6 @@ if ((mat.transparent !== !wantOpaque) || (mat.depthWrite !== wantOpaque)) {
 - [视觉参数总表 §2](docs/project_docs/视觉参数总表.md) active 材质行
 - [Tech Spec §1.1](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md) 双路径说明
 - [Phase 8 基线](docs/benchmarks/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md) 加 `## P16 出口` 节，重跑 P12 出口压力片段（搜 `Drama` 大集合 + 搜 `Christopher Nolan`）
-- 实施报告 `Phase 16.x ... 实施报告.md`（建议合并为单文件）
 - 回归清单：
   - 搜电影 / 人名 / genre 三条路径联想 + zCurrent 行为符合 D2/D3/D4
   - genre `Drama` 全集深度顺序正确

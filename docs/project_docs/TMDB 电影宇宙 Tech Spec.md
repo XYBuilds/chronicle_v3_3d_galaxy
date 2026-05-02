@@ -126,11 +126,19 @@ Output
 
 **非目标 / 禁止**：任何将目测 `-15° / -7.5° / 0.26180 / 0.13090` 等旋转值写入 `GALAXY_CAMERA_EULER` 或相机常量的"症状掩盖"式修复。
 
-#### **1.4.7 首屏加载体验**
+#### **1.4.7 首屏加载体验（Phase 15）**
 
-* 显示**全屏 Loading**（Spinner + 可选进度：gzip 下载 / 解压或透明解码 / JSON 解析阶段文案）。  
-* 前端必须**全量解析**宇宙数据（默认 **`galaxy_data.json.gz`**，见 §5.1）完毕后，才初始化 Three.js 场景并移除 Loading 覆盖层。  
-* 加载失败时提供**错误提示与重试**（Phase 7 自用验收路径）。
+首屏加载分为**四阶段**（与 `Loading.tsx` 进度 `ol` 一一对应）：
+
+1. **download** — `fetch` **`galaxy_data.json.gz`**（HTTP 字节流；进度由 `Content-Length` / 已下载字节驱动）。  
+2. **decompress** — `DecompressionStream` 解压（进度仅阶段切换，无字节级）。  
+3. **parse** — `JSON.parse` + 类型校验。  
+4. **index** — **`galaxy_search_index.json.gz`** hydrate（`meta.has_search_index === true` 时执行；为 **`false`** 时本阶段直接 **`status='skipped'`**，不阻塞）。
+
+四阶段**全部完成**（含 **`skipped`**）后进入 **Cover-await-start** 状态：保留 Loading **同一覆盖层**，**隐藏** Spinner，显示 **Start** CTA。用户**点击 Start** 后再 **mount Three.js 场景**（首次创建 `WebGLRenderer` 与 GPU buffer）。失败处理：
+
+* **`galaxy_data`** 的 download / decompress / parse **任一失败** → **错误页 + Retry**（与现状一致）；**不**进入 Cover。  
+* **`galaxy_search_index`** 失败 → 第四阶段标 **`Failed`**，用户仍**可点 Start** 进入应用；搜索框 **disabled**（与 Phase 12 §4.8「无索引退化」一致）。
 
 ### **1.5 交互拾取（Phase 8.4：active `InstancedMesh` + 世界球；Phase 12：search 多选与 mask 对齐）**
 

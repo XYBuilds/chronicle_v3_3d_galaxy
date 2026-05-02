@@ -119,7 +119,7 @@ function makeSharedUniforms(
       /** P11.1 / P13.6 — non-target active alpha at focus blend=1 (tuned down from 0.1 for dense neighbor sphere). */
       uFocusNonTargetActiveAlpha: { value: 0.08 },
       /** P17.2+ — focus neighborhood: hovered active alpha = max(dimAlpha, this); default 1 = fully opaque on hover. */
-      uFocusHoveredActiveAlpha: { value: 1.0 },
+      uFocusHoveredActiveAlpha: { value: 0.4 },
       /** P11.2 — idle focus dim: chroma × this when dim (OKLab a,b scale with C). Phase 17 default 1 = off (Hunt in P17.2). */
       uFocusDimChroma: { value: 1.0 },
       /** P11.2 — idle focus dim: multiply OKLab L by this (with chroma mult below). */

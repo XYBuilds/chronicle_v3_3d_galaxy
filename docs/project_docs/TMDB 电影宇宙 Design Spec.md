@@ -142,14 +142,22 @@
 * **产品 HUD**：主体文案为 **英语**（以 **`locales/en.json`** + **`strings.ts`（`STRINGS`）** 为准，见 §3 头部 SSOT）。
 * **中文**：仅出现在**项目文档**（如本 Design Spec、Pipeline、报告）与 **dev 审计用 `console.log`** 中；**不**作为生产 HUD 用户可见字符串来源。
 
-### **3.5 Close 控件 primitive（Phase 14）**
+### **3.5 Cover-with-Start（Phase 15）**
+
+* **范围**：**极简**。Loading 四阶段完成后保留**同一全屏覆盖层**；Spinner **隐藏**，**进度条保留**已完成勾选状态（第四阶段在 **`skipped`** / **`error`** 时按 token 灰显或 destructive，与 Tech Spec §1.4.7 一致）。**不**加品牌大标题、教程或额外视觉编码说明。  
+* **文案**：标题 **`STRINGS.cover.title`**、副文案 **`STRINGS.cover.subtitle`**（**`locales/en.json`** 的 **`cover.*`**，经 **`strings.ts`** 导出为 **`STRINGS.cover`**，与 §3.4.5 / Phase 14 **SSOT** 一致）。  
+* **Start 按钮**：原生 **`<button type="button">`**；样式走 **primary**（或项目约定的 ghost-with-glow）；**`autoFocus`**，使 **Enter** / **Space** 默认可触发点击。  
+* **键盘**：**Enter** / **Space** 等同点击；**Esc** **不**关闭 Cover（无可关闭语义）。  
+* **可访问性**：根容器 **`role="dialog"`**，**`aria-labelledby`** / **`aria-describedby`** 绑定标题与副文案（可用 visually hidden 标题满足 SR）；按钮 **`aria-label`** 与可见文案一致或补强。
+
+### **3.6 Close 控件 primitive（Phase 14）**
 
 * **组件**：**`CloseButton`**，实现路径 **`frontend/src/components/ui/close-button.tsx`**。
 * **Variants**：**`default`**（带边框的方形按钮）/ **`ghost-sm`** / **`ghost-lg`**（轻量幽灵态，尺寸分档）。
 * **图标**：**`lucide-react`** 的 **`X`**；**`aria-label`** 等可访问性文案走 **`STRINGS`**（与 §3 SSOT 一致）。
 * **视觉**：**`CloseButton`** 的边框线宽与 **hover 环 / Timeline** 同属 **UI edge** 线宽语义（**`--ui-edge-stroke-width`**，见《视觉参数总表》**§7**、**§7a**）。**颜色**：按钮叠在 **DOM 壳层**，使用随主题变化的 **`--ui-edge-color` / `--ui-edge-color-strong`**；**HoverRing** 与 **Timeline** 仅叠在 **黑色 WebGL 画布**上，使用 **`:root` 固定**的 **`--ui-edge-canvas-color` / `--ui-edge-canvas-color-strong`**（与 **§3.4.4**「画布可保持深色底」一致，避免 `?theme=light` 时环与轴变成浅灰细线导致对比度错误）。
 
-### **3.6 全局键盘快捷键与全屏控件（Phase 14 · HUD）**
+### **3.7 全局键盘快捷键与全屏控件（Phase 14 · HUD）**
 
 * **全屏按钮**：HUD 右上角 **`FullscreenButton`**（`frontend/src/hud/FullscreenButton.tsx`；**`lucide-react`** Maximize / Minimize），与 **Info** 同列；监听 **`fullscreenchange`** / **`webkitfullscreenchange`** 同步图标；行为与下述 **`F`** 一致（Safari 等需 **webkit** 前缀检测时以源码为准）。
 

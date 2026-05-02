@@ -12,6 +12,7 @@ function interpolate(template: string, vars: Record<string, string>): string {
 
 export const STRINGS = {
   loading: en.loading,
+  cover: en.cover,
   galaxyData: {
     downloadProgress: (downloadedMb: string, totalMb: string) =>
       interpolate(en.galaxyData.downloadProgress, { downloadedMb, totalMb }),

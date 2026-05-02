@@ -19,6 +19,7 @@ uniform int uFocusedInstanceId;
 uniform float uFocusCameraBlend;
 uniform int uFocusTargetInstanceId;
 uniform float uFocusNonTargetActiveAlpha;
+uniform float uFocusHoveredActiveAlpha;
 uniform sampler2D uSelectionMask;
 uniform int uSelectionMode;
 uniform int uSelectionAtlasWidth;
@@ -86,6 +87,7 @@ void main() {
   float blend = clamp(uFocusCameraBlend, 0.0, 1.0);
   float dimAlpha = mix(1.0, uFocusNonTargetActiveAlpha, blend);
   bool isHovered = (uHoveredInstanceId >= 0) && (gl_InstanceID == uHoveredInstanceId);
-  bool hoverAlphaOverride = (uSelectionMode == 2) && isHovered;
-  vFocusAlphaMult = (isFocusTarget || hoverAlphaOverride) ? 1.0 : dimAlpha;
+  bool hoverAlphaBoost = (uSelectionMode == 2) && isHovered && !isFocusTarget;
+  float hoverShown = max(dimAlpha, clamp(uFocusHoveredActiveAlpha, 0.0, 1.0));
+  vFocusAlphaMult = isFocusTarget ? 1.0 : (hoverAlphaBoost ? hoverShown : dimAlpha);
 }

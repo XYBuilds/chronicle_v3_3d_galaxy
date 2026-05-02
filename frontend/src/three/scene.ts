@@ -65,6 +65,8 @@ interface GalaxyColorDebug {
   chroma: number
   /** P11.1 / P13.6 — alpha of non-target active stars when focus blend = 1 (default 0.08). */
   focusNonTargetActiveAlpha: number
+  /** P17.2+ — focus neighborhood hovered active: alpha = max(dim, this); default 1. */
+  focusHoveredActiveAlpha: number
   /** P11.2 — idle focus dim: chroma multiplier toward gray. */
   focusDimChroma: number
   /** P11.2 — idle focus dim: L multiplier (× L_base). */
@@ -267,6 +269,7 @@ export function mountGalaxyScene(
   const uFocusCameraBlend = galUniforms.uFocusCameraBlend as THREE.Uniform<number>
   const uFocusTargetInstanceId = galUniforms.uFocusTargetInstanceId as THREE.Uniform<number>
   const uFocusNonTargetActiveAlpha = galUniforms.uFocusNonTargetActiveAlpha as THREE.Uniform<number>
+  const uFocusHoveredActiveAlpha = galUniforms.uFocusHoveredActiveAlpha as THREE.Uniform<number>
   const uFocusDimChroma = galUniforms.uFocusDimChroma as THREE.Uniform<number>
   const uFocusDimL = galUniforms.uFocusDimL as THREE.Uniform<number>
   const uFocusDimMode = galUniforms.uFocusDimMode as THREE.Uniform<number>
@@ -748,6 +751,12 @@ export function mountGalaxyScene(
     set focusNonTargetActiveAlpha(value: number) {
       uFocusNonTargetActiveAlpha.value = THREE.MathUtils.clamp(value, 0.02, 1)
     },
+    get focusHoveredActiveAlpha() {
+      return uFocusHoveredActiveAlpha.value
+    },
+    set focusHoveredActiveAlpha(value: number) {
+      uFocusHoveredActiveAlpha.value = THREE.MathUtils.clamp(value, 0.02, 1)
+    },
     get focusDimChroma() {
       return uFocusDimChroma.value
     },
@@ -769,7 +778,7 @@ export function mountGalaxyScene(
     },
     log() {
       console.log(
-        `[Galaxy] OKLCH+P10.1 uLMin=${uLMin.value} uLMax=${uLMax.value} uHighRatingT=${uHighRatingT.value} uHighTierTRangeScale=${uHighTierTRangeScale.value} uLightnessRatingExponent=${uLightnessRatingExponent.value} uChroma=${uChroma.value} | P17.1 uDistanceLightnessFloor=${uDistanceLightnessFloorU.value} (uZCamDistance sync via store) | P17.2 uHuntGamma=${uHuntGammaU.value} uHuntApplyMask=${uHuntApplyMaskU.value} | P11.1 uFocusNonTargetActiveAlpha=${uFocusNonTargetActiveAlpha.value} | P11.2 uFocusDimChroma=${uFocusDimChroma.value} uFocusDimL=${uFocusDimL.value} uFocusDimMode=${uFocusDimMode.value}`,
+        `[Galaxy] OKLCH+P10.1 uLMin=${uLMin.value} uLMax=${uLMax.value} uHighRatingT=${uHighRatingT.value} uHighTierTRangeScale=${uHighTierTRangeScale.value} uLightnessRatingExponent=${uLightnessRatingExponent.value} uChroma=${uChroma.value} | P17.1 uDistanceLightnessFloor=${uDistanceLightnessFloorU.value} (uZCamDistance sync via store) | P17.2 uHuntGamma=${uHuntGammaU.value} uHuntApplyMask=${uHuntApplyMaskU.value} | P11.1 uFocusNonTargetActiveAlpha=${uFocusNonTargetActiveAlpha.value} uFocusHoveredActiveAlpha=${uFocusHoveredActiveAlpha.value} | P11.2 uFocusDimChroma=${uFocusDimChroma.value} uFocusDimL=${uFocusDimL.value} uFocusDimMode=${uFocusDimMode.value}`,
       )
     },
   }

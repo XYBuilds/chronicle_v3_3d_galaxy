@@ -212,3 +212,4 @@ Perlin focus 球在片元侧按 **`vNoise`** 与 **`uThresh[0..K−2]`**（**K**
 | 2026-04-30 | Phase 18 文档同步：`genre_hue` / palette 顺序改由 Data Pipeline SSOT 的 frozen palette 管理 |
 | 2026-04-30 | **Phase 13 P13.0**：§3.4 表修订（邻域球、轨道相机、退出路径）；新增 **§3.4.5** 邻域 mask、**§3.4.6** 轨道相机；§3.6 **`uSelectionMode = 2`** 与 **focus×select（D1）** mask 替换语义 |
 | 2026-05-01 | **Phase 13 P13.7**：文档与 Phase 8 基线收口；§3.4.3 **`uFocusNonTargetActiveAlpha`** 默认与代码对齐为 **0.08**（P13.6）；性能三线未重录时见 [`Phase 8 基线 P8.0 性能与 P8.4 准入.md`](../benchmarks/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md) **`## P13 出口`** |
+| 2026-05-02 | **Phase 16 P16.4**：[`Phase 8 基线`](../benchmarks/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md) 新增 **`## P16 出口`**（复跑 §P12 **B** 压力片段 `Drama` / Christopher Nolan + 手测回归清单）；与 §3.2.1 active 双路径验收交叉引用 |

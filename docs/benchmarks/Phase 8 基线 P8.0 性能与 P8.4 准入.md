@@ -2,7 +2,7 @@
 
 > **文档性质**：本文件位于 **`docs/benchmarks/`**，是 **性能测量口径、Story 准入门槛与里程碑入口/出口表的归档**（基线簿），**不是**功能或渲染行为的 SSOT；交互与实现以 [`星球状态机 spec.md`](../project_docs/星球状态机%20spec.md)、《Tech Spec》《Design Spec》及源码为准。
 >
-> **里程碑扩展**：随 Phase 10 / 11 / 12 / **13** 等可在文末追加 `## P10.x`、`## P11.x`、`## P12.x`、**`## P13.0 入口`**、**`## P13 出口`** 等 **入口/出口** 节（与 §P8.0.1 **同录制口径**），并与对应 Cursor 计划交叉引用。**Phase 12** 出口见下文 **`## P12 入口/出口`**（[`.cursor/plans/phase_12_search_and_select_6c9bfa94.plan.md`](../../.cursor/plans/phase_12_search_and_select_6c9bfa94.plan.md) · P12.9）。**Phase 13** 入口见 **`## P13.0 入口`**；**收尾与文档登记**见 **`## P13 出口`**（[`.cursor/plans/phase_13_focus_experience_ab016b85.plan.md`](../../.cursor/plans/phase_13_focus_experience_ab016b85.plan.md) · P13.7）。
+> **里程碑扩展**：随 Phase 10 / 11 / 12 / **13** / **16** 等可在文末追加 `## P10.x`、`## P11.x`、`## P12.x`、**`## P13.0 入口`**、**`## P13 出口`**、**`## P16 出口`** 等 **入口/出口** 节（与 §P8.0.1 **同录制口径**），并与对应 Cursor 计划交叉引用。**Phase 12** 出口见下文 **`## P12 入口/出口`**（[`.cursor/plans/phase_12_search_and_select_6c9bfa94.plan.md`](../../.cursor/plans/phase_12_search_and_select_6c9bfa94.plan.md) · P12.9）。**Phase 13** 入口见 **`## P13.0 入口`**；**收尾与文档登记**见 **`## P13 出口`**（[`.cursor/plans/phase_13_focus_experience_ab016b85.plan.md`](../../.cursor/plans/phase_13_focus_experience_ab016b85.plan.md) · P13.7）。**Phase 16**（搜索 placeholder、`zCurrent` 差异化、active 双路径）性能与手测登记见 **`## P16 出口`**（[`.cursor/plans/phase_16_search_refinements_22478218.plan.md`](../../.cursor/plans/phase_16_search_refinements_22478218.plan.md) · P16.4）。
 
 > 从 `视觉参数总表.md` 拆出单独跟踪（**2026-04-27**）。Phase 7 宏观参数清单仍见 **`视觉参数总表.md`**（Git 跟踪；**不再**列入 `.cursorignore`）。总表文首注明：开发者速查用，**非** Agent SSOT。
 
@@ -53,7 +53,7 @@
 ## P8.0.4 状态机 SSOT
 
 - 四态（idle / active / hover / focus）+ **Phase 12 起正式态 `select`**（人名/genre 搜索多 active、`selectionMask`、`searchMode`、ESC 焦点栈等）：见 [`星球状态机 spec.md`](../project_docs/星球状态机%20spec.md) §3.6（`W = uZVisWindow×0.2`、`vote_count` focus 权重与「小片偏小」意图、draw 顺序、WebGL2、**focus×select 嵌套**）。
-- **Phase 8 文档回写（2026-04-27）**：《视觉参数总表》持续与源码对齐；《Tech Spec》/《Design Spec》/《数据特征工程与 3D 映射总表》已更新 P8.1–P8.4 双 mesh 与 `genre_hue`。**Phase 12（2026-04-29）**：搜索 UX、数据契约（`has_search_index`、`galaxy_search_index.json.gz`）、拾取与 mask 覆盖规则已写入上述 SSOT + 本节 **`## P12 入口/出口`**。**Phase 13 P13.0（2026-04-30）**：focus 邻域球 **`uSelectionMode=2`**、轨道相机、`bridgeZ=zCurrent` / Timeline snap、`transitionDriver` 等契约已写入 SSOT；性能入口见 **`## P13.0 入口`**。**Phase 13 P13.7（2026-05-01）**：全量 spec / 视觉总表与实现对齐；Chrome Performance 三线**未**在本里程碑重录时见 **`## P13 出口`**。
+- **Phase 8 文档回写（2026-04-27）**：《视觉参数总表》持续与源码对齐；《Tech Spec》/《Design Spec》/《数据特征工程与 3D 映射总表》已更新 P8.1–P8.4 双 mesh 与 `genre_hue`。**Phase 12（2026-04-29）**：搜索 UX、数据契约（`has_search_index`、`galaxy_search_index.json.gz`）、拾取与 mask 覆盖规则已写入上述 SSOT + 本节 **`## P12 入口/出口`**。**Phase 13 P13.0（2026-04-30）**：focus 邻域球 **`uSelectionMode=2`**、轨道相机、`bridgeZ=zCurrent` / Timeline snap、`transitionDriver` 等契约已写入 SSOT；性能入口见 **`## P13.0 入口`**。**Phase 13 P13.7（2026-05-01）**：全量 spec / 视觉总表与实现对齐；Chrome Performance 三线**未**在本里程碑重录时见 **`## P13 出口`**。**Phase 16 P16.4（2026-05-02）**：搜索压力片段复跑口径 + 手测回归清单见 **`## P16 出口`**。
 
 ---
 
@@ -189,3 +189,35 @@
 | **focus** | 与 §P13.0 入口同口径，且稳态含 **邻域 + 轨道** | *未重录* | *未重录* | *未重录* | *未重录* | **门槛（计划）**：≥ §P13.0 入口 focus **约 95%** |
 
 **录制步骤**：与 §P8.0.1「录制步骤（摘要）」相同。
+
+---
+
+## P16 出口（Phase 16 搜索体验完善 · 文档与回归登记）
+
+> **目的**：在 P16.1–P16.3（三档 placeholder、差异化 **`zCurrent`** 联动、**`galaxyActive`** 材质双路径）落地后，**复跑** **`## P12 入口/出口`** 中 **B — 搜索压力二线** 的录制口径（**`Drama`** 等大集合 genre、**`Christopher Nolan`** 或参演数 ≥60 的等价影人），确认 **fps** 相对 **§P8.0.1 idle** 或既有填值**无显著回归**（计划常见容差：**±约 5%**）；并完成 **手测回归清单** 登记。  
+> **关联计划**：[`.cursor/plans/phase_16_search_refinements_22478218.plan.md`](../../.cursor/plans/phase_16_search_refinements_22478218.plan.md)（P16.4）。  
+> **Git 分支（文档登记）**：`phase/p16-4-doc-sync`（P16.4 文档同步与本节结构）。
+
+**2026-05-02（本仓库 P16 出口登记）**
+
+**手测结论（补记）**：下文 **第 2 节「手测回归清单」** 已由维护者在本机 **逐项通过**（三路径 **`zCurrent`**、`Drama` / person 深度、focus 嵌套与 **ESC** 出栈、Cover / Loading / HUD 无回归；与 [`.cursor/plans/phase_16_search_refinements_22478218.plan.md`](../../.cursor/plans/phase_16_search_refinements_22478218.plan.md) P16.4 出口口径一致）。
+
+1. **重跑压力片段（与 `## P12 入口/出口` §B 同操作说明）**  
+   - **search · genre（大集合）**：顶部 **genre** 分段 → 联想选 **`Drama`**（或当前数据包 **count 最大**的一档）→ 稳态约 **5 s** Performance；**P16** 额外验收：**大量 active 前后遮挡正确**（select 单态走路径 **A**：opaque + **`depthWrite`**，见《星球状态机 spec》§3.2.1）。**fps** 与 §P12 表备注一致：相对 idle 中位数 **≥ ~95%** 为通过参考。  
+   - **search · person（Christopher Nolan）**：顶部 **person** 分段 → 联想选 **Christopher Nolan**（或 **`movie_ids.length` ≥ 60** 的等价影人）→ 稳态约 **5 s**；验收：**深度顺序正确**、**Timeline 在约 700 ms 内平滑对齐选区最早 `movie.z`**（Design Spec §4.4）、**星座连线**（默认开）无异常；**fps** 门槛同上。
+
+2. **手测回归清单（维护者逐条确认）**  
+   - **movie / person / genre** 三条联想路径：点击后 **`zCurrent`** 分别符合 Design Spec **§4.3**（电影 → P13.4 snap 到 **`movie.z`**）、**§4.4**（人名 → **`min(z over selectionIds)`** 渐变）、**§4.5**（genre → **不**改 **`zCurrent`**）。  
+   - **genre `Drama`**：全集 active 时 **远处球体被近处正确遮挡**（无透明排序错乱）。  
+   - **person**（如 Christopher Nolan）：同上深度验收。  
+   - **focus 嵌套 person/genre**：邻域 mask（P13.2）+ 非目标 active **alpha** 渐变（P11.1）正常；**退出 focus** 后回到 select 单态 → **opaque 路径 A** 恢复；**ESC** 出栈与 Design Spec §4.6 一致。  
+   - **Cover / Loading / Phase 14 HUD** 等既有体验无回归。
+
+3. **数值表**：下列二线与 §P12 **B** 表同列含义；**留空**表示 DevTools Performance 数值仍**可选补录**（手测已通过；若将来要归档 fps 与 §P8.0.1 逐项对照，再填入）。补录后与 **§P8.0.1 idle** 或 §P12 已填值对比 **≥ ~95%** 为通过参考。
+
+| 片段 | 操作说明 | GPU time（ms / frame，中位数） | JS Main（ms / frame） | Long tasks（>50 ms，次数） | fps 中位数 | 备注 |
+|------|----------|--------------------------------|----------------------|-----------------------------|------------|------|
+| **search · genre（Drama 大集合）** | 同 **`## P12 入口/出口` §B** 行 **search · genre**；联想确认后 **Record** | *待补录* | *待补录* | *待补录* | *待补录* | 路径 **A**；与 P15 入口比 **±~5%** |
+| **search · person（Christopher Nolan）** | 同 §B 行 **search · person**；命中项为 **Christopher Nolan** 或等价高 **`movie_ids.length`** 影人 | *待补录* | *待补录* | *待补录* | *待补录* | 含连线 + **zCurrent** snap |
+
+**录制步骤**：与 §P8.0.1 及 **`## P12 入口/出口`**「录制步骤」相同；须在联想 **点击确认**、画面已切换到多 active 后再 **Record**。

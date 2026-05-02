@@ -16,7 +16,7 @@ todos:
     status: completed
   - id: p164-doc-sync
     content: P16.4 文档同步 + 回归：Design Spec §4 · 状态机 spec §3.2.1 · 视觉参数总表 · Tech Spec §1.1 同步；Phase 8 基线 P16 出口（重跑 Drama / Christopher Nolan 压力片段）；三路径联动 × focus 嵌套 × 退出出栈手测
-    status: pending
+    status: completed
 isProject: false
 ---
 

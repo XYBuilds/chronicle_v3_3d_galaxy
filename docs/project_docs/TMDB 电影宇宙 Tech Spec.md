@@ -176,7 +176,7 @@ Output
 | **hover 环** | **HTML overlay**（`HoverRing`），**无 CSS transition**，与 Tooltip 同节奏显隐 |
 | **历史：Points** | 旧版对 `Points.threshold` 的估算与 A/B 层过滤见归档讨论；`interaction.ts` 中 `computePointScreenRadiusCss` 等**仅**供基准/遗留对照 |
 
-**假设与局限**：active 在条带外趋近零尺度时极难点中，属预期；若 T6 类问题再现，可收紧容差或第二近邻（性能基线与准入归档见 [`Phase 8 基线 P8.0 性能与 P8.4 准入.md`](../benchmarks/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md)，含 **§P12 入口/出口** 搜索压力片段）。
+**假设与局限**：active 在条带外趋近零尺度时极难点中，属预期；若 T6 类问题再现，可收紧容差或第二近邻（性能基线与准入归档见 [`Phase 8 基线 P8.0 性能与 P8.4 准入.md`](../benchmarks/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md)，含 **`## P12 入口/出口`** 搜索压力片段与 **`## P16 出口`** Phase 16 复跑 / 手测登记）。
 
 **Phase 11.6（已实装）**：当 `selectedMovieId != null` 时，拾取先判断 focus Perlin 球包围球（半径 `selectionPlanet.lastRadius`）是否沿当前射线比 active 命中更近；若更近，则 hover/click 归为焦点星语义（保持 focus，tooltip 继续由 `hoveredMovieId` 单一字段驱动）；否则回落既有 `galaxyActive` 世界球命中路径以支持切换 focus。详见《星球状态机 spec》§3.5.2 与 `interaction.ts`。
 

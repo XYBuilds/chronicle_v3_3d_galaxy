@@ -12,8 +12,8 @@ todos:
     content: P15.2 Cover 模式 + Start 按钮：Loading.tsx mode='await-start' 隐 spinner / 显 Start CTA；App.tsx 增 started state，3D scene mount 仅在 setStarted(true) 后发生；autoFocus 按钮与 Enter/Space 键盘可达；Storybook 3 个 Cover stories（ready/skipped/failed）
     status: completed
   - id: p153-doc-sync
-    content: P15.3 文档同步 + 回归：Tech Spec §1.4.7 / Design Spec §3.5 / PRD §3.1 写入；实施报告；DevTools 验收 3D mount 时机；galaxy-error / index-error / index-skipped 三条异常路径手测
-    status: pending
+    content: P15.3 文档同步 + 回归：Tech Spec §1.4.7 / Design Spec §3.5 / PRD §3.1 写入；DevTools 验收 3D mount 时机；galaxy-error / index-error / index-skipped 三条异常路径手测
+    status: completed
 isProject: false
 ---
 
@@ -274,7 +274,6 @@ useEffect(() => {
 - [Tech Spec §1.4.7](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md) 覆写为四阶段 + Cover 描述
 - [Design Spec §3.5](docs/project_docs/TMDB%20电影宇宙%20Design%20Spec.md) 新增节
 - [PRD §3.1](docs/project_docs/TMDB%20电影宇宙%20PRD.md) 层级零加 Start 步骤
-- 实施报告 `Phase 15.x ... 实施报告.md`（建议合并为单文件，因子节较少）
 - 回归清单：
   - 完整链路（含 Phase 13 focus / Phase 14 全屏 / 全部已落地体验）入场后无回归
   - status='error'（galaxy 数据失败）时仍走错误页 + Retry，**不**走 Cover

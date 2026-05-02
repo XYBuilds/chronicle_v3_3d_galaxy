@@ -10,7 +10,7 @@ todos:
     status: completed
   - id: p162-zcurrent-snap
     content: P16.2 差异化 zCurrent 联动：复用 P13.1 driver 构造 zCurrentDriver；搜人名 → animateZCurrentTo(min z, 700ms)；搜电影继承 P13.4；genre 不动；切人中途 driver.cancel + start
-    status: pending
+    status: completed
   - id: p163-active-dual-path
     content: P16.3 active 材质双路径切换（修 genre 深度 bug）：scene.ts RAF 检测 inSelectOnly → transparent/depthWrite 切换 + needsUpdate；P11.1 alpha 渐变路径在 focus / focus嵌套下保留；备选方案 B（双 mesh）仅当主方案出问题时启用
     status: pending

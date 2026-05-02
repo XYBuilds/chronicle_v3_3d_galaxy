@@ -27,3 +27,34 @@ export const CustomLabel: Story = {
     label: 'Fetching subsample rows from data/subsample/tmdb2025_random20.csv',
   },
 }
+
+/** Galaxy gzip finished; fourth step = search index hydrate (matches App index-loading overlay). */
+export const PhaseSearchIndexLoading: Story = {
+  args: {
+    mode: 'loading',
+    label: 'Loading search index…',
+    progress: null,
+    gzipDone: true,
+    indexStatus: 'loading',
+  },
+}
+
+export const PhaseSearchIndexSkipped: Story = {
+  args: {
+    mode: 'loading',
+    label: 'Loading search index…',
+    progress: null,
+    gzipDone: true,
+    indexStatus: 'skipped',
+  },
+}
+
+export const PhaseSearchIndexFailed: Story = {
+  args: {
+    mode: 'loading',
+    label: 'Loading search index…',
+    progress: null,
+    gzipDone: true,
+    indexStatus: 'error',
+  },
+}

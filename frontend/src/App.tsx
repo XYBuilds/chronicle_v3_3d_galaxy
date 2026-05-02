@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 
 import { MovieDetailDrawer } from '@/components/Drawer'
 import { SearchBar } from '@/components/SearchBar'
@@ -28,19 +28,41 @@ function App() {
   const errorMessage = useGalaxyDataStore((s) => s.errorMessage)
   const loadProgress = useGalaxyDataStore((s) => s.loadProgress)
   const fetchGalaxyData = useGalaxyDataStore((s) => s.fetchGalaxyData)
+  const indexStatus = useSearchIndexStore((s) => s.status)
   const canvasHostRef = useRef<HTMLDivElement>(null)
+
+  const indexHydrationTerminal =
+    indexStatus === 'ready' || indexStatus === 'skipped' || indexStatus === 'error'
+
+  type AppLoadPhase = 'galaxy-loading' | 'galaxy-error' | 'index-loading' | 'main'
+
+  const phase: AppLoadPhase = useMemo(() => {
+    if (status === 'loading' || status === 'idle') return 'galaxy-loading'
+    if (status === 'error') return 'galaxy-error'
+    if (status === 'ready' && data !== null && !indexHydrationTerminal) return 'index-loading'
+    if (status === 'ready' && data !== null && indexHydrationTerminal) return 'main'
+    return 'galaxy-loading'
+  }, [status, data, indexHydrationTerminal])
+
+  useEffect(() => {
+    if (phase !== 'index-loading' || !data) return
+    console.log('[App] search index hydrate in progress', {
+      movies: data.movies.length,
+      indexStatus,
+    })
+  }, [phase, data, indexStatus])
 
   useEffect(() => {
     void fetchGalaxyData()
   }, [fetchGalaxyData])
 
   useEffect(() => {
-    if (status !== 'ready' || !data) return
+    if (status !== 'ready' || !data || !indexHydrationTerminal) return
     const el = canvasHostRef.current
     if (!el) return
     const mount = mountGalaxyScene(el, data.meta, data.movies)
     return () => mount.dispose()
-  }, [status, data])
+  }, [status, data, indexHydrationTerminal])
 
   useEffect(() => {
     if (status !== 'ready' || !data) return
@@ -123,11 +145,19 @@ function App() {
     return () => window.removeEventListener('keydown', onKeyDownCapture, true)
   }, [])
 
-  if (status === 'loading' || status === 'idle') {
-    return <Loading progress={loadProgress} />
+  if (phase === 'galaxy-loading') {
+    return (
+      <Loading
+        mode="loading"
+        label={STRINGS.loading.title}
+        progress={loadProgress}
+        gzipDone={false}
+        indexStatus="pending"
+      />
+    )
   }
 
-  if (status === 'error') {
+  if (phase === 'galaxy-error') {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-6 text-center text-foreground">
         <h1 className="text-lg font-medium">{STRINGS.error.title}</h1>
@@ -150,8 +180,28 @@ function App() {
     )
   }
 
+  if (phase === 'index-loading' && data !== null) {
+    return (
+      <Loading
+        mode="loading"
+        label={STRINGS.searchBar.indexLoading}
+        progress={null}
+        gzipDone
+        indexStatus="loading"
+      />
+    )
+  }
+
   if (data === null) {
-    return <Loading progress={loadProgress} />
+    return (
+      <Loading
+        mode="loading"
+        label={STRINGS.loading.title}
+        progress={loadProgress}
+        gzipDone={false}
+        indexStatus="pending"
+      />
+    )
   }
 
   const hasSearchIndex = data.meta.has_search_index === true

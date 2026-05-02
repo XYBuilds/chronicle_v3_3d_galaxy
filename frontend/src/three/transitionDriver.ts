@@ -10,6 +10,8 @@ export interface TransitionDriver {
   readonly progress: number
   /** True while a start/reverse animation is running. */
   readonly active: boolean
+  /** Stop in-flight animation; keeps `progress`; clears `onDone`. P16.2 person zCurrent retarget. */
+  cancel(): void
   /** Animate from 0 → 1 over `durationMs` (focus enter / selecting). */
   start(durationMs: number, options?: { easing?: EasingFn; onDone?: () => void }): void
   /** Animate from current `progress` → 0 over `durationMs` (focus exit / deselecting). */
@@ -49,6 +51,10 @@ export function createTransitionDriver(): TransitionDriver {
     },
     get active() {
       return running
+    },
+    cancel() {
+      running = false
+      onDone = undefined
     },
     start(durationMs, options) {
       progress = 0

@@ -111,11 +111,17 @@ declare global {
   }
 }
 
+/** P16.2 — Timeline `zCurrent` eased drift (person search); scene-owned driver, HUD calls via mount ref. */
+export interface GalaxySceneController {
+  animateZCurrentTo: (z: number, durationMs?: number) => void
+}
+
 export interface GalaxySceneMount {
   renderer: THREE.WebGLRenderer
   scene: THREE.Scene
   camera: THREE.PerspectiveCamera
   dispose: () => void
+  controller: GalaxySceneController
   /** Idle `InstancedMesh` shader (P8.4); shares `uniforms` with `galaxyActiveMaterial`. */
   galaxyMaterial: THREE.ShaderMaterial
   /** Active mesh shader — same uniform bag as `galaxyMaterial` for `__galaxyPointScale` / Leva. */
@@ -138,6 +144,8 @@ function xyCenter(meta: Pick<Meta, 'xy_range'>): { cx: number; cy: number } {
  */
 const SELECT_MS = 700
 const DESELECT_MS = 450
+/** P16.2 — person/genre suggestion zCurrent drift matches focus enter easing (Design Spec §4.4). */
+const Z_CURRENT_ANIM_MS = 700
 
 export function mountGalaxyScene(
   container: HTMLElement,
@@ -337,6 +345,9 @@ export function mountGalaxyScene(
   let selectionPhase: SelectionPhase = 'idle'
   const macroZWheel = () => selectionPhase === 'idle'
   const focusDriver = createTransitionDriver()
+  const zCurrentDriver = createTransitionDriver()
+  let zTimelineAnimFrom = zCurrent
+  let zTimelineAnimTo = zCurrent
   const restCam = new THREE.Vector3()
   const fromCam = new THREE.Vector3()
   const toCam = new THREE.Vector3()
@@ -356,6 +367,19 @@ export function mountGalaxyScene(
   /** P13.4 — Timeline `zCurrent` animates with focus enter (same eased progress as camera). */
   let focusZAnimStart = 0
   let focusZAnimTarget = 0
+
+  const animateZCurrentTo = (targetZ: number, durationMs: number = Z_CURRENT_ANIM_MS) => {
+    zCurrentDriver.cancel()
+    const st = useGalaxyInteractionStore.getState()
+    zTimelineAnimFrom = st.zCurrent
+    zTimelineAnimTo = targetZ
+    zCurrentDriver.start(Math.max(1, durationMs))
+    console.log('[ZCurrent] animateZCurrentTo start', {
+      from: zTimelineAnimFrom,
+      to: zTimelineAnimTo,
+      durationMs,
+    })
+  }
 
   const applySelectionFrame = (nowMs: number) => {
     if (selectionPhase === 'idle') {
@@ -461,6 +485,7 @@ export function mountGalaxyScene(
   }
 
   const beginSelect = (movie: Movie) => {
+    zCurrentDriver.cancel()
     planet.mesh.visible = true
     planet.material.uniforms.uAlpha.value = 1
     pendingSelectInstanceIndex = movies.findIndex((m) => m.id === movie.id)
@@ -895,7 +920,14 @@ export function mountGalaxyScene(
   let prevSearchSelectMode = -1
   const tick = () => {
     raf = requestAnimationFrame(tick)
-    applySelectionFrame(performance.now())
+    const nowMs = performance.now()
+    applySelectionFrame(nowMs)
+    if (zCurrentDriver.active && selectionPhase !== 'selecting') {
+      zCurrentDriver.tick(nowMs)
+      const p = zCurrentDriver.progress
+      const zNext = zTimelineAnimFrom + (zTimelineAnimTo - zTimelineAnimFrom) * p
+      useGalaxyInteractionStore.setState({ zCurrent: zNext })
+    }
     const st = useGalaxyInteractionStore.getState()
     // P12.6 / P13.2 — person/genre mask vs focus spherical neighborhood vs timeline slab
     const selectionDrawMode =
@@ -973,6 +1005,7 @@ export function mountGalaxyScene(
   tick()
 
   const dispose = () => {
+    zCurrentDriver.cancel()
     cancelAnimationFrame(raf)
     ro?.disconnect()
     window.removeEventListener('resize', resize)
@@ -1022,6 +1055,7 @@ export function mountGalaxyScene(
     scene,
     camera,
     dispose,
+    controller: { animateZCurrentTo },
     galaxyMaterial: galaxy.idleMaterial,
     galaxyActiveMaterial: galaxy.activeMaterial,
     selectionPlanet: planet,

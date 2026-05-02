@@ -142,14 +142,23 @@
 * **产品 HUD**：主体文案为 **英语**（以 **`locales/en.json`** + **`strings.ts`（`STRINGS`）** 为准，见 §3 头部 SSOT）。
 * **中文**：仅出现在**项目文档**（如本 Design Spec、Pipeline、报告）与 **dev 审计用 `console.log`** 中；**不**作为生产 HUD 用户可见字符串来源。
 
-### **3.5 Close 控件 primitive（Phase 14）**
+### **3.5 Cover-with-Start（Phase 15）**
+
+首屏四阶段（见 Tech Spec §1.4.7）全部结束后，在进入 Three.js 主场景前展示**极简封面**：仍在同一 **`Loading.tsx` 全屏覆盖层**内，**隐藏 spinner**，进度列表保留**勾选完成**状态；中央展示 **一句副文案** + **Start** 主按钮。**不加**品牌大标题、产品介绍或视觉编码教程。
+
+* **文案 SSOT**：标题 **`STRINGS.cover.title`**（可对视力辅助用户用作对话框标题；可与视觉上一句提示分工）；副文案 **`STRINGS.cover.subtitle`**；按钮字面 **`STRINGS.cover.start`**；按钮 **`aria-label`** 等可走 **`STRINGS.cover.startAriaLabel`**（与 §3 头部 `en.json` → `STRINGS` 规则一致）。  
+* **Start 按钮**：`<button type="button">`，主按钮视觉（如 `bg-primary` / `text-primary-foreground`）；**`autoFocus`**，使 **Enter** / **Space** 默认可触发（与原生 button 行为一致）。  
+* **键盘**：**Enter** / **Space** 等同点击；**Esc** 不关闭（无可关闭对象）。  
+* **可访问性**：覆盖层容器使用 **`role="dialog"`**，**`aria-labelledby`**（绑定标题 id）、**`aria-describedby`**（绑定副文案 id）；必要时 **`aria-modal="true"`**（实现以源码为准）。
+
+### **3.6 Close 控件 primitive（Phase 14）**
 
 * **组件**：**`CloseButton`**，实现路径 **`frontend/src/components/ui/close-button.tsx`**。
 * **Variants**：**`default`**（带边框的方形按钮）/ **`ghost-sm`** / **`ghost-lg`**（轻量幽灵态，尺寸分档）。
 * **图标**：**`lucide-react`** 的 **`X`**；**`aria-label`** 等可访问性文案走 **`STRINGS`**（与 §3 SSOT 一致）。
 * **视觉**：**`CloseButton`** 的边框线宽与 **hover 环 / Timeline** 同属 **UI edge** 线宽语义（**`--ui-edge-stroke-width`**，见《视觉参数总表》**§7**、**§7a**）。**颜色**：按钮叠在 **DOM 壳层**，使用随主题变化的 **`--ui-edge-color` / `--ui-edge-color-strong`**；**HoverRing** 与 **Timeline** 仅叠在 **黑色 WebGL 画布**上，使用 **`:root` 固定**的 **`--ui-edge-canvas-color` / `--ui-edge-canvas-color-strong`**（与 **§3.4.4**「画布可保持深色底」一致，避免 `?theme=light` 时环与轴变成浅灰细线导致对比度错误）。
 
-### **3.6 全局键盘快捷键与全屏控件（Phase 14 · HUD）**
+### **3.7 全局键盘快捷键与全屏控件（Phase 14 · HUD）**
 
 * **全屏按钮**：HUD 右上角 **`FullscreenButton`**（`frontend/src/hud/FullscreenButton.tsx`；**`lucide-react`** Maximize / Minimize），与 **Info** 同列；监听 **`fullscreenchange`** / **`webkitfullscreenchange`** 同步图标；行为与下述 **`F`** 一致（Safari 等需 **webkit** 前缀检测时以源码为准）。
 

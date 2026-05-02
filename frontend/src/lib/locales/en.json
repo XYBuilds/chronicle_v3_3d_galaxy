@@ -3,7 +3,14 @@
     "title": "Loading galaxy data",
     "phaseDownload": "Download",
     "phaseDecompress": "Decompress",
-    "phaseParse": "Parse"
+    "phaseParse": "Parse",
+    "phaseIndex": "Search index"
+  },
+  "cover": {
+    "title": "Ready",
+    "subtitle": "Press Start to enter the galaxy.",
+    "start": "Start",
+    "startAriaLabel": "Start and open the 3D scene"
   },
   "galaxyData": {
     "downloadProgress": "Downloaded {{downloadedMb}} / {{totalMb}}",

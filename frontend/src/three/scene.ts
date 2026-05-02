@@ -56,10 +56,8 @@ interface GalaxyColorDebug {
   highTierTRangeScale: number
   /** P10.1 — exponent on compressed `t` before `mix(uLMin, uLMax, …)`. */
   lightnessRatingExponent: number
-  /** P10.2 — `1/(1+k·dz²)` for `dz = max(0, aZ - (uZCurrent+uZVisWindow))` (world Z, decimal years). */
-  distanceFalloffK: number
-  /** P10.2 — `0` off (P8.4 idle alpha), `1` on (color × falloff + high idle alpha vs bloom halo). */
-  distanceFalloffMode: number
+  /** P17.1 — lower clamp on idle distance-L multiplier `pow(d0/d, 2/3)` (`uDistanceLightnessFloor`). */
+  distanceLightnessFloor: number
   chroma: number
   /** P11.1 / P13.6 — alpha of non-target active stars when focus blend = 1 (default 0.08). */
   focusNonTargetActiveAlpha: number
@@ -268,8 +266,10 @@ export function mountGalaxyScene(
   const uFocusDimChroma = galUniforms.uFocusDimChroma as THREE.Uniform<number>
   const uFocusDimL = galUniforms.uFocusDimL as THREE.Uniform<number>
   const uFocusDimMode = galUniforms.uFocusDimMode as THREE.Uniform<number>
+  const uZCamDistUniform = galUniforms.uZCamDistance as THREE.Uniform<number>
   uZ.value = zCurrent
   uZw.value = zVisWindow
+  uZCamDistUniform.value = useGalaxyInteractionStore.getState().zCamDistance
   uFocused.value = -1
   uFocusCameraBlend.value = 0
   uFocusTargetInstanceId.value = -1
@@ -647,8 +647,7 @@ export function mountGalaxyScene(
   const uHighRatingT = galUniforms.uHighRatingT as THREE.Uniform<number>
   const uHighTierTRangeScale = galUniforms.uHighTierTRangeScale as THREE.Uniform<number>
   const uLightnessRatingExponent = galUniforms.uLightnessRatingExponent as THREE.Uniform<number>
-  const uDistanceFalloffK = galUniforms.uDistanceFalloffK as THREE.Uniform<number>
-  const uDistanceFalloffMode = galUniforms.uDistanceFalloffMode as THREE.Uniform<number>
+  const uDistanceLightnessFloorU = galUniforms.uDistanceLightnessFloor as THREE.Uniform<number>
   const uChroma = galUniforms.uChroma as THREE.Uniform<number>
 
   const pointScaleDebug: GalaxyPointScaleDebug = {
@@ -712,18 +711,11 @@ export function mountGalaxyScene(
     set lightnessRatingExponent(value: number) {
       uLightnessRatingExponent.value = value
     },
-    get distanceFalloffK() {
-      return uDistanceFalloffK.value
+    get distanceLightnessFloor() {
+      return uDistanceLightnessFloorU.value
     },
-    set distanceFalloffK(value: number) {
-      uDistanceFalloffK.value = value
-    },
-    get distanceFalloffMode() {
-      return uDistanceFalloffMode.value
-    },
-    set distanceFalloffMode(value: number) {
-      const v = Math.round(value)
-      uDistanceFalloffMode.value = v === 0 ? 0 : 1
+    set distanceLightnessFloor(value: number) {
+      uDistanceLightnessFloorU.value = THREE.MathUtils.clamp(value, 0.02, 1)
     },
     get chroma() {
       return uChroma.value
@@ -758,7 +750,7 @@ export function mountGalaxyScene(
     },
     log() {
       console.log(
-        `[Galaxy] OKLCH+P10.1 uLMin=${uLMin.value} uLMax=${uLMax.value} uHighRatingT=${uHighRatingT.value} uHighTierTRangeScale=${uHighTierTRangeScale.value} uLightnessRatingExponent=${uLightnessRatingExponent.value} uChroma=${uChroma.value} | P10.2 uDistanceFalloffK=${uDistanceFalloffK.value} uDistanceFalloffMode=${uDistanceFalloffMode.value} | P11.1 uFocusNonTargetActiveAlpha=${uFocusNonTargetActiveAlpha.value} | P11.2 uFocusDimChroma=${uFocusDimChroma.value} uFocusDimL=${uFocusDimL.value} uFocusDimMode=${uFocusDimMode.value}`,
+        `[Galaxy] OKLCH+P10.1 uLMin=${uLMin.value} uLMax=${uLMax.value} uHighRatingT=${uHighRatingT.value} uHighTierTRangeScale=${uHighTierTRangeScale.value} uLightnessRatingExponent=${uLightnessRatingExponent.value} uChroma=${uChroma.value} | P17.1 uDistanceLightnessFloor=${uDistanceLightnessFloorU.value} (uZCamDistance sync via store) | P11.1 uFocusNonTargetActiveAlpha=${uFocusNonTargetActiveAlpha.value} | P11.2 uFocusDimChroma=${uFocusDimChroma.value} uFocusDimL=${uFocusDimL.value} uFocusDimMode=${uFocusDimMode.value}`,
       )
     },
   }
@@ -930,8 +922,8 @@ export function mountGalaxyScene(
     }
     const st = useGalaxyInteractionStore.getState()
     // P16.3 — active material dual path (state machine §3.2.1): select-only person/genre uses
-    // opaque + depthWrite so many full-alpha actives sort by depth; focus / idle keep transparent
-    // for P11.1 vFocusAlphaMult gradients.
+    // opaque + depthWrite so many full-alpha actives sort by depth; idle is P17.1 opaque + depthWrite;
+    // default active stays transparent for P11.1 vFocusAlphaMult gradients.
     const inSelectOnly =
       (st.searchMode === 'person' || st.searchMode === 'genre') && st.selectedMovieId === null
     const wantOpaque = inSelectOnly
@@ -952,6 +944,7 @@ export function mountGalaxyScene(
     }
     uZ.value = st.zCurrent
     uZw.value = st.zVisWindow
+    uZCamDistUniform.value = st.zCamDistance
     syncSelectionPlanetWorldScale()
 
     const ringsPhaseActive =

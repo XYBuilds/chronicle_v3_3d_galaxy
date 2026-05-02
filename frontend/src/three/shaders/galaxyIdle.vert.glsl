@@ -13,6 +13,8 @@ uniform float uLightnessRatingExponent;
 uniform float uZCamDistance;
 uniform float uDistanceLightnessFloor;
 uniform float uChroma;
+uniform float uHuntGamma;
+uniform int uHuntApplyMask;
 uniform int uFocusedInstanceId;
 uniform float uFocusDimChroma;
 uniform float uFocusDimL;
@@ -76,12 +78,14 @@ void main() {
   float distanceMul = clamp(pow(d0 / d, 2.0 / 3.0), uDistanceLightnessFloor, 1.0);
   float L_distance = L_star * distanceMul;
 
-  float C_base = uChroma;
+  float C_base_after_hunt = (uHuntApplyMask & 1) != 0
+    ? applyHuntChroma(L_distance, uLMax, uChroma, uHuntGamma)
+    : uChroma;
   bool modeAllowsDim = (uFocusDimMode == 0) || (uFocusDimMode == 1);
   bool dimEligible = modeAllowsDim && (uFocusedInstanceId >= 0) && !isFocused;
   float dimMix = dimEligible ? 1.0 : 0.0;
   float L = mix(L_distance, L_distance * uFocusDimL, dimMix);
-  float C = mix(C_base, C_base * uFocusDimChroma, dimMix);
+  float C = mix(C_base_after_hunt, C_base_after_hunt * uFocusDimChroma, dimMix);
   float a = C * cos(hue);
   float labB = C * sin(hue);
   vColor = linear_to_srgb(oklab_to_linear_srgb(vec3(L, a, labB)));

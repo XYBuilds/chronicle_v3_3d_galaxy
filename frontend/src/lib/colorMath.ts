@@ -15,6 +15,12 @@ function clamp01(x: number): number {
   return Math.max(0, Math.min(1, x))
 }
 
+/** P17.2 — mirror of `applyHuntChroma` in `oklab.glsl` / active.vert (C scales with L). */
+export function applyHuntChroma(L_actual: number, L_ref: number, C_base: number, gamma: number): number {
+  const t = clamp01(L_actual / Math.max(L_ref, 1e-4))
+  return C_base * Math.pow(t, gamma)
+}
+
 /** Same as shader: `voteNorm` ∈ [0,1] → compressed t → pow → L. */
 export function lightnessFromVoteNorm(voteNorm: number, snap: GalaxyLightnessUniforms): number {
   const t = clamp01(voteNorm)
@@ -64,15 +70,27 @@ export function linearSrgbToSrgb(rgb: readonly [number, number, number]): [numbe
   return [linearSrgbToSrgbChannel(rgb[0]), linearSrgbToSrgbChannel(rgb[1]), linearSrgbToSrgbChannel(rgb[2])]
 }
 
-/** Galaxy star color: OKLab (L from P10.1, chroma plane from hue rad). */
+/** Snapshot for HUD stripes: P10.1 L + optional P17.2 Hunt on chroma (matches `galaxyActive.vert.glsl`). */
+export type GalaxyHudColorSnap = GalaxyLightnessUniforms & {
+  uChroma: number
+  uHuntGamma?: number
+  uHuntApplyMask?: number
+}
+
+/** Galaxy star color: OKLab (L from P10.1, chroma from hue; P17.2 Hunt when mask bit1 + gamma present). */
 export function srgb01FromHueAndVoteNorm(
   hueRad: number,
   voteNorm: number,
-  snap: GalaxyLightnessUniforms & { uChroma: number },
+  snap: GalaxyHudColorSnap,
 ): [number, number, number] {
   const L = lightnessFromVoteNorm(voteNorm, snap)
-  const a = snap.uChroma * Math.cos(hueRad)
-  const labB = snap.uChroma * Math.sin(hueRad)
+  const huntActive =
+    snap.uHuntGamma !== undefined &&
+    snap.uHuntApplyMask !== undefined &&
+    (snap.uHuntApplyMask & 2) !== 0
+  const C = huntActive ? applyHuntChroma(L, snap.uLMax, snap.uChroma, snap.uHuntGamma!) : snap.uChroma
+  const a = C * Math.cos(hueRad)
+  const labB = C * Math.sin(hueRad)
   const lin = oklabToLinearSrgb([L, a, labB])
   return linearSrgbToSrgb(lin)
 }

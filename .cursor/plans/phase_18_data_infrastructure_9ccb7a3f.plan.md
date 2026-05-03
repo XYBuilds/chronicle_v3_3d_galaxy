@@ -6,7 +6,7 @@ todos:
     content: P18.0 Genre palette 冻结：写死 19 genre 固定 hue 表，meta 加 genre_palette_version；assert 数据中所有 genre 都在表内
     status: completed
   - id: p181-cpu-refit-benchmark
-    content: P18.1 CPU 全量 refit benchmark：本机跑 production 参数 (384d/densmap/n=300/min_dist=0.4) 记耗时+峰值内存；再在目标 GHA runner 上 workflow_dispatch 同脚本拿墙钟时间（本地不可 1:1 换算）；写报告
+    content: P18.1 canonical full rebuild + GHA core benchmark：本机从 TMDB_all_movies.csv 开始全链重跑 (384d/densmap/n=300/min_dist=0.4/metric=cosine/random_state=42)，产出 P18 v1 canonical artifacts；再用该产物在 public ubuntu-24.04 runner 上 workflow_dispatch 跑 core benchmark（fusion → DensMAP/UMAP → Procrustes → export）拿墙钟/内存；写报告
     status: pending
   - id: p182-supabase-schema
     content: P18.2 Supabase schema (movies / galaxy_v1_reference / movies_pending / vote_snapshots) + 一次性导入 cleaned.csv 59014 行 + v1 坐标
@@ -104,7 +104,7 @@ flowchart TD
 ```mermaid
 flowchart TD
     P180[P18.0 Genre palette 冻结]
-    P181["P18.1 CPU refit benchmark (本机+GHA)"]
+    P181["P18.1 canonical full rebuild + GHA core benchmark"]
     P182[P18.2 Supabase schema + 一次性导入 v1]
     P183[P18.3 Procrustes 对齐 helper + v1 reference 锁定]
     P184[P18.4 GH Actions nightly:vote refresh + JSON 重导]
@@ -124,7 +124,7 @@ flowchart TD
 
 依赖说明：
 - **P18.0** 独立可做，可并入当前 phase 17 末（属 export 修复）
-- **P18.1** 本机 benchmark + **同脚本在 public `ubuntu-24.04` GHA 上跑一次**拿到墙钟时间（定 P18.5 `timeout-minutes` 与是否坚持 monthly）；本机数字只做量级与内存，不可当作 CI 确切耗时
+- **P18.1** 先做本地 canonical full rebuild，保证当前本地所有产物符合 production 参数；再用 canonical artifacts 在 public `ubuntu-24.04` GHA 上跑 core benchmark（定 P18.5 `timeout-minutes` 与是否坚持 monthly）；本机全链时间用于流程审计，GHA core 时间用于 runner 可行性判断
 - **P18.2** v1 锁定：把当前 [frontend/public/data/galaxy_data.json](frontend/public/data/galaxy_data.json) 的 xy 作为永久 Procrustes reference 写入 Supabase 一张专表
 - **P18.3** 是 P18.5 的前置 helper
 - **P18.4 / P18.5** 互相独立，可并行实现；P18.4 使用 frozen threshold，P18.5 负责 threshold 版本更新
@@ -155,29 +155,107 @@ flowchart TD
 
 ---
 
-## P18.1 CPU 全量 refit benchmark（实测）
+## P18.1 Canonical full rebuild + GHA core benchmark
 
 ### 目的
 
-把"30-60 分钟"估算变成**可复核的数字**。决定 P18.5 monthly cron 是否可稳定跑 production 参数，以及 `timeout-minutes`（GH Actions 单 job 上限 6h；本仓库为 public，标准 Linux runner 可用 **4 CPU / 16GB RAM / 14GB SSD**，以 [GitHub 文档](https://docs.github.com/en/actions/reference/runners/github-hosted-runners) 为准）。
+P18.1 分成两件事，避免混淆"产物可信度"与"runner 可行性"：
+
+1. **本地 canonical full rebuild**：从 `data/raw/TMDB_all_movies.csv` 开始完整重跑 cleaning → 384d embedding → genre/lang vectors → DensMAP/UMAP → export → validate，建立 P18 v1 canonical artifacts，确认当前本地数据严格符合 production 参数。
+2. **GHA core benchmark**：用 canonical artifacts 中的 feature matrices，在 public `ubuntu-24.04` runner 上只测未来 monthly refit 最重、最关键的 core path：fusion → DensMAP/UMAP → Procrustes → export。该数字决定 P18.5 monthly cron 是否可稳定使用 hosted runner。
+
+production 参数固定为：
+
+- embedding：`sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`（384d）
+- UMAP：`densmap=true`、`n_neighbors=300`、`min_dist=0.4`、`metric=cosine`、`random_state=42`
+- feature weights：`text=1.0`、`genre=1.0`、`lang=1.0`
+- genre weight ratio：`1/φ`
+
+### P18.1a 本地 canonical full rebuild
+
+新增 `scripts/experiments/phase18_canonical_full_rebuild.py`（或先用 `scripts/run_pipeline.py` 包装）：
+
+1. 输入 `data/raw/TMDB_all_movies.csv`，不直接在对话中读取 raw。
+2. 执行 Phase 1 cleaning，输出到独立 run 目录，而非直接覆盖 production：
+
+   ```text
+   data/runs/p18_1_full_rebuild_YYYYMMDD_HHMM/
+   ```
+
+3. 执行 384d text embedding（优先 GPU；若 CPU 则明确记录）。
+4. 执行 genre vectors / language vectors。
+5. 执行 CPU `umap-learn` DensMAP full `fit_transform`（当前 production 参数）。
+6. 导出 `galaxy_data.json`、`galaxy_data.json.gz`、`galaxy_search_index.json.gz`。
+7. 运行 `scripts/validate_galaxy_json.py`。
+8. 与当前 production 产物对比：
+   - `meta.count`
+   - `meta.umap_params`
+   - `xy_range` / `z_range`
+   - Procrustes 对齐到当前 production 后的位移分布（p50 / p95 / p99 / max）
+   - JSON/gzip/search-index 文件大小
+
+本地 full rebuild 必须持续 print：
+
+- 当前步骤名与阶段编号
+- 输入/输出路径
+- raw 文件 size / mtime / 可选 hash
+- 每步开始/结束时间、耗时
+- DataFrame shape、过滤后行数、动态阈值摘要
+- embedding device / model / batch size / 输出 shape
+- feature matrix shape
+- UMAP 参数、fit 开始/结束、xy range
+- 峰值 RSS 与磁盘剩余
+- export 文件大小与 validate 结果
+
+产物命名建议：
+
+```text
+data/runs/p18_1_full_rebuild_YYYYMMDD_HHMM/
+  cleaned.csv
+  text_embeddings.npy
+  genre_vectors.npy
+  language_vectors.npy
+  umap_xy.npy
+  galaxy_data.json
+  galaxy_data.json.gz
+  galaxy_search_index.json.gz
+  run_manifest.json
+  benchmark_log.txt
+```
+
+通过验收后，才决定是否同步覆盖 `data/output/*` 与 `frontend/public/data/*`。
+
+### P18.1b GHA core benchmark
+
+新增 `scripts/experiments/phase18_core_refit_benchmark.py`：
+
+- 输入来自 P18.1a canonical artifacts：`text_embeddings.npy`、`genre_vectors.npy`、`language_vectors.npy`、`cleaned.csv`、`umap_xy.npy`。
+- 不重跑 raw cleaning，不重跑老电影 embedding。
+- 跑 monthly refit 的核心路径：
+  1. load feature matrices
+  2. `fuse_modalities`
+  3. CPU `umap-learn` DensMAP `fit_transform`
+  4. Procrustes 对齐到 canonical v1
+  5. export/validate（可选开启，用于测总成本）
+- 输出 `umap_xy_p18_core_benchmark.npy` 与 `benchmark_report.json`。
+- **必须持续 print 进度**：启动参数、runner CPU/RAM/disk、加载 shape、fusion shape、UMAP 开始/结束、每 30s RSS + disk free heartbeat、xy range、Procrustes 指标。
+
+新增 `.github/workflows/phase18_refit_benchmark.yml`：
+
+- `workflow_dispatch` only。
+- `runs-on: ubuntu-24.04`。
+- 使用 P18.1a canonical artifacts（cache / artifact / release asset，首次 seed 方式须写进报告）。
+- 执行 `python scripts/experiments/phase18_core_refit_benchmark.py`。
+- 上传 benchmark report 与日志。
 
 ### 本地 vs GHA：不要互相换算墙钟时间
 
-- **本机（如 Win + .venv）**：CPU 架构、核心数、BLAS 线程与 Linux CI 不一致，**墙钟时间不能 1:1 换算成 GHA**。
-- **本机仍必跑**：迭代快、验证脚本正确、得到 **fit_transform 段峰值 RSS**（判断是否会顶满 runner 内存）与**耗时数量级**。
-- **GHA 上再跑一次**：用与 P18.5 相同的 `runs-on: ubuntu-24.04` + `workflow_dispatch`，在同一套缓存/输入假设下跑**同一条 benchmark 命令**，得到 **CI 墙钟时间**；P18.5 的 timeout 与是否需要降级到本地重跑方案，以 **GHA 实测** 为主，本机为辅。
+- **本地 full rebuild 时间**：用于证明完整流程和产物可信，不直接代表 CI 月度成本。
+- **GHA core benchmark 时间**：用于 P18.5 hosted runner 可行性判断。
+- P18.5 的 `timeout-minutes`、是否启用 monthly hosted runner、是否降级 local fallback，均以 **GHA core benchmark** 为主。
 
-### 实施
+### GHA 参数
 
-- 新增 `scripts/experiments/phase18_full_refit_benchmark.py`：
-  - 参数固定为当前 production：MiniLM 384d / densmap / n_neighbors=300 / min_dist=0.4 / random_state=42
-  - 直接复用现有 `data/output/text_embeddings.npy` + `genre_vectors.npy` + `language_vectors.npy`（不重跑 embedding）
-  - 调 `umap_projection.fuse_modalities` + `_fit_umap_learn` (CPU)
-  - 计时 + 打印峰值内存（`psutil.Process().memory_info().rss`）
-  - **必须持续 print 进度**：启动参数、runner CPU/RAM/disk、加载 shape、fusion shape、UMAP 开始/结束、每 30s RSS + disk free heartbeat、xy range、Procrustes 指标
-  - 输出 `umap_xy_p18_benchmark.npy` 验证与 `umap_xy.npy` 误差（应在 Procrustes 对齐后非常小）
-- **本机**：跑一次，记录 fit_transform 段总耗时、峰值 RSS、CPU/OS 简述。
-- **GHA**：新增 `.github/workflows/phase18_refit_benchmark.yml`（仅 `workflow_dispatch`），`runs-on: ubuntu-24.04`，checkout → setup-python → 安装依赖 → 将 benchmark 所需 `data/output/*.npy` 经 **cache 或 artifact** 对齐到与本机相同输入（或文档写明首次 seed 上传方式）→ `python scripts/experiments/phase18_full_refit_benchmark.py`；记录 **job 墙钟**、runner 镜像标签、日期。
 - **GHA 线程参数初值**（public 4C / 16GB runner）：
   - `OMP_NUM_THREADS=4`
   - `NUMBA_NUM_THREADS=4`
@@ -188,13 +266,15 @@ flowchart TD
 
 ### 验收
 
-- 报告里同时包含：**本机**与 **GHA** 两套数字 + 峰值内存；并注明「P18.5 timeout / 是否需要 fallback 以 GHA 为准」。
+- 报告里同时包含：**本地 full rebuild** 与 **GHA core benchmark** 两套数字 + 峰值内存；并注明「P18.5 timeout / 是否需要 fallback 以 GHA core benchmark 为准」。
+- 本地 canonical artifacts 的 `meta` 必须与 production 参数一致：384d / DensMAP / `n_neighbors=300` / `min_dist=0.4` / `metric=cosine` / `random_state=42`。
+- validate 通过，且 `meta.count == len(movies)`。
 - 判定：
   - `< 60 min` 且峰值 RSS `< 10GB`：monthly cron 稳定，weekly 可作为手动实验。
   - `60-120 min`：monthly cron 合理，weekly 不默认启用。
   - `> 120 min` 或接近 OOM：monthly 仍可试一次，但准备 quarterly/local fallback。
   - 接近 6h 或失败：改为季度/半年度本地机器 full refit + 上传产物。
-- 输出存档到 `docs/reports/Phase 18.1 CPU refit benchmark 实施报告.md`
+- 输出存档到 `docs/reports/Phase 18.1 Canonical full rebuild 与 GHA core benchmark 实施报告.md`
 
 ---
 
@@ -505,7 +585,7 @@ GitHub-hosted public `ubuntu-24.04` runner 为 4 CPU / 16GB RAM / 14GB SSD。`te
 - 实施报告：每个 P18.x 一份，存 `docs/reports/Phase 18.x ...`
 - 出口验收清单：
   - [ ] P18.0 frozen palette 与 v1 hex 一致
-  - [ ] P18.1：本机 + public `ubuntu-24.04` GHA 各一套 benchmark 数字；可行性（内存/timeout）以 GHA 为准
+  - [ ] P18.1：本地 canonical full rebuild 产物完整且 validate 通过；public `ubuntu-24.04` GHA core benchmark 有墙钟/内存数字；可行性（内存/timeout）以 GHA core benchmark 为准
   - [ ] P18.2 Supabase 59014 行 + galaxy_v1_reference 不可变
   - [ ] P18.3 Procrustes helper 单测通过
   - [ ] P18.4 nightly cron 手动 dispatch 成功 + JSON 部署到 CF Pages
@@ -521,9 +601,9 @@ GitHub-hosted public `ubuntu-24.04` runner 为 4 CPU / 16GB RAM / 14GB SSD。`te
 | :------------------------------------------------------- | :------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Kaggle API 配额或下架 dataset                            | 高                  | 加 fallback：失败时 cron 邮件通知；考虑直接调 TMDB 官方 API（rate-limited 但可控）                                                                             |
 | Supabase free tier 数据库 500MB 上限                     | 中                  | 59K 行约 80MB 表数据 + BYTEA features ~250MB，接近上限。若超：把 `movies_pending.text_embedding` 等 BYTEA 移到 Supabase Storage                                |
-| GH Actions public runner 资源限制（4 CPU / 16GB / 14GB） | 中                  | P18.1 先以 production 参数 benchmark；打印 heartbeat / RSS / disk；若 OOM 或接近 6h，full refit 改季度/半年度本地运行后上传                                    |
+| GH Actions public runner 资源限制（4 CPU / 16GB / 14GB） | 中                  | P18.1 先本地 full rebuild 建 canonical artifacts，再用 production 参数跑 GHA core benchmark；打印 heartbeat / RSS / disk；若 OOM 或接近 6h，full refit 改季度/半年度本地运行后上传 |
 | GH Actions free tier / 公共仓库配额变化                  | 低                  | public 仓库标准 runner 当前免费；仍需记录 job 分钟与失败率，避免把 heavy refit 设为 weekly 默认                                                                |
-| CPU refit 在 GHA 上实测超 120 分钟                       | 中                  | 以 **GHA 墙钟** 决策（非本机）：60-120min → monthly 保留；>120min 或接近 OOM → 准备 local quarterly/biannual fallback；近 6h → 不再用 hosted runner full refit |
+| CPU refit 在 GHA 上实测超 120 分钟                       | 中                  | 以 **GHA core benchmark 墙钟** 决策（非本机 full rebuild）：60-120min → monthly 保留；>120min 或接近 OOM → 准备 local quarterly/biannual fallback；近 6h → 不再用 hosted runner full refit |
 | numba/UMAP 升级再次破坏                                  | 低（B1 已绕开 pkl） | pin 版本于 [requirements.cpu.txt](requirements.cpu.txt)；CI lock 测试                                                                                          |
 | Procrustes 对齐失败（边界情况）                          | 低                  | 加 fallback：对齐 RMSE > 阈值时报警 + 跳过 update（保留上一版坐标）                                                                                            |
 | CF Pages 国内访问问题                                    | 中                  | 本 phase 不解决；GitHub Pages 保留 1-2 周备线；Phase 19+ 处理                                                                                                  |

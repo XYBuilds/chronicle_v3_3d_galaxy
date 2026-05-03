@@ -6,7 +6,7 @@ todos:
     content: P18.0 Genre palette 冻结：写死 19 genre 固定 hue 表，meta 加 genre_palette_version；assert 数据中所有 genre 都在表内
     status: pending
   - id: p181-cpu-refit-benchmark
-    content: P18.1 CPU 全量 refit benchmark：用当前 production 参数 (384d/densmap/n=300/min_dist=0.4) 实测耗时 + 内存峰值，写报告
+    content: P18.1 CPU 全量 refit benchmark：本机跑 production 参数 (384d/densmap/n=300/min_dist=0.4) 记耗时+峰值内存；再在目标 GHA runner 上 workflow_dispatch 同脚本拿墙钟时间（本地不可 1:1 换算）；写报告
     status: pending
   - id: p182-supabase-schema
     content: P18.2 Supabase schema (movies / galaxy_v1_reference / movies_pending / vote_snapshots) + 一次性导入 cleaned.csv 59014 行 + v1 坐标
@@ -91,7 +91,7 @@ flowchart TD
 ```mermaid
 flowchart TD
     P180[P18.0 Genre palette 冻结]
-    P181["P18.1 CPU 全量 refit benchmark (实测)"]
+    P181["P18.1 CPU refit benchmark (本机+GHA)"]
     P182[P18.2 Supabase schema + 一次性导入 v1]
     P183[P18.3 Procrustes 对齐 helper + v1 reference 锁定]
     P184[P18.4 GH Actions nightly:vote refresh + JSON 重导]
@@ -111,7 +111,7 @@ flowchart TD
 
 依赖说明：
 - **P18.0** 独立可做，可并入当前 phase 17 末（属 export 修复）
-- **P18.1** benchmark 跑一次拿到实测耗时，用来给 P18.5 cron 选定频率（每周 vs 每月）
+- **P18.1** 本机 benchmark + **同脚本在 GHA 上跑一次**拿到墙钟时间（定 P18.5 `timeout-minutes` 与每周/每月）；本机数字只做量级与内存，不可当作 CI 确切耗时
 - **P18.2** v1 锁定：把当前 [frontend/public/data/galaxy_data.json](frontend/public/data/galaxy_data.json) 的 xy 作为永久 Procrustes reference 写入 Supabase 一张专表
 - **P18.3** 是 P18.5 的前置 helper
 - **P18.4 / P18.5** 互相独立，可并行实现
@@ -146,7 +146,13 @@ flowchart TD
 
 ### 目的
 
-把"30-60 分钟"估算变成实测数。决定 P18.5 cron 选每周还是每月（GH Actions free tier 单 job 上限 6h，CPU 4-core）。
+把"30-60 分钟"估算变成**可复核的数字**。决定 P18.5 cron 选每周还是每月，以及 `timeout-minutes`（GH Actions 单 job 上限 6h；**hosted runner 的 vCPU / RAM 以 [GitHub 文档](https://docs.github.com/en/actions/using-github-hosted-runners/using-github-hosted-runners/about-github-hosted-runners) 为准**，勿凭记忆写死核数）。
+
+### 本地 vs GHA：不要互相换算墙钟时间
+
+- **本机（如 Win + .venv）**：CPU 架构、核心数、BLAS 线程与 Linux CI 不一致，**墙钟时间不能 1:1 换算成 GHA**。
+- **本机仍必跑**：迭代快、验证脚本正确、得到 **fit_transform 段峰值 RSS**（判断是否会顶满 runner 内存）与**耗时数量级**。
+- **GHA 上再跑一次**：用与 P18.5 相同的 `runs-on`（如 `ubuntu-latest`）+ `workflow_dispatch`，在同一套缓存/输入假设下跑**同一条 benchmark 命令**，得到 **CI 墙钟时间**；P18.5 的 timeout 与「周/月」决策以 **GHA 实测** 为主，本机为辅。
 
 ### 实施
 
@@ -156,14 +162,12 @@ flowchart TD
   - 调 `umap_projection.fuse_modalities` + `_fit_umap_learn` (CPU)
   - 计时 + 打印峰值内存（`psutil.Process().memory_info().rss`）
   - 输出 `umap_xy_p18_benchmark.npy` 验证与 `umap_xy.npy` 误差（应在 Procrustes 对齐后非常小）
-- 在本机（Win + .venv）跑一次，记录：
-  - 总耗时（fit_transform 段）
-  - 峰值 RSS
-  - GH Actions free tier (Ubuntu, 7GB RAM, 4 vCPU) 是否能跑（按 RAM 与时长估算）
+- **本机**：跑一次，记录 fit_transform 段总耗时、峰值 RSS、CPU/OS 简述。
+- **GHA**：新增 `.github/workflows/phase18_refit_benchmark.yml`（仅 `workflow_dispatch`），checkout → setup-python → 安装依赖 → 将 benchmark 所需 `data/output/*.npy` 经 **cache 或 artifact** 对齐到与本机相同输入（或文档写明首次 seed 上传方式）→ `python scripts/experiments/phase18_full_refit_benchmark.py`；记录 **job 墙钟**、runner 镜像标签、日期。
 
 ### 验收
 
-- 拿到实测数字，写进 P18.5 决策（每周 cron 是否合理）
+- 报告里同时包含：**本机**与 **GHA** 两套数字 + 峰值内存；并注明「P18.5 timeout / 频率 以 GHA 为准」。
 - 输出存档到 `docs/reports/Phase 18.1 CPU refit benchmark 实施报告.md`
 
 ---
@@ -376,7 +380,7 @@ on:
 jobs:
   refit:
     runs-on: ubuntu-latest
-    timeout-minutes: 180  # 视 P18.1 benchmark 调整
+    timeout-minutes: 180  # 视 P18.1 在 GHA 上的实测墙钟 + 余量调整
     steps:
       - checkout
       - setup-python
@@ -406,7 +410,7 @@ GH Actions ephemeral disk 14GB，但 `text_embeddings.npy` (~180MB) + `cleaned.c
 
 ### 验收（需 P18.1 实测后细化）
 
-- weekly cron 执行时长 < 90 分钟（依赖 P18.1 benchmark）
+- weekly cron 执行时长 < 90 分钟（阈值以 **P18.1 在 GHA 上的墙钟** 为基准留出余量；勿仅用本机时间推断）
 - Procrustes 对齐后 95% 的星与上一版坐标距离 < 0.01 单位
 - 跑一次手动 dispatch 验证全流程
 
@@ -440,7 +444,7 @@ GH Actions ephemeral disk 14GB，但 `text_embeddings.npy` (~180MB) + `cleaned.c
 - 实施报告：每个 P18.x 一份，存 `docs/reports/Phase 18.x ...`
 - 出口验收清单：
   - [ ] P18.0 frozen palette 与 v1 hex 一致
-  - [ ] P18.1 benchmark 数字 + GH Actions 可行性确认
+  - [ ] P18.1：本机 + GHA 各一套 benchmark 数字；可行性（内存/timeout）以 GHA 为准
   - [ ] P18.2 Supabase 59014 行 + galaxy_v1_reference 不可变
   - [ ] P18.3 Procrustes helper 单测通过
   - [ ] P18.4 nightly cron 手动 dispatch 成功 + JSON 部署到 CF Pages
@@ -457,7 +461,7 @@ GH Actions ephemeral disk 14GB，但 `text_embeddings.npy` (~180MB) + `cleaned.c
 | Kaggle API 配额或下架 dataset                     | 高                  | 加 fallback：失败时 cron 邮件通知；考虑直接调 TMDB 官方 API（rate-limited 但可控）                                              |
 | Supabase free tier 数据库 500MB 上限              | 中                  | 59K 行约 80MB 表数据 + BYTEA features ~250MB，接近上限。若超：把 `movies_pending.text_embedding` 等 BYTEA 移到 Supabase Storage |
 | GH Actions free tier 月度配额 2000 分钟           | 低                  | nightly 30min × 30 + weekly 90min × 4 = 1260 min，仍在配额内                                                                    |
-| CPU refit 实测超 90 分钟                          | 中                  | P18.1 benchmark 后调整：超 90min → 改月度；超 3h → 考虑 self-hosted runner 或保留本地手工 refit                                 |
+| CPU refit 在 GHA 上实测超 90 分钟               | 中                  | 以 **GHA 墙钟** 决策（非本机）：超 90min → 改月度；近 6h → 放宽 timeout 或改月度；超 3h 仍不可接受 → self-hosted / 保留本地手工 refit |
 | numba/UMAP 升级再次破坏                           | 低（B1 已绕开 pkl） | pin 版本于 [requirements.cpu.txt](requirements.cpu.txt)；CI lock 测试                                                           |
 | Procrustes 对齐失败（边界情况）                   | 低                  | 加 fallback：对齐 RMSE > 阈值时报警 + 跳过 update（保留上一版坐标）                                                             |
 | CF Pages 国内访问问题                             | 中                  | 本 phase 不解决；GitHub Pages 保留 1-2 周备线；Phase 19+ 处理                                                                   |

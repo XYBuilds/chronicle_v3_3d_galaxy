@@ -102,14 +102,14 @@ function makeSharedUniforms(
       uLightnessRatingExponent: { value: 3.0 },
       /** P17.1 — Z-axis camera standoff (world years); distance-L reference `d0 = max(uZCamDistance, ε)`. */
       uZCamDistance: { value: 30 },
-      /** P17.1 — lower clamp on `pow(d0/d, 2/3)` so stars nearer than the reference plane do not blow past vote L. */
+      /** P17.1 — lower clamp on `pow(d0/d, 2/3)` so stars nearer than the reference plane do not blow past vote L. P17.4 production default. */
       uDistanceLightnessFloor: { value: 0.5 },
       uChroma: { value: 0.18 },
-      /** P17.2 — Hunt exponent γ (shared idle / active / Perlin). */
+      /** P17.2 — Hunt exponent γ (shared idle / active / Perlin). P17.4 production default after sweep. */
       uHuntGamma: { value: 0.3 },
       /** P17.2 — bit 0 = idle vert, bit 1 = active vert, bit 2 = perlin frag; default 0b111 = 7. */
       uHuntApplyMask: { value: 7 },
-      /** P17.2 — focus-neighborhood hover: instance id for full alpha; -1 = none. */
+      /** P17.2 — focus-neighborhood hover: instance id for alpha lift; -1 = none. */
       uHoveredInstanceId: { value: -1 },
       uFocusedInstanceId: { value: -1 },
       /** P11.1 — focus fly-in/out: same eased progress as camera lerp (scene.ts). */
@@ -118,7 +118,7 @@ function makeSharedUniforms(
       uFocusTargetInstanceId: { value: -1 },
       /** P11.1 / P13.6 — non-target active alpha at focus blend=1 (tuned down from 0.1 for dense neighbor sphere). */
       uFocusNonTargetActiveAlpha: { value: 0.08 },
-      /** P17.2+ — focus neighborhood: hovered active alpha = max(dimAlpha, this); default 1 = fully opaque on hover. */
+      /** P17.2+ — focus neighborhood: hovered active alpha = max(dimAlpha, this). P17.4 default 0.4. */
       uFocusHoveredActiveAlpha: { value: 0.4 },
       /** P11.2 — idle focus dim: chroma × this when dim (OKLab a,b scale with C). Phase 17 default 1 = off (Hunt in P17.2). */
       uFocusDimChroma: { value: 1.0 },

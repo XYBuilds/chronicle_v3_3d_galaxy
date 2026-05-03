@@ -2,7 +2,7 @@
 
 > **文档性质**：本文件位于 **`docs/benchmarks/`**，是 **性能测量口径、Story 准入门槛与里程碑入口/出口表的归档**（基线簿），**不是**功能或渲染行为的 SSOT；交互与实现以 [`星球状态机 spec.md`](../project_docs/星球状态机%20spec.md)、《Tech Spec》《Design Spec》及源码为准。
 >
-> **里程碑扩展**：随 Phase 10 / 11 / 12 / **13** / **16** 等可在文末追加 `## P10.x`、`## P11.x`、`## P12.x`、**`## P13.0 入口`**、**`## P13 出口`**、**`## P16 出口`** 等 **入口/出口** 节（与 §P8.0.1 **同录制口径**），并与对应 Cursor 计划交叉引用。**Phase 12** 出口见下文 **`## P12 入口/出口`**（[`.cursor/plans/phase_12_search_and_select_6c9bfa94.plan.md`](../../.cursor/plans/phase_12_search_and_select_6c9bfa94.plan.md) · P12.9）。**Phase 13** 入口见 **`## P13.0 入口`**；**收尾与文档登记**见 **`## P13 出口`**（[`.cursor/plans/phase_13_focus_experience_ab016b85.plan.md`](../../.cursor/plans/phase_13_focus_experience_ab016b85.plan.md) · P13.7）。**Phase 16**（搜索 placeholder、`zCurrent` 差异化、active 双路径）性能与手测登记见 **`## P16 出口`**（[`.cursor/plans/phase_16_search_refinements_22478218.plan.md`](../../.cursor/plans/phase_16_search_refinements_22478218.plan.md) · P16.4）。
+> **里程碑扩展**：随 Phase 10 / 11 / 12 / **13** / **16** / **17** 等可在文末追加 `## P10.x`、`## P11.x`、`## P12.x`、**`## P13.0 入口`**、**`## P13 出口`**、**`## P16 出口`**、**`## P17 出口`** 等 **入口/出口** 节（与 §P8.0.1 **同录制口径**），并与对应 Cursor 计划交叉引用。**Phase 12** 出口见下文 **`## P12 入口/出口`**（[`.cursor/plans/phase_12_search_and_select_6c9bfa94.plan.md`](../../.cursor/plans/phase_12_search_and_select_6c9bfa94.plan.md) · P12.9）。**Phase 13** 入口见 **`## P13.0 入口`**；**收尾与文档登记**见 **`## P13 出口`**（[`.cursor/plans/phase_13_focus_experience_ab016b85.plan.md`](../../.cursor/plans/phase_13_focus_experience_ab016b85.plan.md) · P13.7）。**Phase 16**（搜索 placeholder、`zCurrent` 差异化、active 双路径）性能与手测登记见 **`## P16 出口`**（[`.cursor/plans/phase_16_search_refinements_22478218.plan.md`](../../.cursor/plans/phase_16_search_refinements_22478218.plan.md) · P16.4）。**Phase 17**（Hunt、距离-L、idle opaque、Space dolly）见 **`## P17 出口`**（[`.cursor/plans/phase_17_visual_system_upgrade_e8b64dbb.plan.md`](../../.cursor/plans/phase_17_visual_system_upgrade_e8b64dbb.plan.md) · P17.4）。
 
 > 从 `视觉参数总表.md` 拆出单独跟踪（**2026-04-27**）。Phase 7 宏观参数清单仍见 **`视觉参数总表.md`**（Git 跟踪；**不再**列入 `.cursorignore`）。总表文首注明：开发者速查用，**非** Agent SSOT。
 
@@ -53,7 +53,7 @@
 ## P8.0.4 状态机 SSOT
 
 - 四态（idle / active / hover / focus）+ **Phase 12 起正式态 `select`**（人名/genre 搜索多 active、`selectionMask`、`searchMode`、ESC 焦点栈等）：见 [`星球状态机 spec.md`](../project_docs/星球状态机%20spec.md) §3.6（`W = uZVisWindow×0.2`、`vote_count` focus 权重与「小片偏小」意图、draw 顺序、WebGL2、**focus×select 嵌套**）。
-- **Phase 8 文档回写（2026-04-27）**：《视觉参数总表》持续与源码对齐；《Tech Spec》/《Design Spec》/《数据特征工程与 3D 映射总表》已更新 P8.1–P8.4 双 mesh 与 `genre_hue`。**Phase 12（2026-04-29）**：搜索 UX、数据契约（`has_search_index`、`galaxy_search_index.json.gz`）、拾取与 mask 覆盖规则已写入上述 SSOT + 本节 **`## P12 入口/出口`**。**Phase 13 P13.0（2026-04-30）**：focus 邻域球 **`uSelectionMode=2`**、轨道相机、`bridgeZ=zCurrent` / Timeline snap、`transitionDriver` 等契约已写入 SSOT；性能入口见 **`## P13.0 入口`**。**Phase 13 P13.7（2026-05-01）**：全量 spec / 视觉总表与实现对齐；Chrome Performance 三线**未**在本里程碑重录时见 **`## P13 出口`**。**Phase 16 P16.4（2026-05-02）**：搜索压力片段复跑口径 + 手测回归清单见 **`## P16 出口`**。
+- **Phase 8 文档回写（2026-04-27）**：《视觉参数总表》持续与源码对齐；《Tech Spec》/《Design Spec》/《数据特征工程与 3D 映射总表》已更新 P8.1–P8.4 双 mesh 与 `genre_hue`。**Phase 12（2026-04-29）**：搜索 UX、数据契约（`has_search_index`、`galaxy_search_index.json.gz`）、拾取与 mask 覆盖规则已写入上述 SSOT + 本节 **`## P12 入口/出口`**。**Phase 13 P13.0（2026-04-30）**：focus 邻域球 **`uSelectionMode=2`**、轨道相机、`bridgeZ=zCurrent` / Timeline snap、`transitionDriver` 等契约已写入 SSOT；性能入口见 **`## P13.0 入口`**。**Phase 13 P13.7（2026-05-01）**：全量 spec / 视觉总表与实现对齐；Chrome Performance 三线**未**在本里程碑重录时见 **`## P13 出口`**。**Phase 16 P16.4（2026-05-02）**：搜索压力片段复跑口径 + 手测回归清单见 **`## P16 出口`**。**Phase 17 P17.4（2026-05-03）**：Hunt、距离-L、idle opaque、Space dolly、focus 邻域 hover alpha 与 SSOT 对齐；Chrome Performance 三线**未**在本 Agent 会话内重录，登记见 **`## P17 出口`**。
 
 ---
 
@@ -221,3 +221,36 @@
 | **search · person（Christopher Nolan）** | 同 §B 行 **search · person**；命中项为 **Christopher Nolan** 或等价高 **`movie_ids.length`** 影人 | *待补录* | *待补录* | *待补录* | *待补录* | 含连线 + **zCurrent** snap |
 
 **录制步骤**：与 §P8.0.1 及 **`## P12 入口/出口`**「录制步骤」相同；须在联想 **点击确认**、画面已切换到多 active 后再 **Record**。
+
+---
+
+## P17 出口（Phase 17 视觉系统升级 · 文档与回归登记）
+
+> **目的**：在 P17.1–P17.3（idle opaque + 距离-L、Hunt 全层、P11.2 默认关闭、**Space + 滚轮** dolly、`zCamDistance` **\[2, 30\]** 仅推近、Ctrl+滚轮交浏览器）及 P17.4（三份 SSOT + 本基线簿 + 参数表与 `galaxyMeshes.ts` / `camera.ts` 定稿对齐）完成后，用与 **§P8.0.1** **同口径**的 Chrome Performance **三线**归档 **出口**，并与 **§P8.0.1** / **`## P16 出口`** 冻结值对照（计划常见容差：**±约 10%**；Hunt 增加顶点 `pow`，idle opaque 增加 **depthWrite**，净效应以实测为准）。  
+> **关联计划**：[`.cursor/plans/phase_17_visual_system_upgrade_e8b64dbb.plan.md`](../../.cursor/plans/phase_17_visual_system_upgrade_e8b64dbb.plan.md)（P17.4）。  
+> **Git 分支（文档登记）**：`phase/p17-4-doc-sync`（P17.4 文档同步与本节）。  
+> **子报告**：[`Phase 17.1 P17.1 idle 遮挡修复与距离-L 实施报告.md`](../reports/Phase%2017.1%20P17.1%20idle%20遮挡修复与距离-L%20实施报告.md) · [`Phase 17.2 P17.2 Hunt 与 focus 交互 实施报告.md`](../reports/Phase%2017.2%20P17.2%20Hunt%20与%20focus%20交互%20实施报告.md) · [`Phase 17.3 P17.3 Space dolly 局部缩放与相机契约 实施报告.md`](../reports/Phase%2017.3%20P17.3%20Space%20dolly%20局部缩放与相机契约%20实施报告.md) · [`Phase 17.4 P17.4 文档同步与基线收口 实施报告.md`](../reports/Phase%2017.4%20P17.4%20文档同步与基线收口%20实施报告.md)。
+
+**2026-05-03（本仓库 P17 出口登记）**
+
+1. **定稿参数（与 `galaxyMeshes.ts` / `camera.ts` 一致）**  
+   - **`uHuntGamma`** = **0.3**；**`uHuntApplyMask`** = **7**；**`uDistanceLightnessFloor`** = **0.5**；**`uChroma`** = **0.18**；**`uFocusHoveredActiveAlpha`** = **0.4**；**`d0`** 策略 = **`max(uZCamDistance, ε)`**（store **`zCamDistance`** 每帧同步）。  
+   - **Dolly**：**`DOLLY_SPEED_MUL`** = **5**；**`nearEase`** = **`clamp(prevR/14, 0.22, 1)`**；**`GALAXY_ZCAM_DISTANCE_DEFAULT`** = **30**；局部 clamp **`[2, 30]`**（仅推近）。**未**暴露独立 **`__galaxyInteraction.dollyZoomSpeed`**（见《视觉参数总表》§8）。
+
+2. **Chrome Performance §P8.0.1 三线**  
+   - 本提交**未**在 Agent 环境内重录 DevTools；下列三行**留空**，维护者本地按 §P8.0.1「录制步骤」补录后与 **§P8.0.1（2026-04-27）** 及 **`## P16 出口`** 对照（**±~10%** 容差）。
+
+| 片段 | 操作说明 | GPU time（ms / frame，中位数） | JS Main（ms / frame） | Long tasks（>50 ms，次数） | fps 中位数 | 备注 |
+|------|----------|--------------------------------|----------------------|-----------------------------|------------|------|
+| **idle** | 与 §P8.0.1 idle 同口径（默认数据；稳态后可另录 5 s） | *待补录* | *待补录* | *待补录* | *待补录* | idle **opaque + depthWrite**；顶点距离-L + Hunt |
+| **timeline 拖动** | 与 §P8.0.1 同口径 | *待补录* | *待补录* | *待补录* | *待补录* | 与 macro Z 行为一致；**Space 未按住** |
+| **focus** | 与 §P8.0.1 focus 同口径（飞入 + 稳态 + 邻域 + 轨道） | *待补录* | *待补录* | *待补录* | *待补录* | Perlin Hunt；邻域 hover alpha 手测见第 3 节 |
+
+3. **手测回归清单（维护者逐条确认）**  
+   - **idle**：密集区 idle **深度遮挡**正确，无明显「远盖近」；片元 **alpha = 1**。  
+   - **距离-L + Hunt**：观测平面附近亮度与预期一致；远离平面变暗且饱和度随 Hunt 下降（**`__galaxyColor.huntApplyMask=0`** 可关 Hunt 做 A/B）。  
+   - **Space + 滚轮 dolly**：**`zCurrent` / Timeline 不动**；光标下 **`z = zCurrent`** 平面锚定稳定；**松开 Space** → **`zCamDistance` → 30**；**Ctrl + 滚轮** → 浏览器缩放、画布不劫持。  
+   - **focus**：滚轮 **noop**（含 Space）；**R 内**邻域 active 非 hover 半透明、**hover** 抬升到 **`uFocusHoveredActiveAlpha`**；**R 外** idle；**`uSelectionMode === 1`**（person/genre）**无** hover alpha 规则误触。  
+   - **P16 路径**：`Drama` / 高人名 select **opaque 路径 A** 与 **ESC** 栈无回归（与 **`## P16 出口`** 交叉引用）。
+
+**录制步骤**：与 §P8.0.1「录制步骤（摘要）」相同。

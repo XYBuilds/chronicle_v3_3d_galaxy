@@ -15,8 +15,8 @@ todos:
     content: P17.3 Space+滚轮 dolly（不用 ctrlKey）+ Space 松开复位默认 zCamDistance；Raycaster 锚定；clamp [2,30]；focus noop；实施报告见 docs/reports
     status: completed
   - id: p174-doc-sync
-    content: P17.4 文档同步 + 回归 + 出口 fps：三份 spec / Phase 8 基线 P17 出口 / 实施报告；扫参收口（γ / mask / d0 策略 / distance-L clamp / dolly speed 默认值）；mac/win/chrome/safari 手测 dolly；focus 邻域 hover alpha 回归
-    status: pending
+    content: P17.4 文档同步 + 回归 + 出口 fps：三份 spec / Phase 8 基线 P17 出口 ；扫参收口（γ / mask / d0 策略 / distance-L clamp / dolly speed 默认值）；mac/win/chrome/safari 手测 dolly；focus 邻域 hover alpha 回归
+    status: completed
 isProject: false
 ---
 
@@ -510,7 +510,7 @@ if (selectionPhase === 'idle') {
 - [Tech Spec.md](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md) §1.4.1 / §1.4.3 / §1.4.4
 - [Design Spec.md](docs/project_docs/TMDB%20电影宇宙%20Design%20Spec.md) §1 / §2.1
 - [Phase 8 基线](docs/benchmarks/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md) 加 `## P17 出口` 节，重跑 P8.0.1 三片段（Hunt + distance-L 主要影响 vertex 计算量；idle opaque 可能改善透明排序成本但增加深度写入，需实测 fps；dolly 对 fps 影响极小）
-- 实施报告 P17.1 / P17.2 / P17.3 各一份；P17.4 合入主报告
+- 实施报告 P17.1 / P17.2 / P17.3 各一份
 - 扫参收口：γ / mask / d0 策略 / distance-L floor / dolly speed 默认值最终化并写回 [galaxyMeshes.ts](frontend/src/three/galaxyMeshes.ts)、[camera.ts](frontend/src/three/camera.ts) 默认值
 - 回归清单：
   - 三片段视觉对比：Phase 16 末态 vs Hunt on（截图存档）

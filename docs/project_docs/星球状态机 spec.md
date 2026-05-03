@@ -70,6 +70,7 @@ inFocus = smoothstep(zLo - W, zLo, aZ) × (1 - smoothstep(zHi, zHi + W, aZ))
 | **z 范围** | 不改变 `inFocus`；与 active 命中一致 |
 | **大小** | **不**改 mesh scale；HTML ring 半径 = 屏幕空间星球半径 + padding（与 tooltip 同源 `screenRadius`） |
 | **色彩** | ring 样式在 HUD/CSS；数据色仍以 mesh 为准 |
+| **双 mesh GPU** | 通用 **hover**（`hoveredMovieId`）**不**改 idle 顶点；**active** 顶点在 **movie / person / genre** 常规拾取下**不**因 hover 单独改 alpha。**Phase 17**：仅在 **focus 球形邻域**（**`uSelectionMode === 2`**，见 **§3.4.3**）对**被 hover 的邻域 active 实例**抬升 **`vFocusAlphaMult`**，且 **`hoveredMovieId === null`** 时 **`uHoveredInstanceId = -1`**，避免残留不透明。 |
 | **可交互性** | 展示 tooltip；点击逻辑沿用现工程 |
 | **进入/退出** | **即时**（无 transition），与 tooltip 一致 |
 
@@ -112,6 +113,7 @@ inFocus = smoothstep(zLo - W, zLo, aZ) × (1 - smoothstep(zHi, zHi + W, aZ))
   - **`uFocusCameraBlend ∈ [0,1]`**：与选中相机动画**同一标量**——`selecting` 时等于 `easeOutCubic(t)`（与 `camera.position.lerpVectors(fromCam, toCam, ·)` 第三个参数一致）；`selected` 恒为 **1**；`deselecting` 为 **`1 - easeOutCubic(t)`**；`idle` 为 **0**。
   - **`uFocusTargetInstanceId`**：`selecting` / `selected` / `deselecting` 为当前操作对应的 **`pendingSelectInstanceIndex`**；`idle` 为 **-1**。用于在 **`uFocusedInstanceId === -1`** 的飞入阶段仍能识别「目标」实例，使目标 active **alpha 恒为 1**（飞入中仍不透明）。
   - **`uFocusNonTargetActiveAlpha`**：定稿默认 **0.08**（**Phase 13.6**：邻域 active 变密后由 **0.10** 下调；见《视觉参数总表》§2）；非目标 active 片元 `alpha = mix(1.0, uFocusNonTargetActiveAlpha, uFocusCameraBlend)`（在 vert 打包为 `vFocusAlphaMult` 传入片元）。
+  - **Phase 17 · focus 邻域 hover alpha**（与 **`uSelectionMode === 2`** 绑定，**不**作用于 person/genre **`uSelectionMode === 1`**）：`scene.ts` 将 **`hoveredMovieId`** 映射为 **`uHoveredInstanceId`**（无 hover 时为 **`-1`**）。当 **`gl_InstanceID === uHoveredInstanceId`** 且非主目标（**`gl_InstanceID !== uFocusTargetInstanceId`** 路径与现有 P11.1 目标识别一致）时，令 **`dimAlpha = mix(1.0, uFocusNonTargetActiveAlpha, uFocusCameraBlend)`**，再 **`vFocusAlphaMult = max(dimAlpha, clamp(uFocusHoveredActiveAlpha, 0, 1))`**（默认 **`uFocusHoveredActiveAlpha = 0.4`**，可调 **`__galaxyColor.focusHoveredActiveAlpha`**）。**R 外**实例仍走 idle，**不**经本条。主 Perlin 焦点在双 mesh 上 **`sActive = 0`**，hover 命中焦点 id **不**额外「亮起」一颗 active 目标球。
 - **焦点实例在 `selected` 后**仍在 vert 上 `sActive = 0`（双 mesh 隐藏），Perlin 为主视觉；本条主要压低**其余** slab 内 active，突出 focus。
 
 #### 3.4.4 焦点近相机遮挡剔除（原计划 P11.1 · **未实装**）
@@ -123,7 +125,8 @@ inFocus = smoothstep(zLo - W, zLo, aZ) × (1 - smoothstep(zHi, zHi + W, aZ))
 - **`uSelectionMode = 2`**（focus 邻域）：GPU 顶点路径上 **`inFocus` 与 `uSelectionMode = 1` 一致**——即按 **`uSelectionMask`** 纹理采样结果**覆盖**条带公式算出的 `inFocus`；**区别仅在 CPU 写 mask 的数据源**（本模式为**球形邻域 id 集合**，而非人名/genre 搜索的 `selectionIds`）。
 - **邻域定义**：以**焦点影片**的 world 位置为球心、store **`focusNeighborRadius`**（世界单位）为半径 **R**，凡满足欧氏距离 **≤ R** 的影片 id 写入 mask（**含**焦点 id 与否以实现为准，拾取仍以 Perlin 球优先，见 §3.5.2）。
 - **默认值**：`focusNeighborRadius` **5** world units（Leva **`__galaxy.focusNeighborRadius`** 可调；与《视觉参数总表》§6 一致）。
-- **退出 focus**：清空邻域 mask；**`uSelectionMode` 回到 `0`**（idle）或 **`1`**（若仍处于 person/genre **select** 会话且须在下一帧恢复 search mask，见下条 **D1**）。
+- **Phase 17 hover 读回**：邻域 mask 与 **§3.4.3** 的 **`uHoveredInstanceId` / `uFocusHoveredActiveAlpha`** 正交——mask 决定 **R 内**谁画 **active**；hover 仅在 **`uSelectionMode === 2`** 下微调 **active** 的 **`vFocusAlphaMult`**，**不**把 R 外 idle 升为 active。
+- **退出 focus**：清空邻域 mask；**`uSelectionMode` 回到 `0`**（idle）或 **`1`**（若仍处于 person/genre **select** 会话且须在下一帧恢复 search mask，见下条 **D1**）；**`uHoveredInstanceId → -1`**。
 
 #### 3.4.6 focus 态轨道相机（Phase 13 · **相机契约破例**）
 
@@ -213,5 +216,6 @@ Perlin focus 球在片元侧按 **`vNoise`** 与 **`uThresh[0..K−2]`**（**K**
 | 2026-04-30 | **Phase 13 P13.0**：§3.4 表修订（邻域球、轨道相机、退出路径）；新增 **§3.4.5** 邻域 mask、**§3.4.6** 轨道相机；§3.6 **`uSelectionMode = 2`** 与 **focus×select（D1）** mask 替换语义 |
 | 2026-05-01 | **Phase 13 P13.7**：文档与 Phase 8 基线收口；§3.4.3 **`uFocusNonTargetActiveAlpha`** 默认与代码对齐为 **0.08**（P13.6）；性能三线未重录时见 [`Phase 8 基线 P8.0 性能与 P8.4 准入.md`](../benchmarks/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md) **`## P13 出口`** |
 | 2026-05-02 | **Phase 16 P16.4**：[`Phase 8 基线`](../benchmarks/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md) 新增 **`## P16 出口`**（复跑 §P12 **B** 压力片段 `Drama` / Christopher Nolan + 手测回归清单）；与 §3.2.1 active 双路径验收交叉引用 |
-| 2026-05-03 | **Phase 17 P17.0（spec）**：§3.1 idle 色彩链改为 **L_star → 距离-L → Hunt** + opaque/depthWrite；§3.2 active 加 Hunt；§3.4.1 P11.2 **默认 1.0/1.0** 与 Hunt 语义分工；§3.5.1 Perlin Hunt + **`uHuntApplyMask` bit2**；§3.4.6 focus 滚轮 noop 含 Alt/Ctrl dolly |
+| 2026-05-03 | **Phase 17 P17.0（spec）**：§3.1 idle 色彩链改为 **L_star → 距离-L → Hunt** + opaque/depthWrite；§3.2 active 加 Hunt；§3.4.1 P11.2 **默认 1.0/1.0** 与 Hunt 语义分工；§3.5.1 Perlin Hunt + **`uHuntApplyMask` bit2**；§3.4.6 focus 滚轮 noop 与 **Space / Ctrl** 滚轮契约对齐（见 P17.3 报告） |
 | 2026-05-03 | **Phase 17 P17.3**：§3.4.6 **focus 滚轮 noop** 与 **`Space + wheel` dolly** 对齐（替换草案 Alt/Ctrl）；实施报告 [`Phase 17.3 P17.3 Space dolly 局部缩放与相机契约 实施报告.md`](../reports/Phase%2017.3%20P17.3%20Space%20dolly%20局部缩放与相机契约%20实施报告.md) |
+| 2026-05-03 | **Phase 17 P17.4**：§3.3 补 GPU hover 与邻域 alpha 分工；§3.4.3 补 **`uHoveredInstanceId` / `uFocusHoveredActiveAlpha`**；§3.4.5 补与 hover uniform 关系；基线见 **`docs/benchmarks/Phase 8 基线 P8.0 性能与 P8.4 准入.md`** **`## P17 出口`** |

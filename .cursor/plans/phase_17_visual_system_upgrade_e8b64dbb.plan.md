@@ -1,6 +1,6 @@
 ---
 name: phase 17 visual system upgrade
-overview: Phase 17 升级整体色彩、深度与交互系统：上线 Hunt 效应（C 随 L 衰减 ~ C_base × (L/L_base)^γ）覆盖 idle / active / Perlin 三层 OKLab 色彩公式；彻底移除 idle 片元透明度控制并将 idle 材质切到 opaque + depthWrite 修复遮挡；用距离-L 公式 L(d)=Lmax*(d0/d)^(2/3) 取代旧 P10.2 透明/颜色距离衰减，Hunt 直接消费距离修正后的 L；禁用 P11.2 focus 态 idle 降 C/L 路径作为对照；新增 Alt/Ctrl + 滚轮 = dolly-to-cursor 双模式（默认沿 Z 穿梭维持），zCamDistance 由 wheel 写入实现"以光标为中心"的物理推近，zCurrent 不变。
+overview: Phase 17 升级整体色彩、深度与交互系统：上线 Hunt 效应（C 随 L 衰减 ~ C_base × (L/L_base)^γ）覆盖 idle / active / Perlin 三层 OKLab 色彩公式；彻底移除 idle 片元透明度控制并将 idle 材质切到 opaque + depthWrite 修复遮挡；用距离-L 公式 L(d)=Lmax*(d0/d)^(2/3) 取代旧 P10.2 透明/颜色距离衰减，Hunt 直接消费距离修正后的 L；禁用 P11.2 focus 态 idle 降 C/L 路径作为对照；滚轮双模式：**Alt 按住**时滚轮与 Timeline 脱钩，仅 dolly-to-cursor（局部放大：zCamDistance、「以光标为中心」数学同 P17.3 节）；**Alt 松开（keyup）**将 zCamDistance 复位默认、滚轮恢复 macro Z / Timeline；**不**使用 `e.ctrlKey` 触发 dolly（浏览器将 Ctrl+滚轮用作页面缩放，触摸板 pinch 常带 ctrlKey）；zCurrent 在 dolly 路径不变。
 todos:
   - id: p170-spec
     content: P17.0 spec 升级（无代码）：状态机 / 视觉参数总表 / Tech Spec / Design Spec 同步 Hunt 全层 + idle opaque/depthWrite + 距离-L 替代 P10.2 + P11.2 默认禁用 + zCamDistance 运行时可调 + 滚轮双模式
@@ -12,7 +12,7 @@ todos:
     content: P17.2 Hunt 效应全层接入 + P11.2 默认值禁用 + focus 邻域 hover 不透明：oklab.glsl 增 applyHuntChroma；galaxyMeshes.ts 加 uHuntGamma / uHuntApplyMask / uHoveredInstanceId + uFocusDim默认 1.0；idle 基于 P17.1 L_distance 接入，active vert + perlin.frag 接入；__galaxyColor 拓展
     status: completed
   - id: p173-dolly-zoom
-    content: P17.3 Alt/Ctrl + 滚轮 dolly-to-cursor：camera.ts onWheel 加 altLike 分支；dollyToCursor helper（unproject 两次保持光标 NDC）；zCamDistance clamp [2, 300]；focus 态 noop（控 macro 分支拦截）
+    content: P17.3 仅 Alt+滚轮 dolly（不用 ctrlKey）+ Alt keyup 复位默认 zCamDistance；无 Alt 时滚轮仅 timeline/macro Z；dollyToCursor / clamp [2,300] / focus noop 同前
     status: pending
   - id: p174-doc-sync
     content: P17.4 文档同步 + 回归 + 出口 fps：三份 spec / Phase 8 基线 P17 出口 / 实施报告；扫参收口（γ / mask / d0 策略 / distance-L clamp / dolly speed 默认值）；mac/win/chrome/safari 手测 dolly；focus 邻域 hover alpha 回归
@@ -29,7 +29,7 @@ isProject: false
 - 子节点：P17.0 → P17.4
 - 数据契约：**不变**
 - 渲染管线：idle / active vert + perlin.frag 公式扩 Hunt；idle 新增距离-L 路径并切 opaque + depthWrite；新增共享 uniform `uHuntGamma`、`uHuntApplyMask`（位标志，便于关闭单层调试）；focus 邻域 active 增加 hover alpha override（R 内非 hover 半透明、hover 不透明、R 外保持 idle）
-- 相机契约：`zCamDistance` 从「常量 30」改为「运行时变量，由 Alt+wheel / dev tool 写入；默认值仍 30」；store 已有该字段，无需扩
+- 相机契约：`zCamDistance` 从「常量 30」改为「**Alt 按住**时滚轮仅 dolly（与 Timeline 脱钩）；**Alt 松开（keyup）**复位默认 30；无 Alt 时滚轮恢复 macro Z / Timeline；dev tool 仍可手写」；store 已有该字段，无需扩
 - 涉及文件（预计）：
   - [frontend/src/three/galaxyMeshes.ts](frontend/src/three/galaxyMeshes.ts)（新增 uniforms + 默认值；P11.2 默认值改为关闭；idleMaterial 改 `transparent=false` / `depthWrite=true`；新增 `uHoveredInstanceId`）
   - [frontend/src/three/shaders/oklab.glsl](frontend/src/three/shaders/oklab.glsl)（新增 `applyHuntChroma(L, L_ref, C_base, gamma) -> C_new` helper）
@@ -38,28 +38,28 @@ isProject: false
   - [frontend/src/three/shaders/galaxyActive.vert.glsl](frontend/src/three/shaders/galaxyActive.vert.glsl)（接入 Hunt；focus 邻域 hover alpha override）
   - [frontend/src/three/shaders/perlin.frag.glsl](frontend/src/three/shaders/perlin.frag.glsl)（接入 Hunt — `uPerlinChroma → C_new`）
   - [frontend/src/three/planet.ts](frontend/src/three/planet.ts)（focus 入场快照 `uHuntGamma`）
-  - [frontend/src/three/camera.ts](frontend/src/three/camera.ts)（onWheel 分支：Alt/Ctrl 触发 dolly-to-cursor；R_MIN/R_MAX 安全区 clamp）
+  - [frontend/src/three/camera.ts](frontend/src/three/camera.ts)（onWheel：仅 `e.altKey` 走 dolly；**不**用 `ctrlKey`；Alt keyup 复位默认 zCamDistance；安全区 clamp）
   - [frontend/src/three/scene.ts](frontend/src/three/scene.ts)（每帧同步 `uZCamDistance`；`hoveredMovieId → uHoveredInstanceId`；`__galaxyColor.huntGamma` / `__galaxyColor.huntApplyMask` / distance-L debug；`__galaxyInteraction.zCamDistance` 仍可手写）
   - [docs/project_docs/星球状态机 spec.md](docs/project_docs/星球状态机%20spec.md) §3.1 / §3.2 / §3.4.1 / §3.5
   - [docs/project_docs/视觉参数总表.md](docs/project_docs/视觉参数总表.md) §1（zCamDistance 改为运行时） / §2（Hunt uniforms）/ §4（Perlin Hunt）
   - [docs/project_docs/TMDB 电影宇宙 Tech Spec.md](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md) §1.4.1 / §1.4.3
-  - [docs/project_docs/TMDB 电影宇宙 Design Spec.md](docs/project_docs/TMDB%20电影宇宙%20Design%20Spec.md) §1（色彩） / §2.1（滚轮双模式）
+  - [docs/project_docs/TMDB 电影宇宙 Design Spec.md](docs/project_docs/TMDB%20电影宇宙%20Design%20Spec.md) §1（色彩） / §2.1（Alt 按住 dolly / 松开复位 + 滚轮 Timeline）
 
 ## 决策表（已锁定）
 
-| #   | 决策项                      | 选定方案                                                                                                                      | 备注                                                                                                              |
-| --- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| D1  | Hunt 应用范围               | **全层 idle + active + Perlin**                                                                                               | 三层共享 `uHuntGamma`；perlin.frag 内共享 hue + 同一 L → 同一 C_new                                               |
-| D2  | Hunt 公式形式               | `C_new = C_base × clamp(L_actual / L_ref, 0, 1)^γ`                                                                            | `L_ref` = `uLMax`（满分电影 L 端点，与现状参考一致）；`C_base` = 现 `uChroma`；γ 默认 `1.0` 起步，Leva 扫参后定   |
-| D3  | P11.2 idle 降 C/L 处置      | **禁用**（默认 `uFocusDimChroma=1.0` / `uFocusDimL=1.0`）                                                                     | 不删 uniform；通过默认值生效。Leva 仍可调；Phase 11.2 spec 标注「Phase 17 起 Hunt 接管语义，默认值保留乘子=1」    |
-| D4  | 旧 P10.2 距离衰减处置       | **移除 / 废弃** `uDistanceFalloffK` + `uDistanceFalloffMode` 对 idle/active 颜色或 alpha 的参与                               | Hunt 不再与旧 P10.2 并存；远处视觉由距离-L + Hunt 承担                                                            |
-| D5  | Alt + 滚轮放大机制          | **Dolly-to-cursor**：改 `zCamDistance`（推近 / 拉远），同时偏移 camera.x/y 让光标 NDC 命中世界点不变；fov 不变；zCurrent 不变 | 触摸板 pinch（`e.ctrlKey=true`，无键盘修饰）也走该分支；mac Cmd 不触发                                            |
-| D6  | dolly 安全区                | `zCamDistance ∈ [2, 300]`                                                                                                     | MIN=2 避免相机进入 zCurrent 平面（`near=0.05` 还有余量）；MAX=300 避免 far culling 大量 active                    |
-| D7  | dolly 影响 viswindow 视觉吗 | **不影响**：viswindow 视觉仍由 zCurrent / zVisWindow 驱动；dolly 只改物理距离与可视范围（屏幕投影 size 自然变化）             | Timeline 指针位置不动                                                                                             |
-| D8  | idle 遮挡修复               | **彻底移除 idle 透明度控制**，idle 材质默认 `transparent=false` / `depthWrite=true` / `depthTest=true`                        | 修复 idle 层同类透明排序遮挡问题；片元输出 `alpha=1.0`，不再依赖 `vInFocus` 或距离调 alpha                        |
-| D9  | 距离-L 公式                 | `L_distance = L_star × clamp(pow(d0 / max(d, eps), 2.0/3.0), L_floor, 1.0)`                                                   | `L_star` 为 vote/Hunt 前该星应有 L；`d0` **不是数学 0**，定义为观测平面参考距离，默认运行时 `zCamDistance`        |
-| D10 | 距离 d 定义                 | 初版采用 **Z 轴相机距离** `d = abs(aZ - cameraZ)`，不是完整欧氏距离                                                           | 避免同一 z 平面屏幕边缘因 XY 距离变暗；若后续想要真实空间衰减再另开视觉评估                                       |
-| D11 | focus 邻域 hover 透明度     | **并入 P17.2 轻量实现**：focus 态 R 内邻域仍走 active mask；非 hover 默认半透明，hover 命中实例 alpha=1；R 外仍保持 idle 态   | 复用 `focusNeighborIds` / `uSelectionMode=2` / `hoveredMovieId`，只新增 hovered instance uniform，不生成多 Perlin |
+| #   | 决策项                      | 选定方案                                                                                                                                                                   | 备注                                                                                                                                                                                    |
+| --- | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D1  | Hunt 应用范围               | **全层 idle + active + Perlin**                                                                                                                                            | 三层共享 `uHuntGamma`；perlin.frag 内共享 hue + 同一 L → 同一 C_new                                                                                                                     |
+| D2  | Hunt 公式形式               | `C_new = C_base × clamp(L_actual / L_ref, 0, 1)^γ`                                                                                                                         | `L_ref` = `uLMax`（满分电影 L 端点，与现状参考一致）；`C_base` = 现 `uChroma`；γ 默认 `1.0` 起步，Leva 扫参后定                                                                         |
+| D3  | P11.2 idle 降 C/L 处置      | **禁用**（默认 `uFocusDimChroma=1.0` / `uFocusDimL=1.0`）                                                                                                                  | 不删 uniform；通过默认值生效。Leva 仍可调；Phase 11.2 spec 标注「Phase 17 起 Hunt 接管语义，默认值保留乘子=1」                                                                          |
+| D4  | 旧 P10.2 距离衰减处置       | **移除 / 废弃** `uDistanceFalloffK` + `uDistanceFalloffMode` 对 idle/active 颜色或 alpha 的参与                                                                            | Hunt 不再与旧 P10.2 并存；远处视觉由距离-L + Hunt 承担                                                                                                                                  |
+| D5  | Alt + 滚轮局部放大          | **Dolly-to-cursor**（沿用 P17.3 数学）：**仅 Alt 按住**时滚轮只改 `zCamDistance` 并偏移 camera.x/y 保持光标下 z=zCurrent 世界点不变；fov / zCurrent 不变；与 Timeline 脱钩 | **Alt 松开（keyup）**`zCamDistance` 复位默认 30。**不**用 `e.ctrlKey` 走 dolly：浏览器将 Ctrl+滚轮用作页面缩放，触摸板 pinch 亦常带 `ctrlKey`。本 phase **不**实现 pinch→dolly 替代入口 |
+| D6  | dolly 安全区                | `zCamDistance ∈ [2, 300]`                                                                                                                                                  | MIN=2 避免相机进入 zCurrent 平面（`near=0.05` 还有余量）；MAX=300 避免 far culling 大量 active                                                                                          |
+| D7  | dolly 影响 viswindow 视觉吗 | **不影响**：viswindow 视觉仍由 zCurrent / zVisWindow 驱动；dolly 只改物理距离与可视范围（屏幕投影 size 自然变化）                                                          | Timeline 指针位置不动                                                                                                                                                                   |
+| D8  | idle 遮挡修复               | **彻底移除 idle 透明度控制**，idle 材质默认 `transparent=false` / `depthWrite=true` / `depthTest=true`                                                                     | 修复 idle 层同类透明排序遮挡问题；片元输出 `alpha=1.0`，不再依赖 `vInFocus` 或距离调 alpha                                                                                              |
+| D9  | 距离-L 公式                 | `L_distance = L_star × clamp(pow(d0 / max(d, eps), 2.0/3.0), L_floor, 1.0)`                                                                                                | `L_star` 为 vote/Hunt 前该星应有 L；`d0` **不是数学 0**，定义为观测平面参考距离，默认运行时 `zCamDistance`                                                                              |
+| D10 | 距离 d 定义                 | 初版采用 **Z 轴相机距离** `d = abs(aZ - cameraZ)`，不是完整欧氏距离                                                                                                        | 避免同一 z 平面屏幕边缘因 XY 距离变暗；若后续想要真实空间衰减再另开视觉评估                                                                                                             |
+| D11 | focus 邻域 hover 透明度     | **并入 P17.2 轻量实现**：focus 态 R 内邻域仍走 active mask；非 hover 默认半透明，hover 命中实例 alpha=1；R 外仍保持 idle 态                                                | 复用 `focusNeighborIds` / `uSelectionMode=2` / `hoveredMovieId`，只新增 hovered instance uniform，不生成多 Perlin                                                                       |
 
 ## 执行顺序
 
@@ -68,7 +68,7 @@ flowchart TD
     P170["P17.0 spec 升级（无代码）"]
     P171["P17.1 idle 遮挡修复 + 距离-L"]
     P172["P17.2 Hunt 效应全层接入 + P11.2 默认值禁用"]
-    P173["P17.3 Alt/Ctrl + 滚轮 dolly-to-cursor"]
+    P173["P17.3 Alt + 滚轮 dolly；Alt 松开复位"]
     P174["P17.4 文档同步 + 回归 + 出口 fps"]
 
     P170 --> P171
@@ -99,24 +99,26 @@ flowchart TD
 
 ### 视觉参数总表 §1 / §2 / §4
 
-- §1：把「`zCamDistance = 30`（常量）」改为「**`zCamDistance` 默认 30 / 运行时可调**（Alt/Ctrl + wheel dolly-to-cursor）；安全区 `[2, 300]`」；新增「Wheel 双模式」节
+- §1：把「`zCamDistance = 30`（常量）」改为「**`zCamDistance` 默认 30 / 运行时可调**（仅 Alt 按住 + wheel dolly；Alt keyup 复位默认；**不**用 Ctrl 修饰）；安全区 `[2, 300]`」；新增「Wheel 双模式」节
 - §2：双 mesh 共享 uniform 列表加 **`uHuntGamma`（默认 1.0）/`uHuntApplyMask`（默认 `0b111` = 7）/ `uZCamDistance` / distance-L 参数**；P11.2 默认值改为 1.0 / 1.0；标注旧 P10.2 `uDistanceFalloffK` / `uDistanceFalloffMode` 在 Phase 17 废弃
 - §4：Perlin 表加 Hunt 行（与 §3.5.1 一致）
 - §8 Dev 调试桥：`__galaxyColor.huntGamma` / `__galaxyColor.huntApplyMask` / distance-L clamp 参数；`__galaxyInteraction.zCamDistance` 已存在；新增 `__galaxyInteraction.dollyZoomSpeed`
 
 ### Tech Spec §1.4.1 / §1.4.3
 
-- §1.4.1 表格 `zCamDistance` 行：注释改为「**Phase 17 起**：默认 30；运行时由 Alt/Ctrl + wheel 写入，安全区 [2, 300]」
+- §1.4.1 表格 `zCamDistance` 行：注释改为「**Phase 17 起**：默认 30；Alt 按住 + wheel 写入 dolly；**Alt keyup** 复位默认；安全区 [2, 300]」
 - §1.4.3 滚轮控制：扩为「**双模式**」：
-  - **默认（无修饰键）**：维持 Phase 5.1.5 macro Z scroll 行为
-  - **Alt 或 Ctrl 修饰**：dolly-to-cursor，改 `zCamDistance`，同步偏移 camera.x/y 保持光标命中点 NDC 不变；zCurrent 与 fov 不变
+  - **默认（未按住 Alt）**：维持 Phase 5.1.5 macro Z scroll（Timeline）；此时 `zCamDistance` 为默认（Alt 松开后已复位）
+  - **Alt 按住**：滚轮与 Timeline 脱钩，仅 dolly-to-cursor（局部放大：改 `zCamDistance`，偏移 camera.x/y 保持光标下命中点不变）；zCurrent 与 fov 不变
+  - **Alt 松开**：`zCamDistance →` 默认；滚轮恢复上条 macro 行为
+  - **Ctrl+滚轮**：不进入 dolly、不推进 macro Z；`onWheel` 若检测到 `e.ctrlKey` 则 **直接 return 且不 `preventDefault()`**，交给浏览器页面缩放（常见 Ctrl+滚轮）
   - 在 focus 态：现状 `getMacroZWheel === false`（特写推拉）保留；Phase 13 P13.3 已决策 focus 态 wheel = noop 不动，因此 Alt+wheel 在 focus 态也 noop（保护 Perlin 球距离恒定）
 - §1.4.4 clamp：补 `zCamDistance ∈ [2, 300]`
 
 ### Design Spec §1 / §2.1
 
 - §1「内核亮度」段：补一句距离-L + Hunt 说明（"项目内 OKLab L 先随观察距离下降，再由 Hunt 让 C 随 L 同步衰减，模拟远处低光照下的感知变暗与降饱和"）；同时注明 idle 不再使用透明度表达远近
-- §2.1 摄像机控制：滚轮节扩为「双模式」（同 Tech Spec §1.4.3）
+- §2.1 摄像机控制：滚轮节扩为「Alt 按住 = 局部 dolly / 脱钩 Timeline；Alt 松开 = 默认机位距离 + 滚轮回 Timeline」（同 Tech Spec §1.4.3）
 
 ---
 
@@ -366,7 +368,13 @@ distanceLightnessFloor: number // [0, 1], P17.1 clamp floor
 
 ---
 
-## P17.3 Alt/Ctrl + 滚轮 dolly-to-cursor
+## P17.3 Alt + 滚轮局部放大（dolly-to-cursor）与 Timeline 脱钩
+
+### 交互契约
+
+- **Alt 按住**：滚轮与 **Timeline / macro Z（zCurrent）** 脱钩；滚轮仅驱动 **局部放大** — 即本节 **dolly-to-cursor**（改 `zCamDistance` + 保持光标下 `z=zCurrent` 世界点不变），数学与 clamp、`dollyToCursor` 实现细节**全部沿用**下文。
+- **Alt 松开（`keyup`，`key === 'Alt'`）**：将 `zCamDistance` **复位为默认值**（如 `30`，与 Phase 5.1.5 常量一致）；相机 `position.z` 与 store 同步，避免一帧错位。之后 **滚轮恢复** Phase 5.1.5 **macro Z / Timeline** 行为（无修饰键分支）。
+- **Ctrl+滚轮 / 常带 `ctrlKey` 的触摸板 pinch**：**不**作为 dolly 入口（浏览器将 Ctrl+滚轮用作**页面缩放**；pinch 与 `ctrlKey` 强相关）。本 phase **仅** `Alt+滚轮` 做局部放大；不提供 pinch→dolly 替代。
 
 ### 数学（NDC 不变约束）
 
@@ -378,18 +386,20 @@ distanceLightnessFloor: number // [0, 1], P17.1 clamp floor
 
 ### camera.ts 改造
 
-[camera.ts](frontend/src/three/camera.ts) `onWheel`：
+[camera.ts](frontend/src/three/camera.ts) 注册 **`keyup`**（仅一次）：当 `e.key === 'Alt'`（及 `Dead`/浏览器变体若需）且 `!e.altKey` 时，将 store 的 `zCamDistance` 设为默认（如 `30`），并按当前 `zCurrent` 写回 `camera.position.z = zCurrent - zCamDistance`，再 `applyFixedOrientation`。**注意**：从别的窗口切回时若 Alt 已松开，依赖首次 wheel 前状态一致即可；可选在 `blur` 时同样复位以免 Alt 卡死。
+
+`onWheel`：
 
 ```ts
 const onWheel = (e: WheelEvent) => {
   if (options.getInputLocked?.()) return
+  if (e.ctrlKey) return // 交给浏览器页面缩放，不 preventDefault、不做 dolly / macro Z
   e.preventDefault()
-  const altLike = e.altKey || e.ctrlKey  // Alt 显式 / Ctrl 含触摸板 pinch
   const dz = Math.sign(e.deltaY) * zScrollSpeed * Math.min(Math.abs(e.deltaY) / 100, 3)
 
   const macro = options.getMacroZWheel?.() ?? true
 
-  if (altLike && macro) {
+  if (e.altKey && macro) {
     // Phase 17 P17.3 — Dolly-to-cursor（focus 态 P13.3 已决 noop，所以 macro=false 时不进本分支）
     dollyToCursor(camera, e.clientX, e.clientY, dz, options.xyRange, options.xyClampPaddingRatio)
   } else if (macro) {
@@ -480,12 +490,12 @@ if (selectionPhase === 'idle') {
 
 ### 验收
 
-- macOS 触摸板：两指上滑（pinch out，`e.ctrlKey=true`）→ dolly 拉远；两指下滑（pinch in）→ dolly 推近；命中点（光标下）保持 NDC 不变
-- Win 鼠标 + Alt：Alt + 滚轮上 → 推近；Alt + 滚轮下 → 拉远
-- 默认无修饰键滚轮：仍走 Phase 5.1.5 macro Z scroll，zCurrent 推进
-- focus 态：Phase 13 P13.3 决策 wheel = noop；Alt+wheel 同样 noop（在 dollyToCursor 之前 `getMacroZWheel=false` 已分支拦截）
-- Timeline 在 dolly 期间不动（zCurrent 不变）
-- Cursor 位置在屏幕角落（NDC 接近 ±1）时仍正确收敛（不出现严重偏移；可加更小步长容忍）
+- **Alt 按住 + 滚轮**：仅 dolly，**zCurrent / Timeline 不动**；光标下命中世界点稳定
+- **Alt 松开**：`zCamDistance` 回到默认（如 30）；随后无修饰键滚轮仅推进 **macro Z / Timeline**
+- **Ctrl+滚轮**：页面缩放由浏览器处理，canvas **不**拦截、**不**改 zCurrent / zCamDistance
+- Win / mac：**Alt + 滚轮** → 推近/拉远；松 Alt 后再滚轮 → 仅 zCurrent（触摸板 pinch **不**在本 phase 映射为 dolly）
+- focus 态：Phase 13 P13.3 决策 wheel = noop；Alt+wheel 同样 noop（`getMacroZWheel=false` 已分支拦截）
+- Cursor 在屏幕角落（NDC 接近 ±1）时仍合理收敛（可加步长容忍）
 
 ---
 
@@ -503,7 +513,7 @@ if (selectionPhase === 'idle') {
   - 三片段视觉对比：Phase 16 末态 vs Hunt on（截图存档）
   - idle opaque 后遮挡关系正确；密集区域不再明显"远盖近"
   - 远处星由距离-L 变暗，且观测平面星不被整体压暗
-  - Alt+wheel / pinch dolly-to-cursor 全平台（mac / win / chrome / safari）
+  - Alt+wheel dolly、Alt keyup 复位默认距离、无 Alt 滚轮 Timeline；Ctrl+滚轮不劫持（浏览器缩放）；mac / win / chrome / safari 手测
   - focus 单态、focus 嵌套、search select 单态在 Hunt 全层应用下颜色一致
   - focus 视角 R 范围内邻域星：非 hover 时半透明，hover 命中时不透明；R 外星体仍保持 idle 态，不被提升为 active
   - focus 主 Perlin 球 hover 不应在双 mesh 上额外显出 active 目标球；hover 离开 / 空白 hover 后 `uHoveredInstanceId=-1`，无残留不透明邻域星
@@ -514,19 +524,19 @@ if (selectionPhase === 'idle') {
 
 ## 风险与回滚
 
-| 风险                                                            | 影响 | 缓解                                                                                        |
-| --------------------------------------------------------------- | ---- | ------------------------------------------------------------------------------------------- |
-| Hunt 让低分电影几乎消色 → 用户感觉"颜色少了"                    | 中   | γ Leva 调整；保守起步 γ=0.5（更温和）；mask 单层关闭对照                                    |
-| Perlin frag Hunt 改色后与 idle/active 在 focus 嵌套时连续性破裂 | 低   | mask bit 2 单独控制 Perlin Hunt；如不一致先关 Perlin Hunt（mask=3）                         |
-| `d0` 被误实现为数学 0                                           | 高   | 代码 assert / console.log：`d0 > 0`；以 `zCamDistance` 作为参考距离                         |
-| idle opaque 失去半透明雾感、窗缘变硬                            | 中   | 明确作为 P17 新视觉；用距离-L floor、Hunt γ、`uBgSizeMul` 扫参，不恢复 idle alpha           |
-| 使用欧氏距离导致屏幕边缘同 z 星变暗                             | 中   | 初版使用 Z 轴相机距离；欧氏距离只作为未来视觉实验                                           |
-| idle 写 depth 后前景 idle 遮住后景 active，搜索/聚焦可读性下降  | 中   | P17.1 验收覆盖 search select / focus；必要时压低 selection/focus 态 idle 尺寸或 L           |
-| focus hover 不透明残留                                          | 中   | `hoveredMovieId=null` 时同步 `uHoveredInstanceId=-1`；pointerleave / 空白 hover 手测覆盖    |
-| hover override 误影响 search select                             | 低   | shader 侧限制 `uSelectionMode == 2` 才应用；person/genre select 单态回归                    |
-| dolly-to-cursor NDC 在边角不稳定                                | 低   | clamp + 速度 magnitude 限制；如发现严重抖动降级为"以屏幕中心为锚点"                         |
-| zCamDistance 运行时变化与 Phase 5.1.5 假设冲突影响 Timeline 等  | 中   | Timeline bridgeZ 已在 Phase 13 改为 `bridgeZ = zCurrent`，与 zCamDistance 解耦；spec 已声明 |
-| Alt + wheel 与浏览器 / OS 快捷键冲突                            | 低   | `e.preventDefault()` + 仅在 canvas 区域触发；mac 系统级 Alt+wheel 无标准映射                |
+| 风险                                                            | 影响 | 缓解                                                                                         |
+| --------------------------------------------------------------- | ---- | -------------------------------------------------------------------------------------------- |
+| Hunt 让低分电影几乎消色 → 用户感觉"颜色少了"                    | 中   | γ Leva 调整；保守起步 γ=0.5（更温和）；mask 单层关闭对照                                     |
+| Perlin frag Hunt 改色后与 idle/active 在 focus 嵌套时连续性破裂 | 低   | mask bit 2 单独控制 Perlin Hunt；如不一致先关 Perlin Hunt（mask=3）                          |
+| `d0` 被误实现为数学 0                                           | 高   | 代码 assert / console.log：`d0 > 0`；以 `zCamDistance` 作为参考距离                          |
+| idle opaque 失去半透明雾感、窗缘变硬                            | 中   | 明确作为 P17 新视觉；用距离-L floor、Hunt γ、`uBgSizeMul` 扫参，不恢复 idle alpha            |
+| 使用欧氏距离导致屏幕边缘同 z 星变暗                             | 中   | 初版使用 Z 轴相机距离；欧氏距离只作为未来视觉实验                                            |
+| idle 写 depth 后前景 idle 遮住后景 active，搜索/聚焦可读性下降  | 中   | P17.1 验收覆盖 search select / focus；必要时压低 selection/focus 态 idle 尺寸或 L            |
+| focus hover 不透明残留                                          | 中   | `hoveredMovieId=null` 时同步 `uHoveredInstanceId=-1`；pointerleave / 空白 hover 手测覆盖     |
+| hover override 误影响 search select                             | 低   | shader 侧限制 `uSelectionMode == 2` 才应用；person/genre select 单态回归                     |
+| dolly-to-cursor NDC 在边角不稳定                                | 低   | clamp + 速度 magnitude 限制；如发现严重抖动降级为"以屏幕中心为锚点"                          |
+| zCamDistance 运行时变化与 Phase 5.1.5 假设冲突影响 Timeline 等  | 中   | Timeline bridgeZ 已在 Phase 13 改为 `bridgeZ = zCurrent`，与 zCamDistance 解耦；spec 已声明  |
+| Alt + wheel 与浏览器 / OS 快捷键冲突                            | 低   | `e.preventDefault()` + 仅在 canvas 区域触发；**Ctrl+滚轮不处理**，避免与浏览器页面缩放抢事件 |
 
 ## 出口准入
 

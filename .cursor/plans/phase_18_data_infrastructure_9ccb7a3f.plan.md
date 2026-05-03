@@ -1,10 +1,10 @@
 ---
 name: phase 18 data infrastructure
-overview: Phase 18 把数据流从"本地一次性 export → 推 git"升级为"Supabase 作 source of truth + GitHub Actions 自动化 + Cloudflare Pages 静态托管"。前端契约不变（仍吃 galaxy_data.json.gz）。统一节奏：每日刷 vote_count/vote_average，每周全量 fit_transform + 永久 Procrustes 对齐到 v1 reference。配套修复 P18.0 genre palette 冻结隐患。
+overview: Phase 18 把数据流从"本地一次性 export → 推 git"升级为"Supabase 作 source of truth + GitHub Actions 自动化 + Cloudflare Pages 静态托管"。前端契约不变（仍吃 galaxy_data.json.gz）。统一节奏：每日沿用上一周期 frozen threshold，仅刷新 vote_count/vote_average/popularity；每月全量 threshold + membership + fit_transform，并永久 Procrustes 对齐到 v1 reference。仓库为 public，首轮 GHA benchmark 以 ubuntu-24.04 public runner (4 CPU / 16GB RAM / 14GB SSD) 为目标；若 runner 压力过大，降级为季度/半年度本地机器重跑后上传。
 todos:
   - id: p180-genre-palette-freeze
     content: P18.0 Genre palette 冻结：写死 19 genre 固定 hue 表，meta 加 genre_palette_version；assert 数据中所有 genre 都在表内
-    status: pending
+    status: completed
   - id: p181-cpu-refit-benchmark
     content: P18.1 CPU 全量 refit benchmark：本机跑 production 参数 (384d/densmap/n=300/min_dist=0.4) 记耗时+峰值内存；再在目标 GHA runner 上 workflow_dispatch 同脚本拿墙钟时间（本地不可 1:1 换算）；写报告
     status: pending
@@ -17,8 +17,8 @@ todos:
   - id: p184-nightly-vote-refresh
     content: P18.4 GH Actions nightly cron：Kaggle 拉新 → diff → UPDATE existing votes / INSERT pending 新片 → 重导 JSON.gz → 部署
     status: pending
-  - id: p185-weekly-refit
-    content: P18.5 GH Actions weekly cron：全量 fit_transform CPU densmap → Procrustes 对齐 v1 → UPDATE movies + 清空 pending → 重导 + 部署
+  - id: p185-monthly-refit
+    content: P18.5 GH Actions monthly cron：重算 dynamic threshold + membership，全量 fit_transform CPU densmap → Procrustes 对齐 v1 → UPDATE movies + 清空 pending → 重导 + 部署；weekly 仅保留 workflow_dispatch/实验
     status: pending
   - id: p186-cf-pages-cutover
     content: P18.6 Cloudflare Pages 项目 + 自定义域名 + cron 末尾触发部署 + GitHub Pages 灰度备线 1-2 周
@@ -33,14 +33,17 @@ isProject: false
 
 ## 范围
 
-把当前"本地手工 run pipeline → 提交 galaxy_data.json.gz 到 git → GitHub Pages 部署"的流程，升级为云端自动化的 daily refresh + weekly refit。前端不动（继续吃静态 `galaxy_data.json.gz`）。
+把当前"本地手工 run pipeline → 提交 galaxy_data.json.gz 到 git → GitHub Pages 部署"的流程，升级为云端自动化的 daily refresh + monthly refit。前端不动（继续吃静态 `galaxy_data.json.gz`）。
 
 **已确认决策**（用户）：
 - D1 = A1：Supabase 作 source of truth，前端继续吃静态 JSON.gz
 - D5 = 不做前端动画（即使 remap 也不插值）
 - P18.0 = Genre palette 冻结（独立 export 修复）
 - D2 = B1：不持久化 UMAP pkl，每次全量 refit
-- 节奏：每日 vote 刷新 + 每周/每月全量 refit + **永久 Procrustes 对齐到 v1 reference**
+- 仓库是 **public**：首轮 GHA benchmark 以 GitHub-hosted public `ubuntu-24.04` runner 为目标（4 CPU / 16GB RAM / 14GB SSD）
+- 节奏：每日 vote/rating/popularity 轻刷新 + 每月 threshold/membership/topology 全量 refit + **永久 Procrustes 对齐到 v1 reference**
+- daily refresh **沿用上一长周期 frozen dynamic threshold**；threshold 版本只在 monthly refit 中更新，避免每日阈值微漂移导致老电影频繁加入/剔除
+- 若 GHA runner 无法稳定承担 production 参数重跑，备选为**季度/半年度本地机器 full refit 后上传产物**；基于当前估算每月新增约 0.21%，该降级方案可接受
 
 **当前 production 参数**（来自 [frontend/public/data/galaxy_data.json](frontend/public/data/galaxy_data.json) `meta`，作为 v1 基准锁定）：
 
@@ -56,13 +59,22 @@ isProject: false
 
 注：`densmap=true` 强制 [scripts/feature_engineering/umap_projection.py](scripts/feature_engineering/umap_projection.py) 走 CPU `umap-learn`（cuML 不支持 densmap），所以"GH Actions CPU refit"其实就是当前 production 路径。
 
+### cadence 决策
+
+P18 默认采用 **daily light refresh + monthly full refit**：
+
+- daily：沿用上一 monthly 产出的 frozen dynamic threshold table，只刷新已入库电影的 `vote_count` / `vote_average` / `popularity`，并把新达标电影放入 `movies_pending`；不重算 UMAP，不从 `movies` 删除老电影。
+- monthly：重新计算 dynamic threshold，重新评估 membership，合入 pending 新片，全量 `fit_transform`，再 Procrustes 对齐到 v1 reference。
+- weekly：不作为默认 cron；仅保留 `workflow_dispatch` 或测试期临时 cron，用于观察数据漂移 / runner 压力。
+- fallback：若 public runner production 参数实测不可接受，改为季度或半年度本地机器 full refit + 上传产物，daily refresh 仍保留。
+
 ## 数据流图
 
 ```mermaid
 flowchart TD
     Kaggle[Kaggle TMDB daily updates]
     GHA_Daily["GH Actions: nightly cron (UTC 20:00)"]
-    GHA_Weekly["GH Actions: weekly cron (Sun UTC 20:00)"]
+    GHA_Monthly["GH Actions: monthly cron (1st UTC 20:00)"]
     Supabase[(Supabase movies table)]
     SupaPending[(Supabase movies_pending)]
     R2["Cloudflare R2 / Releases"]
@@ -76,11 +88,12 @@ flowchart TD
     GHA_Daily -->|export_galaxy_json.py| R2
     R2 -->|deploy| CFPages
 
-    GHA_Weekly -->|SELECT all movies| Supabase
-    GHA_Weekly -->|merge pending| Supabase
-    GHA_Weekly -->|fit_transform + Procrustes vs v1| GHA_Weekly
-    GHA_Weekly -->|UPDATE x,y| Supabase
-    GHA_Weekly -->|export_galaxy_json.py| R2
+    GHA_Monthly -->|recompute threshold + membership| GHA_Monthly
+    GHA_Monthly -->|SELECT all movies| Supabase
+    GHA_Monthly -->|merge pending| Supabase
+    GHA_Monthly -->|fit_transform + Procrustes vs v1| GHA_Monthly
+    GHA_Monthly -->|UPDATE x,y| Supabase
+    GHA_Monthly -->|export_galaxy_json.py| R2
     R2 -->|deploy| CFPages
 
     Browser -->|fetch json.gz| CFPages
@@ -95,7 +108,7 @@ flowchart TD
     P182[P18.2 Supabase schema + 一次性导入 v1]
     P183[P18.3 Procrustes 对齐 helper + v1 reference 锁定]
     P184[P18.4 GH Actions nightly:vote refresh + JSON 重导]
-    P185[P18.5 GH Actions weekly:全量 refit + Procrustes + JSON 重导]
+    P185[P18.5 GH Actions monthly:threshold + 全量 refit + Procrustes + JSON 重导]
     P186[P18.6 Cloudflare Pages 切换 + 自定义域名]
     P187[P18.7 文档同步 + 出口验收]
 
@@ -111,10 +124,10 @@ flowchart TD
 
 依赖说明：
 - **P18.0** 独立可做，可并入当前 phase 17 末（属 export 修复）
-- **P18.1** 本机 benchmark + **同脚本在 GHA 上跑一次**拿到墙钟时间（定 P18.5 `timeout-minutes` 与每周/每月）；本机数字只做量级与内存，不可当作 CI 确切耗时
+- **P18.1** 本机 benchmark + **同脚本在 public `ubuntu-24.04` GHA 上跑一次**拿到墙钟时间（定 P18.5 `timeout-minutes` 与是否坚持 monthly）；本机数字只做量级与内存，不可当作 CI 确切耗时
 - **P18.2** v1 锁定：把当前 [frontend/public/data/galaxy_data.json](frontend/public/data/galaxy_data.json) 的 xy 作为永久 Procrustes reference 写入 Supabase 一张专表
 - **P18.3** 是 P18.5 的前置 helper
-- **P18.4 / P18.5** 互相独立，可并行实现
+- **P18.4 / P18.5** 互相独立，可并行实现；P18.4 使用 frozen threshold，P18.5 负责 threshold 版本更新
 - **P18.6** 切流量到 CF Pages（保留 GitHub Pages 备线 1-2 周观察）
 - **P18.7** 收尾
 
@@ -146,13 +159,13 @@ flowchart TD
 
 ### 目的
 
-把"30-60 分钟"估算变成**可复核的数字**。决定 P18.5 cron 选每周还是每月，以及 `timeout-minutes`（GH Actions 单 job 上限 6h；**hosted runner 的 vCPU / RAM 以 [GitHub 文档](https://docs.github.com/en/actions/using-github-hosted-runners/using-github-hosted-runners/about-github-hosted-runners) 为准**，勿凭记忆写死核数）。
+把"30-60 分钟"估算变成**可复核的数字**。决定 P18.5 monthly cron 是否可稳定跑 production 参数，以及 `timeout-minutes`（GH Actions 单 job 上限 6h；本仓库为 public，标准 Linux runner 可用 **4 CPU / 16GB RAM / 14GB SSD**，以 [GitHub 文档](https://docs.github.com/en/actions/reference/runners/github-hosted-runners) 为准）。
 
 ### 本地 vs GHA：不要互相换算墙钟时间
 
 - **本机（如 Win + .venv）**：CPU 架构、核心数、BLAS 线程与 Linux CI 不一致，**墙钟时间不能 1:1 换算成 GHA**。
 - **本机仍必跑**：迭代快、验证脚本正确、得到 **fit_transform 段峰值 RSS**（判断是否会顶满 runner 内存）与**耗时数量级**。
-- **GHA 上再跑一次**：用与 P18.5 相同的 `runs-on`（如 `ubuntu-latest`）+ `workflow_dispatch`，在同一套缓存/输入假设下跑**同一条 benchmark 命令**，得到 **CI 墙钟时间**；P18.5 的 timeout 与「周/月」决策以 **GHA 实测** 为主，本机为辅。
+- **GHA 上再跑一次**：用与 P18.5 相同的 `runs-on: ubuntu-24.04` + `workflow_dispatch`，在同一套缓存/输入假设下跑**同一条 benchmark 命令**，得到 **CI 墙钟时间**；P18.5 的 timeout 与是否需要降级到本地重跑方案，以 **GHA 实测** 为主，本机为辅。
 
 ### 实施
 
@@ -161,13 +174,26 @@ flowchart TD
   - 直接复用现有 `data/output/text_embeddings.npy` + `genre_vectors.npy` + `language_vectors.npy`（不重跑 embedding）
   - 调 `umap_projection.fuse_modalities` + `_fit_umap_learn` (CPU)
   - 计时 + 打印峰值内存（`psutil.Process().memory_info().rss`）
+  - **必须持续 print 进度**：启动参数、runner CPU/RAM/disk、加载 shape、fusion shape、UMAP 开始/结束、每 30s RSS + disk free heartbeat、xy range、Procrustes 指标
   - 输出 `umap_xy_p18_benchmark.npy` 验证与 `umap_xy.npy` 误差（应在 Procrustes 对齐后非常小）
 - **本机**：跑一次，记录 fit_transform 段总耗时、峰值 RSS、CPU/OS 简述。
-- **GHA**：新增 `.github/workflows/phase18_refit_benchmark.yml`（仅 `workflow_dispatch`），checkout → setup-python → 安装依赖 → 将 benchmark 所需 `data/output/*.npy` 经 **cache 或 artifact** 对齐到与本机相同输入（或文档写明首次 seed 上传方式）→ `python scripts/experiments/phase18_full_refit_benchmark.py`；记录 **job 墙钟**、runner 镜像标签、日期。
+- **GHA**：新增 `.github/workflows/phase18_refit_benchmark.yml`（仅 `workflow_dispatch`），`runs-on: ubuntu-24.04`，checkout → setup-python → 安装依赖 → 将 benchmark 所需 `data/output/*.npy` 经 **cache 或 artifact** 对齐到与本机相同输入（或文档写明首次 seed 上传方式）→ `python scripts/experiments/phase18_full_refit_benchmark.py`；记录 **job 墙钟**、runner 镜像标签、日期。
+- **GHA 线程参数初值**（public 4C / 16GB runner）：
+  - `OMP_NUM_THREADS=4`
+  - `NUMBA_NUM_THREADS=4`
+  - `OPENBLAS_NUM_THREADS=1`
+  - `MKL_NUM_THREADS=1`
+  - `PYTHONUNBUFFERED=1`
+  - `timeout-minutes=180` 起步；若实测接近上限再调整
 
 ### 验收
 
-- 报告里同时包含：**本机**与 **GHA** 两套数字 + 峰值内存；并注明「P18.5 timeout / 频率 以 GHA 为准」。
+- 报告里同时包含：**本机**与 **GHA** 两套数字 + 峰值内存；并注明「P18.5 timeout / 是否需要 fallback 以 GHA 为准」。
+- 判定：
+  - `< 60 min` 且峰值 RSS `< 10GB`：monthly cron 稳定，weekly 可作为手动实验。
+  - `60-120 min`：monthly cron 合理，weekly 不默认启用。
+  - `> 120 min` 或接近 OOM：monthly 仍可试一次，但准备 quarterly/local fallback。
+  - 接近 6h 或失败：改为季度/半年度本地机器 full refit + 上传产物。
 - 输出存档到 `docs/reports/Phase 18.1 CPU refit benchmark 实施报告.md`
 
 ---
@@ -231,7 +257,7 @@ CREATE TABLE movies (
 CREATE INDEX idx_movies_release_date ON movies(release_date);
 CREATE INDEX idx_movies_vote_count ON movies(vote_count);
 
--- 候补：通过门槛但还没 fit 入星图的新电影（每周 refit 时合并）
+-- 候补：通过门槛但还没 fit 入星图的新电影（monthly refit 时合并）
 CREATE TABLE movies_pending (
   id BIGINT PRIMARY KEY,
   -- 全部 movies 字段（除了 x/y），feature vectors 也存
@@ -250,6 +276,18 @@ CREATE TABLE vote_snapshots (
   vote_count INTEGER NOT NULL,
   vote_average REAL NOT NULL,
   PRIMARY KEY (movie_id, snapshot_month)
+);
+
+-- 长周期阈值版本：monthly refit 更新，daily refresh 只读取当前 active 版本
+CREATE TABLE threshold_versions (
+  version TEXT PRIMARY KEY,
+  computed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  quantile REAL NOT NULL,
+  alpha REAL NOT NULL,
+  rolling_window INTEGER NOT NULL,
+  abs_min REAL NOT NULL,
+  thresholds_json JSONB NOT NULL,  -- year -> vote_count threshold
+  is_active BOOLEAN NOT NULL DEFAULT false
 );
 ```
 
@@ -328,7 +366,7 @@ on:
 
 jobs:
   refresh:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
       - checkout
@@ -344,12 +382,14 @@ jobs:
 ### 脚本 `scripts/cron/nightly_vote_refresh.py`
 
 1. `kaggle datasets download alanvourch/tmdb-movies-daily-updates` → 解压
-2. `cleaning.run_cleaning_pipeline(...)` 得当前过滤后 cleaned df
-3. 与 Supabase `movies` 表 diff:
+2. 加载 `threshold_versions.is_active = true` 的 frozen threshold table；daily **不得重算 dynamic threshold**
+3. `cleaning.run_cleaning_pipeline(...)` 得当前过滤后 cleaned df，但 `vote_count` 动态阈值使用上一周期 frozen table
+4. 与 Supabase `movies` 表 diff:
    - **现有 id**：批量 UPDATE `vote_count` / `vote_average` / `popularity`（这是每日真实变化）
-   - **新 id 通过门槛**：跑 embedding + genre encode + lang encode → INSERT `movies_pending`（feature vectors 以 BYTEA 存）
-4. 月初额外快照：INSERT INTO `vote_snapshots` (按月聚合)
-5. 输出统计：本次刷新影响行数
+   - **新 id 通过 frozen threshold 门槛**：跑 embedding + genre encode + lang encode → INSERT `movies_pending`（feature vectors 以 BYTEA 存）
+   - **老电影低于当前 frozen threshold**：daily 不删除、不从主星图移除；最多写入状态字段 / 报告，由 monthly membership pass 决定是否处理
+5. 月初额外快照：INSERT INTO `vote_snapshots` (按月聚合)
+6. 输出统计：本次刷新影响行数、pending 新增数、below-threshold 观察数
 
 ### 脚本 `scripts/cron/export_from_supabase.py`
 
@@ -364,55 +404,76 @@ jobs:
 - nightly cron 执行时长 < 30 分钟
 - vote_count 在 Supabase 中确实有变化（抽查 10 部高 popularity 电影日间日变化）
 - 生成的 JSON.gz 与上次 diff 主要在 size/emissive 字段（log10(vote_count) 平滑变化）
+- daily 不改变 `threshold_versions`，不触发主星图 membership 删除
 
 ---
 
-## P18.5 GH Actions weekly: 全量 refit + Procrustes
+## P18.5 GH Actions monthly: threshold + 全量 refit + Procrustes
 
-### Workflow `.github/workflows/weekly_refit.yml`
+### Workflow `.github/workflows/monthly_refit.yml`
 
 ```yaml
 on:
   schedule:
-    - cron: '0 20 * * 0'  # 每周日 UTC 20:00
+    - cron: '0 20 1 * *'  # 每月 1 日 UTC 20:00
   workflow_dispatch:
 
 jobs:
   refit:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 180  # 视 P18.1 在 GHA 上的实测墙钟 + 余量调整
+    env:
+      PYTHONUNBUFFERED: "1"
+      OMP_NUM_THREADS: "4"
+      NUMBA_NUM_THREADS: "4"
+      OPENBLAS_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
     steps:
       - checkout
       - setup-python
       - pip install (含 umap-learn[densmap], scipy, sentence-transformers)
-      - run: python scripts/cron/weekly_refit.py
+      - run: python scripts/cron/monthly_refit.py
       - run: python scripts/cron/export_from_supabase.py
       - deploy to CF Pages
 ```
 
-### 脚本 `scripts/cron/weekly_refit.py`
+### 脚本 `scripts/cron/monthly_refit.py`
 
-1. SELECT 所有 `movies` + `movies_pending`（拼成完整 df）
-2. 重新加载 / 重算 feature 矩阵：
+1. 拉取 Kaggle 最新数据并运行 cleaning；**重新计算 dynamic threshold table**，写入新的 `threshold_versions`，并设置为 active
+2. 根据新 threshold 重新评估 membership：
+   - 新达标电影：合入 pending / full refit 输入
+   - 低于阈值的既有电影：默认不立即硬删除；先标记并在报告中列出，除非连续多周期低于阈值再人工确认移除策略
+3. SELECT 所有 `movies` + `movies_pending`（拼成完整 df）
+4. 重新加载 / 重算 feature 矩阵：
    - 旧 ids: 从本地 `text_embeddings.npy` 拉（GH Actions 用 cache action 缓存这些大文件）
    - 新 ids（来自 pending）: 从 Supabase BYTEA 还原 float32 vectors
-3. 拼接 → `fuse_modalities` → `_fit_umap_learn`（CPU densmap）
-4. 加载 `galaxy_v1_reference` → 用 P18.3 的 `align_to_reference`
-5. 把对齐后的 (x, y) UPDATE 回 `movies`（pending 的也一并 INSERT 进 `movies` 并清空 pending）
-6. 触发一次 export_from_supabase.py
-7. meta.version 改为 `YYYY.MM.DD.weekly.<seq>`
+5. 拼接 → `fuse_modalities` → `_fit_umap_learn`（CPU densmap）
+6. 加载 `galaxy_v1_reference` → 用 P18.3 的 `align_to_reference`
+7. 把对齐后的 (x, y) UPDATE 回 `movies`（pending 的也一并 INSERT 进 `movies` 并清空 pending）
+8. 触发一次 export_from_supabase.py
+9. meta.version 改为 `YYYY.MM.DD.monthly.<seq>`，并记录 `threshold_version`
 
 ### 关键：embedding cache 策略
 
-GH Actions ephemeral disk 14GB，但 `text_embeddings.npy` (~180MB) + `cleaned.csv` (~62MB) + numpy weights = ~250MB。用 [actions/cache@v4](https://github.com/actions/cache) 缓存 `data/output/*.npy` + `cleaned.csv`。
+GitHub-hosted public `ubuntu-24.04` runner 为 4 CPU / 16GB RAM / 14GB SSD。`text_embeddings.npy` (~180MB) + `cleaned.csv` (~62MB) + numpy weights = ~250MB，磁盘上足够。用 [actions/cache@v4](https://github.com/actions/cache) 缓存 `data/output/*.npy` + `cleaned.csv`，但 cache miss 时必须 print 清晰错误和恢复步骤。
 
 新增电影的 embedding 只在 P18.4 nightly 时计算（增量小，CPU MiniLM ~100ms/部），存进 `movies_pending.text_embedding` BYTEA。
 
 ### 验收（需 P18.1 实测后细化）
 
-- weekly cron 执行时长 < 90 分钟（阈值以 **P18.1 在 GHA 上的墙钟** 为基准留出余量；勿仅用本机时间推断）
+- monthly cron 执行时长 < 120 分钟（阈值以 **P18.1 在 GHA 上的墙钟** 为基准留出余量；勿仅用本机时间推断）
 - Procrustes 对齐后 95% 的星与上一版坐标距离 < 0.01 单位
 - 跑一次手动 dispatch 验证全流程
+- workflow 保留 `workflow_dispatch`，但默认不启用 weekly schedule
+
+### Runner fallback
+
+若 P18.1 或 P18.5 实测显示 public runner 无法稳定承担 production 参数：
+
+- 保留 daily light refresh 自动化。
+- full refit 改为季度或半年度在本地高性能机器运行。
+- 本地产物包括：`umap_xy.npy`、对齐后的坐标、导出的 `galaxy_data.json.gz` / `galaxy_search_index.json.gz`、benchmark/report。
+- 上传方式：手动上传到 Supabase + Cloudflare Pages / R2，或通过 `workflow_dispatch` 仅执行"接收产物并部署"的轻量 job。
 
 ---
 
@@ -424,7 +485,7 @@ GH Actions ephemeral disk 14GB，但 `text_embeddings.npy` (~180MB) + `cleaned.c
 2. Build 命令：`cd frontend && npm ci && npm run build`
 3. Output: `frontend/dist`
 4. 配置自定义域名（用户已购或新购）
-5. P18.4 / P18.5 cron 末尾用 [cloudflare/pages-action](https://github.com/cloudflare/pages-action) 触发部署
+5. P18.4 / P18.5 cron 末尾用 [cloudflare/pages-action](https://github.com/cloudflare/pages-action) 触发部署；若启用 local fallback，则轻量 `workflow_dispatch` 仅接收/部署本地产物
 6. 灰度：保留现有 GitHub Pages 1-2 周作为备线，监控 CF Pages 流量与延迟
 7. 国内访问：本 phase **不处理**（标注为 Phase 19+ 任务）
 
@@ -438,17 +499,17 @@ GH Actions ephemeral disk 14GB，但 `text_embeddings.npy` (~180MB) + `cleaned.c
 
 ## P18.7 文档同步 + 出口验收
 
-- 新建 [docs/project_docs/TMDB 电影宇宙 Data Pipeline.md](docs/project_docs/TMDB 电影宇宙 Data Pipeline.md)（基于 [docs/temp/TMDB 电影宇宙 Data Pipeline.md](docs/temp/TMDB 电影宇宙 Data Pipeline.md) 改写，反映本 plan 实际方案）
+- 更新 [docs/project_docs/TMDB 电影宇宙 Data Pipeline.md](docs/project_docs/TMDB 电影宇宙 Data Pipeline.md)：daily frozen threshold + monthly refit + public runner benchmark + local fallback
 - 更新 [docs/project_docs/TMDB 电影宇宙 Tech Spec.md](docs/project_docs/TMDB 电影宇宙 Tech Spec.md) §2 / §4：增加 Supabase + cron + Procrustes 章节
 - 更新根 [README.md](README.md)："运行管线"小节加 cron 路径说明
 - 实施报告：每个 P18.x 一份，存 `docs/reports/Phase 18.x ...`
 - 出口验收清单：
   - [ ] P18.0 frozen palette 与 v1 hex 一致
-  - [ ] P18.1：本机 + GHA 各一套 benchmark 数字；可行性（内存/timeout）以 GHA 为准
+  - [ ] P18.1：本机 + public `ubuntu-24.04` GHA 各一套 benchmark 数字；可行性（内存/timeout）以 GHA 为准
   - [ ] P18.2 Supabase 59014 行 + galaxy_v1_reference 不可变
   - [ ] P18.3 Procrustes helper 单测通过
   - [ ] P18.4 nightly cron 手动 dispatch 成功 + JSON 部署到 CF Pages
-  - [ ] P18.5 weekly cron 手动 dispatch 成功 + Procrustes 对齐误差 < 阈值
+  - [ ] P18.5 monthly cron 手动 dispatch 成功 + Procrustes 对齐误差 < 阈值；若失败则 fallback 路线文档化
   - [ ] P18.6 CF Pages 自定义域名生效
   - [ ] 至少 1 周 nightly cron 稳定运行（无失败）
 
@@ -456,21 +517,22 @@ GH Actions ephemeral disk 14GB，但 `text_embeddings.npy` (~180MB) + `cleaned.c
 
 ## 风险与回滚
 
-| 风险                                              | 影响                | 缓解                                                                                                                            |
-| :------------------------------------------------ | :------------------ | :------------------------------------------------------------------------------------------------------------------------------ |
-| Kaggle API 配额或下架 dataset                     | 高                  | 加 fallback：失败时 cron 邮件通知；考虑直接调 TMDB 官方 API（rate-limited 但可控）                                              |
-| Supabase free tier 数据库 500MB 上限              | 中                  | 59K 行约 80MB 表数据 + BYTEA features ~250MB，接近上限。若超：把 `movies_pending.text_embedding` 等 BYTEA 移到 Supabase Storage |
-| GH Actions free tier 月度配额 2000 分钟           | 低                  | nightly 30min × 30 + weekly 90min × 4 = 1260 min，仍在配额内                                                                    |
-| CPU refit 在 GHA 上实测超 90 分钟               | 中                  | 以 **GHA 墙钟** 决策（非本机）：超 90min → 改月度；近 6h → 放宽 timeout 或改月度；超 3h 仍不可接受 → self-hosted / 保留本地手工 refit |
-| numba/UMAP 升级再次破坏                           | 低（B1 已绕开 pkl） | pin 版本于 [requirements.cpu.txt](requirements.cpu.txt)；CI lock 测试                                                           |
-| Procrustes 对齐失败（边界情况）                   | 低                  | 加 fallback：对齐 RMSE > 阈值时报警 + 跳过 update（保留上一版坐标）                                                             |
-| CF Pages 国内访问问题                             | 中                  | 本 phase 不解决；GitHub Pages 保留 1-2 周备线；Phase 19+ 处理                                                                   |
-| v1 reference 永久锁定的代价（未来想"宇宙重组"难） | 低                  | 接受。重置是显式人为操作，不是流水线常规路径                                                                                    |
+| 风险                                                     | 影响                | 缓解                                                                                                                                                           |
+| :------------------------------------------------------- | :------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Kaggle API 配额或下架 dataset                            | 高                  | 加 fallback：失败时 cron 邮件通知；考虑直接调 TMDB 官方 API（rate-limited 但可控）                                                                             |
+| Supabase free tier 数据库 500MB 上限                     | 中                  | 59K 行约 80MB 表数据 + BYTEA features ~250MB，接近上限。若超：把 `movies_pending.text_embedding` 等 BYTEA 移到 Supabase Storage                                |
+| GH Actions public runner 资源限制（4 CPU / 16GB / 14GB） | 中                  | P18.1 先以 production 参数 benchmark；打印 heartbeat / RSS / disk；若 OOM 或接近 6h，full refit 改季度/半年度本地运行后上传                                    |
+| GH Actions free tier / 公共仓库配额变化                  | 低                  | public 仓库标准 runner 当前免费；仍需记录 job 分钟与失败率，避免把 heavy refit 设为 weekly 默认                                                                |
+| CPU refit 在 GHA 上实测超 120 分钟                       | 中                  | 以 **GHA 墙钟** 决策（非本机）：60-120min → monthly 保留；>120min 或接近 OOM → 准备 local quarterly/biannual fallback；近 6h → 不再用 hosted runner full refit |
+| numba/UMAP 升级再次破坏                                  | 低（B1 已绕开 pkl） | pin 版本于 [requirements.cpu.txt](requirements.cpu.txt)；CI lock 测试                                                                                          |
+| Procrustes 对齐失败（边界情况）                          | 低                  | 加 fallback：对齐 RMSE > 阈值时报警 + 跳过 update（保留上一版坐标）                                                                                            |
+| CF Pages 国内访问问题                                    | 中                  | 本 phase 不解决；GitHub Pages 保留 1-2 周备线；Phase 19+ 处理                                                                                                  |
+| v1 reference 永久锁定的代价（未来想"宇宙重组"难）        | 低                  | 接受。重置是显式人为操作，不是流水线常规路径                                                                                                                   |
 
 ## 出口准入
 
 - 所有 P18.0–P18.7 todos `completed`
-- nightly + weekly cron 各跑过至少 2 次手动 dispatch 成功
+- nightly + monthly cron 各跑过至少 2 次手动 dispatch 成功；或明确记录 monthly hosted runner 不可行并启用 local fallback
 - 切流量到 CF Pages 后 1 周无重大问题
 - 三份项目 spec 与代码一致，变更记录有 Phase 18 行
 - v1 reference 表行数固定 = 59014 且 `last_modified` 不变

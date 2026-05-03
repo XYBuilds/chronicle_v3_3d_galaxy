@@ -86,7 +86,7 @@ Output
 | :---- | :---- | :---- |
 | **`zCurrent`** | 用户当前关注的发行年（世界 Z，与 `movies[i].z` 同轴，含小数年） | 挂载时写入 **`z_range` 排序后的较早端 `zLo`**（计划 Rev 4；从时间轴起点开始漫游） |
 | **`zVisWindow`** | 可观测 Z 窗口宽度（年），定义 **`[zCurrent, zCurrent + zVisWindow]`** 闭区间 | 默认 **1 年**（非常聚焦），供 §1.1 粒子分层与 §1.5 拾取共用 |
-| **`zCamDistance`** | 相机沿 −Z 相对 `zCurrent` 的后退距离 | **Phase 7.3**：初值 **`30`** 世界单位，Zustand 默认与 `mountGalaxyScene` 挂载写入一致，**不再**按 `zSpan` 公式计算。**Phase 17 起**：**运行时可调**——**Alt 或 Ctrl + 滚轮**（及约定下的触摸板 pinch）走 **dolly-to-cursor**，写入 **`zCamDistance`** 并平移相机 XY 使光标 NDC 下世界命中点不变；**`zCurrent` 与 fov 不变**；**安全区 clamp `zCamDistance ∈ [2, 300]`**（见 §1.4.3 / §1.4.4）。**focus 会话**内滚轮（含该 dolly）**仍为 noop**（与 Phase 13 一致）。实现见 `galaxyInteractionStore.ts`、`camera.ts`、`scene.ts` |
+| **`zCamDistance`** | 相机沿 −Z 相对 `zCurrent` 的后退距离 | **Phase 7.3**：初值 **`30`** 世界单位，Zustand 默认与 `mountGalaxyScene` 挂载写入一致，**不再**按 `zSpan` 公式计算。**Phase 17 起**：**运行时可调**——**宏观 idle** 下 **按住 Space + 滚轮**走 **dolly-to-cursor**，写入 **`zCamDistance`** 并平移相机 XY 使光标 NDC 下世界命中点不变；**`zCurrent` 与 fov 不变**；**局部 dolly 写入时** **`clamp(zCamDistance, 2, 30)`**（**上限 = 默认 standoff**，仅允许相对默认「推近」，见 §1.4.4）。**松开 Space**（本轮曾武装 dolly）将 **`zCamDistance` 复位为 30**。**Ctrl + 滚轮**不处理相机（交给浏览器页面缩放）。**focus 会话**内滚轮（含 Space + wheel）**仍为 noop**（与 Phase 13 一致）。实现见 `galaxyInteractionStore.ts`、`camera.ts`、`scene.ts` |
 
 **相机世界 Z 关系（宏观 idle 态）**：
 
@@ -107,11 +107,12 @@ Output
 #### **1.4.3 滚轮与拖拽控制**
 
 * **滚轮双模式**（Phase 5.1.5，经 Phase 13 修订，**Phase 17** 扩 **dolly-to-cursor**）：  
-  * **默认（无 Alt / Ctrl 键盘修饰）**：**宏观 idle 态**下滚轮修改 **`zCurrent`**（受 `[zLo, zHi]` clamp），随即同帧写 `camera.position.z = next - zCamDistance`，维持 Phase 5.1.5 **macro Z scroll** 行为。  
-  * **Alt 或 Ctrl 修饰 + 滚轮**：**dolly-to-cursor**——修改 **`zCamDistance`**（clamp **§1.4.4**），并偏移 **`camera.position.x/y`** 使**光标下屏幕 NDC 对应的世界点**在 dolly 前后保持一致；**`zCurrent` 不变**、**透视 fov 不变**。**触摸板 pinch** 在浏览器中常表现为 **`ctrlKey === true` 且无 Alt**：与产品约定一致时**可走本分支**（与纯键盘 Ctrl 区分以实现为准）。**macOS Cmd 不作为**本修饰键。  
-  * **非 idle、且非 Phase 13 focus 轨道路径**（如历史「飞入途中推拉」等）：无修饰键滚轮可直接调节 `camera.position.z`（保留 Phase 4.5 特写推拉体验），**直至** focus 轨道相机语义落地后以实现为准。  
-  * **Phase 13 · focus 会话**（与单片 `selectedMovieId` 关联的 **`selecting` / `selected` / `deselecting`**）：滚轮 **noop**——**不**修改 **`zCurrent`**、**不** dolly **`camera.position.z`**、**不**改变 **`FOCUS_PERLIN_CAMERA_STANDOFF`**、**不**改 **`zCamDistance`**（**含** Alt/Ctrl + wheel；保证 Perlin 球屏幕尺寸严格映射 **`vote_count`**，与 P13.3 一致）。  
-  * 控制函数暴露 **`getMacroZWheel?: () => boolean`** 钩子；缺省视为 true；**focus 态 macro 滚轮已 noop 时**，修饰键 dolly 分支同样不得生效。  
+  * **默认（无 Space 武装、且非 Ctrl 交由浏览器）**：**宏观 idle 态**下滚轮修改 **`zCurrent`**（受 `[zLo, zHi]` clamp），随即同帧写 `camera.position.z = next - zCamDistance`，维持 Phase 5.1.5 **macro Z scroll** 行为。  
+  * **按住 Space + 滚轮**（仅 **宏观 idle**、`getMacroZWheel === true`）：**dolly-to-cursor**——修改 **`zCamDistance`**（clamp **§1.4.4**），并偏移 **`camera.position.x/y`** 使**光标下屏幕 NDC 对应的世界点**在 **`z = zCurrent`** 平面上 dolly 前后保持一致（实现：`Raycaster` + 水平 **`Plane`**）；**`zCurrent` 不变**、**透视 fov 不变**。**松开 Space**（且本轮曾武装 dolly）→ **`zCamDistance → 30`**。  
+  * **`Ctrl + 滚轮`**：**不** `preventDefault`、**不**改 **`zCurrent` / `zCamDistance`**，交给**浏览器页面缩放**（避免与触摸板 pinch 的 `ctrlKey` 抢手势）。  
+  * **非 idle、且非 Phase 13 focus 轨道路径**（如历史「飞入途中推拉」等）：无 Space 武装时滚轮可直接调节 `camera.position.z`（保留 Phase 4.5 特写推拉体验），**直至** focus 轨道相机语义落地后以实现为准。  
+  * **Phase 13 · focus 会话**（与单片 `selectedMovieId` 关联的 **`selecting` / `selected` / `deselecting`**）：滚轮 **noop**——**不**修改 **`zCurrent`**、**不** dolly **`camera.position.z`**、**不**改变 **`FOCUS_PERLIN_CAMERA_STANDOFF`**、**不**改 **`zCamDistance`**（**含** Space + wheel；保证 Perlin 球屏幕尺寸严格映射 **`vote_count`**，与 P13.3 一致）。  
+  * 控制函数暴露 **`getMacroZWheel?: () => boolean`** 钩子；缺省视为 true；**focus 态 macro 滚轮已 noop 时**，**Space + wheel** dolly 分支同样不得生效。  
 * **滚轮步长初值**：每刻度约 **0.5**（半年），在开发阶段按实际视觉效果调整；**dolly 速度**初值见《视觉参数总表》§1 / §8。  
 * **拖拽**：**宏观 idle** 下仅 **truck / pedestal**（XY 平移），Rotation 恒定。**Phase 13 · focus 轨道段**：指针拖拽用于 **orbit**（更新 store **`focusOrbit.yaw` / `focusOrbit.pitch`**，绕 pivot），**不**沿用 idle 的 truck/pedestal 语义（见状态机 spec §3.4.6）。
 
@@ -119,7 +120,7 @@ Output
 
 * **`zCurrent`** 限制在 **`[zLo, zHi] = sorted(meta.z_range)`** 内。  
 * **相机 XY** 限制在 **`meta.xy_range`** 加 **padding = 0.08 × 轴跨度**；`clampGalaxyCameraXY` 在拖拽回调与每帧 tick 均被调用，全相位一致。  
-* **`zCamDistance`**（**Phase 17**）：**`clamp(zCamDistance, 2, 300)`**——避免相机过于贴近 **`zCurrent`** 平面（`near=0.05` 余量）及过远导致大量 active 被视锥裁掉；与 §1.4.1 初值 **30** 及 dolly-to-cursor 写入一致。
+* **`zCamDistance`**（**Phase 17**）：**局部 dolly 写入路径**为 **`clamp(zCamDistance, 2, 30)`**——**下限 2** 避免相机过于贴近 **`zCurrent`** 平面（`near=0.05` 余量）；**上限 = 默认 standoff 30**，产品语义为**仅允许相对默认机位「推近」**，不允许通过 dolly 把 standoff 拉到大于默认。**store 初值 / 松开 Space 复位**仍为 **30**。历史草案 **[2, 300]** 上界仅见于早期计划文本，**以实现为准**。
 
 #### **1.4.5 近远裁面（Phase 8 定稿）**
 

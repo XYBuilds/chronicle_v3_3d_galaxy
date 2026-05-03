@@ -131,7 +131,7 @@ inFocus = smoothstep(zLo - W, zLo, aZ) × (1 - smoothstep(zHi, zHi + W, aZ))
 - **朝向**：恒 **`lookAt(pivot)`**。
 - **`selecting` / `deselecting`**：与抽屉/非目标 alpha 等一致，经 **`transitionDriver`** 同时对**世界坐标位置**（`lerpVectors`）与**四元数**（`slerp`）插值，自宏观机位过渡到轨道机位或反向。
 - **`selectionPhase === 'idle'`**（无 focus）：恢复 **`GALAXY_CAMERA_EULER`**；**`focusOrbit.yaw` / `focusOrbit.pitch` 重置为 `0`**（**不含**径向 **`r`** 字段）。
-- **滚轮**：整条 focus 相关相位（与单片 `selectedMovieId` 关联的 **`selecting` / `selected` / `deselecting`**）内滚轮 **noop**（不推进 `zCurrent`、不 dolly `camera.position.z`、不改变 standoff），以保证 Perlin 球屏幕尺寸严格映射 **`vote_count`**（见 Tech Spec §1.4.3）。**Phase 17**：含 **Alt / Ctrl + 滚轮** 的 **dolly-to-cursor**（改 `zCamDistance`）在 focus 态同样 **noop**（与 P13.3 一致，保护 Perlin 距离恒定）。
+- **滚轮**：整条 focus 相关相位（与单片 `selectedMovieId` 关联的 **`selecting` / `selected` / `deselecting`**）内滚轮 **noop**（不推进 `zCurrent`、不 dolly `camera.position.z`、不改变 standoff），以保证 Perlin 球屏幕尺寸严格映射 **`vote_count`**（见 Tech Spec §1.4.3）。**Phase 17**：含 **Space + 滚轮** 的 **dolly-to-cursor**（改 `zCamDistance`）在 focus 态同样 **noop**（与 P13.3 一致，保护 Perlin 距离恒定）。
 
 ### 3.5 Perlin 球 · 阶梯地形（Phase 11.3 起）
 
@@ -214,3 +214,4 @@ Perlin focus 球在片元侧按 **`vNoise`** 与 **`uThresh[0..K−2]`**（**K**
 | 2026-05-01 | **Phase 13 P13.7**：文档与 Phase 8 基线收口；§3.4.3 **`uFocusNonTargetActiveAlpha`** 默认与代码对齐为 **0.08**（P13.6）；性能三线未重录时见 [`Phase 8 基线 P8.0 性能与 P8.4 准入.md`](../benchmarks/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md) **`## P13 出口`** |
 | 2026-05-02 | **Phase 16 P16.4**：[`Phase 8 基线`](../benchmarks/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md) 新增 **`## P16 出口`**（复跑 §P12 **B** 压力片段 `Drama` / Christopher Nolan + 手测回归清单）；与 §3.2.1 active 双路径验收交叉引用 |
 | 2026-05-03 | **Phase 17 P17.0（spec）**：§3.1 idle 色彩链改为 **L_star → 距离-L → Hunt** + opaque/depthWrite；§3.2 active 加 Hunt；§3.4.1 P11.2 **默认 1.0/1.0** 与 Hunt 语义分工；§3.5.1 Perlin Hunt + **`uHuntApplyMask` bit2**；§3.4.6 focus 滚轮 noop 含 Alt/Ctrl dolly |
+| 2026-05-03 | **Phase 17 P17.3**：§3.4.6 **focus 滚轮 noop** 与 **`Space + wheel` dolly** 对齐（替换草案 Alt/Ctrl）；实施报告 [`Phase 17.3 P17.3 Space dolly 局部缩放与相机契约 实施报告.md`](../reports/Phase%2017.3%20P17.3%20Space%20dolly%20局部缩放与相机契约%20实施报告.md) |

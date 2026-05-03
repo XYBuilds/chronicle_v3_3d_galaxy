@@ -1,6 +1,6 @@
 ---
 name: phase 17 visual system upgrade
-overview: Phase 17 升级整体色彩、深度与交互系统：上线 Hunt 效应（C 随 L 衰减 ~ C_base × (L/L_base)^γ）覆盖 idle / active / Perlin 三层 OKLab 色彩公式；彻底移除 idle 片元透明度控制并将 idle 材质切到 opaque + depthWrite 修复遮挡；用距离-L 公式 L(d)=Lmax*(d0/d)^(2/3) 取代旧 P10.2 透明/颜色距离衰减，Hunt 直接消费距离修正后的 L；禁用 P11.2 focus 态 idle 降 C/L 路径作为对照；滚轮双模式：**Alt 按住**时滚轮与 Timeline 脱钩，仅 dolly-to-cursor（局部放大：zCamDistance、「以光标为中心」数学同 P17.3 节）；**Alt 松开（keyup）**将 zCamDistance 复位默认、滚轮恢复 macro Z / Timeline；**不**使用 `e.ctrlKey` 触发 dolly（浏览器将 Ctrl+滚轮用作页面缩放，触摸板 pinch 常带 ctrlKey）；zCurrent 在 dolly 路径不变。
+overview: Phase 17 升级整体色彩、深度与交互系统：上线 Hunt 效应（C 随 L 衰减 ~ C_base × (L/L_base)^γ）覆盖 idle / active / Perlin 三层 OKLab 色彩公式；彻底移除 idle 片元透明度控制并将 idle 材质切到 opaque + depthWrite 修复遮挡；用距离-L 公式 L(d)=Lmax*(d0/d)^(2/3) 取代旧 P10.2 透明/颜色距离衰减，Hunt 直接消费距离修正后的 L；禁用 P11.2 focus 态 idle 降 C/L 路径作为对照；滚轮双模式：**按住 Space** 时滚轮与 Timeline 脱钩，仅 dolly-to-cursor（局部放大：`zCamDistance`、`Raycaster` 锚定 `z=zCurrent`）；**松开 Space** 将 `zCamDistance` 复位默认、`zScrollSpeed` 滚轮恢复 macro Z；**Ctrl+滚轮**不处理相机（交给浏览器缩放）；局部 dolly clamp **`zCamDistance ∈ [2,30]`**（仅推近）；zCurrent 在 dolly 路径不变。详见 `docs/reports/Phase 17.3 P17.3 Space dolly 局部缩放与相机契约 实施报告.md`。
 todos:
   - id: p170-spec
     content: P17.0 spec 升级（无代码）：状态机 / 视觉参数总表 / Tech Spec / Design Spec 同步 Hunt 全层 + idle opaque/depthWrite + 距离-L 替代 P10.2 + P11.2 默认禁用 + zCamDistance 运行时可调 + 滚轮双模式
@@ -12,13 +12,16 @@ todos:
     content: P17.2 Hunt 效应全层接入 + P11.2 默认值禁用 + focus 邻域 hover 不透明：oklab.glsl 增 applyHuntChroma；galaxyMeshes.ts 加 uHuntGamma / uHuntApplyMask / uHoveredInstanceId + uFocusDim默认 1.0；idle 基于 P17.1 L_distance 接入，active vert + perlin.frag 接入；__galaxyColor 拓展
     status: completed
   - id: p173-dolly-zoom
-    content: P17.3 仅 Alt+滚轮 dolly（不用 ctrlKey）+ Alt keyup 复位默认 zCamDistance；无 Alt 时滚轮仅 timeline/macro Z；dollyToCursor / clamp [2,300] / focus noop 同前
-    status: pending
+    content: P17.3 Space+滚轮 dolly（不用 ctrlKey）+ Space 松开复位默认 zCamDistance；Raycaster 锚定；clamp [2,30]；focus noop；实施报告见 docs/reports
+    status: completed
   - id: p174-doc-sync
     content: P17.4 文档同步 + 回归 + 出口 fps：三份 spec / Phase 8 基线 P17 出口 / 实施报告；扫参收口（γ / mask / d0 策略 / distance-L clamp / dolly speed 默认值）；mac/win/chrome/safari 手测 dolly；focus 邻域 hover alpha 回归
     status: pending
 isProject: false
 ---
+
+> **2026-05-03 — P17.3 已落地（SSOT 已同步）**  
+> 草案中的 **Alt + 滚轮**、**dolly clamp [2, 300]**、**触摸板 pinch→dolly** 等叙述已由 **`docs/reports/Phase 17.3 P17.3 Space dolly 局部缩放与相机契约 实施报告.md`** 与已更新的 **`Tech Spec` / `Design Spec` / `视觉参数总表` / `星球状态机 spec`** 取代。下文历史小节仍保留 Alt 字面处，仅作归档对照；**以实现与 SSOT 为准**。
 
 # Phase 17 — 视觉系统升级
 

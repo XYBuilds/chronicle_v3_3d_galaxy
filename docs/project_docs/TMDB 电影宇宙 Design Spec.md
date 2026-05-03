@@ -29,7 +29,7 @@
 
 * 渲染层级：全部 ~60K 影片为**两份** **`InstancedMesh`**（**idle** `Icosahedron(1,0)` + **active** `Icosahedron(1,1)`），同实例矩阵与 hue / vote / size；条带内 **`inFocus`** 用 **smoothstep**（`W = zVisWindow × 0.2`）驱动 **互补尺度**（详见 [`星球状态机 spec.md`](星球状态机%20spec.md) 与 Tech Spec §1.1）。**非**单 `Points` 主路径。  
 * **视距窗口（Phase 5.1.5 · 方案 1）**：在时间轴 Z 上定义闭区间 **`[zCurrent, zCurrent + zVisWindow]`**：  
-  * **`zCurrent`**、**`zVisWindow`**、**`zCamDistance`**：前两者语义不变；**`zCamDistance` 默认仍为 30**，**Phase 17 起**为**运行时可调**物理后退距离（Alt/Ctrl + 滚轮 dolly，clamp **[2,300]**），详见 Tech Spec §1.4.1 / §1.4.3。  
+  * **`zCurrent`**、**`zVisWindow`**、**`zCamDistance`**：前两者语义不变；**`zCamDistance` 默认仍为 30**，**Phase 17 起**为**运行时可调**物理后退距离（**按住 Space + 滚轮** dolly；**松开 Space** 复位默认；局部 dolly clamp **`[2,30]`**），详见 Tech Spec §1.4.1 / §1.4.3。  
   * 状态在 Zustand 中维护；**拾取**以 **active mesh** + 世界球逻辑为准（Tech Spec §1.5）。  
 * **与旧 A/B「点大小」的对应（心智模型）**：条带外可见性主要由 **idle** 支路 + **`uBgSizeMul`** 体现；条带内由 **active** 支路 + **`uActiveSizeMul`** 体现；**初值** `uSizeScale=0.3`，`uActiveSizeMul=0.02`，`uBgSizeMul=0.002`（以《视觉参数总表》与 `galaxyMeshes.ts` 为准）。
 
@@ -41,7 +41,7 @@
   * **过渡**：**smoothstep**，非旧版 A/B `step` 硬切。  
 * 摄像机控制（**宏观 idle**；**focus 态**例外见 **§2.2 Phase 13**）：  
   * **摄像机轴线始终与 Z 轴平行**（无旋转、无倾斜；参数永远为 `Euler(0, π, 0, 'YXZ')`）。  
-  * **滚轮（双模式，Phase 17）**：**无修饰键**——沿 Z 轴（release\_date 时间纵深）前后穿梭；**宏观 idle 态下写入 `zCurrent`**，相机 **`z = zCurrent - zCamDistance`**（Phase 5.1.5 macro）。**Alt 或 Ctrl + 滚轮**——**dolly-to-cursor**：只改 **`zCamDistance`**（及相机 XY 保持光标下世界点），**不改 `zCurrent`**；**focus 会话**内滚轮（含本模式）**noop**（Tech Spec §1.4.3）。  
+  * **滚轮（双模式，Phase 17）**：**无 Space 武装**——沿 Z 轴（release\_date 时间纵深）前后穿梭；**宏观 idle 态下写入 `zCurrent`**，相机 **`z = zCurrent - zCamDistance`**（Phase 5.1.5 macro）。**按住 Space + 滚轮**——**dolly-to-cursor**：只改 **`zCamDistance`**（及相机 XY 保持光标下 **`z = zCurrent`** 平面上的世界点），**不改 `zCurrent`**；**松开 Space** 将 **`zCamDistance` 复位为默认**。**Ctrl + 滚轮**交给浏览器页面缩放。**focus 会话**内滚轮（含 Space + wheel）**noop**（Tech Spec §1.4.3）。  
   * **拖拽**：仅执行 **truck**（水平平移）与 **pedestal**（垂直平移）——改变 Camera Position，**Rotation 恒定不变**；XY 位置被 `xy_range + padding` 约束。
 
 ### **2.2 微观聚焦状态 (Selected · Phase 13 起含「邻域探索」)**

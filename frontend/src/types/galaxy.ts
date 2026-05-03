@@ -43,6 +43,8 @@ export interface Meta {
   genre_weight_ratio: number
   /** Genre name → sRGB hex (§4.2). */
   genre_palette: Record<string, string>
+  /** Phase 18.0+ frozen palette generation version (e.g. `v1`). */
+  genre_palette_version?: string
   feature_weights: FeatureWeights
   /** `[z_min, z_max]` decimal years (§4.2). */
   z_range: number[]

@@ -26,8 +26,13 @@ from export.export_search_index import (  # noqa: E402
 )
 from feature_engineering.genre_encoding import (  # noqa: E402
     DEFAULT_GENRE_WEIGHT_RATIO,
-    collect_sorted_genres,
     parse_genre_list,
+)
+from feature_engineering.genre_palette import (  # noqa: E402
+    FROZEN_GENRE_ORDER_V1,
+    GENRE_PALETTE_VERSION,
+    assert_all_genres_in_frozen_v1,
+    build_frozen_genre_palette_v1,
 )
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -38,11 +43,6 @@ _DEFAULT_GZ = _REPO_ROOT / "frontend" / "public" / "data" / "galaxy_data.json.gz
 
 POSTER_BASE = "https://image.tmdb.org/t/p/w500"
 EMBEDDING_MODEL_ID = "paraphrase-multilingual-MiniLM-L12-v2"
-
-# OKLCH → sRGB (Björn Ottosson OKLab), then CSS sRGB transfer; gamut clamp on linear + encoded.
-_OKLCH_L = 0.75
-_OKLCH_C = 0.14
-
 
 def _split_list_cell(val: object) -> list[str]:
     """Split TMDB multi-value string fields on comma (dataset uses comma-separated names)."""
@@ -110,59 +110,6 @@ def decimal_year_with_jitter(release_date: str, movie_id: int) -> tuple[float, b
     doy = date(y, m, d).timetuple().tm_yday
     frac = (doy - 1) / float(days_in_year)
     return float(y) + frac, False
-
-
-def oklch_to_srgb_hex(L: float, C: float, h_deg: float) -> tuple[str, tuple[float, float, float]]:
-    """OKLCH (L,C,H deg) → gamut-clamped sRGB hex + normalized RGB tuple."""
-    h = math.radians(h_deg % 360.0)
-    a_ = C * math.cos(h)
-    b_ = C * math.sin(h)
-    l_ = L + 0.3963377774 * a_ + 0.2158037573 * b_
-    m_ = L - 0.1055613458 * a_ - 0.0638541728 * b_
-    s_ = L - 0.0894841775 * a_ - 1.2914855480 * b_
-    l = l_**3
-    m = m_**3
-    s = s_**3
-    r_lin = +4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s
-    g_lin = -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s
-    b_lin = -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s
-
-    def _srgb_channel(x: float) -> float:
-        x = float(np.clip(x, 0.0, 1.0))
-        if x <= 0.0031308:
-            return 12.92 * x
-        return 1.055 * (x ** (1.0 / 2.4)) - 0.055
-
-    r8 = _srgb_channel(r_lin)
-    g8 = _srgb_channel(g_lin)
-    b8 = _srgb_channel(b_lin)
-    r8, g8, b8 = (float(np.clip(r8, 0.0, 1.0)), float(np.clip(g8, 0.0, 1.0)), float(np.clip(b8, 0.0, 1.0)))
-    hx = f"#{int(round(r8 * 255)):02X}{int(round(g8 * 255)):02X}{int(round(b8 * 255)):02X}"
-    return hx, (r8, g8, b8)
-
-
-def build_genre_palette(
-    genre_order: list[str],
-) -> tuple[dict[str, str], dict[str, tuple[float, float, float]], dict[str, float]]:
-    """Equal hue spacing on OKLCH ring (Design Spec §1.1 + dev plan Phase 2.5 + P8.1 `genre_hue` rad)."""
-    n = len(genre_order)
-    if n == 0:
-        return {}, {}, {}
-    step = 360.0 / float(n)
-    two_pi = 2.0 * math.pi
-    palette: dict[str, str] = {}
-    rgb_norm: dict[str, tuple[float, float, float]] = {}
-    hue_by_genre: dict[str, float] = {}
-    for i, g in enumerate(genre_order):
-        h_deg = step * float(i)
-        hx, rgb = oklch_to_srgb_hex(_OKLCH_L, _OKLCH_C, h_deg)
-        palette[g] = hx
-        rgb_norm[g] = rgb
-        hue_rad = two_pi * float(i) / float(n)
-        if not (0.0 <= hue_rad < two_pi):
-            raise AssertionError(f"genre_hue out of [0, 2π) for {g!r}: {hue_rad!r}")
-        hue_by_genre[g] = float(hue_rad)
-    return palette, rgb_norm, hue_by_genre
 
 
 def linear_map_array(values: np.ndarray, out_min: float, out_max: float) -> np.ndarray:
@@ -363,8 +310,10 @@ def main(argv: list[str] | None = None) -> int:
     if "id" not in df.columns or "release_date" not in df.columns:
         raise KeyError("CSV must include id and release_date")
 
-    genre_order = collect_sorted_genres(df["genres"])
-    genre_palette, genre_rgb, genre_hue_by_name = build_genre_palette(genre_order)
+    assert_all_genres_in_frozen_v1(df["genres"])
+    genre_order = list(FROZEN_GENRE_ORDER_V1)
+    genre_palette, genre_rgb, genre_hue_by_name = build_frozen_genre_palette_v1()
+    assert set(genre_palette.keys()) == set(FROZEN_GENRE_ORDER_V1)
     print(f"[Genre hue] {len(genre_order)} genres (index, name, hue_deg, hex):")
     for i, g in enumerate(genre_order):
         hr = genre_hue_by_name[g]
@@ -472,6 +421,7 @@ def main(argv: list[str] | None = None) -> int:
             "densmap": bool(args.densmap),
         },
         "genre_weight_ratio": float(args.genre_weight_ratio),
+        "genre_palette_version": GENRE_PALETTE_VERSION,
         "genre_palette": genre_palette,
         "feature_weights": {"text": float(args.w_text), "genre": float(args.w_genre), "lang": float(args.w_lang)},
         "z_range": z_range_out,

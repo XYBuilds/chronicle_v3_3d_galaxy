@@ -19,6 +19,8 @@ venv/
 # Match directory or M6 WSL symlink at data/raw (trailing-slash-only rules miss symlinks).
 data/raw
 data/output/
+# P18.1+ local canonical rebuild outputs (large; not versioned)
+data/runs/
 scripts/output/
 *.pkl
 *.joblib

@@ -4,22 +4,22 @@ overview: 将宏观浏览（含 movie 搜索、Space dolly）纳入 active 路�
 todos:
   - id: scene-wantOpaque
     content: scene.ts：`wantOpaque = selectionPhase === 'idle' && selectedMovieId === null`；注释由 P16.3 扩展为 P19；log 文案可选区分 macro vs focus
-    status: pending
+    status: completed
   - id: docs-state-machine
     content: 《星球状态机 spec》§3.2.1 重写为「默认路径 A；路径 B 仅 focus 相关相位」；标注 Phase 16→19 演进
-    status: pending
+    status: completed
   - id: docs-tech-spec
     content: 《Tech Spec》§1.1 更新 active 段落与切换矩阵（替代原 Phase 16 全表口径）；RAF 条件改为 selectionPhase + selectedMovieId
-    status: pending
+    status: completed
   - id: docs-visual-params
     content: 《视觉参数总表》Active 材质（Phase 16 双路径）小节改为 Phase 19 判定口径（与 §3.2.1 一致）
-    status: pending
+    status: completed
   - id: docs-design-spec
     content: 《Design Spec》§2.1 宏观漫游：补一句「宏观 active 默认不透明 + 写深度；仅 focus 会话内保留非目标 active 片元 alpha（P11.1）」
-    status: pending
+    status: completed
   - id: report-p19
     content: 新增 docs/reports《Phase 19 P19 浏览态 active 深度路径 实施报告.md》：决策、与 P16.3 关系、wantOpaque 条件、验收、回滚；关联本 plan 与 SSOT 锚点
-    status: pending
+    status: completed
 isProject: false
 ---
 

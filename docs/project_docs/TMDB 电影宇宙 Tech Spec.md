@@ -18,23 +18,21 @@
 * **WebGL2 硬前置**：`WebGLRenderer` 创建后若 `!renderer.capabilities.isWebGL2` 则**抛错**并提示升级浏览器；宏观与 focus 使用 **`gl_InstanceID`** 与 per-instance 属性，**不**维护 WebGL1 或手动 `aInstanceId` 回退（与 Phase 7.2 浏览器红线一致）。  
 * **宏观双 mesh（各 ~60K instance，共享 `instanceMatrix` 与 hue / voteNorm / aSize）**（`frontend/src/three/galaxyMeshes.ts`）：  
   * **idle**：`IcosahedronGeometry(1, 0)`；`ShaderMaterial` **`transparent: true`**、**`depthWrite: false`**、`depthTest: true`；`renderOrder = 0`。  
-  * **active**：`IcosahedronGeometry(1, 1)`；`ShaderMaterial` **`alphaTest: 0.01`**、`depthTest: true`；`renderOrder = 1`。**构造初值**（`galaxyMeshes.ts`）：**`transparent: true`**、**`depthWrite: false`**。**Phase 16**：运行时由 **`scene.ts` RAF** 在 **`searchMode` × `selectedMovieId`** 下切换 **双路径**——详见《星球状态机 spec》**§3.2.1** 与下表；切换时仅在 **`transparent` / `depthWrite`** 变化处设 **`material.needsUpdate = true`**。  
-  * **active · Phase 11.1（路径 B 语义）**：非目标 active 片元 **`alpha`** 随 **`uFocusCameraBlend`**（与 **`transitionDriver`** / `focusDriver.progress` 同步）从 **1** 过渡到 **`uFocusNonTargetActiveAlpha`**（默认 **0.08**，**Phase 13.6** 由 **0.10** 下调以适配邻域球变密）；目标实例在飞入/飞出全程由 **`uFocusTargetInstanceId`** 识别并保持 **alpha = 1**（详见《星球状态机 spec》§3.4.3 与《视觉参数总表》§2）。**路径 A（select 单态 opaque）** 下片元 **alpha 恒为 1**，与状态机 **§3.2.1** 一致。**Phase 11.2**：**不**在 active 上改 L/chroma；非焦点 **idle** 在 focus 时对 **`L_base` / `C_base` 乘** `uFocusDimL` / `uFocusDimChroma`（定稿 **1** / **0.7**），见《星球状态机 spec》§3.4.1。  
+  * **active**：`IcosahedronGeometry(1, 1)`；`ShaderMaterial` **`alphaTest: 0.01`**、`depthTest: true`；`renderOrder = 1`。**构造初值**（`galaxyMeshes.ts`）：**`transparent: true`**、**`depthWrite: false`**。**Phase 16 + Phase 19**：运行时由 **`scene.ts` RAF** 在 **`selectionPhase`（**闭包**，非 Zustand）× `selectedMovieId`（store）** 下切换 **双路径**——详见《星球状态机 spec》**§3.2.1** 与下表；切换时仅在 **`transparent` / `depthWrite`** 变化处设 **`material.needsUpdate = true`**。  
+  * **active · Phase 11.1（路径 B 语义）**：非目标 active 片元 **`alpha`** 随 **`uFocusCameraBlend`**（与 **`transitionDriver`** / `focusDriver.progress` 同步）从 **1** 过渡到 **`uFocusNonTargetActiveAlpha`**（默认 **0.08**，**Phase 13.6** 由 **0.10** 下调以适配邻域球变密）；目标实例在飞入/飞出全程由 **`uFocusTargetInstanceId`** 识别并保持 **alpha = 1**（详见《星球状态机 spec》§3.4.3 与《视觉参数总表》§2）。**路径 A（宏观 opaque）** 下片元 **alpha 恒为 1**，与状态机 **§3.2.1** 一致。**Phase 11.2**：**不**在 active 上改 L/chroma；非焦点 **idle** 在 focus 时对 **`L_base` / `C_base` 乘** `uFocusDimL` / `uFocusDimChroma`（定稿 **1** / **0.7**），见《星球状态机 spec》§3.4.1。  
   * **Z 条带与过渡**：与 [`星球状态机 spec.md`](星球状态机%20spec.md) 一致——`W = uZVisWindow × 0.2`，`inFocus = smoothstep(zLo−W, zLo, aZ) × (1 − smoothstep(zHi, zHi+W, aZ))`；**idle** 侧尺度 `sIdle = (1 − inFocus) × uSizeScale × uBgSizeMul × aSize`，**active** 侧 `sActive = inFocus × uSizeScale × uActiveSizeMul × aSize`；二者互补（初值 `uSizeScale=0.3`，`uActiveSizeMul=0.02`，`uBgSizeMul=0.002`，见《视觉参数总表》）。  
   * 色彩：§4.3 **`genre_hue`（弧度）** + OKLab **`uLMin` / `uLMax` / `uChroma`**；**Lightness** 由 **`voteNorm`** 经 **Phase 10.1** 分段压缩与 `pow` 映射到 **L**（见《视觉参数总表》§2，非线性等价于「评分驱动明暗」）。  
 
-**Phase 16 · `galaxyActive` 渲染路径切换矩阵**（与《星球状态机 spec》**§3.2.1** 同构；由 **`scene.ts` RAF** 驱动 **`transparent` / `depthWrite`**，**`needsUpdate`** 仅在组合变化时置位）：
+**Phase 19 · `galaxyActive` 渲染路径规则**（取代 Phase 16 按 **`searchMode`** 细分矩阵；与《星球状态机 spec》**§3.2.1** 同构；由 **`scene.ts` RAF** 驱动 **`transparent` / `depthWrite`**，**`needsUpdate`** 仅在组合变化时置位）：
 
-| `searchMode` | `selectedMovieId` | 路径 | 备注 |
-| :---- | :---- | :---- | :---- |
-| `idle` | `null` | **B**（transparent） | 默认；条带内 active 少，深度问题不显著 |
-| `idle` | non-null | **B** | focus 单态，需 **P11.1** alpha 渐变 |
-| `movie` | `null` | **B** | 电影联想未点选或已清空 |
-| `movie` | non-null | **B** | 同 idle + focus |
-| **`person`** | **`null`** | **A**（opaque） | select 单态，`selectionIds` 大量 active |
-| **`person`** | non-null | **B** | focus 嵌套 person（邻域 mask 见《星球状态机 spec》**§3.4.5** / **§3.6**；仍 **P11.1**） |
-| **`genre`** | **`null`** | **A** | select 单态，大量 active |
-| **`genre`** | non-null | **B** | focus 嵌套 genre |
+- **`selectionPhase`**：`scene.ts` **`mountGalaxyScene`** 内 **`applySelectionFrame` / focus 驱动`** 维护的闭包变量（**非** Zustand store 字段）。
+- **路径 A（opaque）**：**`selectionPhase === 'idle'`** 且 **`selectedMovieId === null`** —— 宏观浏览、电影名联想未点片、person/genre select 未 focus、Space dolly 等均在此列。
+- **路径 B（transparent）**：**否则** —— **`selecting` / `selected` / `deselecting`** 任一则需 **P11.1**；或 **`selectedMovieId !== null`**（单片 focus / 嵌套会话）。
+
+| 条件（AND） | 路径 | 备注 |
+| :---- | :---- | :---- |
+| **`selectionPhase === 'idle'`** ∧ **`selectedMovieId === null`** | **A**（opaque + `depthWrite`） | 常态宏观 active |
+| **否则** | **B**（transparent） | focus 管线 **P11.1** |
 
 * **Focus 态 Perlin 球（按需、单实例）**：`IcosahedronGeometry(1, 8)` + **CPU** 上按顶点 noise **分位数阈值**划分至多 **8** 档 genre 带（`perlin.frag.glsl` 中 **`step`** 分 **`bandIdx`**；顶点 **`perlin.vert.glsl`** 用 **`smoothstep`** 累加 **`level`** 做阶梯挤出，见《星球状态机 spec》§3.5）。**Phase 11.4**：片元用 **`dFdx`/`dFdy`** 重构法线与 Lambert 明暗；**`uPerlinL`** 由 **`vote_average`** 经与宏观一致的 **P10.1** 公式写入；**`uPerlinChroma`** 与星系 **`uChroma`** 快照一致；**hue** 为主 genre **`movie.genre_hue`**（若存在）+ 其余 genre **`genreHueForGenreName`**（palette key 序对齐 Python **`sorted`**）；线性 RGB **clamp** 后编码 **sRGB**；光照定稿见《视觉参数总表》§4。**Phase 11.5**：材质已切换为 **opaque**（`transparent: false`、`depthWrite: true`、`alphaTest: 0.01`），降低台阶边缘透明伪影。`movie.id` 种子化 PRNG；面积比例由 **`uAreaRatio`** 等控制。当 `uFocusedInstanceId` 命中时，**idle + active** 上该 `gl_InstanceID` 的 scale 在 shader 中**置零**，仅由 Perlin 球呈现。  
 * **后处理顺序（生产）**：同帧先画 idle → active → focus 时 Perlin 球 `visible=true`（`renderOrder` 以 `scene.ts` 为准）。**`UnrealBloomPass`** 默认**不**参与输出（§1.2）；调试启用时再走 composer。

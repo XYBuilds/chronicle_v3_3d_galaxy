@@ -949,18 +949,20 @@ export function mountGalaxyScene(
       useGalaxyInteractionStore.setState({ zCurrent: zNext })
     }
     const st = useGalaxyInteractionStore.getState()
-    // P16.3 — active material dual path (state machine §3.2.1): select-only person/genre uses
-    // opaque + depthWrite so many full-alpha actives sort by depth; idle is P17.1 opaque + depthWrite;
-    // default active stays transparent for P11.1 vFocusAlphaMult gradients.
-    const inSelectOnly =
-      (st.searchMode === 'person' || st.searchMode === 'genre') && st.selectedMovieId === null
-    const wantOpaque = inSelectOnly
+    // P16.3 / P19 — active material dual path (state machine §3.2.1): macro browse
+    // (`selectionPhase === 'idle'` && no selectedMovieId) uses opaque + depthWrite so strip
+    // actives depth-sort correctly (movie search, Space dolly, person/genre select pre-focus).
+    // `selectionPhase` is this closure (not Zustand). Focus phases need path B for P11.1.
+    const wantOpaque = selectionPhase === 'idle' && st.selectedMovieId === null
     const activeMat = galaxy.activeMaterial
     if (activeMat.transparent !== !wantOpaque || activeMat.depthWrite !== wantOpaque) {
       activeMat.transparent = !wantOpaque
       activeMat.depthWrite = wantOpaque
       activeMat.needsUpdate = true
-      console.log('[Active material]', wantOpaque ? 'opaque (select-only)' : 'transparent (default)')
+      console.log(
+        '[Active material]',
+        wantOpaque ? 'opaque (path A · macro browse)' : 'transparent (path B · focus)',
+      )
     }
     // P12.6 / P13.2 — person/genre mask vs focus spherical neighborhood vs timeline slab
     const selectionDrawMode =

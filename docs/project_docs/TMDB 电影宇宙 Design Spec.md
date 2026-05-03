@@ -32,6 +32,7 @@
   * **`zCurrent`**、**`zVisWindow`**、**`zCamDistance`**：前两者语义不变；**`zCamDistance` 默认仍为 30**，**Phase 17 起**为**运行时可调**物理后退距离（**按住 Space + 滚轮** dolly；**松开 Space** 复位默认；局部 dolly clamp **`[2,30]`**），详见 Tech Spec §1.4.1 / §1.4.3。  
   * 状态在 Zustand 中维护；**拾取**以 **active mesh** + 世界球逻辑为准（Tech Spec §1.5）。  
 * **与旧 A/B「点大小」的对应（心智模型）**：条带外可见性主要由 **idle** 支路 + **`uBgSizeMul`** 体现；条带内由 **active** 支路 + **`uActiveSizeMul`** 体现；**初值** `uSizeScale=0.3`，`uActiveSizeMul=0.02`，`uBgSizeMul=0.002`（以《视觉参数总表》与 `galaxyMeshes.ts` 为准）。
+* **Phase 19**：宏观漫游（含电影名联想未 focus、Space dolly 推近）下 **active** **默认 opaque + depthWrite**；**仅** focus 会话内保留非目标 **active** 片元 **alpha**（**P11.1**），与《星球状态机 spec》**§3.2.1** 路径 **B** 一致。
 
 | 层             | 定义                | 视觉                      | 交互                                        |
 | :------------- | :------------------ | :------------------------ | :------------------------------------------ |

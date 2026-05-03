@@ -51,17 +51,17 @@ inFocus = smoothstep(zLo - W, zLo, aZ) × (1 - smoothstep(zHi, zHi + W, aZ))
 | **可交互性** | 主拾取；可选 `inFocus > 0.5` 门控 + 第二近邻容差（由 P8.2 结论定） |
 | **进入/退出** | 连续，与 idle 互补叠加；**不得**在过渡区出现「双实心球」过曝（P8.5 硬验收） |
 
-#### 3.2.1 active 材质双路径（Phase 16）
+#### 3.2.1 active 材质双路径（Phase 16 → Phase 19）
 
-**动机**：路径 **B**（透明、不写深度）下，`person` / `genre` **select 单态**大量 active 同帧 **alpha≈1** 时，透明排序会导致远处球体错误压在近处之上。**Phase 16** 在 **`scene.ts` RAF** 内按 store 组合切换 **`galaxyActive` ShaderMaterial** 的 GPU 状态（**无**第二套 mesh 为默认路径）。
+**动机**：路径 **B**（透明、不写深度）下，条带或 mask 内大量 active 同帧 **alpha≈1** 时，透明排序会导致远处球体错误压在近处之上。**Phase 16** 先在 **`person` / `genre` select 单态**切入路径 **A**（opaque + `depthWrite`）。**Phase 19** 将路径 **A** 收敛为**全部宏观无 focus**：与 **`searchMode` 细分无关**，统一为 **`selectionPhase === 'idle'`** 且 **`selectedMovieId === null`**（含 idle / `movie` 联想未点片、Space dolly 推近等）；**唯一**路径 **B** 特例为 **focus 管线**（`selectionPhase ∈ { selecting, selected, deselecting }` **或** 已持有 **`selectedMovieId`**），以保留 **P11.1** 非目标 active **alpha**。仍在 **`scene.ts` RAF** 内切换 **`galaxyActive` ShaderMaterial**（**无**第二套 mesh）。
 
-| 路径 | 条件（Zustand） | `transparent` | `depthWrite` | `alphaTest` | 备注 |
-|------|-----------------|---------------|--------------|-------------|------|
-| **A — opaque（select 单态）** | **`searchMode ∈ { 'person', 'genre' }`** 且 **`selectedMovieId === null`** | `false` | `true` | `0.01` | 仅 mask 内实例 **`sActive > 0`** 的片元参与深度；大量 active 时前后遮挡正确 |
-| **B — transparent（默认）** | 其余所有情况：idle、`movie` 未点联想、`movie`+focus、**focus 嵌套 person/genre**（`selectedMovieId !== null`）等 | `true` | `false` | `0.01` | 保留 **Phase 11.1** **`vFocusAlphaMult`** / **`uFocusCameraBlend`** 的非目标 active **alpha** 渐变能力 |
+| 路径 | 条件 | `transparent` | `depthWrite` | `alphaTest` | 备注 |
+|------|------|---------------|--------------|-------------|------|
+| **A — opaque（宏观默认）** | **`selectionPhase === 'idle'`**（**`scene.ts` 闭包**，非 Zustand）且 **`selectedMovieId === null`**（store） | `false` | `true` | `0.01` | 条带 / mask 内 **`sActive > 0`** 片元写深度；宏观浏览与 **Phase 17** Space dolly 推近后遮挡正确 |
+| **B — transparent（focus 特例）** | **`selectionPhase`** 为 **`selecting` / `selected` / `deselecting`** **或** **`selectedMovieId !== null`** | `true` | `false` | `0.01` | **P11.1** **`vFocusAlphaMult`** / **`uFocusCameraBlend`** 压暗非目标邻域 active |
 
-* **切换**：由 **`scene.ts`** 每帧读取 **`searchMode` × `selectedMovieId`**，仅在 **`transparent` / `depthWrite`** 与目标路径不一致时设置 **`material.needsUpdate = true`**（触发 shader 重编译；用户操作边界上频率极低）。切换**无**时间插值动画。  
-* **与 P11.1 兼容**：路径 **A** 下 select 单态片元 **alpha 恒为 1**（mask 外 **`sActive = 0`** 已丢弃），与 opaque 深度写入无冲突；路径 **B** 下 focus 飞入/保持/飞出仍走 **§3.4.3**。
+* **切换**：由 **`scene.ts`** 每帧用 **`selectionPhase`（闭包）× `selectedMovieId`（store）** 判定路径，仅在 **`transparent` / `depthWrite`** 与目标不一致时设置 **`material.needsUpdate = true`**（触发 shader 重编译；用户操作边界上频率极低）。切换**无**时间插值动画。  
+* **与 P11.1 兼容**：路径 **A** 下宏观 active 片元 **alpha 恒为 1**（mask / 条带外 **`sActive = 0`** 已丢弃），与 opaque 深度写入无冲突；路径 **B** 下 focus 飞入/保持/飞出仍走 **§3.4.3**。
 
 ### 3.3 hover
 
@@ -219,3 +219,4 @@ Perlin focus 球在片元侧按 **`vNoise`** 与 **`uThresh[0..K−2]`**（**K**
 | 2026-05-03 | **Phase 17 P17.0（spec）**：§3.1 idle 色彩链改为 **L_star → 距离-L → Hunt** + opaque/depthWrite；§3.2 active 加 Hunt；§3.4.1 P11.2 **默认 1.0/1.0** 与 Hunt 语义分工；§3.5.1 Perlin Hunt + **`uHuntApplyMask` bit2**；§3.4.6 focus 滚轮 noop 与 **Space / Ctrl** 滚轮契约对齐（见 P17.3 报告） |
 | 2026-05-03 | **Phase 17 P17.3**：§3.4.6 **focus 滚轮 noop** 与 **`Space + wheel` dolly** 对齐（替换草案 Alt/Ctrl）；实施报告 [`Phase 17.3 P17.3 Space dolly 局部缩放与相机契约 实施报告.md`](../reports/Phase%2017.3%20P17.3%20Space%20dolly%20局部缩放与相机契约%20实施报告.md) |
 | 2026-05-03 | **Phase 17 P17.4**：§3.3 补 GPU hover 与邻域 alpha 分工；§3.4.3 补 **`uHoveredInstanceId` / `uFocusHoveredActiveAlpha`**；§3.4.5 补与 hover uniform 关系；基线见 **`docs/benchmarks/Phase 8 基线 P8.0 性能与 P8.4 准入.md`** **`## P17 出口`** |
+| 2026-05-03 | **Phase 19 P19**：§3.2.1 路径 **A** = **`selectionPhase === 'idle'` ∧ `selectedMovieId === null`**（宏观默认 opaque）；路径 **B** = focus 特例；演进说明 **Phase 16 → 19**（收敛 **`searchMode`** 矩阵口径） |

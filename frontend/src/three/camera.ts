@@ -91,6 +91,85 @@ export function clampGalaxyCameraXY(
   clampCameraXY(camera, xyRange, padRatio)
 }
 
+/** P17.3 — dolly safety band for runtime `zCamDistance`. */
+export const ZCAM_DOLLY_MIN = 2
+export const ZCAM_DOLLY_MAX = 300
+
+const DOLLY_SPEED_MUL = 5
+
+const _unprojA = new THREE.Vector3()
+const _unprojB = new THREE.Vector3()
+const _ndcDolly = new THREE.Vector2()
+
+/**
+ * Ray from camera through NDC (x,y,0.5) intersected with plane worldZ = constant.
+ */
+function unprojectToZPlane(
+  ndcX: number,
+  ndcY: number,
+  camera: THREE.PerspectiveCamera,
+  worldZ: number,
+  out: THREE.Vector3,
+): THREE.Vector3 {
+  out.set(ndcX, ndcY, 0.5).unproject(camera)
+  const dirZ = out.z - camera.position.z
+  if (Math.abs(dirZ) < 1e-6) {
+    out.set(camera.position.x, camera.position.y, worldZ)
+    return out
+  }
+  const t = (worldZ - camera.position.z) / dirZ
+  out.set(
+    camera.position.x + (out.x - camera.position.x) * t,
+    camera.position.y + (out.y - camera.position.y) * t,
+    worldZ,
+  )
+  return out
+}
+
+function clientToNdc(clientX: number, clientY: number, rect: DOMRect, out: THREE.Vector2): void {
+  const w = Math.max(1, rect.width)
+  const h = Math.max(1, rect.height)
+  const x = ((clientX - rect.left) / w) * 2 - 1
+  const y = -(((clientY - rect.top) / h) * 2 - 1)
+  out.set(x, y)
+}
+
+/**
+ * P17.3 — Alt/Ctrl + wheel: change `zCamDistance` and pan X/Y so the point under the cursor
+ * on plane z = zCurrent stays fixed in world space. `zCurrent` unchanged.
+ */
+export function dollyToCursor(
+  camera: THREE.PerspectiveCamera,
+  domElement: HTMLElement,
+  clientX: number,
+  clientY: number,
+  dz: number,
+  xyRange: XyRange,
+  xyClampPad: number,
+): void {
+  const rect = domElement.getBoundingClientRect()
+  clientToNdc(clientX, clientY, rect, _ndcDolly)
+  const { zCurrent, zCamDistance: prevR } = useGalaxyInteractionStore.getState()
+
+  unprojectToZPlane(_ndcDolly.x, _ndcDolly.y, camera, zCurrent, _unprojA)
+  const worldBefore = _unprojA
+
+  const speed = DOLLY_SPEED_MUL * Math.max(prevR / 30, 0.5)
+  const nextR = THREE.MathUtils.clamp(prevR + dz * speed, ZCAM_DOLLY_MIN, ZCAM_DOLLY_MAX)
+  if (Math.abs(nextR - prevR) < 1e-6) {
+    return
+  }
+
+  useGalaxyInteractionStore.setState({ zCamDistance: nextR })
+  camera.position.z = zCurrent - nextR
+  camera.updateMatrixWorld(true)
+
+  unprojectToZPlane(_ndcDolly.x, _ndcDolly.y, camera, zCurrent, _unprojB)
+  camera.position.x += worldBefore.x - _unprojB.x
+  camera.position.y += worldBefore.y - _unprojB.y
+  clampGalaxyCameraXY(camera, xyRange, xyClampPad)
+}
+
 /**
  * Truck (pointer X → world X) + pedestal (pointer Y → world Y) + wheel → world Z.
  * Rotation is locked; only `camera.position` changes.
@@ -173,8 +252,12 @@ export function attachGalaxyCameraControls(
       return
     }
     const dz = Math.sign(e.deltaY) * zScrollSpeed * Math.min(Math.abs(e.deltaY) / 100, 3)
+    const altLike = e.altKey || e.ctrlKey
     const macro = options.getMacroZWheel?.() ?? true
-    if (macro) {
+    if (altLike && macro) {
+      // P17.3 — pinch (ctrlKey) / Alt+wheel dolly; focus orbit already returned above (macro wheel noop).
+      dollyToCursor(camera, domElement, e.clientX, e.clientY, dz, options.xyRange, xyClampPaddingRatio)
+    } else if (macro) {
       const { zCurrent: prev, zCamDistance } = useGalaxyInteractionStore.getState()
       const next = THREE.MathUtils.clamp(prev + dz, zLo, zHi)
       useGalaxyInteractionStore.setState({ zCurrent: next })

@@ -130,7 +130,7 @@ export function clampGalaxyCameraXY(
 export const GALAXY_ZCAM_DISTANCE_DEFAULT = 30
 
 const ZCAM_DOLLY_MIN = 2
-const DOLLY_SPEED_MUL = 5
+const DOLLY_SPEED_MUL = 5 // P17.3 dolly; P17.4 production default (× zScroll wheel scaling, see Phase 17.3 report)
 
 const _dollyVBefore = new THREE.Vector3()
 const _dollyVAfter = new THREE.Vector3()

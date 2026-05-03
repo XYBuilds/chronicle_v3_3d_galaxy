@@ -597,17 +597,17 @@ GitHub-hosted public `ubuntu-24.04` runner 为 4 CPU / 16GB RAM / 14GB SSD。`te
 
 ## 风险与回滚
 
-| 风险                                                     | 影响                | 缓解                                                                                                                                                           |
-| :------------------------------------------------------- | :------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Kaggle API 配额或下架 dataset                            | 高                  | 加 fallback：失败时 cron 邮件通知；考虑直接调 TMDB 官方 API（rate-limited 但可控）                                                                             |
-| Supabase free tier 数据库 500MB 上限                     | 中                  | 59K 行约 80MB 表数据 + BYTEA features ~250MB，接近上限。若超：把 `movies_pending.text_embedding` 等 BYTEA 移到 Supabase Storage                                |
-| GH Actions public runner 资源限制（4 CPU / 16GB / 14GB） | 中                  | P18.1 先本地 full rebuild 建 canonical artifacts，再用 production 参数跑 GHA core benchmark；打印 heartbeat / RSS / disk；若 OOM 或接近 6h，full refit 改季度/半年度本地运行后上传 |
-| GH Actions free tier / 公共仓库配额变化                  | 低                  | public 仓库标准 runner 当前免费；仍需记录 job 分钟与失败率，避免把 heavy refit 设为 weekly 默认                                                                |
+| 风险                                                     | 影响                | 缓解                                                                                                                                                                                       |
+| :------------------------------------------------------- | :------------------ | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Kaggle API 配额或下架 dataset                            | 高                  | 加 fallback：失败时 cron 邮件通知；考虑直接调 TMDB 官方 API（rate-limited 但可控）                                                                                                         |
+| Supabase free tier 数据库 500MB 上限                     | 中                  | 59K 行约 80MB 表数据 + BYTEA features ~250MB，接近上限。若超：把 `movies_pending.text_embedding` 等 BYTEA 移到 Supabase Storage                                                            |
+| GH Actions public runner 资源限制（4 CPU / 16GB / 14GB） | 中                  | P18.1 先本地 full rebuild 建 canonical artifacts，再用 production 参数跑 GHA core benchmark；打印 heartbeat / RSS / disk；若 OOM 或接近 6h，full refit 改季度/半年度本地运行后上传         |
+| GH Actions free tier / 公共仓库配额变化                  | 低                  | public 仓库标准 runner 当前免费；仍需记录 job 分钟与失败率，避免把 heavy refit 设为 weekly 默认                                                                                            |
 | CPU refit 在 GHA 上实测超 120 分钟                       | 中                  | 以 **GHA core benchmark 墙钟** 决策（非本机 full rebuild）：60-120min → monthly 保留；>120min 或接近 OOM → 准备 local quarterly/biannual fallback；近 6h → 不再用 hosted runner full refit |
-| numba/UMAP 升级再次破坏                                  | 低（B1 已绕开 pkl） | pin 版本于 [requirements.cpu.txt](requirements.cpu.txt)；CI lock 测试                                                                                          |
-| Procrustes 对齐失败（边界情况）                          | 低                  | 加 fallback：对齐 RMSE > 阈值时报警 + 跳过 update（保留上一版坐标）                                                                                            |
-| CF Pages 国内访问问题                                    | 中                  | 本 phase 不解决；GitHub Pages 保留 1-2 周备线；Phase 19+ 处理                                                                                                  |
-| v1 reference 永久锁定的代价（未来想"宇宙重组"难）        | 低                  | 接受。重置是显式人为操作，不是流水线常规路径                                                                                                                   |
+| numba/UMAP 升级再次破坏                                  | 低（B1 已绕开 pkl） | pin 版本于 [requirements.cpu.txt](requirements.cpu.txt)；CI lock 测试                                                                                                                      |
+| Procrustes 对齐失败（边界情况）                          | 低                  | 加 fallback：对齐 RMSE > 阈值时报警 + 跳过 update（保留上一版坐标）                                                                                                                        |
+| CF Pages 国内访问问题                                    | 中                  | 本 phase 不解决；GitHub Pages 保留 1-2 周备线；Phase 19+ 处理                                                                                                                              |
+| v1 reference 永久锁定的代价（未来想"宇宙重组"难）        | 低                  | 接受。重置是显式人为操作，不是流水线常规路径                                                                                                                                               |
 
 ## 出口准入
 

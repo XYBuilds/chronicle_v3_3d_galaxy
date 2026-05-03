@@ -8,6 +8,9 @@ Usage (from repo root, with raw CSV present)::
     python scripts/experiments/phase18_canonical_full_rebuild.py
 
 Requires ``data/raw/TMDB_all_movies.csv`` (never read raw in chat; this script reads it locally only).
+
+**Phase 2 text embedding** defaults to **GPU** (``--embedding-device cuda`` → ``text_embedding.py``).
+**Phase 5 UMAP** stays **CPU** ``umap-learn`` with ``--densmap`` (production path; cuML does not do DensMAP).
 """
 from __future__ import annotations
 
@@ -314,7 +317,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         type=str,
         default="cuda",
         choices=("cuda", "cpu", "auto"),
-        help="Forwarded to text_embedding.py",
+        help="Phase 2 sentence-transformers device (default: cuda = GPU). Forwarded to text_embedding.py.",
     )
     p.add_argument("--embedding-batch-size", type=int, default=64, help="Forwarded to text_embedding.py")
     p.add_argument(
@@ -421,8 +424,11 @@ def main(argv: list[str] | None = None) -> int:
     galaxy_gz = run_dir / "galaxy_data.json.gz"
     search_gz = run_dir / "galaxy_search_index.json.gz"
 
-    # --- Phase 2: embeddings ---
-    banner("Phase 2/6 — text embeddings (384d MiniLM)")
+    # --- Phase 2: embeddings (GPU by default; independent of Phase 5 CPU DensMAP) ---
+    banner(
+        "Phase 2/6 — text embeddings (384d MiniLM, GPU: "
+        f"--embedding-device {args.embedding_device!r} → text_embedding.py)"
+    )
     _print_resource_banner("pre Phase 2", root=run_dir)
     ph, t0 = timer.start("phase2_text_embedding")
     cmd2 = [

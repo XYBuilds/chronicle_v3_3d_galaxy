@@ -7,10 +7,10 @@ todos:
     status: completed
   - id: p171-idle-depth-distance-lightness
     content: P17.1 idle 遮挡修复 + 距离-L：移除 idle alpha 控制；idleMaterial transparent=false/depthWrite=true；移除旧 P10.2 uDistanceFalloffK / uDistanceFalloffMode 参与；新增 L(d)=Lmax*(d0/d)^(2/3)，d0=观测平面参考距离（默认 zCamDistance，非数学 0）
-    status: pending
+    status: completed
   - id: p172-hunt
     content: P17.2 Hunt 效应全层接入 + P11.2 默认值禁用 + focus 邻域 hover 不透明：oklab.glsl 增 applyHuntChroma；galaxyMeshes.ts 加 uHuntGamma / uHuntApplyMask / uHoveredInstanceId + uFocusDim默认 1.0；idle 基于 P17.1 L_distance 接入，active vert + perlin.frag 接入；__galaxyColor 拓展
-    status: pending
+    status: completed
   - id: p173-dolly-zoom
     content: P17.3 Alt/Ctrl + 滚轮 dolly-to-cursor：camera.ts onWheel 加 altLike 分支；dollyToCursor helper（unproject 两次保持光标 NDC）；zCamDistance clamp [2, 300]；focus 态 noop（控 macro 分支拦截）
     status: pending

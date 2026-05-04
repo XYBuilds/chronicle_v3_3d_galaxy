@@ -7,7 +7,7 @@ todos:
     status: completed
   - id: p181-cpu-refit-benchmark
     content: P18.1 canonical full rebuild + GHA core benchmark：本机从 TMDB_all_movies.csv 开始全链重跑 (384d/densmap/n=300/min_dist=0.4/metric=cosine/random_state=42)，产出 P18 v1 canonical artifacts；再用该产物在 public ubuntu-24.04 runner 上 workflow_dispatch 跑 core benchmark（fusion → DensMAP/UMAP → Procrustes → export）拿墙钟/内存；写报告
-    status: pending
+    status: completed
   - id: p182-supabase-schema
     content: P18.2 Supabase schema (movies / galaxy_v1_reference / movies_pending / vote_snapshots) + 一次性导入 cleaned.csv 59014 行 + v1 坐标
     status: pending
@@ -178,9 +178,13 @@ production 参数固定为：
 1. 输入 `data/raw/TMDB_all_movies.csv`，不直接在对话中读取 raw。
 2. 执行 Phase 1 cleaning，输出到独立 run 目录，而非直接覆盖 production：
 
-   ```text
+   
+
+```text
    data/runs/p18_1_full_rebuild_YYYYMMDD_HHMM/
-   ```
+   
+
+```
 
 3. 执行 384d text embedding（优先 GPU；若 CPU 则明确记录）。
 4. 执行 genre vectors / language vectors。

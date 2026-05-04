@@ -183,13 +183,23 @@ def _fit_cuml(
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(
-        description="Fuse text/genre/lang features and run UMAP (Phase 2.4). Saves model .pkl for transform()."
+        description="Fuse text/genre/lang features and run UMAP (Phase 2.4). Optional --save-model writes joblib .pkl."
     )
     p.add_argument("--text-input", type=Path, default=_DEFAULT_TEXT, help="text_embeddings.npy (n, d_text)")
     p.add_argument("--genre-input", type=Path, default=_DEFAULT_GENRE, help="genre_vectors.npy (n, N_genre)")
     p.add_argument("--lang-input", type=Path, default=_DEFAULT_LANG, help="language_vectors.npy (n, N_lang)")
     p.add_argument("--output-xy", type=Path, default=_DEFAULT_XY, help="Output float32 (n, 2) UMAP coordinates")
-    p.add_argument("--model-output", type=Path, default=_DEFAULT_MODEL, help="Fitted UMAP estimator (joblib .pkl)")
+    p.add_argument(
+        "--model-output",
+        type=Path,
+        default=_DEFAULT_MODEL,
+        help="Destination for fitted UMAP when --save-model is set (default: data/output/umap_model.pkl)",
+    )
+    p.add_argument(
+        "--save-model",
+        action="store_true",
+        help="Write fitted UMAP estimator via joblib (large .pkl; off by default — Phase 18+ does not rely on pickle)",
+    )
     p.add_argument("--w-text", type=float, default=1.0, help="Modal weight for text block (default 1.0)")
     p.add_argument("--w-genre", type=float, default=1.0, help="Modal weight for genre block (default 1.0)")
     p.add_argument("--w-lang", type=float, default=1.0, help="Modal weight for language block (default 1.0)")
@@ -329,15 +339,18 @@ def main(argv: list[str] | None = None) -> int:
     print(f"[UMAP] Output shape: {xy.shape} | X range: [{xmin:.2f}, {xmax:.2f}] | Y range: [{ymin:.2f}, {ymax:.2f}]")
 
     out_xy.parent.mkdir(parents=True, exist_ok=True)
-    out_model.parent.mkdir(parents=True, exist_ok=True)
     np.save(out_xy, xy)
-    joblib.dump(reducer, out_model, compress=3)
-
     xy_mb = out_xy.stat().st_size / (1024 * 1024)
-    model_bytes = out_model.stat().st_size
-    model_mb = model_bytes / (1024 * 1024)
     print(f"[UMAP] Wrote coordinates {out_xy} ({xy.shape}, {xy_mb:.4f} MB)")
-    print(f"[UMAP] Wrote model {out_model} ({model_bytes:,} bytes, {model_mb:.4f} MB)")
+
+    if bool(args.save_model):
+        out_model.parent.mkdir(parents=True, exist_ok=True)
+        joblib.dump(reducer, out_model, compress=3)
+        model_bytes = out_model.stat().st_size
+        model_mb = model_bytes / (1024 * 1024)
+        print(f"[UMAP] Wrote model {out_model} ({model_bytes:,} bytes, {model_mb:.4f} MB)")
+    else:
+        print("[UMAP] Skipped model .pkl (pass --save-model to persist fitted estimator).", flush=True)
 
     return 0
 

@@ -1,0 +1,121 @@
+name: P18.1b Core refit benchmark
+
+on:
+  workflow_dispatch:
+    inputs:
+      bundle_url:
+        description: >
+          HTTPS URL of a zip with cleaned.csv, text_embeddings.npy, genre_vectors.npy,
+          language_vectors.npy, umap_xy.npy (flat or one top-level folder). Leave empty to use
+          Actions cache path data/runs/p18_canonical_ci (cache key p18-canonical-artifacts-v1).
+        required: false
+        default: ""
+        type: string
+      with_export:
+        description: Also run export_galaxy_json + validate_galaxy_json (adds wall time)
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p18-1b-benchmark
+  cancel-in-progress: false
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    env:
+      PYTHONUNBUFFERED: "1"
+      OMP_NUM_THREADS: "4"
+      NUMBA_NUM_THREADS: "4"
+      OPENBLAS_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+      P18_RUN_DIR: ${{ github.workspace }}/data/runs/p18_canonical_ci
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements.cpu.txt
+
+      - name: Install Python dependencies
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.cpu.txt
+
+      - name: Fetch canonical bundle (zip URL)
+        if: ${{ github.event.inputs.bundle_url != '' }}
+        run: |
+          set -euo pipefail
+          mkdir -p "${P18_RUN_DIR}"
+          curl -fL "${{ github.event.inputs.bundle_url }}" -o /tmp/p18_canonical.zip
+          mkdir -p /tmp/p18_canonical_extract
+          unzip -q /tmp/p18_canonical.zip -d /tmp/p18_canonical_extract
+          if test -f /tmp/p18_canonical_extract/cleaned.csv; then
+            cp -a /tmp/p18_canonical_extract/. "${P18_RUN_DIR}/"
+          else
+            sub="$(find /tmp/p18_canonical_extract -mindepth 1 -maxdepth 1 -type d | head -1)"
+            test -n "${sub}"
+            cp -a "${sub}/." "${P18_RUN_DIR}/"
+          fi
+
+      - name: Restore canonical inputs from cache
+        id: p18_cache
+        if: ${{ github.event.inputs.bundle_url == '' }}
+        uses: actions/cache@v4
+        with:
+          path: data/runs/p18_canonical_ci
+          key: p18-canonical-artifacts-v1
+
+      - name: Verify canonical input files
+        run: |
+          set -euo pipefail
+          for f in cleaned.csv text_embeddings.npy genre_vectors.npy language_vectors.npy umap_xy.npy; do
+            if ! test -f "${P18_RUN_DIR}/${f}"; then
+              echo "::error::Missing ${P18_RUN_DIR}/${f}. Seed Actions cache key p18-canonical-artifacts-v1 (e.g. zip your P18.1a run dir and gh cache save), or re-run with bundle_url."
+              exit 1
+            fi
+          done
+          ls -la "${P18_RUN_DIR}"
+
+      - name: Run P18.1b core benchmark (no export)
+        if: ${{ !inputs.with_export }}
+        run: |
+          set -euo pipefail
+          python scripts/experiments/phase18_core_refit_benchmark.py \
+            --run-dir "${P18_RUN_DIR}" \
+            --heartbeat-seconds 30
+
+      - name: Run P18.1b core benchmark (with export)
+        if: ${{ inputs.with_export }}
+        run: |
+          set -euo pipefail
+          python scripts/experiments/phase18_core_refit_benchmark.py \
+            --run-dir "${P18_RUN_DIR}" \
+            --heartbeat-seconds 30 \
+            --with-export
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: p18-1b-benchmark-${{ github.run_id }}
+          if-no-files-found: error
+          path: |
+            data/runs/p18_canonical_ci/benchmark_report.json
+            data/runs/p18_canonical_ci/benchmark_core_log.txt
+            data/runs/p18_canonical_ci/umap_xy_p18_core_benchmark.npy
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ inputs.with_export }}
+        with:
+          name: p18-1b-export-${{ github.run_id }}
+          if-no-files-found: warn
+          path: |
+            data/runs/p18_canonical_ci/galaxy_data_core_benchmark.json
+            data/runs/p18_canonical_ci/galaxy_data_core_benchmark.json.gz

@@ -7,6 +7,10 @@ Usage (from repo root, with raw CSV present)::
 
     python scripts/experiments/phase18_canonical_full_rebuild.py
 
+If the run died after export on Windows (e.g. ``UnicodeDecodeError`` while streaming validate output), finish without re-UMAP::
+
+    python scripts/experiments/phase18_canonical_full_rebuild.py --resume-after-export data/runs/p18_1_full_rebuild_YYYYMMDD_HHMM
+
 Requires ``data/raw/TMDB_all_movies.csv`` (never read raw in chat; this script reads it locally only).
 """
 from __future__ import annotations
@@ -118,9 +122,10 @@ def _procrustes_residual_norms(ref_xy: np.ndarray, cur_xy: np.ndarray) -> tuple[
 
 
 class _LogFile:
-    def __init__(self, path: Path) -> None:
+    def __init__(self, path: Path, *, append: bool = False) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
-        self._f: TextIO = path.open("w", encoding="utf-8", newline="\n")
+        mode = "a" if append else "w"
+        self._f: TextIO = path.open(mode, encoding="utf-8", newline="\n")
 
     def write(self, s: str) -> None:
         self._f.write(s)
@@ -139,7 +144,8 @@ def _run_subprocess_logged(
     heartbeat_s: float = 30.0,
 ) -> int:
     """Stream child stdout/stderr to console and ``benchmark_log``; optional RSS polling via psutil."""
-    env = {**os.environ, "PYTHONUNBUFFERED": "1"}
+    # Windows defaults to a legacy ANSI code page for subprocess pipes; child scripts emit UTF-8.
+    env = {**os.environ, "PYTHONUNBUFFERED": "1", "PYTHONIOENCODING": "utf-8"}
     print(f"\n[P18.1a] >>> {' '.join(cmd)}", flush=True)
     log.write(f"\n[P18.1a] >>> {' '.join(cmd)}\n")
 
@@ -150,6 +156,8 @@ def _run_subprocess_logged(
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         bufsize=1,
     )
     peak_rss_mb: float | None = None
@@ -300,6 +308,142 @@ def _compare_to_production(
     return out
 
 
+def _finalize_validate_and_manifest(
+    *,
+    run_dir: Path,
+    log: _LogFile,
+    log_path: Path,
+    prod_path: Path,
+    timer: PhaseTimer,
+    t_wall0: float,
+    rev: str | None,
+    raw_path: Path | None,
+    raw_bytes: int | None,
+    raw_sha256: str | None,
+    n_clean: int,
+    embedding_device: str,
+    embedding_batch_size: int,
+    resume_after_export: bool,
+) -> int:
+    """Validate exported JSON, assert canonical meta, optional production diff, write ``run_manifest.json``."""
+
+    def banner(msg: str) -> None:
+        line = f"\n{'=' * 72}\n[P18.1a] {msg}\n{'=' * 72}\n"
+        print(line, flush=True)
+        log.write(line)
+
+    py = sys.executable
+    cleaned_csv = run_dir / "cleaned.csv"
+    text_npy = run_dir / "text_embeddings.npy"
+    genre_npy = run_dir / "genre_vectors.npy"
+    lang_npy = run_dir / "language_vectors.npy"
+    genre_meta = run_dir / "genre_encoding_meta.json"
+    lang_meta = run_dir / "language_encoding_meta.json"
+    umap_xy = run_dir / "umap_xy.npy"
+    umap_pkl = run_dir / "umap_model.pkl"
+    galaxy_json = run_dir / "galaxy_data.json"
+    galaxy_gz = run_dir / "galaxy_data.json.gz"
+    search_gz = run_dir / "galaxy_search_index.json.gz"
+
+    for label, pth in (
+        ("galaxy_data.json", galaxy_json),
+        ("galaxy_data.json.gz", galaxy_gz),
+        ("galaxy_search_index.json.gz", search_gz),
+    ):
+        if not pth.is_file():
+            print(f"Error: expected output missing: {pth}", file=sys.stderr)
+            log.close()
+            return 1
+        mb = pth.stat().st_size / (1024**2)
+        print(f"[P18.1a] {label}: {mb:.2f} MB ({pth.stat().st_size:,} bytes)", flush=True)
+        log.write(f"[P18.1a] {label}: {mb:.2f} MB ({pth.stat().st_size:,} bytes)\n")
+
+    banner("Validate galaxy_data.json")
+    ph, t0 = timer.start("validate_json")
+    cmd7 = [py, str(_REPO_ROOT / "scripts" / "validate_galaxy_json.py"), "--input", str(galaxy_json)]
+    rc = _run_subprocess_logged(cmd7, cwd=_REPO_ROOT, log=log, label="validate")
+    if rc != 0:
+        log.close()
+        return rc
+    timer.end(ph, t0)
+
+    payload = json.loads(galaxy_json.read_text(encoding="utf-8"))
+    meta, movies = payload["meta"], payload["movies"]
+
+    print(f"[P18.1a] Loaded export meta.count={meta['count']} len(movies)={len(movies)}", flush=True)
+    log.write(f"[P18.1a] Loaded export meta.count={meta['count']} len(movies)={len(movies)}\n")
+    assert len(movies) == n_clean, f"movies {len(movies)} vs cleaned {n_clean}"
+    _assert_canonical_meta(meta, movies_len=len(movies))
+
+    compare = _compare_to_production(meta, movies, prod_path, log)
+
+    wall_s = time.perf_counter() - t_wall0
+    manifest: dict[str, Any] = {
+        "schema": "p18_1a_run_manifest_v1",
+        "created_at_utc": datetime.now(timezone.utc).isoformat(),
+        "git_rev": rev,
+        "raw_csv": str(raw_path) if raw_path is not None else None,
+        "raw_bytes": raw_bytes,
+        "raw_sha256": raw_sha256,
+        "run_dir": str(run_dir),
+        "resume_after_export": bool(resume_after_export),
+        "production_params": {
+            "embedding_model_id": MODEL_ID,
+            "embedding_meta": EMBEDDING_META,
+            "n_neighbors": N_NEIGHBORS,
+            "min_dist": MIN_DIST,
+            "metric": METRIC,
+            "random_state": RANDOM_STATE,
+            "densmap": True,
+            "genre_weight_ratio": GENRE_WEIGHT_RATIO,
+            "feature_weights": {"text": 1.0, "genre": 1.0, "lang": 1.0},
+        },
+        "embedding_cli": {"device": embedding_device, "batch_size": int(embedding_batch_size)},
+        "phases": timer.phases,
+        "wall_clock_seconds_total": round(wall_s, 3),
+        "cleaned_rows": n_clean,
+        "export_meta_xy_range": meta.get("xy_range"),
+        "export_meta_z_range": meta.get("z_range"),
+        "compare_to_production": compare,
+        "artifact_sizes_mb": {
+            "galaxy_data.json": round(galaxy_json.stat().st_size / (1024**2), 4),
+            "galaxy_data.json.gz": round(galaxy_gz.stat().st_size / (1024**2), 4),
+            "galaxy_search_index.json.gz": round(search_gz.stat().st_size / (1024**2), 4),
+            "cleaned.csv": round(cleaned_csv.stat().st_size / (1024**2), 4) if cleaned_csv.is_file() else None,
+            "text_embeddings.npy": round(text_npy.stat().st_size / (1024**2), 4) if text_npy.is_file() else None,
+            "genre_vectors.npy": round(genre_npy.stat().st_size / (1024**2), 4) if genre_npy.is_file() else None,
+            "language_vectors.npy": round(lang_npy.stat().st_size / (1024**2), 4) if lang_npy.is_file() else None,
+            "umap_xy.npy": round(umap_xy.stat().st_size / (1024**2), 4) if umap_xy.is_file() else None,
+        },
+        "artifact_paths": {
+            "cleaned_csv": str(cleaned_csv),
+            "text_embeddings": str(text_npy),
+            "genre_vectors": str(genre_npy),
+            "language_vectors": str(lang_npy),
+            "umap_xy": str(umap_xy),
+            "umap_model_pkl": str(umap_pkl),
+            "galaxy_data_json": str(galaxy_json),
+            "galaxy_data_json_gz": str(galaxy_gz),
+            "galaxy_search_index_json_gz": str(search_gz),
+            "genre_encoding_meta": str(genre_meta),
+            "language_encoding_meta": str(lang_meta),
+            "benchmark_log": str(log_path),
+        },
+    }
+    manifest_path = run_dir / "run_manifest.json"
+    manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+    print(f"[P18.1a] Wrote {manifest_path}", flush=True)
+
+    summary = (
+        f"\n[P18.1a] DONE: wall {wall_s/60:.1f} min | run_dir={run_dir}\n"
+        f"         meta.count={meta['count']} | validate OK | manifest written\n"
+    )
+    print(summary, flush=True)
+    log.write(summary)
+    log.close()
+    return 0
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--input", type=Path, default=_DEFAULT_RAW, help="Raw TMDB CSV")
@@ -322,14 +466,64 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Skip full-file SHA-256 of raw CSV (saves time on huge files)",
     )
+    p.add_argument(
+        "--resume-after-export",
+        type=Path,
+        default=None,
+        metavar="RUN_DIR",
+        help=(
+            "Skip phases 1–6; use an existing run directory that already contains galaxy_data.json (+ gzip + search). "
+            "Runs validate + meta asserts + production diff + run_manifest.json only (avoids re-running UMAP)."
+        ),
+    )
     return p.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
-    raw_path = args.input.expanduser().resolve()
     prod_path = args.production_json.expanduser().resolve()
 
+    if args.resume_after_export is not None:
+        run_dir = args.resume_after_export.expanduser().resolve()
+        need = [
+            ("cleaned.csv", run_dir / "cleaned.csv"),
+            ("galaxy_data.json", run_dir / "galaxy_data.json"),
+            ("galaxy_data.json.gz", run_dir / "galaxy_data.json.gz"),
+            ("galaxy_search_index.json.gz", run_dir / "galaxy_search_index.json.gz"),
+        ]
+        for label, pth in need:
+            if not pth.is_file():
+                print(f"Error: --resume-after-export requires {label}: {pth}", file=sys.stderr)
+                return 1
+        log_path = run_dir / "benchmark_log.txt"
+        log = _LogFile(log_path, append=True)
+        timer = PhaseTimer()
+        t_wall0 = time.perf_counter()
+        rev = _try_git_revision(_REPO_ROOT)
+        head = f"\n{'=' * 72}\n[P18.1a] RESUME: validate + run_manifest only\n{'=' * 72}\n"
+        print(head, flush=True)
+        log.write(head)
+        n_clean = int(pd.read_csv(run_dir / "cleaned.csv", usecols=["id"]).shape[0])
+        print(f"[P18.1a] resume run_dir={run_dir}\n[P18.1a] cleaned_rows={n_clean:,} (from cleaned.csv id column)", flush=True)
+        log.write(f"[P18.1a] resume run_dir={run_dir}\ncleaned_rows={n_clean:,}\n")
+        return _finalize_validate_and_manifest(
+            run_dir=run_dir,
+            log=log,
+            log_path=log_path,
+            prod_path=prod_path,
+            timer=timer,
+            t_wall0=t_wall0,
+            rev=rev,
+            raw_path=None,
+            raw_bytes=None,
+            raw_sha256=None,
+            n_clean=n_clean,
+            embedding_device=str(args.embedding_device),
+            embedding_batch_size=int(args.embedding_batch_size),
+            resume_after_export=True,
+        )
+
+    raw_path = args.input.expanduser().resolve()
     if not raw_path.is_file():
         print(f"Error: raw CSV not found: {raw_path}", file=sys.stderr)
         return 1
@@ -590,102 +784,22 @@ def main(argv: list[str] | None = None) -> int:
         return rc
     timer.end(ph, t0)
 
-    for label, pth in (
-        ("galaxy_data.json", galaxy_json),
-        ("galaxy_data.json.gz", galaxy_gz),
-        ("galaxy_search_index.json.gz", search_gz),
-    ):
-        if not pth.is_file():
-            print(f"Error: expected output missing: {pth}", file=sys.stderr)
-            return 1
-        mb = pth.stat().st_size / (1024**2)
-        print(f"[P18.1a] {label}: {mb:.2f} MB ({pth.stat().st_size:,} bytes)", flush=True)
-        log.write(f"[P18.1a] {label}: {mb:.2f} MB ({pth.stat().st_size:,} bytes)\n")
-
-    # --- validate ---
-    banner("Validate galaxy_data.json")
-    ph, t0 = timer.start("validate_json")
-    cmd7 = [py, str(_REPO_ROOT / "scripts" / "validate_galaxy_json.py"), "--input", str(galaxy_json)]
-    rc = _run_subprocess_logged(cmd7, cwd=_REPO_ROOT, log=log, label="validate")
-    if rc != 0:
-        log.close()
-        return rc
-    timer.end(ph, t0)
-
-    payload = json.loads(galaxy_json.read_text(encoding="utf-8"))
-    meta, movies = payload["meta"], payload["movies"]
-
-    print(f"[P18.1a] Loaded export meta.count={meta['count']} len(movies)={len(movies)}", flush=True)
-    log.write(f"[P18.1a] Loaded export meta.count={meta['count']} len(movies)={len(movies)}\n")
-    assert len(movies) == n_clean, f"movies {len(movies)} vs cleaned {n_clean}"
-    _assert_canonical_meta(meta, movies_len=len(movies))
-
-    compare = _compare_to_production(meta, movies, prod_path, log)
-
-    wall_s = time.perf_counter() - t_wall0
-    manifest: dict[str, Any] = {
-        "schema": "p18_1a_run_manifest_v1",
-        "created_at_utc": datetime.now(timezone.utc).isoformat(),
-        "git_rev": rev,
-        "raw_csv": str(raw_path),
-        "raw_bytes": st.st_size,
-        "raw_sha256": raw_sha256,
-        "run_dir": str(run_dir),
-        "production_params": {
-            "embedding_model_id": MODEL_ID,
-            "embedding_meta": EMBEDDING_META,
-            "n_neighbors": N_NEIGHBORS,
-            "min_dist": MIN_DIST,
-            "metric": METRIC,
-            "random_state": RANDOM_STATE,
-            "densmap": True,
-            "genre_weight_ratio": GENRE_WEIGHT_RATIO,
-            "feature_weights": {"text": 1.0, "genre": 1.0, "lang": 1.0},
-        },
-        "embedding_cli": {"device": args.embedding_device, "batch_size": int(args.embedding_batch_size)},
-        "phases": timer.phases,
-        "wall_clock_seconds_total": round(wall_s, 3),
-        "cleaned_rows": n_clean,
-        "export_meta_xy_range": meta.get("xy_range"),
-        "export_meta_z_range": meta.get("z_range"),
-        "compare_to_production": compare,
-        "artifact_sizes_mb": {
-            "galaxy_data.json": round(galaxy_json.stat().st_size / (1024**2), 4),
-            "galaxy_data.json.gz": round(galaxy_gz.stat().st_size / (1024**2), 4),
-            "galaxy_search_index.json.gz": round(search_gz.stat().st_size / (1024**2), 4),
-            "cleaned.csv": round(cleaned_csv.stat().st_size / (1024**2), 4),
-            "text_embeddings.npy": round(text_npy.stat().st_size / (1024**2), 4),
-            "genre_vectors.npy": round(genre_npy.stat().st_size / (1024**2), 4),
-            "language_vectors.npy": round(lang_npy.stat().st_size / (1024**2), 4),
-            "umap_xy.npy": round(umap_xy.stat().st_size / (1024**2), 4),
-        },
-        "artifact_paths": {
-            "cleaned_csv": str(cleaned_csv),
-            "text_embeddings": str(text_npy),
-            "genre_vectors": str(genre_npy),
-            "language_vectors": str(lang_npy),
-            "umap_xy": str(umap_xy),
-            "umap_model_pkl": str(umap_pkl),
-            "galaxy_data_json": str(galaxy_json),
-            "galaxy_data_json_gz": str(galaxy_gz),
-            "galaxy_search_index_json_gz": str(search_gz),
-            "genre_encoding_meta": str(genre_meta),
-            "language_encoding_meta": str(lang_meta),
-            "benchmark_log": str(log_path),
-        },
-    }
-    manifest_path = run_dir / "run_manifest.json"
-    manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
-    print(f"[P18.1a] Wrote {manifest_path}", flush=True)
-
-    summary = (
-        f"\n[P18.1a] DONE — wall {wall_s/60:.1f} min | run_dir={run_dir}\n"
-        f"         meta.count={meta['count']} | validate OK | manifest written\n"
+    return _finalize_validate_and_manifest(
+        run_dir=run_dir,
+        log=log,
+        log_path=log_path,
+        prod_path=prod_path,
+        timer=timer,
+        t_wall0=t_wall0,
+        rev=rev,
+        raw_path=raw_path,
+        raw_bytes=int(st.st_size),
+        raw_sha256=raw_sha256,
+        n_clean=n_clean,
+        embedding_device=str(args.embedding_device),
+        embedding_batch_size=int(args.embedding_batch_size),
+        resume_after_export=False,
     )
-    print(summary, flush=True)
-    log.write(summary)
-    log.close()
-    return 0
 
 
 if __name__ == "__main__":

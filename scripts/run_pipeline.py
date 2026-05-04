@@ -61,6 +61,7 @@ def run_phase2_through_export(
     metric: str,
     random_state: int,
     force_umap_cpu: bool,
+    save_umap_model: bool,
 ) -> None:
     """Phase 2.1–2.5 in order; paths must be absolute."""
     c = str(cleaned_csv)
@@ -86,6 +87,8 @@ def run_phase2_through_export(
     ]
     if densmap:
         umap_args.append("--densmap")
+    if save_umap_model:
+        umap_args.append("--save-model")
     _run_python_script(Path("scripts") / "feature_engineering" / "umap_projection.py", umap_args)
 
     gz_path = galaxy_json.parent / f"{galaxy_json.stem}.json.gz"
@@ -235,6 +238,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="With --through-phase-2, skip Tech Spec 4.3 JSON validation script",
     )
+    p.add_argument(
+        "--save-umap-model",
+        action="store_true",
+        help="Phase 2.4: forward --save-model to umap_projection.py (large umap_model.pkl; off by default)",
+    )
     return p.parse_args(argv)
 
 
@@ -329,6 +337,7 @@ def main(argv: list[str] | None = None) -> int:
             metric=str(args.umap_metric),
             random_state=int(args.umap_random_state),
             force_umap_cpu=bool(args.cpu),
+            save_umap_model=bool(args.save_umap_model),
         )
         if not args.skip_json_validate:
             vpath = REPO_ROOT / "scripts" / "validate_galaxy_json.py"

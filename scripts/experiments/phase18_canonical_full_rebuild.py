@@ -11,6 +11,10 @@ If the run died after export on Windows (e.g. ``UnicodeDecodeError`` while strea
 
     python scripts/experiments/phase18_canonical_full_rebuild.py --resume-after-export data/runs/p18_1_full_rebuild_YYYYMMDD_HHMM
 
+By default Phase 5 does **not** write ``umap_model.pkl`` (large / slow). To persist the fitted estimator::
+
+    python scripts/experiments/phase18_canonical_full_rebuild.py --save-umap-model
+
 Requires ``data/raw/TMDB_all_movies.csv`` (never read raw in chat; this script reads it locally only).
 """
 from __future__ import annotations
@@ -414,6 +418,7 @@ def _finalize_validate_and_manifest(
             "genre_vectors.npy": round(genre_npy.stat().st_size / (1024**2), 4) if genre_npy.is_file() else None,
             "language_vectors.npy": round(lang_npy.stat().st_size / (1024**2), 4) if lang_npy.is_file() else None,
             "umap_xy.npy": round(umap_xy.stat().st_size / (1024**2), 4) if umap_xy.is_file() else None,
+            "umap_model.pkl": round(umap_pkl.stat().st_size / (1024**2), 4) if umap_pkl.is_file() else None,
         },
         "artifact_paths": {
             "cleaned_csv": str(cleaned_csv),
@@ -461,6 +466,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Forwarded to text_embedding.py",
     )
     p.add_argument("--embedding-batch-size", type=int, default=64, help="Forwarded to text_embedding.py")
+    p.add_argument(
+        "--save-umap-model",
+        action="store_true",
+        help="Phase 5: pass --save-model to umap_projection.py (writes large umap_model.pkl; off by default)",
+    )
     p.add_argument(
         "--skip-sha256-raw",
         action="store_true",
@@ -711,8 +721,6 @@ def main(argv: list[str] | None = None) -> int:
         str(lang_npy),
         "--output-xy",
         str(umap_xy),
-        "--model-output",
-        str(umap_pkl),
         "--backend",
         "umap",
         "--densmap",
@@ -731,6 +739,8 @@ def main(argv: list[str] | None = None) -> int:
         "--w-lang",
         "1.0",
     ]
+    if bool(args.save_umap_model):
+        cmd5.extend(["--save-model", "--model-output", str(umap_pkl)])
     rc = _run_subprocess_logged(cmd5, cwd=_REPO_ROOT, log=log, label="umap", heartbeat_s=30.0)
     if rc != 0:
         log.close()

@@ -40,6 +40,7 @@ python scripts/feature_engineering/umap_projection.py \
   --genre-input "${ART}/genre_vectors.npy" \
   --lang-input "${ART}/language_vectors.npy" \
   --output-xy "${ART}/umap_xy.npy" \
+  --save-model \
   --model-output "${ART}/umap_model.pkl" \
   --backend cuml \
   --n-neighbors 100 \

@@ -17,3 +17,6 @@ scikit-learn>=1.8,<2
 joblib>=1.5,<2
 tqdm>=4.67,<5
 psutil>=7.0,<8
+
+# P18.2+ Supabase REST (initial_import, future cron scripts)
+supabase>=2.3,<3

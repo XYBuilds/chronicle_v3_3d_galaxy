@@ -20,3 +20,4 @@ psutil>=7.0,<8
 
 # P18.2+ Supabase REST (initial_import, future cron scripts)
 supabase>=2.3,<3
+python-dotenv>=1.0,<2

@@ -47,6 +47,12 @@
    - **Project URL**：形如 `https://xxxxxxxx.supabase.co`
    - **service_role** 下的 **secret**（点击 Reveal 后复制）
 
+### 4.1 使用仓库根目录 `.env`（推荐本地）
+
+- 复制模板：`Copy-Item .env.example .env`（macOS/Linux：`cp .env.example .env`），在 `.env` 里填入真实值。  
+- **`.env` 已被 `.gitignore` 忽略**，勿把 `service_role` 提交到 git。`.env.example` 仅含占位符，可安全提交。  
+- 运行 `python scripts/supabase/initial_import.py` 时，若存在根目录 `.env`，会通过 `python-dotenv` **自动加载**（已写入 `requirements.cpu.txt`）。已在 shell 里 `export` / `$env:...` 的变量**优先**于 `.env` 中的同名项。
+
 本地运行导入脚本时（PowerShell 示例，**仅当前会话有效**）：
 
 ```powershell
@@ -215,6 +221,7 @@ A: 官方偏全栈 Auth/Realtime；本仓库当前是 **Python 批处理 + REST*
 | 路径 | 用途 |
 |------|------|
 | `supabase/migrations/20260504120000_p18_2_schema.sql` | P18.2 DDL |
+| `.env.example` | 密钥占位模板；复制为根目录 `.env` 后本地使用 |
 | `scripts/supabase/initial_import.py` | 一次性导入脚本 |
 | `docs/reports/Phase 18.2 Supabase schema 与一次性导入 实施报告.md` | 阶段验收与说明 |
 | `.cursor/plans/phase_18_data_infrastructure_9ccb7a3f.plan.md` | Phase 18 总计划（P18.4 cron 等后续） |

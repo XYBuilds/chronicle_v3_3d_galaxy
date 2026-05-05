@@ -186,6 +186,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    env_path = _REPO_ROOT / ".env"
+    if env_path.is_file():
+        from dotenv import load_dotenv
+
+        load_dotenv(env_path)
+        print(f"[P18.2] Loaded environment from {env_path}", flush=True)
+
     csv_path = args.input.expanduser().resolve()
     xy_path = args.xy_input.expanduser().resolve()
 

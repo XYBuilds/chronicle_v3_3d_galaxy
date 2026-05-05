@@ -5,6 +5,8 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -26,6 +28,41 @@ from feature_engineering.genre_encoding import DEFAULT_GENRE_WEIGHT_RATIO  # noq
 
 _DEFAULT_OUT_DIR = _REPO_ROOT / "frontend" / "public" / "data"
 
+# PostgREST: avoid select("*") — omits unused columns (e.g. title_normalized, z, timestamps)
+# and shrinks JSON payload vs full row transfer.
+_MOVIES_EXPORT_COLUMNS: tuple[str, ...] = (
+    "id",
+    "title",
+    "original_title",
+    "overview",
+    "tagline",
+    "release_date",
+    "genres",
+    "original_language",
+    "vote_count",
+    "vote_average",
+    "popularity",
+    "imdb_rating",
+    "imdb_votes",
+    "runtime",
+    "revenue",
+    "budget",
+    "production_countries",
+    "production_companies",
+    "spoken_languages",
+    "cast_list",
+    "director",
+    "writers",
+    "producers",
+    "director_of_photography",
+    "music_composer",
+    "poster_path",
+    "imdb_id",
+    "x",
+    "y",
+)
+MOVIES_EXPORT_SELECT = ",".join(_MOVIES_EXPORT_COLUMNS)
+
 
 def _join_csv_field(val: object) -> str:
     if val is None:
@@ -43,21 +80,126 @@ def _imdb_cell(val: object) -> str | None:
     return None if not s or s.casefold() in ("nan", "none") else s
 
 
-def fetch_all_movies(supabase: Any, *, page_size: int) -> list[dict[str, Any]]:
+def _movies_exact_count(supabase: Any) -> int:
+    r = supabase.table("movies").select("id", count="exact").limit(1).execute()
+    c = getattr(r, "count", None)
+    assert c is not None and c >= 0, "movies count not returned (need count=exact from PostgREST)"
+    return int(c)
+
+
+def _fetch_movies_shard(
+    url: str,
+    key: str,
+    *,
+    select_str: str,
+    row_start: int,
+    row_end_exclusive: int,
+    page_size: int,
+    shard_idx: int,
+) -> list[dict[str, Any]]:
+    """Own Supabase client per thread (HTTP client is not shared across threads)."""
+    from supabase import create_client  # noqa: WPS433
+
+    supabase = create_client(url, key)
     out: list[dict[str, Any]] = []
-    start = 0
-    while True:
-        end = start + page_size - 1
-        res = supabase.table("movies").select("*").order("id", desc=False).range(start, end).execute()
+    pos = row_start
+    t0 = time.perf_counter()
+    while pos < row_end_exclusive:
+        end = min(pos + page_size - 1, row_end_exclusive - 1)
+        want = end - pos + 1
+        res = (
+            supabase.table("movies")
+            .select(select_str)
+            .order("id", desc=False)
+            .range(pos, end)
+            .execute()
+        )
         batch = res.data or []
-        print(f"[P18.4 export] fetched movies rows [{start}, {end}] n={len(batch)}", flush=True)
         if not batch:
             break
         out.extend(batch)
-        if len(batch) < page_size:
+        n = len(batch)
+        pos += n
+        if n < want:
             break
-        start += page_size
-    print(f"[P18.4 export] total movies rows={len(out):,}", flush=True)
+    elapsed = time.perf_counter() - t0
+    print(
+        f"[P18.4 export] shard {shard_idx} rows [{row_start}, {row_end_exclusive}) "
+        f"n={len(out):,} {elapsed:.1f}s",
+        flush=True,
+    )
+    return out
+
+
+def fetch_all_movies(
+    supabase: Any,
+    *,
+    page_size: int,
+    url: str,
+    key: str,
+    fetch_workers: int,
+) -> list[dict[str, Any]]:
+    select_str = MOVIES_EXPORT_SELECT
+    workers = max(1, int(fetch_workers))
+    if workers == 1:
+        total = _movies_exact_count(supabase)
+        if total == 0:
+            print("[P18.4 export] total movies rows=0", flush=True)
+            return []
+        out = _fetch_movies_shard(
+            url,
+            key,
+            select_str=select_str,
+            row_start=0,
+            row_end_exclusive=total,
+            page_size=page_size,
+            shard_idx=0,
+        )
+        print(f"[P18.4 export] total movies rows={len(out):,}", flush=True)
+        assert len(out) > 0, "movies table is empty"
+        return out
+
+    total = _movies_exact_count(supabase)
+    print(
+        f"[P18.4 export] parallel fetch workers={workers} page_size={page_size} total={total:,}",
+        flush=True,
+    )
+    if total == 0:
+        print("[P18.4 export] total movies rows=0", flush=True)
+        return []
+    shard_size = (total + workers - 1) // workers
+    ranges: list[tuple[int, int, int]] = []
+    for w in range(workers):
+        a = w * shard_size
+        b = min(total, (w + 1) * shard_size)
+        if a < b:
+            ranges.append((w, a, b))
+
+    out_by_shard: list[list[dict[str, Any]]] = [[] for _ in ranges]
+    t0 = time.perf_counter()
+    with ThreadPoolExecutor(max_workers=len(ranges)) as ex:
+        futs = {
+            ex.submit(
+                _fetch_movies_shard,
+                url,
+                key,
+                select_str=select_str,
+                row_start=a,
+                row_end_exclusive=b,
+                page_size=page_size,
+                shard_idx=w,
+            ): idx
+            for idx, (w, a, b) in enumerate(ranges)
+        }
+        for fut in as_completed(futs):
+            idx = futs[fut]
+            out_by_shard[idx] = fut.result()
+    elapsed = time.perf_counter() - t0
+    out: list[dict[str, Any]] = []
+    for part in out_by_shard:
+        out.extend(part)
+    print(f"[P18.4 export] total movies rows={len(out):,} wall {elapsed:.1f}s", flush=True)
+    assert len(out) == total, f"row count mismatch: got {len(out)} expected {total}"
     assert len(out) > 0, "movies table is empty"
     return out
 
@@ -111,7 +253,18 @@ def rows_to_dataframe(rows: list[dict[str, Any]]) -> tuple[pd.DataFrame, np.ndar
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--output-dir", type=Path, default=_DEFAULT_OUT_DIR, help="Directory for galaxy_data.json(.gz)")
-    p.add_argument("--page-size", type=int, default=1000, help="Supabase range page size")
+    p.add_argument(
+        "--page-size",
+        type=int,
+        default=1000,
+        help="Rows per PostgREST request (do not exceed project max-rows, often 1000)",
+    )
+    p.add_argument(
+        "--fetch-workers",
+        type=int,
+        default=int(os.environ.get("GALAXY_EXPORT_FETCH_WORKERS", "4")),
+        help="Parallel shards for movies fetch (1=sequential). Env: GALAXY_EXPORT_FETCH_WORKERS",
+    )
     p.add_argument(
         "--export-seq",
         type=str,
@@ -140,7 +293,13 @@ def main(argv: list[str] | None = None) -> int:
     from supabase import create_client  # noqa: WPS433
 
     supabase = create_client(url, key)
-    rows = fetch_all_movies(supabase, page_size=max(100, int(args.page_size)))
+    rows = fetch_all_movies(
+        supabase,
+        page_size=max(100, int(args.page_size)),
+        url=url,
+        key=key,
+        fetch_workers=max(1, int(args.fetch_workers)),
+    )
     df, xy = rows_to_dataframe(rows)
     print(f"[P18.4 export] DataFrame shape={df.shape} xy.shape={xy.shape}", flush=True)
 

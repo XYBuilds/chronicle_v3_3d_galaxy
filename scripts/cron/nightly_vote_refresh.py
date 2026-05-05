@@ -80,10 +80,7 @@ def _resolve_kaggle_csv(root: Path) -> Path:
 
 def _download_kaggle_to(tmp: Path) -> Path:
     tmp.mkdir(parents=True, exist_ok=True)
-    cmd = [
-        sys.executable,
-        "-m",
-        "kaggle",
+    kaggle_args = [
         "datasets",
         "download",
         "-d",
@@ -92,11 +89,23 @@ def _download_kaggle_to(tmp: Path) -> Path:
         "-p",
         str(tmp),
     ]
-    print("[P18.4 nightly] ", " ".join(cmd), flush=True)
-    proc = subprocess.run(cmd, env={**os.environ}, cwd=str(_REPO_ROOT))
-    if proc.returncode != 0:
-        raise RuntimeError(f"kaggle download failed exit={proc.returncode}")
-    return _resolve_kaggle_csv(tmp)
+    commands: list[list[str]] = [
+        [sys.executable, "-m", "kaggle.cli", *kaggle_args],
+    ]
+    kaggle_bin = shutil.which("kaggle")
+    if kaggle_bin:
+        commands.append([kaggle_bin, *kaggle_args])
+    commands.append([sys.executable, "-m", "kaggle", *kaggle_args])
+
+    last_exit: int | None = None
+    for cmd in commands:
+        print("[P18.4 nightly] ", " ".join(cmd), flush=True)
+        proc = subprocess.run(cmd, env={**os.environ}, cwd=str(_REPO_ROOT))
+        last_exit = proc.returncode
+        if proc.returncode == 0:
+            return _resolve_kaggle_csv(tmp)
+
+    raise RuntimeError(f"kaggle download failed after fallbacks; last_exit={last_exit}")
 
 
 def _fetch_active_threshold(supabase: Any) -> dict[str, Any]:

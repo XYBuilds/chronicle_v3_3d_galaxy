@@ -55,6 +55,8 @@ Thumbs.db
 # Misc
 # ============================================================
 *.log
+logs/
+docs/guides/
 .env
 .env.*
 # Allow committing a template (see root `.env.example`).

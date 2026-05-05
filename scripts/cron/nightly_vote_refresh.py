@@ -265,9 +265,9 @@ def _poster(val: object) -> str | None:
 def _pending_row_from_cleaned(
     row: pd.Series,
     *,
-    text_b: bytes,
-    genre_b: bytes,
-    lang_b: bytes,
+    text_b: str,
+    genre_b: str,
+    lang_b: str,
 ) -> dict[str, Any]:
     mid = int(float(row["id"]))
     z, _j = decimal_year_with_jitter(str(row["release_date"]).strip(), mid)
@@ -328,6 +328,11 @@ def _pending_row_from_cleaned(
         "genre_vector": genre_b,
         "lang_vector": lang_b,
     }
+
+
+def _bytea_hex(buf: bytes) -> str:
+    """Encode bytes as Postgres BYTEA hex literal for PostgREST JSON."""
+    return "\\x" + buf.hex()
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -423,9 +428,9 @@ def main(argv: list[str] | None = None) -> int:
                 pending_payloads.append(
                     _pending_row_from_cleaned(
                         row,
-                        text_b=text_e[j].astype(np.float32).tobytes(),
-                        genre_b=genre_e[j].astype(np.float32).tobytes(),
-                        lang_b=lang_e[j].astype(np.float32).tobytes(),
+                        text_b=_bytea_hex(text_e[j].astype(np.float32).tobytes()),
+                        genre_b=_bytea_hex(genre_e[j].astype(np.float32).tobytes()),
+                        lang_b=_bytea_hex(lang_e[j].astype(np.float32).tobytes()),
                     )
                 )
             for i in range(0, len(pending_payloads), chunk):

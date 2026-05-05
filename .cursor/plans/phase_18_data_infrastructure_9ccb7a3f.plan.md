@@ -16,7 +16,7 @@ todos:
     status: completed
   - id: p184-nightly-vote-refresh
     content: P18.4 GH Actions nightly cron：Kaggle 拉新 → diff → UPDATE existing votes / INSERT pending 新片 → 重导 JSON.gz → 部署
-    status: pending
+    status: completed
   - id: p185-monthly-refit
     content: P18.5 GH Actions monthly cron：重算 dynamic threshold + membership，全量 fit_transform CPU densmap → Procrustes 对齐 v1 → UPDATE movies + 清空 pending → 重导 + 部署；weekly 仅保留 workflow_dispatch/实验
     status: pending

@@ -12,6 +12,7 @@ torch>=2.11,<3
 # Dimensionality reduction
 umap-learn>=0.5.12,<0.6
 scikit-learn>=1.8,<2
+scipy>=1.11,<2
 
 # Utilities
 joblib>=1.5,<2

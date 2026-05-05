@@ -13,7 +13,7 @@ todos:
     status: completed
   - id: p183-procrustes-helper
     content: P18.3 align_to_reference helper + v1 reference 不可变约束 (RLS / 脚本 assert)
-    status: pending
+    status: completed
   - id: p184-nightly-vote-refresh
     content: P18.4 GH Actions nightly cron：Kaggle 拉新 → diff → UPDATE existing votes / INSERT pending 新片 → 重导 JSON.gz → 部署
     status: pending

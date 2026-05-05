@@ -1,5 +1,5 @@
 /**
- * HUD / Storybook fixtures built from `data/subsample/tmdb2025_random20.csv`
+ * HUD / Storybook fixtures built from `data/subsample/TMDB_all_movies_random20.csv`
  * (TMDB id 657018, 77223, 8223, 489533). Galaxy fields (x, y, z, size, emissive for JSON,
  * `genre_color` / `genre_hue` for primary genre follow `pipelineRingSrgb01` + palette order (P8.1).
  * Other fields remain fixture placeholders; the live scene fills GPU `voteNorm` from `vote_average`.

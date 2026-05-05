@@ -25,7 +25,7 @@ export const Default: Story = {
 
 export const CustomLabel: Story = {
   args: {
-    label: 'Fetching subsample rows from data/subsample/tmdb2025_random20.csv',
+    label: 'Fetching subsample rows from data/subsample/TMDB_all_movies_random20.csv',
   },
 }
 

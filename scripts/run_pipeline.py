@@ -25,7 +25,7 @@ DEFAULT_INPUT = REPO_ROOT / "data" / "raw" / "TMDB_all_movies.csv"
 DEFAULT_OUTPUT = REPO_ROOT / "data" / "output" / "cleaned.csv"
 _DEFAULT_GALAXY_JSON = REPO_ROOT / "frontend" / "public" / "data" / "galaxy_data.json"
 # Dev plan Phase 2.6: this subsample path triggers full Phase 1+2 without extra flags.
-_SUBSAMPLE_SMOKE_CSV = (REPO_ROOT / "data" / "subsample" / "tmdb2025_random20.csv").resolve()
+_SUBSAMPLE_SMOKE_CSV = (REPO_ROOT / "data" / "subsample" / "TMDB_all_movies_random20.csv").resolve()
 
 _DEFAULT_ST_MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 
@@ -119,7 +119,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         description=(
             "Run TMDB galaxy data pipeline. Phase 1: load CSV, dedupe, must-drop filters, "
             "dynamic vote_count baseline, write cleaned.csv. "
-            "Input data/subsample/tmdb2025_random20.csv auto-runs Phase 2.6 (Phase 1+2 + JSON validate); "
+            "Input data/subsample/TMDB_all_movies_random20.csv auto-runs Phase 2.6 (Phase 1+2 + JSON validate); "
             "use --phase-1-only to clean only."
         )
     )

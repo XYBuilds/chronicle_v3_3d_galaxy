@@ -46,7 +46,38 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-p18-monthly-emb-
 
-      - name: Verify embedding bundle (cache or repo copy)
+      # Scheme C: canonical bundle from private URL (zip). When set, overwrites cache/repo
+      # copies under data/output/. Zip must contain the four files in one directory (any nesting).
+      - name: Download embedding bundle (GALAXY_EMBED_BUNDLE_URL)
+        env:
+          BUNDLE_URL: ${{ secrets.GALAXY_EMBED_BUNDLE_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${BUNDLE_URL:-}" ]; then
+            echo "GALAXY_EMBED_BUNDLE_URL not set; using Actions cache and/or repo copy under data/output/."
+            exit 0
+          fi
+          mkdir -p data/output
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+          curl -fSL "$BUNDLE_URL" -o "$tmp/bundle.zip"
+          unzip -q -o "$tmp/bundle.zip" -d "$tmp/extract"
+          csv_path="$(find "$tmp/extract" -type f -name cleaned.csv | head -1)"
+          if [ -z "$csv_path" ]; then
+            echo "::error::Archive from GALAXY_EMBED_BUNDLE_URL must contain cleaned.csv."
+            exit 1
+          fi
+          dir="$(dirname "$csv_path")"
+          for f in cleaned.csv text_embeddings.npy genre_vectors.npy language_vectors.npy; do
+            if [ ! -f "$dir/$f" ]; then
+              echo "::error::Missing $f in same directory as cleaned.csv (dir=$dir)."
+              exit 1
+            fi
+          done
+          cp "$dir/cleaned.csv" "$dir/text_embeddings.npy" "$dir/genre_vectors.npy" "$dir/language_vectors.npy" data/output/
+          echo "Embedding bundle copied from zip into data/output/ (GALAXY_EMBED_BUNDLE_URL)."
+
+      - name: Verify embedding bundle (cache, repo, or downloaded zip)
         run: |
           set -euo pipefail
           ok=true
@@ -58,7 +89,7 @@ jobs:
             if [ ! -f "$f" ]; then echo "MISSING: $f"; ok=false; fi
           done
           if [ "$ok" != true ]; then
-            echo "::error::Monthly refit requires data/output embedding bundle. Prime Actions cache from a full pipeline run or copy the four files into data/output/."
+            echo "::error::Monthly refit requires the embedding bundle under data/output/. Set secret GALAXY_EMBED_BUNDLE_URL (zip URL), restore Actions cache, or commit the four files."
             exit 1
           fi
 

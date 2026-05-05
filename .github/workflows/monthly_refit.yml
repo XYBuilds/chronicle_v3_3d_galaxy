@@ -1,0 +1,97 @@
+name: P18.5 Monthly galaxy refit
+
+on:
+  schedule:
+    - cron: "0 20 1 * *" # 20:00 UTC on the 1st of each month (~04:00 Beijing 2nd)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p18-5-monthly-refit
+  cancel-in-progress: false
+
+jobs:
+  refit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    env:
+      PYTHONUNBUFFERED: "1"
+      OMP_NUM_THREADS: "4"
+      NUMBA_NUM_THREADS: "4"
+      OPENBLAS_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+      GALAXY_EXPORT_SEQ: ${{ github.run_number }}
+      GALAXY_EXPORT_VERSION_BRANCH: monthly
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements.cpu.txt
+
+      - name: Restore embedding bundle cache (cleaned.csv + npy)
+        id: emb_cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            data/output/cleaned.csv
+            data/output/text_embeddings.npy
+            data/output/genre_vectors.npy
+            data/output/language_vectors.npy
+          key: ${{ runner.os }}-p18-monthly-emb-${{ hashFiles('requirements.cpu.txt') }}-v1
+          restore-keys: |
+            ${{ runner.os }}-p18-monthly-emb-
+
+      - name: Verify embedding bundle (cache or repo copy)
+        run: |
+          set -euo pipefail
+          ok=true
+          for f in \
+            data/output/cleaned.csv \
+            data/output/text_embeddings.npy \
+            data/output/genre_vectors.npy \
+            data/output/language_vectors.npy; do
+            if [ ! -f "$f" ]; then echo "MISSING: $f"; ok=false; fi
+          done
+          if [ "$ok" != true ]; then
+            echo "::error::Monthly refit requires data/output embedding bundle. Prime Actions cache from a full pipeline run or copy the four files into data/output/."
+            exit 1
+          fi
+
+      - name: Install Python dependencies
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.cpu.txt
+
+      - name: Monthly refit (threshold + UMAP + Procrustes + Supabase)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+          KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
+        run: |
+          set -euo pipefail
+          python scripts/cron/monthly_refit.py
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: galaxy-export-monthly-${{ github.run_id }}
+          if-no-files-found: warn
+          path: |
+            frontend/public/data/galaxy_data.json
+            frontend/public/data/galaxy_data.json.gz
+            frontend/public/data/galaxy_search_index.json.gz
+
+      # P18.6: uncomment after Cloudflare Pages + secrets are configured.
+      # - name: Deploy to Cloudflare Pages
+      #   uses: cloudflare/pages-action@v1
+      #   with:
+      #     apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      #     accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      #     projectName: ${{ secrets.CLOUDFLARE_PAGES_PROJECT_NAME }}
+      #     directory: frontend/dist

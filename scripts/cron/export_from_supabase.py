@@ -271,6 +271,19 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=os.environ.get("GALAXY_EXPORT_SEQ", "0"),
         help="Suffix for meta.version daily branch (default env GALAXY_EXPORT_SEQ or 0)",
     )
+    p.add_argument(
+        "--version-branch",
+        type=str,
+        choices=("daily", "monthly"),
+        default="daily",
+        help="meta.version segment (daily vs monthly). Env GALAXY_EXPORT_VERSION_BRANCH overrides when daily/monthly.",
+    )
+    p.add_argument(
+        "--threshold-version",
+        type=str,
+        default=os.environ.get("GALAXY_THRESHOLD_VERSION", ""),
+        help="Optional meta.threshold_version (monthly refit; env GALAXY_THRESHOLD_VERSION)",
+    )
     p.add_argument("--skip-plain-json", action="store_true", help="Write only .json.gz (smaller CI artifacts)")
     return p.parse_args(argv)
 
@@ -304,7 +317,14 @@ def main(argv: list[str] | None = None) -> int:
     print(f"[P18.4 export] DataFrame shape={df.shape} xy.shape={xy.shape}", flush=True)
 
     now = datetime.now(timezone.utc)
-    version = f"{now.strftime('%Y.%m.%d')}.daily.{str(args.export_seq).strip()}"
+    env_b = os.environ.get("GALAXY_EXPORT_VERSION_BRANCH", "").strip().lower()
+    if env_b in ("daily", "monthly"):
+        branch = env_b
+    else:
+        branch = str(args.version_branch).strip().lower()
+    if branch not in ("daily", "monthly"):
+        branch = "daily"
+    version = f"{now.strftime('%Y.%m.%d')}.{branch}.{str(args.export_seq).strip()}"
     generated_at = now.isoformat()
 
     payload, genre_order = build_galaxy_payload(
@@ -321,9 +341,13 @@ def main(argv: list[str] | None = None) -> int:
         random_state=42,
     )
     meta = payload["meta"]
+    tv = str(args.threshold_version).strip()
+    if tv:
+        meta["threshold_version"] = tv
     movies = payload["movies"]
     print(
-        f"[P18.4 export] payload meta.count={meta.get('count')} movies={len(movies)} version={meta.get('version')}",
+        f"[P18.4 export] payload meta.count={meta.get('count')} movies={len(movies)} "
+        f"version={meta.get('version')} threshold_version={meta.get('threshold_version')!r}",
         flush=True,
     )
     assert meta["count"] == len(movies) == len(df), "count invariant"

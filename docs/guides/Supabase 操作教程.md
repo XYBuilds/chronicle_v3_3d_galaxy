@@ -227,7 +227,10 @@ A: 官方偏全栈 Auth/Realtime；本仓库当前是 **Python 批处理 + REST*
 | `.env.example` | 密钥占位模板；复制为根目录 `.env` 后本地使用 |
 | `scripts/supabase/initial_import.py` | 一次性导入脚本 |
 | `docs/reports/Phase 18.2 Supabase schema 与一次性导入 实施报告.md` | P18.2 决策、操作、问题与验收（唯一报告） |
-| `.cursor/plans/phase_18_data_infrastructure_9ccb7a3f.plan.md` | Phase 18 总计划（P18.4 cron 等后续） |
+| `.cursor/plans/phase_18_data_infrastructure_9ccb7a3f.plan.md` | Phase 18 总计划（含 P18.4 / P18.5 等） |
+| [P18.4 每日投票刷新与导出入口指南](./P18.4%20每日投票刷新与导出入口指南.md) | 冻结 `threshold_versions`、seed、Kaggle nightly、仅导出、GitHub Actions 与排错 |
+
+导入完成后，若要启用 **每日投票刷新** 与从 **`movies`** 重导 **`galaxy_data.json(.gz)`**，请按 **P18.4 指南** 顺序配置：`threshold_versions` 播种 → Secrets → `workflow_dispatch` 验收。
 
 ---
 

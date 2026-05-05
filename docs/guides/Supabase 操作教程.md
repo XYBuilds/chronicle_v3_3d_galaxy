@@ -211,6 +211,9 @@ A: `initial_import.py` 需要 **service_role** 写入；anon 在 RLS 下通常�
 **Q: 免费档 / 500MB 会爆吗**  
 A: Phase 18 计划在 `phase_18_data_infrastructure_9ccb7a3f.plan.md` 中已提示：主表 + 未来 pending 的 BYTEA 可能接近上限；若告警需压缩策略（例如向量迁到 Storage）。当前仅 `movies` + `galaxy_v1_reference` 约数万行文本与数值，一般远小于 500MB。
 
+**Q: 导入报错 `permission denied for table ...`（SQLSTATE `42501`）**  
+A: PostgREST 使用的角色 `service_role` 缺少对该表的 **GRANT**（与 RLS 无关）。在 **SQL Editor** 执行迁移文件末尾的 `GRANT ... TO service_role` 段（见 `supabase/migrations/20260504120000_p18_2_schema.sql` 底部），或按报错里的 `hint` 对相应表执行 `GRANT SELECT, INSERT, ... TO service_role;`，然后重新运行 `initial_import.py`。首次导入若在第一 batch 失败，表里一般仍为空，可直接重跑。
+
 **Q: 与官方「Supabase + Next.js」教程关系**  
 A: 官方偏全栈 Auth/Realtime；本仓库当前是 **Python 批处理 + REST**，只需 **API URL + service_role** 即可。
 

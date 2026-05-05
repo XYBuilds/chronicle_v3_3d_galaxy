@@ -136,3 +136,15 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_threshold_versions_one_active
   WHERE is_active;
 
 COMMENT ON TABLE threshold_versions IS 'At most one is_active=true; daily cron reads frozen thresholds_json.';
+
+-- ---------------------------------------------------------------------------
+-- PostgREST: `service_role` JWT must have table GRANTs (separate from RLS).
+-- Newer Supabase / disabled "expose new tables" can omit default API grants.
+-- ---------------------------------------------------------------------------
+GRANT USAGE ON SCHEMA public TO service_role;
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.galaxy_v1_reference TO service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.movies TO service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.movies_pending TO service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.vote_snapshots TO service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.threshold_versions TO service_role;

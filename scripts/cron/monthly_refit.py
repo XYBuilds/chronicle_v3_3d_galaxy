@@ -8,6 +8,7 @@ Requires cached ``data/output/{cleaned.csv,text_embeddings.npy,genre_vectors.npy
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import os
 import shutil
 import subprocess
@@ -33,8 +34,8 @@ from feature_engineering.genre_encoding import (  # noqa: E402
 from feature_engineering.genre_palette import FROZEN_GENRE_ORDER_V1  # noqa: E402
 from feature_engineering.language_encoding import (  # noqa: E402
     UNKNOWN_LANG,
+    collect_sorted_languages,
     l2_normalize_rows,
-    normalize_language_code,
     one_hot_language_matrix_with_fallback,
 )
 from feature_engineering.procrustes_align import align_to_reference  # noqa: E402
@@ -58,7 +59,23 @@ from pipeline.cleaning import (  # noqa: E402
     run_cleaning_pipeline,
     run_cleaning_pipeline_before_vote_threshold,
 )
-from supabase.initial_import import _row_to_reference_and_movie  # noqa: E402
+
+
+def _load_row_to_reference_and_movie() -> Any:
+    """Load ``scripts/supabase/initial_import.py`` by path — avoids ``supabase`` clashing with PyPI."""
+    path = _SCRIPTS_DIR / "supabase" / "initial_import.py"
+    spec = importlib.util.spec_from_file_location("_galaxy_initial_import", path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Cannot load module spec for {path}")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    fn = getattr(mod, "_row_to_reference_and_movie", None)
+    if fn is None:
+        raise ImportError(f"{path} has no _row_to_reference_and_movie")
+    return fn
+
+
+_row_to_reference_and_movie = _load_row_to_reference_and_movie()
 
 
 _DEFAULT_CACHE_DIR = _REPO_ROOT / "data" / "output"
@@ -87,7 +104,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--version-label",
         type=str,
         default="",
-        help="threshold_versions.version (default: p18_monthly_YYYYMMDD_<GITHUB_RUN_NUMBER>)",
+        help="threshold_versions.version (default: p18_monthly_YYYYMMDD_<GITHUB_RUN_NUMBER>); same version on re-run uses upsert",
     )
     p.add_argument("--page-size", type=int, default=1000, help="Supabase pagination size")
     p.add_argument("--upsert-chunk", type=int, default=500, help="Rows per movies upsert batch")
@@ -95,7 +112,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--anchor-rmse-abort",
         type=float,
         default=0.25,
-        help="Abort if mean L2 residual vs galaxy_v1_reference anchors exceeds this after align",
+        help=(
+            "Abort if mean L2 residual vs galaxy_v1_reference after Procrustes exceeds this. "
+            "Full monthly refit (different N + mixed cached/re-encoded rows) often yields >> 0.25 — "
+            "use --skip-anchor-rmse-abort after reviewing logs, or tighten embedding bundle parity."
+        ),
+    )
+    p.add_argument(
+        "--skip-anchor-rmse-abort",
+        action="store_true",
+        help="Log anchor mean/max L2 but do not abort when above --anchor-rmse-abort (still exits 0 if rest succeeds)",
     )
     p.add_argument("--dry-run", action="store_true", help="No Supabase writes / no export subprocess")
     p.add_argument("--skip-export", action="store_true", help="Do not run export_from_supabase.py after refit")
@@ -223,14 +249,6 @@ def _decode_bytea(val: Any) -> bytes:
     raise TypeError(f"Unexpected BYTEA type={type(val)!r}")
 
 
-def _build_lang_order_from_series(lang_series: pd.Series) -> list[str]:
-    found: set[str] = set()
-    for v in lang_series.astype(object):
-        found.add(normalize_language_code(v))
-    found.add(UNKNOWN_LANG)
-    return sorted(found)
-
-
 def _encode_missing_movies(
     sub: pd.DataFrame,
     *,
@@ -257,7 +275,11 @@ def _encode_missing_movies(
     g_raw = rank_weighted_genre_matrix(sub["genres"], genre_order, weight_ratio=DEFAULT_GENRE_WEIGHT_RATIO)
     genre_emb = l2_normalize_rows(np.asarray(g_raw, dtype=np.float64).astype(np.float32))
 
-    l_raw = one_hot_language_matrix_with_fallback(sub["original_language"], lang_order)
+    # Must match Phase 2 ``collect_sorted_languages``: UNKNOWN slot exists only if present in fitted vocab.
+    fb = UNKNOWN_LANG if UNKNOWN_LANG in lang_order else lang_order[0]
+    l_raw = one_hot_language_matrix_with_fallback(
+        sub["original_language"], lang_order, fallback_code=fb
+    )
     lang_emb = l2_normalize_rows(np.asarray(l_raw, dtype=np.float64).astype(np.float32))
     print(
         f"[P18.5 monthly] encoded missing n={n} text={text_emb.shape} genre={genre_emb.shape} lang={lang_emb.shape}",
@@ -271,6 +293,8 @@ def _movie_dict_from_pending(p: dict[str, Any], *, x: float, y: float, z: float,
     out: dict[str, Any] = {k: v for k, v in p.items() if k not in skip}
     out["x"], out["y"], out["z"] = float(x), float(y), float(z)
     out["last_xy_refit"] = now_iso
+    # Pending INSERT (nightly) omits vote-tracking timestamps; movies.last_vote_update is NOT NULL.
+    out["last_vote_update"] = now_iso
     return out
 
 
@@ -375,8 +399,13 @@ def main(argv: list[str] | None = None) -> int:
         cleaned_by_id["_mid"] = cleaned_by_id["id"].map(_mid)
         cleaned_by_id = cleaned_by_id.set_index("_mid", drop=False)
 
-        lang_order = _build_lang_order_from_series(cache_clean["original_language"])
-        print(f"[P18.5 monthly] lang_order dim={len(lang_order)}", flush=True)
+        # Same vocabulary as ``language_encoding.py`` / ``language_vectors.npy`` (no unconditional UNKNOWN slot).
+        lang_order = collect_sorted_languages(cache_clean["original_language"])
+        print(f"[P18.5 monthly] lang_order dim={len(lang_order)} (from cache cleaned.csv)", flush=True)
+        assert len(lang_order) == dl, (
+            f"language vocab len {len(lang_order)} != language_vectors.npy width {dl}; "
+            "regenerate embedding bundle from this cleaned.csv or fix cache files."
+        )
 
         row_index_by_movie_id = {mid: i for i, mid in enumerate(cleaned_ids_sorted)}
 
@@ -412,8 +441,9 @@ def main(argv: list[str] | None = None) -> int:
             "computed_at": utc_now.isoformat(),
         }
         _deactivate_all_thresholds(supabase)
-        supabase.table("threshold_versions").insert(thr_row).execute()
-        print(f"[P18.5 monthly] inserted active threshold_versions.version={ver_label!r}", flush=True)
+        # PK is ``version`` — local reruns reuse ``p18_monthly_YYYYMMDD_0``; INSERT would 23505.
+        supabase.table("threshold_versions").upsert(thr_row, on_conflict="version").execute()
+        print(f"[P18.5 monthly] upserted active threshold_versions.version={ver_label!r}", flush=True)
 
         movie_rows = _fetch_all_movie_rows(supabase, page_size=int(args.page_size))
         db_by_id: dict[int, dict[str, Any]] = {int(r["id"]): dict(r) for r in movie_rows}
@@ -429,6 +459,8 @@ def main(argv: list[str] | None = None) -> int:
         genre_mat = np.zeros((n_fit, dg), dtype=np.float32)
         lang_mat = np.zeros((n_fit, dl), dtype=np.float32)
         need_encode_ids: list[int] = []
+        pending_dim_mismatch = 0
+        pending_mismatch_sample: list[int] = []
 
         for i, mid in enumerate(cleaned_ids_sorted):
             if mid in id_to_idx:
@@ -438,14 +470,27 @@ def main(argv: list[str] | None = None) -> int:
                 lang_mat[i] = lang_all[j].astype(np.float32, copy=False)
             elif mid in pending_by_id:
                 pr = pending_by_id[mid]
-                tb = np.frombuffer(_decode_bytea(pr["text_embedding"]), dtype=np.float32).reshape(dt_text)
-                gb = np.frombuffer(_decode_bytea(pr["genre_vector"]), dtype=np.float32).reshape(dg)
-                lb = np.frombuffer(_decode_bytea(pr["lang_vector"]), dtype=np.float32).reshape(dl)
-                text_mat[i] = tb
-                genre_mat[i] = gb
-                lang_mat[i] = lb
+                tb = np.frombuffer(_decode_bytea(pr["text_embedding"]), dtype=np.float32)
+                gb = np.frombuffer(_decode_bytea(pr["genre_vector"]), dtype=np.float32)
+                lb = np.frombuffer(_decode_bytea(pr["lang_vector"]), dtype=np.float32)
+                if tb.size == dt_text and gb.size == dg and lb.size == dl:
+                    text_mat[i] = tb.reshape(dt_text)
+                    genre_mat[i] = gb.reshape(dg)
+                    lang_mat[i] = lb.reshape(dl)
+                else:
+                    pending_dim_mismatch += 1
+                    if len(pending_mismatch_sample) < 12:
+                        pending_mismatch_sample.append(mid)
+                    need_encode_ids.append(mid)
             else:
                 need_encode_ids.append(mid)
+
+        if pending_dim_mismatch:
+            print(
+                f"[P18.5 monthly] pending BYTEA dim mismatch vs bundle → re-encode: count={pending_dim_mismatch} "
+                f"sample_ids={pending_mismatch_sample} (nightly lang_order can differ from embedding bundle)",
+                flush=True,
+            )
 
         if need_encode_ids:
             sub = cleaned_by_id.loc[need_encode_ids].copy()
@@ -516,11 +561,18 @@ def main(argv: list[str] | None = None) -> int:
         )
         thresh = float(args.anchor_rmse_abort)
         if mean_anchor > thresh:
-            print(
-                f"[P18.5 monthly] ABORT: mean anchor residual {mean_anchor:.6g} > --anchor-rmse-abort={thresh}",
-                flush=True,
-            )
-            return 1
+            if args.skip_anchor_rmse_abort:
+                print(
+                    f"[P18.5 monthly] WARN: mean anchor residual {mean_anchor:.6g} > --anchor-rmse-abort={thresh} "
+                    "(continuing because --skip-anchor-rmse-abort)",
+                    flush=True,
+                )
+            else:
+                print(
+                    f"[P18.5 monthly] ABORT: mean anchor residual {mean_anchor:.6g} > --anchor-rmse-abort={thresh}",
+                    flush=True,
+                )
+                return 1
 
         cleaned_set = set(cleaned_ids_sorted)
         db_ids = set(db_by_id.keys())

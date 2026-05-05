@@ -167,8 +167,10 @@ def _build_lang_order_from_movies(rows: list[dict[str, Any]]) -> list[str]:
     found: set[str] = set()
     for r in rows:
         found.add(normalize_language_code(r.get("original_language")))
+    # Keep a stable fallback slot even if current movies rows happen
+    # to contain no missing language values.
+    found.add(UNKNOWN_LANG)
     out = sorted(found)
-    assert UNKNOWN_LANG in out, "language vocab must include __unknown__ from Supabase corpus"
     return out
 
 

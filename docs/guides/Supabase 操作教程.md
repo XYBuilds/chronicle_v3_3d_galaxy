@@ -146,7 +146,7 @@ python scripts/supabase/initial_import.py
 --verify-sample 20
 ```
 
-更简短的阶段说明见：`docs/reports/Phase 18.2 Supabase schema 与一次性导入 实施报告.md`
+更完整的阶段说明、决策与验收见：`docs/reports/Phase 18.2 Supabase schema 与一次性导入 实施报告.md`
 
 ---
 
@@ -226,7 +226,7 @@ A: 官方偏全栈 Auth/Realtime；本仓库当前是 **Python 批处理 + REST*
 | `supabase/migrations/20260504120000_p18_2_schema.sql` | P18.2 DDL |
 | `.env.example` | 密钥占位模板；复制为根目录 `.env` 后本地使用 |
 | `scripts/supabase/initial_import.py` | 一次性导入脚本 |
-| `docs/reports/Phase 18.2 Supabase schema 与一次性导入 实施报告.md` | 阶段验收与说明 |
+| `docs/reports/Phase 18.2 Supabase schema 与一次性导入 实施报告.md` | P18.2 决策、操作、问题与验收（唯一报告） |
 | `.cursor/plans/phase_18_data_infrastructure_9ccb7a3f.plan.md` | Phase 18 总计划（P18.4 cron 等后续） |
 
 ---

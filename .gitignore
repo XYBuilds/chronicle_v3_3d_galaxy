@@ -57,3 +57,5 @@ Thumbs.db
 *.log
 .env
 .env.*
+# Allow committing a template (see root `.env.example`).
+!.env.example

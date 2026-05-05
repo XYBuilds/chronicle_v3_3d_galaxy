@@ -10,7 +10,7 @@ todos:
     status: completed
   - id: p182-supabase-schema
     content: P18.2 Supabase schema (movies / galaxy_v1_reference / movies_pending / vote_snapshots) + 一次性导入 cleaned.csv 59014 行 + v1 坐标
-    status: pending
+    status: completed
   - id: p183-procrustes-helper
     content: P18.3 align_to_reference helper + v1 reference 不可变约束 (RLS / 脚本 assert)
     status: pending

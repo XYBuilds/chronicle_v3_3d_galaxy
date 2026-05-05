@@ -56,7 +56,9 @@ Thumbs.db
 # ============================================================
 *.log
 logs/
-docs/guides/
+# Ignore scratch under docs/guides; allow committed *.md operator guides.
+docs/guides/*
+!docs/guides/*.md
 .env
 .env.*
 # Allow committing a template (see root `.env.example`).

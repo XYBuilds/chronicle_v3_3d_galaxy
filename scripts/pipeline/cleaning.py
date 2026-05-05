@@ -145,15 +145,13 @@ def _extract_year(series: pd.Series) -> pd.Series:
     return pd.to_numeric(year_text, errors="coerce").astype("Int64")
 
 
-def apply_dynamic_vote_threshold(
-    df: pd.DataFrame,
+def _validate_dynamic_threshold_params(
     *,
-    quantile: float = QUANTILE,
-    alpha: float = ALPHA,
-    abs_min: float = ABS_MIN,
-    rolling_window: int = ROLLING_WINDOW,
-) -> tuple[pd.DataFrame, FilterStepResult]:
-    """Rows with ``vote_count`` below per-year dynamic threshold are removed."""
+    quantile: float,
+    alpha: float,
+    abs_min: float,
+    rolling_window: int,
+) -> None:
     if quantile <= 0 or quantile >= 1:
         raise ValueError("quantile must be in (0, 1)")
     if alpha < 0:
@@ -163,28 +161,107 @@ def apply_dynamic_vote_threshold(
     if rolling_window < 1:
         raise ValueError("rolling_window must be >= 1")
 
+
+def _workframe_with_year_and_vote(df: pd.DataFrame) -> pd.DataFrame:
     work = df.copy()
     work["_year"] = _extract_year(work["release_date"])
     work["_vote_num"] = pd.to_numeric(work["vote_count"].astype(str).str.strip(), errors="coerce")
+    return work
 
+
+def compute_year_to_vote_threshold(
+    df: pd.DataFrame,
+    *,
+    quantile: float = QUANTILE,
+    alpha: float = ALPHA,
+    abs_min: float = ABS_MIN,
+    rolling_window: int = ROLLING_WINDOW,
+) -> dict[int, float]:
+    """Recompute the per-calendar-year vote_count floor (same rule as ``apply_dynamic_vote_threshold``).
+
+    Used to seed ``threshold_versions.thresholds_json`` (P18.4/P18.5). ``df`` must be the frame
+    *after* dedup + must-drop filters and *before* the dynamic vote threshold step.
+    """
+    _validate_dynamic_threshold_params(
+        quantile=quantile, alpha=alpha, abs_min=abs_min, rolling_window=rolling_window
+    )
+    work = _workframe_with_year_and_vote(df)
     yearly_q = (
         work.dropna(subset=["_year"])
         .groupby("_year", sort=True)["_vote_num"]
         .quantile(quantile)
     )
     yearly_q.index = yearly_q.index.astype(int)
-    year_min = int(work["_year"].min())
-    year_max = int(work["_year"].max())
+    y_valid = work["_year"].dropna()
+    if y_valid.empty:
+        raise ValueError("compute_year_to_vote_threshold: no parseable release years")
+    year_min = int(y_valid.min())
+    year_max = int(y_valid.max())
     full_years = pd.RangeIndex(start=year_min, stop=year_max + 1, step=1)
     continuous_q = yearly_q.reindex(full_years).interpolate(method="linear").bfill().ffill()
     smoothed_baseline = continuous_q.rolling(window=rolling_window, min_periods=1).mean()
     threshold_by_year = np.maximum(abs_min, alpha * smoothed_baseline.values)
     threshold_series = pd.Series(threshold_by_year, index=full_years, name="threshold")
-    year_to_threshold = threshold_series.to_dict()
+    out = {int(k): float(v) for k, v in threshold_series.items()}
+    assert len(out) == len(threshold_series), "threshold dict keys must be unique int years"
+    return out
+
+
+def _threshold_series_from_frozen_json(year_to_threshold: dict[int, float]) -> pd.Series:
+    """Expand sparse JSON keys to a contiguous year index (interpolate gaps; clamp beyond ends)."""
+    if not year_to_threshold:
+        raise ValueError("year_to_threshold is empty")
+    norm: dict[int, float] = {int(k): float(v) for k, v in year_to_threshold.items()}
+    keys = sorted(norm.keys())
+    s = pd.Series([norm[y] for y in keys], index=pd.Index(keys, dtype="int64"))
+    full = pd.RangeIndex(keys[0], keys[-1] + 1, step=1)
+    expanded = s.reindex(full).interpolate(method="linear").bfill().ffill()
+    assert expanded.notna().all(), "frozen threshold series has NaN after interpolate"
+    return expanded
+
+
+def _extend_threshold_series_to_year_range(thr_series: pd.Series, y_min: int, y_max: int) -> pd.Series:
+    """Reindex thresholds to cover ``[y_min, y_max]`` (clamp beyond frozen range)."""
+    lo = int(min(int(thr_series.index.min()), y_min))
+    hi = int(max(int(thr_series.index.max()), y_max))
+    full = pd.RangeIndex(lo, hi + 1, step=1)
+    out = thr_series.reindex(full).interpolate(method="linear").bfill().ffill()
+    assert out.notna().all(), "threshold reindex produced NaN"
+    return out
+
+
+def apply_dynamic_vote_threshold(
+    df: pd.DataFrame,
+    *,
+    quantile: float = QUANTILE,
+    alpha: float = ALPHA,
+    abs_min: float = ABS_MIN,
+    rolling_window: int = ROLLING_WINDOW,
+) -> tuple[pd.DataFrame, FilterStepResult]:
+    """Rows with ``vote_count`` below per-year dynamic threshold are removed."""
+    _validate_dynamic_threshold_params(
+        quantile=quantile, alpha=alpha, abs_min=abs_min, rolling_window=rolling_window
+    )
+    work = _workframe_with_year_and_vote(df)
+    year_to_threshold = compute_year_to_vote_threshold(
+        df,
+        quantile=quantile,
+        alpha=alpha,
+        abs_min=abs_min,
+        rolling_window=rolling_window,
+    )
+    thr_series = _threshold_series_from_frozen_json(year_to_threshold)
+    y_valid = work["_year"].dropna()
+    if y_valid.empty:
+        raise ValueError("apply_dynamic_vote_threshold: no parseable release years")
+    y_min = int(y_valid.min())
+    y_max = int(y_valid.max())
+    thr_series = _extend_threshold_series_to_year_range(thr_series, y_min, y_max)
 
     valid_year_mask = work["_year"].notna()
     work["dynamic_threshold"] = np.nan
-    work.loc[valid_year_mask, "dynamic_threshold"] = work.loc[valid_year_mask, "_year"].map(year_to_threshold)
+    mapped = work.loc[valid_year_mask, "_year"].astype("int64")
+    work.loc[valid_year_mask, "dynamic_threshold"] = mapped.map(thr_series)
     vote_ok = work["_vote_num"] >= work["dynamic_threshold"]
     keep_mask = valid_year_mask & vote_ok
 
@@ -193,15 +270,36 @@ def apply_dynamic_vote_threshold(
     return filtered, FilterStepResult(name="dynamic_vote_baseline", dropped=dropped, remaining=len(filtered))
 
 
-def run_cleaning_pipeline(
+def apply_frozen_vote_threshold(
     df: pd.DataFrame,
-    *,
-    quantile: float = QUANTILE,
-    alpha: float = ALPHA,
-    abs_min: float = ABS_MIN,
-    rolling_window: int = ROLLING_WINDOW,
-) -> tuple[pd.DataFrame, list[FilterStepResult]]:
-    """Dedup → must-drop filters → dynamic vote threshold."""
+    year_to_threshold: dict[int, float],
+) -> tuple[pd.DataFrame, FilterStepResult]:
+    """Same membership rule as dynamic threshold, but thresholds come from ``threshold_versions`` JSON (P18.4)."""
+    if not year_to_threshold:
+        raise ValueError("year_to_threshold must be non-empty")
+    work = _workframe_with_year_and_vote(df)
+    thr_series = _threshold_series_from_frozen_json(year_to_threshold)
+    y_valid = work["_year"].dropna()
+    if y_valid.empty:
+        raise ValueError("apply_frozen_vote_threshold: no parseable release years")
+    y_min = int(y_valid.min())
+    y_max = int(y_valid.max())
+    thr_series = _extend_threshold_series_to_year_range(thr_series, y_min, y_max)
+
+    valid_year_mask = work["_year"].notna()
+    work["dynamic_threshold"] = np.nan
+    mapped = work.loc[valid_year_mask, "_year"].astype("int64")
+    work.loc[valid_year_mask, "dynamic_threshold"] = mapped.map(thr_series)
+    vote_ok = work["_vote_num"] >= work["dynamic_threshold"]
+    keep_mask = valid_year_mask & vote_ok
+
+    dropped = int((~keep_mask).sum())
+    filtered = work.loc[keep_mask, df.columns].copy()
+    return filtered, FilterStepResult(name="frozen_dynamic_vote_baseline", dropped=dropped, remaining=len(filtered))
+
+
+def run_cleaning_pipeline_before_vote_threshold(df: pd.DataFrame) -> tuple[pd.DataFrame, list[FilterStepResult], int]:
+    """Dedup + must-drop filters, stopping **before** the per-year ``vote_count`` threshold step."""
     steps: list[FilterStepResult] = []
 
     df, n0, n1, n2 = deduplicate_ids_and_imdb(df)
@@ -233,11 +331,29 @@ def run_cleaning_pipeline(
     df, r = filter_overview_nonempty(df)
     steps.append(r)
     print(f"[Filter:{r.name}] Dropped: {r.dropped} rows ({_pct(r.dropped, base):.2f}%) -> Remaining: {r.remaining}")
-    base = r.remaining
+    return df, steps, r.remaining
 
-    df, r = apply_dynamic_vote_threshold(
-        df, quantile=quantile, alpha=alpha, abs_min=abs_min, rolling_window=rolling_window
-    )
+
+def run_cleaning_pipeline(
+    df: pd.DataFrame,
+    *,
+    quantile: float = QUANTILE,
+    alpha: float = ALPHA,
+    abs_min: float = ABS_MIN,
+    rolling_window: int = ROLLING_WINDOW,
+    frozen_year_thresholds: dict[int, float] | None = None,
+) -> tuple[pd.DataFrame, list[FilterStepResult]]:
+    """Dedup → must-drop filters → dynamic vote threshold (or frozen thresholds for nightly refresh)."""
+    df, steps, base = run_cleaning_pipeline_before_vote_threshold(df)
+
+    if frozen_year_thresholds is not None:
+        norm_thr = {int(k): float(v) for k, v in frozen_year_thresholds.items()}
+        print(f"[Filter:frozen] Using frozen per-year vote_count thresholds ({len(norm_thr)} years in JSON)")
+        df, r = apply_frozen_vote_threshold(df, norm_thr)
+    else:
+        df, r = apply_dynamic_vote_threshold(
+            df, quantile=quantile, alpha=alpha, abs_min=abs_min, rolling_window=rolling_window
+        )
     steps.append(r)
     print(f"[Filter:{r.name}] Dropped: {r.dropped} rows ({_pct(r.dropped, base):.2f}%) -> Remaining: {r.remaining}")
 

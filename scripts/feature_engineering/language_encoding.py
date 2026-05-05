@@ -60,6 +60,27 @@ def one_hot_language_matrix(series: pd.Series, lang_order: list[str]) -> np.ndar
     return mat
 
 
+def one_hot_language_matrix_with_fallback(
+    series: pd.Series,
+    lang_order: list[str],
+    *,
+    fallback_code: str = UNKNOWN_LANG,
+) -> np.ndarray:
+    """Like ``one_hot_language_matrix`` but maps unknown ISO codes to ``fallback_code`` (P18.4 incremental rows)."""
+    idx_map = {code: i for i, code in enumerate(lang_order)}
+    if fallback_code not in idx_map:
+        raise KeyError(f"fallback_code {fallback_code!r} must be present in lang_order")
+    n_lang = len(lang_order)
+    n = len(series)
+    mat = np.zeros((n, n_lang), dtype=np.float64)
+    for r, cell in enumerate(series.astype(object)):
+        code = normalize_language_code(cell)
+        if code not in idx_map:
+            code = fallback_code
+        mat[r, idx_map[code]] = 1.0
+    return mat
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(
         description="Compute L2-normalized one-hot original_language features (Phase 2.3)."

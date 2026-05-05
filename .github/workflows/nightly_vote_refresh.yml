@@ -1,0 +1,67 @@
+name: P18.4 Nightly vote refresh
+
+on:
+  schedule:
+    - cron: "0 20 * * *" # 20:00 UTC daily (~04:00 Beijing next day)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p18-4-nightly-vote-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      PYTHONUNBUFFERED: "1"
+      OMP_NUM_THREADS: "4"
+      NUMBA_NUM_THREADS: "4"
+      OPENBLAS_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+      GALAXY_EXPORT_SEQ: ${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements.cpu.txt
+
+      - name: Install Python dependencies
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.cpu.txt
+
+      - name: Run nightly vote refresh
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+          KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
+        run: |
+          set -euo pipefail
+          python scripts/cron/nightly_vote_refresh.py
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: galaxy-export-${{ github.run_id }}
+          if-no-files-found: warn
+          path: |
+            frontend/public/data/galaxy_data.json
+            frontend/public/data/galaxy_data.json.gz
+            frontend/public/data/galaxy_search_index.json.gz
+
+      # P18.6: uncomment after Cloudflare Pages + secrets are configured.
+      # - name: Deploy to Cloudflare Pages
+      #   uses: cloudflare/pages-action@v1
+      #   with:
+      #     apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      #     accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      #     projectName: ${{ secrets.CLOUDFLARE_PAGES_PROJECT_NAME }}
+      #     directory: frontend/dist

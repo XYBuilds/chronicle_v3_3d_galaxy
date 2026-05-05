@@ -53,10 +53,19 @@ jobs:
           BUNDLE_URL: ${{ secrets.GALAXY_EMBED_BUNDLE_URL }}
         run: |
           set -euo pipefail
-          if [ -z "${BUNDLE_URL:-}" ]; then
+          # Secrets pasted with trailing newline/CR or spaces break curl with "(3) Malformed input".
+          BUNDLE_URL="$(printf '%s' "${BUNDLE_URL:-}" | tr -d '\r\n' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+          if [ -z "$BUNDLE_URL" ]; then
             echo "GALAXY_EMBED_BUNDLE_URL not set; using Actions cache and/or repo copy under data/output/."
             exit 0
           fi
+          case "$BUNDLE_URL" in
+            http://*|https://*) ;;
+            *)
+              echo "::error::GALAXY_EMBED_BUNDLE_URL must be a single http(s) URL to a .zip (no quotes or extra lines in the secret)."
+              exit 1
+              ;;
+          esac
           mkdir -p data/output
           tmp="$(mktemp -d)"
           trap 'rm -rf "$tmp"' EXIT

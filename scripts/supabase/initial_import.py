@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""P18.2: One-time load of galaxy_v1_reference + movies from cleaned.csv + umap_xy.npy (+ z from export rules)."""
+"""P18.2: One-time load of galaxy_v1_reference + movies from cleaned.csv + umap_xy.npy (+ z from export rules).
+
+P18.3: After bootstrap, ``galaxy_v1_reference`` must not be updated/deleted by app keys; see
+``supabase/migrations/*p18_3*`` (REVOKE) and ``scripts/galaxy_v1_reference_guard.py``.
+"""
 from __future__ import annotations
 
 import argparse

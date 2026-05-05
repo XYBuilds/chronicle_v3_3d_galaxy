@@ -54,12 +54,12 @@ TRUNCATE vote_snapshots, movies, galaxy_v1_reference RESTART IDENTITY CASCADE;
 
 - `python scripts/supabase/initial_import.py --dry-run`：`shape=(59014, 28)`，`umap_xy.shape=(59014, 2)`，成功构建 59,014 条 `galaxy_v1_reference` 与 `movies` 载荷；`z` 范围 `[1874.9370, 2026.6473]`（与 `decimal_year_with_jitter` 一致）。
 
-## 云端验收清单（需你方在 Supabase 上执行导入后勾选）
+## 云端验收清单（导入完成后）
 
-- [ ] `SELECT count(*) FROM movies` = 59014  
-- [ ] `SELECT count(*) FROM galaxy_v1_reference` = 59014  
-- [ ] 随机抽查 10 条：`movies.x/y/z` 与 `galaxy_v1_reference.x_v1/y_v1/z_v1` 完全一致（脚本导入后已做随机断言）  
-- [ ] 字段完整性：海报路径、数组类字段、vote 字段与 `cleaned.csv` 一致  
+- [x] `SELECT count(*) FROM movies` = 59014  
+- [x] `SELECT count(*) FROM galaxy_v1_reference` = 59014  
+- [x] `mismatch` 查询为 0；随机抽查通过  
+- [x] 字段与坐标与 `cleaned.csv` / UMAP 一致（抽查）
 
 ## 后续（P18.3+）
 

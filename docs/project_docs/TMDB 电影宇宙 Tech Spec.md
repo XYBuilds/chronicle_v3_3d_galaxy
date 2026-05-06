@@ -266,12 +266,13 @@ TMDB 中一条影片可出现 **任意多个**流派标签（按 API 给定顺�
 
 数据生命周期与 Phase 18+ 自动化方案以 [`TMDB 电影宇宙 Data Pipeline.md`](./TMDB%20电影宇宙%20Data%20Pipeline.md) 为准。
 
-当前已确认方向：
+Phase 18 出口已落地的方向：
 
-* **初始化**：本地或 CI 全量清洗 → embedding → DensMAP/UMAP `fit_transform` → 导出静态 JSON.gz。
-* **每日刷新**：GitHub Actions 拉取 Kaggle daily update，更新已有电影的 `vote_count` / `vote_average` / `popularity`，重导静态 JSON.gz；每日任务不重算 UMAP 坐标。
-* **周度 / 月度 refit**：全量 `fit_transform`，合入 pending 新片，并用 v1 reference 做 Procrustes 对齐后写回当前坐标。
-* **不再依赖 UMAP `.pkl` 增量 transform**：当前 `umap_model.pkl` 体积大且受 pickle/numba ABI 影响，不作为 Phase 18+ 稳定管线依赖。
+* **初始化（一次性）**：本地全量清洗 → embedding → DensMAP/UMAP `fit_transform` → 导出静态 JSON.gz；产物作为 `galaxy_v1_reference` 永久基准 + `movies` 初始坐标导入 Supabase（P18.2）。
+* **每日刷新（P18.4 nightly）**：GitHub Actions 拉取 Kaggle daily update，沿用 frozen `threshold_versions` 清洗，UPDATE `vote_count` / `vote_average` / `popularity`，新过线片入 `movies_pending`，重导静态 JSON.gz；不重算 UMAP 坐标。
+* **月度 refit（P18.5 + P18.5b）**：全量 `fit_transform`（DensMAP），合入 pending 新片，用 `galaxy_v1_reference` 做 Procrustes 对齐后写回当前坐标；锚点采用 **软闸**（默认 `MONTHLY_ANCHOR_MODE=soft`，结构性错误仍 fail），artifact `monthly_refit_meta.json` 用于 P95 观测。
+* **不再依赖 UMAP `.pkl` 增量 transform**：旧版 `umap_model.pkl` 体积大且受 pickle/numba ABI 影响，不作为 Phase 18+ 稳定管线依赖。
+* **Genre palette**：Phase 18.0 起冻结固定 `genre -> hue` 表（19 TMDB 官方 genre）；`meta.genre_palette_version` 写入版本号，调整须 bump。
 
 ## **4\. 输出数据 Schema（Python → 前端契约）**
 
@@ -453,28 +454,41 @@ Vercel / Netlify / GitHub Pages（静态托管）
 * 前端默认 **`fetch(BASE_URL + 'data/galaxy_data.json.gz')`** 一次性加载；按 **gzip 魔数**与 **HTTP 透明 gzip** 分支处理后再 `JSON.parse`；Loading 完成后初始化 Three.js 场景（实现见 `frontend/src/data/loadGalaxyGzip.ts`、`frontend/src/utils/loadGalaxyData.ts`）。  
 * **静态托管**：**GitHub Pages**（本仓库已配 Actions 构建部署）或 **Vercel / Netlify** 等；注意子路径部署时 Vite `base` 与资源 URL 一致。
 
-### **5.2 未来阶段（自动化数据管线）**
+### **5.2 Phase 18 出口：自动化部署形态（实际落地）**
 
-Phase 18+ 的自动化部署目标以 [`TMDB 电影宇宙 Data Pipeline.md`](./TMDB%20电影宇宙%20Data%20Pipeline.md) 为准：
+Phase 18 出口对齐数据流与运维 SSOT 见 [`TMDB 电影宇宙 Data Pipeline.md`](./TMDB%20电影宇宙%20Data%20Pipeline.md) §3.2 / §11 / §12。本节仅给出前端 / 渲染相关的最终拓扑：
 
 ```
 Kaggle Daily Updates
     ↓
-GitHub Actions nightly / weekly jobs
+GitHub Actions
+    ├── nightly_vote_refresh.yml   (0 20 * * *  UTC)
+    └── monthly_refit.yml          (0 20 1 * *  UTC, soft anchor gate)
     ↓
-Supabase (source of truth)
+Supabase  (movies / movies_pending / galaxy_v1_reference / threshold_versions)
     ↓
-export galaxy_data.json.gz + galaxy_search_index.json.gz
+scripts/cron/export_from_supabase.py
     ↓
-Cloudflare Pages
+galaxy_data.json.gz  +  galaxy_search_index.json.gz
+    ├── Cloudflare R2          ← upload_galaxy_r2.py + galaxy_assets_manifest.json
+    │   (绕 Pages 单文件 25MiB 硬限；公开读 + CORS)
+    └── frontend/dist 仅含 manifest 与小静态资源
+        └── Cloudflare Pages   ← cloudflare/pages-action@v1.5.0 (Direct Upload)
+            └── (灰度备线) GitHub Pages by .github/workflows/deploy-pages.yml
     ↓
-Browser 一次性加载静态数据
+Browser
+    ├── fetch app           →  Cloudflare Pages
+    └── fetch galaxy_*.gz   →  Cloudflare R2（manifest 解析；可被 VITE_* 与 ?dataset= 覆盖）
 ```
 
-* **Supabase** 仅作 source of truth；前端不直接查询数据库。
-* **每日任务**只刷新已有电影的投票/评分/热度并重导静态 JSON。
-* **周度 / 月度任务**全量 `fit_transform`，合入 pending 新片，并用 v1 reference 做 Procrustes 对齐。
-* **Cloudflare Pages** 是 Phase 18 目标静态托管；GitHub Pages 保留为灰度备线。
+* **Supabase** 仅作 source of truth；前端不直连数据库。
+* **每日任务（P18.4）** 沿用 frozen `threshold_versions`，只刷新 `vote_count` / `vote_average` / `popularity`，新过线片入 `movies_pending`；不重算 UMAP 坐标。
+* **月度任务（P18.5 + P18.5b）** 重算 dynamic threshold + 全量 `fit_transform` + Procrustes 对齐 `galaxy_v1_reference`；锚点采用 **软闸**（`MONTHLY_ANCHOR_MODE` 默认 `soft`），仅极端残差或结构性错误 fail；产出 `monthly_refit_meta.json` artifact 供 P95 收紧观测。
+* **Cloudflare Pages** 仅托管前端 bundle；Pages 侧 Git 自动构建已 Disconnect，发布主链路为 GitHub Actions Direct Upload。
+* **Cloudflare R2** 托管 `galaxy_*.json.gz`，前端通过 `frontend/src/lib/galaxyAssetUrls.ts` 按「`VITE_*` → `?dataset=` → manifest → 同源默认」优先级解析 URL。
+* **GitHub Pages** 通过 `.github/workflows/deploy-pages.yml` 在 push 到 `main` 时部署，作为 1–2 周灰度备线；该路径仍走同源 gzip，不依赖 R2。
+* **Vite `base`** 在仓库内默认为 `process.env.VITE_BASE_PATH ?? '/'`；GitHub Pages 子路径部署由 `deploy-pages.yml` 注入对应 `VITE_BASE_PATH`，CF Pages 根路径部署直接使用默认值。
+* **国内访问优化** 不属于 Phase 18 出口；规划为 Phase 19+。
 
 ## **6\. 项目目录结构**
 

@@ -31,7 +31,7 @@ todos:
     status: completed
   - id: p187-doc-sync-acceptance
     content: P18.7 文档同步 (Tech Spec / Data Pipeline / README) + 实施报告 + 出口验收清单
-    status: pending
+    status: completed
 isProject: false
 ---
 

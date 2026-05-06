@@ -1,6 +1,6 @@
 ---
 name: phase 18 data infrastructure
-overview: Phase 18 把数据流从"本地一次性 export → 推 git"升级为"Supabase 作 source of truth + GitHub Actions 自动化 + Cloudflare Pages 静态托管"。前端契约不变（仍吃 galaxy_data.json.gz）。统一节奏：每日沿用上一周期 frozen threshold，仅刷新 vote_count/vote_average/popularity；每月全量 threshold + membership + fit_transform，并永久 Procrustes 对齐到 v1 reference。仓库为 public，首轮 GHA benchmark 以 ubuntu-24.04 public runner (4 CPU / 16GB RAM / 14GB SSD) 为目标；若 runner 压力过大，降级为季度/半年度本地机器重跑后上传。
+overview: Phase 18 把数据流从"本地一次性 export → 推 git"升级为"Supabase 作 source of truth + GitHub Actions 自动化 + Cloudflare Pages 静态托管"。前端契约不变（仍吃 galaxy_data.json.gz）。统一节奏：每日沿用上一周期 frozen threshold，仅刷新 vote_count/vote_average/popularity；每月全量 threshold + membership + fit_transform，并永久 Procrustes 对齐到 v1 reference。P18.5 锚点对齐采用「软闸 + 强日志 + 可选 artifact meta」：优先跑通 Supabase→GHA→CF Pages，用数周观测残差分布再收紧；极端异常仍 fail。仓库为 public，首轮 GHA benchmark 以 ubuntu-24.04 public runner (4 CPU / 16GB RAM / 14GB SSD) 为目标；若 runner 压力过大，降级为季度/半年度本地机器重跑后上传。
 todos:
   - id: p180-genre-palette-freeze
     content: P18.0 Genre palette 冻结：写死 19 genre 固定 hue 表，meta 加 genre_palette_version；assert 数据中所有 genre 都在表内
@@ -18,10 +18,13 @@ todos:
     content: P18.4 GH Actions nightly cron：Kaggle 拉新 → diff → UPDATE existing votes / INSERT pending 新片 → 重导 JSON.gz → 部署
     status: completed
   - id: p185-monthly-refit
-    content: P18.5 GH Actions monthly cron：重算 dynamic threshold + membership，全量 fit_transform CPU densmap → Procrustes 对齐 v1 → UPDATE movies + 清空 pending → 重导 + 部署；weekly 仅保留 workflow_dispatch/实验
+    content: P18.5 GH Actions monthly：Kaggle/raw、threshold、全量 UMAP+Procrustes、写 movies、export、validate；weekly 仅 workflow_dispatch。验收优先 Supabase+GHA+产物完整链；四件套与 Kaggle 快照对齐（本地定期重打 zip）。锚点残差见 p185b 软闸策略，不在此 todo 内重复实现细节
+    status: pending
+  - id: p185b-monthly-anchor-observability
+    content: P18.5b 锚点软闸+观测：monthly_refit 与 workflow 打结构化日志（mean/max L2、n_anchors、cleaned 行数、membership、threshold_version、可选 bundle/raw 指纹）；artifact 上传 monthly_refit_meta.json（或等价）；仅极端残差或结构性错误 fail CI；记录数周后 P95 再定硬闸/告警；workflow_dispatch 可临时跳过软闸以 unblock
     status: pending
   - id: p186-cf-pages-cutover
-    content: P18.6 Cloudflare Pages 项目 + 自定义域名 + cron 末尾触发部署 + GitHub Pages 灰度备线 1-2 周
+    content: P18.6 Cloudflare Pages + 自定义域名；P18.4/P18.5（及 p185b artifact）末尾 pages-action 部署；保留 GitHub Pages 灰度 1–2 周；部署不依赖锚点硬阈值通过
     status: pending
   - id: p187-doc-sync-acceptance
     content: P18.7 文档同步 (Tech Spec / Data Pipeline / README) + 实施报告 + 出口验收清单
@@ -109,6 +112,7 @@ flowchart TD
     P183[P18.3 Procrustes 对齐 helper + v1 reference 锁定]
     P184[P18.4 GH Actions nightly:vote refresh + JSON 重导]
     P185[P18.5 GH Actions monthly:threshold + 全量 refit + Procrustes + JSON 重导]
+    P185b[P18.5b 锚点软闸 + 强日志 + artifact meta]
     P186[P18.6 Cloudflare Pages 切换 + 自定义域名]
     P187[P18.7 文档同步 + 出口验收]
 
@@ -117,8 +121,9 @@ flowchart TD
     P182 --> P183
     P183 --> P184
     P183 --> P185
+    P185 --> P185b
     P184 --> P186
-    P185 --> P186
+    P185b --> P186
     P186 --> P187
 ```
 
@@ -127,8 +132,8 @@ flowchart TD
 - **P18.1** 先做本地 canonical full rebuild，保证当前本地所有产物符合 production 参数；再用 canonical artifacts 在 public `ubuntu-24.04` GHA 上跑 core benchmark（定 P18.5 `timeout-minutes` 与是否坚持 monthly）；本机全链时间用于流程审计，GHA core 时间用于 runner 可行性判断
 - **P18.2** v1 锁定：把当前 [frontend/public/data/galaxy_data.json](frontend/public/data/galaxy_data.json) 的 xy 作为永久 Procrustes reference 写入 Supabase 一张专表
 - **P18.3** 是 P18.5 的前置 helper
-- **P18.4 / P18.5** 互相独立，可并行实现；P18.4 使用 frozen threshold，P18.5 负责 threshold 版本更新
-- **P18.6** 切流量到 CF Pages（保留 GitHub Pages 备线 1-2 周观察）
+- **P18.5** 与 **P18.5b**：monthly 主路径 + 锚点软闸/观测（同一 workflow 或紧耦合 PR 交付）；**P18.5b** 完成后 **P18.6** 才依赖「可稳定绿」的 monthly（允许软闸下先跑通 CF）
+- **P18.4 / P18.5** 互相独立启动，但 **P18.6** 需两者均具备可部署产物；**P18.4** 与 **P18.5b** 无直接依赖
 - **P18.7** 收尾
 
 ---
@@ -537,6 +542,30 @@ jobs:
 8. 触发一次 export_from_supabase.py
 9. meta.version 改为 `YYYY.MM.DD.monthly.<seq>`，并记录 `threshold_version`
 
+### P18.5b 运营策略：软闸 + 强日志 + Artifact Meta（优先跑通链路）
+
+**背景**：GHA 使用 Kaggle 日更 raw、四件套可能来自本机较早快照时，`cleaned` 行数 / id 集合与缓存 embedding 会错位，Procrustes 后 mean L2 可能显著高于历史 v1 全量重跑时的 `--anchor-rmse-abort=0.25`。**短期目标**是先跑通 **Supabase → monthly job → export → Cloudflare Pages**，数据新鲜度与残差分布用 **观测** 迭代，而非每月因硬闸失败。
+
+**软闸（建议实现约定）**
+
+- **默认**：`mean_anchor_L2` 超过「历史 P95 的若干倍」或超过绝对天文数字（如 `>50`，可配置）才 **fail CI**；中间区间 **只记日志 + 写 artifact，不 abort**（等价于生产上使用 `--skip-anchor-rmse-abort` 或 workflow env `MONTHLY_ANCHOR_MODE=soft`）。
+- **结构性错误仍硬失败**：如 `n_anchors < 2`、`NaN`/`Inf`、export validate 失败、四件套缺失。
+- **人工 unblock**：保留 `workflow_dispatch` 输入或 env，可在一轮排障中临时 **force hard** 或 **force skip**，避免卡死。
+
+**强日志（stdout / job log 必须可 grep）**
+
+每条 monthly run 至少打印（键名建议稳定）：`anchor_mean_l2`、`anchor_max_l2`、`n_anchors`、`n_fit`（UMAP 行数）、`cleaned_rows`、`cache_bundle_rows`（四件套 `cleaned.csv` 行数）、`membership_count`、`threshold_version`、`raw_source`（kaggle path / hash 前缀）、可选 `bundle_fingerprint`（四文件 mtime 或 sha256 前缀）。
+
+**Artifact（可选但推荐）**
+
+- 在 `monthly_refit` job 内生成 **`monthly_refit_meta.json`**（或 `refit_summary.json`），内容与上述字段一致，并 `actions/upload-artifact` 与 `galaxy_data.json(.gz)` 同次 run 上传；便于离线对比 **数周内残差 P95**，再决定是否恢复硬闸或改为告警 webhook。
+- **不向 `galaxy_data.json` 强塞运营字段**（避免前端契约变化）；meta 仅服务运维与复盘。
+
+**re-embed / 四件套节奏**
+
+- 与 **每月一次** monthly 对齐：本地或可信机在 cron 前 **用与 GHA 同源的 raw（或接受 Kaggle 与本地差异）** 重打四件套 zip，更新 `GALAXY_EMBED_BUNDLE_URL`。
+- **数周观测期**：只记录 `anchor_max_l2` 等，不收紧 `--anchor-rmse-abort`；观测结束后再写入 Data Pipeline / Tech Spec 的正式阈值。
+
 ### 关键：embedding cache 策略
 
 GitHub-hosted public `ubuntu-24.04` runner 为 4 CPU / 16GB RAM / 14GB SSD。`text_embeddings.npy` (~180MB) + `cleaned.csv` (~62MB) + numpy weights = ~250MB，磁盘上足够。用 [actions/cache@v4](https://github.com/actions/cache) 缓存 `data/output/*.npy` + `cleaned.csv`，但 cache miss 时必须 print 清晰错误和恢复步骤。
@@ -546,8 +575,8 @@ GitHub-hosted public `ubuntu-24.04` runner 为 4 CPU / 16GB RAM / 14GB SSD。`te
 ### 验收（需 P18.1 实测后细化）
 
 - monthly cron 执行时长 < 120 分钟（阈值以 **P18.1 在 GHA 上的墙钟** 为基准留出余量；勿仅用本机时间推断）
-- Procrustes 对齐后 95% 的星与上一版坐标距离 < 0.01 单位
-- 跑一次手动 dispatch 验证全流程
+- **P18.5b**：至少 2 次手动 dispatch 在**软闸**下全流程绿（含 export + validate）；artifact 中 `anchor_*` 与日志一致；极端 fail 路径有单测或 dry-run 证明
+- **对齐质量**：观测期内记录残差分布；不强制「95% 星位移 < 0.01」为当月门禁（该条可作为 healthy 参考，在收紧硬闸后恢复为验收项）
 - workflow 保留 `workflow_dispatch`，但默认不启用 weekly schedule
 
 ### Runner fallback
@@ -569,21 +598,23 @@ GitHub-hosted public `ubuntu-24.04` runner 为 4 CPU / 16GB RAM / 14GB SSD。`te
 2. Build 命令：`cd frontend && npm ci && npm run build`
 3. Output: `frontend/dist`
 4. 配置自定义域名（用户已购或新购）
-5. P18.4 / P18.5 cron 末尾用 [cloudflare/pages-action](https://github.com/cloudflare/pages-action) 触发部署；若启用 local fallback，则轻量 `workflow_dispatch` 仅接收/部署本地产物
-6. 灰度：保留现有 GitHub Pages 1-2 周作为备线，监控 CF Pages 流量与延迟
-7. 国内访问：本 phase **不处理**（标注为 Phase 19+ 任务）
+5. P18.4 / P18.5 cron 末尾用 [cloudflare/pages-action](https://github.com/cloudflare/pages-action) 触发部署；**部署成功不依赖** Procrustes 硬阈值通过（与 P18.5b 软闸一致）。若启用 local fallback，则轻量 `workflow_dispatch` 仅接收/部署本地产物
+6. **（推荐）** monthly/nightly job 将 **`monthly_refit_meta.json`**（或等价 summary）作为 **artifact** 保留，便于与 CF 发布结果交叉排障；不向 `galaxy_data` 公共 meta 注入运维专有字段
+7. 灰度：保留现有 GitHub Pages 1-2 周作为备线，监控 CF Pages 流量与延迟
+8. 国内访问：本 phase **不处理**（标注为 Phase 19+ 任务）
 
 ### 验收
 
 - CF Pages 域名能正常加载完整 galaxy
 - 首字节延迟（海外）< GitHub Pages
 - 一周内 CF Pages bandwidth 用量稳定（free tier 无限带宽，但要监控异常）
+- **P18.5 路径**：至少一次由 **monthly 软闸成功** 触发的 Pages 部署（证明链路与 P18.5b 不互斥）
 
 ---
 
 ## P18.7 文档同步 + 出口验收
 
-- 更新 [docs/project_docs/TMDB 电影宇宙 Data Pipeline.md](docs/project_docs/TMDB 电影宇宙 Data Pipeline.md)：daily frozen threshold + monthly refit + public runner benchmark + local fallback
+- 更新 [docs/project_docs/TMDB 电影宇宙 Data Pipeline.md](docs/project_docs/TMDB 电影宇宙 Data Pipeline.md)：daily frozen threshold + monthly refit + **P18.5b 软闸/artifact 观测** + public runner benchmark + local fallback
 - 更新 [docs/project_docs/TMDB 电影宇宙 Tech Spec.md](docs/project_docs/TMDB 电影宇宙 Tech Spec.md) §2 / §4：增加 Supabase + cron + Procrustes 章节
 - 更新根 [README.md](README.md)："运行管线"小节加 cron 路径说明
 - 实施报告：每个 P18.x 一份，存 `docs/reports/Phase 18.x ...`
@@ -593,7 +624,7 @@ GitHub-hosted public `ubuntu-24.04` runner 为 4 CPU / 16GB RAM / 14GB SSD。`te
   - [ ] P18.2 Supabase 59014 行 + galaxy_v1_reference 不可变
   - [ ] P18.3 Procrustes helper 单测通过
   - [ ] P18.4 nightly cron 手动 dispatch 成功 + JSON 部署到 CF Pages
-  - [ ] P18.5 monthly cron 手动 dispatch 成功 + Procrustes 对齐误差 < 阈值；若失败则 fallback 路线文档化
+  - [ ] P18.5 + P18.5b：monthly 在软闸下手动 dispatch 成功 + artifact 含锚点与阈值元数据；观测策略写入实施报告；若启用硬闸则记录触发条件
   - [ ] P18.6 CF Pages 自定义域名生效
   - [ ] 至少 1 周 nightly cron 稳定运行（无失败）
 
@@ -609,14 +640,14 @@ GitHub-hosted public `ubuntu-24.04` runner 为 4 CPU / 16GB RAM / 14GB SSD。`te
 | GH Actions free tier / 公共仓库配额变化                  | 低                  | public 仓库标准 runner 当前免费；仍需记录 job 分钟与失败率，避免把 heavy refit 设为 weekly 默认                                                                                            |
 | CPU refit 在 GHA 上实测超 120 分钟                       | 中                  | 以 **GHA core benchmark 墙钟** 决策（非本机 full rebuild）：60-120min → monthly 保留；>120min 或接近 OOM → 准备 local quarterly/biannual fallback；近 6h → 不再用 hosted runner full refit |
 | numba/UMAP 升级再次破坏                                  | 低（B1 已绕开 pkl） | pin 版本于 [requirements.cpu.txt](requirements.cpu.txt)；CI lock 测试                                                                                                                      |
-| Procrustes 对齐失败（边界情况）                          | 低                  | 加 fallback：对齐 RMSE > 阈值时报警 + 跳过 update（保留上一版坐标）                                                                                                                        |
+| Procrustes 对齐残差偏大（raw/四件套/库版本漂移）                    | 中                  | **P18.5b**：软闸 + 强日志 + artifact；定期更新四件套与 Kaggle 对齐；数周后据 P95 再设硬闸或告警；仍不可接受则 full re-embed 迁 GHA 或更强托管 |
 | CF Pages 国内访问问题                                    | 中                  | 本 phase 不解决；GitHub Pages 保留 1-2 周备线；Phase 19+ 处理                                                                                                                              |
 | v1 reference 永久锁定的代价（未来想"宇宙重组"难）        | 低                  | 接受。重置是显式人为操作，不是流水线常规路径                                                                                                                                               |
 
 ## 出口准入
 
-- 所有 P18.0–P18.7 todos `completed`
-- nightly + monthly cron 各跑过至少 2 次手动 dispatch 成功；或明确记录 monthly hosted runner 不可行并启用 local fallback
+- 所有 P18.0–P18.7 todos `completed`（含 **P18.5b**）
+- nightly + monthly cron 各跑过至少 2 次手动 dispatch 成功；monthly 在观测期允许软闸；或明确记录 monthly hosted runner 不可行并启用 local fallback
 - 切流量到 CF Pages 后 1 周无重大问题
 - 三份项目 spec 与代码一致，变更记录有 Phase 18 行
 - v1 reference 表行数固定 = 59014 且 `last_modified` 不变

@@ -1,6 +1,6 @@
 ---
 name: phase 18 data infrastructure
-overview: Phase 18 把数据流从"本地一次性 export → 推 git"升级为"Supabase 作 source of truth + GitHub Actions 自动化 + Cloudflare Pages 静态托管"。前端契约不变（仍吃 galaxy_data.json.gz）。统一节奏：每日沿用上一周期 frozen threshold，仅刷新 vote_count/vote_average/popularity；每月全量 threshold + membership + fit_transform，并永久 Procrustes 对齐到 v1 reference。P18.5 锚点对齐采用「软闸 + 强日志 + 可选 artifact meta」：优先跑通 Supabase→GHA→CF Pages，用数周观测残差分布再收紧；极端异常仍 fail。仓库为 public，首轮 GHA benchmark 以 ubuntu-24.04 public runner (4 CPU / 16GB RAM / 14GB SSD) 为目标；若 runner 压力过大，降级为季度/半年度本地机器重跑后上传。
+overview: Phase 18 把数据流从"本地一次性 export → 推 git"升级为"Supabase 作 source of truth + GitHub Actions 自动化 + Cloudflare Pages 静态托管"。大体积 `galaxy_data.json.gz` 等（> Pages 单文件 25MiB）走 **Cloudflare R2** 公开读或经 Worker/CDN；前端仍消费同一 JSON 契约，仅加载 URL 可配置。统一节奏：每日沿用上一周期 frozen threshold，仅刷新 vote_count/vote_average/popularity；每月全量 threshold + membership + fit_transform，并永久 Procrustes 对齐到 v1 reference。P18.5 锚点对齐采用「软闸 + 强日志 + 可选 artifact meta」：优先跑通 Supabase→GHA→CF Pages，用数周观测残差分布再收紧；极端异常仍 fail。仓库为 public，首轮 GHA benchmark 以 ubuntu-24.04 public runner (4 CPU / 16GB RAM / 14GB SSD) 为目标；若 runner 压力过大，降级为季度/半年度本地机器重跑后上传。
 todos:
   - id: p180-genre-palette-freeze
     content: P18.0 Genre palette 冻结：写死 19 genre 固定 hue 表，meta 加 genre_palette_version；assert 数据中所有 genre 都在表内
@@ -15,17 +15,20 @@ todos:
     content: P18.3 align_to_reference helper + v1 reference 不可变约束 (RLS / 脚本 assert)
     status: completed
   - id: p184-nightly-vote-refresh
-    content: P18.4 GH Actions nightly cron：Kaggle 拉新 → diff → UPDATE existing votes / INSERT pending 新片 → 重导 JSON.gz → 部署
+    content: P18.4 GH Actions nightly cron：Kaggle 拉新 → diff → UPDATE existing votes / INSERT pending 新片 → 重导 JSON.gz → 部署（前端 Pages；大文件 R2 见 p186b）
     status: completed
   - id: p185-monthly-refit
-    content: P18.5 GH Actions monthly：Kaggle/raw、threshold、全量 UMAP+Procrustes、写 movies、export、validate；weekly 仅 workflow_dispatch。验收优先 Supabase+GHA+产物完整链；四件套与 Kaggle 快照对齐（本地定期重打 zip）。锚点残差见 p185b 软闸策略，不在此 todo 内重复实现细节
+    content: P18.5 GH Actions monthly：Kaggle/raw、threshold、全量 UMAP+Procrustes、写 movies、export、validate；weekly 仅 workflow_dispatch。验收优先 Supabase+GHA+产物完整链；四件套与 Kaggle 快照对齐（本地定期重打 zip）。部署侧：前端 Pages + 大文件 R2（p186b）。锚点残差见 p185b 软闸策略，不在此 todo 内重复实现细节
     status: completed
   - id: p185b-monthly-anchor-observability
     content: P18.5b 锚点软闸+观测：monthly_refit 与 workflow 打结构化日志（mean/max L2、n_anchors、cleaned 行数、membership、threshold_version、可选 bundle/raw 指纹）；artifact 上传 monthly_refit_meta.json（或等价）；仅极端残差或结构性错误 fail CI；记录数周后 P95 再定硬闸/告警；workflow_dispatch 可临时跳过软闸以 unblock
     status: completed
   - id: p186-cf-pages-cutover
-    content: P18.6 Cloudflare Pages + 自定义域名；P18.4/P18.5（及 p185b artifact）末尾 pages-action 部署；保留 GitHub Pages 灰度 1–2 周；部署不依赖锚点硬阈值通过
+    content: P18.6 Cloudflare Pages + 自定义域名；P18.4/P18.5（及 p185b artifact）末尾 pages-action 部署前端 bundle；保留 GitHub Pages 灰度 1–2 周；部署不依赖锚点硬阈值通过
     status: completed
+  - id: p186b-r2-galaxy-assets
+    content: P18.6b Cloudflare R2：将 galaxy_data.json.gz / galaxy_search_index.json.gz 等大文件上传至 R2（绕 Pages 25MiB）；GHA nightly/monthly 写入对象 + 可选小 manifest（版本/URL）；公开读域名或 r2.dev + CORS；前端/环境变量指向 R2 URL；定价与 ops 见 docs 或 Cloudflare R2 pricing
+    status: pending
   - id: p187-doc-sync-acceptance
     content: P18.7 文档同步 (Tech Spec / Data Pipeline / README) + 实施报告 + 出口验收清单
     status: pending
@@ -36,10 +39,10 @@ isProject: false
 
 ## 范围
 
-把当前"本地手工 run pipeline → 提交 galaxy_data.json.gz 到 git → GitHub Pages 部署"的流程，升级为云端自动化的 daily refresh + monthly refit。前端不动（继续吃静态 `galaxy_data.json.gz`）。
+把当前"本地手工 run pipeline → 提交 galaxy_data.json.gz 到 git → GitHub Pages 部署"的流程，升级为云端自动化的 daily refresh + monthly refit。前端仍消费 **同一 JSON.gz 契约**；大文件默认从 **R2 等对象存储** 拉取（URL 可配置），小体积 shell 由 **Pages** 托管。
 
 **已确认决策**（用户）：
-- D1 = A1：Supabase 作 source of truth，前端继续吃静态 JSON.gz
+- D1 = A1：Supabase 作 source of truth；前端继续吃 **JSON.gz 契约**，大文件托管 **R2**（URL 可配置），Pages 托管应用壳
 - D5 = 不做前端动画（即使 remap 也不插值）
 - P18.0 = Genre palette 冻结（独立 export 修复）
 - D2 = B1：不持久化 UMAP pkl，每次全量 refit
@@ -88,18 +91,19 @@ flowchart TD
     GHA_Daily -->|cleaning.py| GHA_Daily
     GHA_Daily -->|UPDATE existing votes| Supabase
     GHA_Daily -->|INSERT new candidates| SupaPending
-    GHA_Daily -->|export_galaxy_json.py| R2
-    R2 -->|deploy| CFPages
+    GHA_Daily -->|export + upload objects| R2
+    GHA_Daily -->|pages-action: frontend/dist| CFPages
 
     GHA_Monthly -->|recompute threshold + membership| GHA_Monthly
     GHA_Monthly -->|SELECT all movies| Supabase
     GHA_Monthly -->|merge pending| Supabase
     GHA_Monthly -->|fit_transform + Procrustes vs v1| GHA_Monthly
     GHA_Monthly -->|UPDATE x,y| Supabase
-    GHA_Monthly -->|export_galaxy_json.py| R2
-    R2 -->|deploy| CFPages
+    GHA_Monthly -->|export + upload objects| R2
+    GHA_Monthly -->|pages-action: frontend/dist| CFPages
 
-    Browser -->|fetch json.gz| CFPages
+    Browser -->|fetch app| CFPages
+    Browser -->|fetch json.gz| R2
 ```
 
 ## 子节点执行顺序
@@ -114,6 +118,7 @@ flowchart TD
     P185[P18.5 GH Actions monthly:threshold + 全量 refit + Procrustes + JSON 重导]
     P185b[P18.5b 锚点软闸 + 强日志 + artifact meta]
     P186[P18.6 Cloudflare Pages 切换 + 自定义域名]
+    P186b[P18.6b R2 托管 galaxy 大文件]
     P187[P18.7 文档同步 + 出口验收]
 
     P180 --> P181
@@ -124,7 +129,9 @@ flowchart TD
     P185 --> P185b
     P184 --> P186
     P185b --> P186
+    P186 --> P186b
     P186 --> P187
+    P186b --> P187
 ```
 
 依赖说明：
@@ -134,6 +141,7 @@ flowchart TD
 - **P18.3** 是 P18.5 的前置 helper
 - **P18.5** 与 **P18.5b**：monthly 主路径 + 锚点软闸/观测（同一 workflow 或紧耦合 PR 交付）；**P18.5b** 完成后 **P18.6** 才依赖「可稳定绿」的 monthly（允许软闸下先跑通 CF）
 - **P18.4 / P18.5** 互相独立启动，但 **P18.6** 需两者均具备可部署产物；**P18.4** 与 **P18.5b** 无直接依赖
+- **P18.6b**：在 Pages 直传稳定后，将超 **25MiB** 的静态数据迁到 **R2**（与 P18.6 同账号生态）；**P18.7** 文档与验收需覆盖 R2 URL / CORS / 版本 manifest
 - **P18.7** 收尾
 
 ---
@@ -592,10 +600,12 @@ GitHub-hosted public `ubuntu-24.04` runner 为 4 CPU / 16GB RAM / 14GB SSD。`te
 
 ## P18.6 Cloudflare Pages 切换
 
+**与 P18.6b**：Pages 负责 **前端静态 bundle**（`pages-action` 上传 `frontend/dist`）；**`galaxy_data.json.gz` 等 >25MiB** 不走 Pages 包内路径，见下文 **P18.6b R2**。
+
 ### 步骤
 
-1. 在 Cloudflare 创建 Pages 项目，连接当前 GitHub 仓库
-2. Build 命令：`cd frontend && npm ci && npm run build`
+1. 在 Cloudflare 创建 **Pages** 项目；生产以 **GitHub Actions Direct Upload** 为主（可选断开 Git 自动构建，避免与 `npm ci`/optional 原生绑定冲突）
+2. 本地/CI 构建：`cd frontend && npm ci && npm run build`（或与 nightly/monthly workflow 一致）
 3. Output: `frontend/dist`
 4. 配置自定义域名（用户已购或新购）
 5. P18.4 / P18.5 cron 末尾用 [cloudflare/pages-action](https://github.com/cloudflare/pages-action) 触发部署；**部署成功不依赖** Procrustes 硬阈值通过（与 P18.5b 软闸一致）。若启用 local fallback，则轻量 `workflow_dispatch` 仅接收/部署本地产物
@@ -605,16 +615,34 @@ GitHub-hosted public `ubuntu-24.04` runner 为 4 CPU / 16GB RAM / 14GB SSD。`te
 
 ### 验收
 
-- CF Pages 域名能正常加载完整 galaxy
+- CF Pages 域名能正常加载应用；**完整星系数据**经 R2（或当前配置的 data URL）加载成功
 - 首字节延迟（海外）< GitHub Pages
 - 一周内 CF Pages bandwidth 用量稳定（free tier 无限带宽，但要监控异常）
 - **P18.5 路径**：至少一次由 **monthly 软闸成功** 触发的 Pages 部署（证明链路与 P18.5b 不互斥）
+- **P18.6b**：`galaxy_data.json.gz`（及必要时 `galaxy_search_index.json.gz`）从 **R2 公开 URL** 加载成功；无 CORS 错误；更新后浏览器能拿到新版本（缓存/版本策略可验收）
+
+---
+
+## P18.6b Cloudflare R2（大静态数据）
+
+**动机**：Cloudflare Pages 对部署内**单文件 25MiB** 硬限制；当前 `galaxy_data.json.gz` 已超过，无法与前端 bundle 同包发布。
+
+**目标形态**（与数据流图一致）：
+
+1. **GHA**（nightly / monthly）在导出后：用 S3 兼容 API 或 `wrangler r2 object put` 将 `galaxy_data.json.gz`、（可选）`galaxy_search_index.json.gz` 写入指定 **bucket + key**（建议 key 含版本或 `GALAXY_EXPORT_SEQ`，便于长缓存）。
+2. **R2** 开启公开读（自定义域 / `*.r2.dev` 等），配置 **CORS** 允许站点源。
+3. **Pages** 仅部署 `frontend/dist`；前端通过 **环境变量或 manifest**（小 JSON，可仍在 `public/` 或由构建注入）解析当前数据 URL。
+4. **Secrets**：`R2_ACCOUNT_ID`、bucket 名、API token（最小权限：该 bucket 读写）置于 GitHub Actions；**勿**提交到仓库。
+
+**成本与用量**（摘要）：R2 Standard 约 **$0.015/GB·月** 存储，**Class B（Get）** 按百万次量级计费；**出站自 R2 不按流量加价**（详见 [Cloudflare R2 Pricing](https://developers.cloudflare.com/r2/pricing/)）。本项目单对象 ~30MB + 低频全量下载，在免费档内概率高。
+
+**验收**：与上节 P18.6b 勾选项一致；另建议记录首月 R2 dashboard 的 Class A/B 用量作基线。
 
 ---
 
 ## P18.7 文档同步 + 出口验收
 
-- 更新 [docs/project_docs/TMDB 电影宇宙 Data Pipeline.md](docs/project_docs/TMDB 电影宇宙 Data Pipeline.md)：daily frozen threshold + monthly refit + **P18.5b 软闸/artifact 观测** + public runner benchmark + local fallback
+- 更新 [docs/project_docs/TMDB 电影宇宙 Data Pipeline.md](docs/project_docs/TMDB 电影宇宙 Data Pipeline.md)：daily frozen threshold + monthly refit + **P18.5b 软闸/artifact 观测** + public runner benchmark + local fallback + **R2 大文件与 Pages 分工**
 - 更新 [docs/project_docs/TMDB 电影宇宙 Tech Spec.md](docs/project_docs/TMDB 电影宇宙 Tech Spec.md) §2 / §4：增加 Supabase + cron + Procrustes 章节
 - 更新根 [README.md](README.md)："运行管线"小节加 cron 路径说明
 - 实施报告：每个 P18.x 一份，存 `docs/reports/Phase 18.x ...`
@@ -623,9 +651,10 @@ GitHub-hosted public `ubuntu-24.04` runner 为 4 CPU / 16GB RAM / 14GB SSD。`te
   - [ ] P18.1：本地 canonical full rebuild 产物完整且 validate 通过；public `ubuntu-24.04` GHA core benchmark 有墙钟/内存数字；可行性（内存/timeout）以 GHA core benchmark 为准
   - [ ] P18.2 Supabase 59014 行 + galaxy_v1_reference 不可变
   - [ ] P18.3 Procrustes helper 单测通过
-  - [ ] P18.4 nightly cron 手动 dispatch 成功 + JSON 部署到 CF Pages
+  - [ ] P18.4 nightly cron 手动 dispatch 成功 + **Pages 部署前端** + **galaxy 数据上 R2**（或等价对象存储）
   - [ ] P18.5 + P18.5b：monthly 在软闸下手动 dispatch 成功 + artifact 含锚点与阈值元数据；观测策略写入实施报告；若启用硬闸则记录触发条件
   - [ ] P18.6 CF Pages 自定义域名生效
+  - [ ] P18.6b R2：大 JSON 从 R2 加载、CORS 与版本/缓存策略可验收
   - [ ] 至少 1 周 nightly cron 稳定运行（无失败）
 
 ---
@@ -641,12 +670,13 @@ GitHub-hosted public `ubuntu-24.04` runner 为 4 CPU / 16GB RAM / 14GB SSD。`te
 | CPU refit 在 GHA 上实测超 120 分钟                       | 中                  | 以 **GHA core benchmark 墙钟** 决策（非本机 full rebuild）：60-120min → monthly 保留；>120min 或接近 OOM → 准备 local quarterly/biannual fallback；近 6h → 不再用 hosted runner full refit |
 | numba/UMAP 升级再次破坏                                  | 低（B1 已绕开 pkl） | pin 版本于 [requirements.cpu.txt](requirements.cpu.txt)；CI lock 测试                                                                                                                      |
 | Procrustes 对齐残差偏大（raw/四件套/库版本漂移）         | 中                  | **P18.5b**：软闸 + 强日志 + artifact；定期更新四件套与 Kaggle 对齐；数周后据 P95 再设硬闸或告警；仍不可接受则 full re-embed 迁 GHA 或更强托管                                              |
+| CF Pages **单文件 25MiB** 上限（galaxy_data.json.gz 超限）       | 高                  | **P18.6b**：大文件上 R2 + 公开读；Pages 只托管前端；manifest/版本号控制缓存                                                                                                                |
 | CF Pages 国内访问问题                                    | 中                  | 本 phase 不解决；GitHub Pages 保留 1-2 周备线；Phase 19+ 处理                                                                                                                              |
 | v1 reference 永久锁定的代价（未来想"宇宙重组"难）        | 低                  | 接受。重置是显式人为操作，不是流水线常规路径                                                                                                                                               |
 
 ## 出口准入
 
-- 所有 P18.0–P18.7 todos `completed`（含 **P18.5b**）
+- 所有 P18.0–P18.7 todos `completed`（含 **P18.5b** 与 **P18.6b**）
 - nightly + monthly cron 各跑过至少 2 次手动 dispatch 成功；monthly 在观测期允许软闸；或明确记录 monthly hosted runner 不可行并启用 local fallback
 - 切流量到 CF Pages 后 1 周无重大问题
 - 三份项目 spec 与代码一致，变更记录有 Phase 18 行

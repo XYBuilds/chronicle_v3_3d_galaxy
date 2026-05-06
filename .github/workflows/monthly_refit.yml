@@ -130,6 +130,20 @@ jobs:
           set -euo pipefail
           python scripts/cron/monthly_refit.py
 
+      # P18.6b: large gzip → R2; Pages bundle keeps a small manifest only (when secrets are set).
+      - name: Upload galaxy gzip to R2 (P18.6b)
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          R2_PUBLIC_BASE_URL: ${{ secrets.R2_PUBLIC_BASE_URL }}
+          R2_KEY_PREFIX: galaxy
+          R2_GALAXY_PRUNE_AFTER_UPLOAD: "1"
+        run: |
+          set -euo pipefail
+          python scripts/cron/upload_galaxy_r2.py
+
       - uses: actions/upload-artifact@v4
         with:
           name: galaxy-export-monthly-${{ github.run_id }}

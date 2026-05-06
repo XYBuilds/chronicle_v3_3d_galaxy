@@ -661,18 +661,18 @@ GitHub-hosted public `ubuntu-24.04` runner 为 4 CPU / 16GB RAM / 14GB SSD。`te
 
 ## 风险与回滚
 
-| 风险                                                     | 影响                | 缓解                                                                                                                                                                                       |
-| :------------------------------------------------------- | :------------------ | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Kaggle API 配额或下架 dataset                            | 高                  | 加 fallback：失败时 cron 邮件通知；考虑直接调 TMDB 官方 API（rate-limited 但可控）                                                                                                         |
-| Supabase free tier 数据库 500MB 上限                     | 中                  | 59K 行约 80MB 表数据 + BYTEA features ~250MB，接近上限。若超：把 `movies_pending.text_embedding` 等 BYTEA 移到 Supabase Storage                                                            |
-| GH Actions public runner 资源限制（4 CPU / 16GB / 14GB） | 中                  | P18.1 先本地 full rebuild 建 canonical artifacts，再用 production 参数跑 GHA core benchmark；打印 heartbeat / RSS / disk；若 OOM 或接近 6h，full refit 改季度/半年度本地运行后上传         |
-| GH Actions free tier / 公共仓库配额变化                  | 低                  | public 仓库标准 runner 当前免费；仍需记录 job 分钟与失败率，避免把 heavy refit 设为 weekly 默认                                                                                            |
-| CPU refit 在 GHA 上实测超 120 分钟                       | 中                  | 以 **GHA core benchmark 墙钟** 决策（非本机 full rebuild）：60-120min → monthly 保留；>120min 或接近 OOM → 准备 local quarterly/biannual fallback；近 6h → 不再用 hosted runner full refit |
-| numba/UMAP 升级再次破坏                                  | 低（B1 已绕开 pkl） | pin 版本于 [requirements.cpu.txt](requirements.cpu.txt)；CI lock 测试                                                                                                                      |
-| Procrustes 对齐残差偏大（raw/四件套/库版本漂移）         | 中                  | **P18.5b**：软闸 + 强日志 + artifact；定期更新四件套与 Kaggle 对齐；数周后据 P95 再设硬闸或告警；仍不可接受则 full re-embed 迁 GHA 或更强托管                                              |
-| CF Pages **单文件 25MiB** 上限（galaxy_data.json.gz 超限）       | 高                  | **P18.6b**：大文件上 R2 + 公开读；Pages 只托管前端；manifest/版本号控制缓存                                                                                                                |
-| CF Pages 国内访问问题                                    | 中                  | 本 phase 不解决；GitHub Pages 保留 1-2 周备线；Phase 19+ 处理                                                                                                                              |
-| v1 reference 永久锁定的代价（未来想"宇宙重组"难）        | 低                  | 接受。重置是显式人为操作，不是流水线常规路径                                                                                                                                               |
+| 风险                                                       | 影响                | 缓解                                                                                                                                                                                       |
+| :--------------------------------------------------------- | :------------------ | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Kaggle API 配额或下架 dataset                              | 高                  | 加 fallback：失败时 cron 邮件通知；考虑直接调 TMDB 官方 API（rate-limited 但可控）                                                                                                         |
+| Supabase free tier 数据库 500MB 上限                       | 中                  | 59K 行约 80MB 表数据 + BYTEA features ~250MB，接近上限。若超：把 `movies_pending.text_embedding` 等 BYTEA 移到 Supabase Storage                                                            |
+| GH Actions public runner 资源限制（4 CPU / 16GB / 14GB）   | 中                  | P18.1 先本地 full rebuild 建 canonical artifacts，再用 production 参数跑 GHA core benchmark；打印 heartbeat / RSS / disk；若 OOM 或接近 6h，full refit 改季度/半年度本地运行后上传         |
+| GH Actions free tier / 公共仓库配额变化                    | 低                  | public 仓库标准 runner 当前免费；仍需记录 job 分钟与失败率，避免把 heavy refit 设为 weekly 默认                                                                                            |
+| CPU refit 在 GHA 上实测超 120 分钟                         | 中                  | 以 **GHA core benchmark 墙钟** 决策（非本机 full rebuild）：60-120min → monthly 保留；>120min 或接近 OOM → 准备 local quarterly/biannual fallback；近 6h → 不再用 hosted runner full refit |
+| numba/UMAP 升级再次破坏                                    | 低（B1 已绕开 pkl） | pin 版本于 [requirements.cpu.txt](requirements.cpu.txt)；CI lock 测试                                                                                                                      |
+| Procrustes 对齐残差偏大（raw/四件套/库版本漂移）           | 中                  | **P18.5b**：软闸 + 强日志 + artifact；定期更新四件套与 Kaggle 对齐；数周后据 P95 再设硬闸或告警；仍不可接受则 full re-embed 迁 GHA 或更强托管                                              |
+| CF Pages **单文件 25MiB** 上限（galaxy_data.json.gz 超限） | 高                  | **P18.6b**：大文件上 R2 + 公开读；Pages 只托管前端；manifest/版本号控制缓存                                                                                                                |
+| CF Pages 国内访问问题                                      | 中                  | 本 phase 不解决；GitHub Pages 保留 1-2 周备线；Phase 19+ 处理                                                                                                                              |
+| v1 reference 永久锁定的代价（未来想"宇宙重组"难）          | 低                  | 接受。重置是显式人为操作，不是流水线常规路径                                                                                                                                               |
 
 ## 出口准入
 

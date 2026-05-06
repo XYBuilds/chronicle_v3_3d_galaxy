@@ -16,6 +16,8 @@ const DATASET_PATHS: Record<string, string> = {
   n500md04: 'data/experiments/galaxy_data.n500md04.json.gz',
 }
 
+const EXPERIMENT_DATASET_KEYS = new Set(Object.keys(DATASET_PATHS))
+
 function withBase(relativePath: string): string {
   const base = import.meta.env.BASE_URL
   const prefix = base.endsWith('/') ? base : `${base}/`
@@ -33,8 +35,21 @@ export function galaxyRuntimeUrlFromSearch(search: string): string {
   return withBase(rel)
 }
 
+/**
+ * When ``?dataset=`` selects a bundled experiment gzip, return its Vite base–aware URL; otherwise ``null``.
+ * Used by P18.6b R2 manifest resolution so experiment URLs are not overridden by production manifest.
+ */
+export function experimentDatasetGalaxyUrl(): string | null {
+  if (typeof window === 'undefined') return null
+  const ds = new URLSearchParams(window.location.search).get('dataset')
+  if (ds === null || !EXPERIMENT_DATASET_KEYS.has(ds)) return null
+  const url = galaxyRuntimeUrlFromSearch(window.location.search)
+  console.log(`[GalaxyData] ?dataset=${ds} — skip R2 manifest, url=${url}`)
+  return url
+}
+
 /** Vite `base`-aware URL for the gzip asset (dev + GH Pages). Honors `?dataset=` when present. */
-function galaxyDataDefaultUrl(): string {
+export function galaxyDataDefaultUrl(): string {
   if (typeof window !== 'undefined') {
     const url = galaxyRuntimeUrlFromSearch(window.location.search)
     const ds = new URLSearchParams(window.location.search).get('dataset')

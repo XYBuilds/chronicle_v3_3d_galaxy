@@ -87,47 +87,58 @@ flowchart TD
 - Phase 2.4：特征融合 + UMAP/DensMAP，输出 `data/output/umap_xy.npy`。
 - Phase 2.5：导出 `galaxy_data.json`、`galaxy_data.json.gz`、`galaxy_search_index.json.gz`。
 
-### 3.2 Phase 18+：自动化目标流
+### 3.2 Phase 18 出口：自动化部署形态（实际落地）
 
-已确认的 Phase 18 数据流决策：
+已确认并实施的 Phase 18 数据流决策：
 
-- **Supabase 角色**：source of truth。前端不直接查询 Supabase，仍加载静态 JSON.gz。
-- **UMAP 模型策略**：不持久化 `.pkl`。当前 `umap_model.pkl` 体积约 884MB，且受 numba/umap pickle ABI 影响不可稳定复用。周期性更新直接全量 `fit_transform`。
-- **更新节奏**：
-  - 每日：刷新已有电影的 `vote_count` / `vote_average` / `popularity`，并重导静态 JSON。
-  - 每周或每月：执行全量 `fit_transform`，新片并入星图，再用 Procrustes 对齐到 v1 reference，保持长期坐标稳定。
+- **Supabase 角色**：source of truth（`movies` / `movies_pending` / `galaxy_v1_reference` / `vote_snapshots` / `threshold_versions`）。前端不直接查询 Supabase，仍加载静态 JSON.gz。
+- **UMAP 模型策略**：不持久化 `.pkl`（旧版 `umap_model.pkl` ~884MB，且受 numba/umap pickle ABI 影响不可稳定复用）。月度直接全量 `fit_transform`（CPU `umap-learn`，DensMAP）。
+- **更新节奏**（最终决策，对照计划「daily light refresh + monthly full refit」）：
+  - **每日（P18.4 nightly）**：沿用上一周期 frozen `threshold_versions`，刷新已入库电影的 `vote_count` / `vote_average` / `popularity`，新过线片入 `movies_pending`，重导静态 JSON。
+  - **每月（P18.5 monthly + P18.5b 软闸）**：重新计算 dynamic threshold 并 active，全量 `fit_transform`，Procrustes 对齐 `galaxy_v1_reference`，合并 pending → `movies`，重导静态 JSON。
+  - **weekly**：仅 `workflow_dispatch`，**不**作为默认 schedule。
 - **前端动画**：不做 remap 插值动画。坐标稳定性由数据层 Procrustes 负责。
-- **Genre palette**：Phase 18.0 冻结固定 `genre -> hue` 表，避免 genre 集合变化导致全图变色。
+- **Genre palette**：Phase 18.0 冻结固定 `genre -> hue` 表（19 TMDB 官方 genre），`meta.genre_palette_version` 记录版本。
+- **静态托管**（详见 §12）：**Cloudflare Pages** 托管 `frontend/dist`；**Cloudflare R2** 托管 `galaxy_data.json.gz` 等大对象（绕 Pages 25MiB 单文件硬限）；**GitHub Pages** 灰度备线由 `deploy-pages.yml` 在 `main` push 时同步。
 
-目标流：
+实际数据流：
 
 ```mermaid
 flowchart TD
     Kaggle["Kaggle TMDB Daily Updates"]
-    Nightly["GitHub Actions nightly"]
-    Weekly["GitHub Actions weekly/monthly refit"]
+    Nightly["GHA nightly_vote_refresh.yml<br/>(0 20 * * * UTC)"]
+    Monthly["GHA monthly_refit.yml<br/>(0 20 1 * * UTC)"]
     SupabaseMovies["Supabase movies"]
     Pending["Supabase movies_pending"]
-    Reference["Supabase galaxy_v1_reference"]
-    Export["export_from_supabase.py"]
-    Cloudflare["Cloudflare Pages static data"]
+    Reference["Supabase galaxy_v1_reference (immutable)"]
+    Threshold["Supabase threshold_versions (active)"]
+    Export["scripts/cron/export_from_supabase.py"]
+    R2["Cloudflare R2 (galaxy_*.json.gz)"]
+    Pages["Cloudflare Pages (frontend/dist)"]
+    GHPages["GitHub Pages (gray release)"]
     Browser["Browser"]
 
     Nightly -->|"download"| Kaggle
-    Nightly -->|"clean + diff"| SupabaseMovies
-    Nightly -->|"new eligible ids"| Pending
+    Nightly -->|"clean (frozen threshold)"| Threshold
+    Nightly -->|"upsert vote_count/avg/popularity"| SupabaseMovies
+    Nightly -->|"new eligible ids (BYTEA features)"| Pending
     Nightly --> Export
-    Export --> Cloudflare
+    Export -->|"upload_galaxy_r2.py + manifest"| R2
+    Nightly -->|"pages-action: frontend/dist"| Pages
 
-    Weekly -->|"load movies + pending"| SupabaseMovies
-    Weekly --> Pending
-    Weekly -->|"fit_transform"| Weekly
-    Reference -->|"v1 xy"| Weekly
-    Weekly -->|"Procrustes aligned xy"| SupabaseMovies
-    Weekly --> Export
-    Export --> Cloudflare
+    Monthly -->|"recompute threshold + active"| Threshold
+    Monthly -->|"load movies + pending + bundle"| SupabaseMovies
+    Monthly --> Pending
+    Monthly -->|"fit_transform DensMAP"| Monthly
+    Reference -->|"v1 xy"| Monthly
+    Monthly -->|"Procrustes aligned xy"| SupabaseMovies
+    Monthly --> Export
+    Export --> R2
+    Monthly -->|"pages-action: frontend/dist"| Pages
 
-    Browser -->|"fetch galaxy_data.json.gz"| Cloudflare
+    Browser -->|"fetch app"| Pages
+    Browser -->|"fetch galaxy_*.json.gz"| R2
+    Browser -.->|"gray release"| GHPages
 ```
 
 ## 4. 数据源与清洗规则
@@ -469,72 +480,114 @@ Phase 18 目标 Supabase 表：
 
 ## 11. 自动化任务
 
-### 11.1 Nightly Vote Refresh
+### 11.1 Nightly Vote Refresh（P18.4）
 
-频率：每日，建议 UTC 20:00（北京时间 04:00）。
+- **Workflow**：[`.github/workflows/nightly_vote_refresh.yml`](../../.github/workflows/nightly_vote_refresh.yml)（schedule: `0 20 * * *` UTC + `workflow_dispatch`，runner `ubuntu-24.04`，`timeout-minutes: 90`）。
+- **入口脚本**：[`scripts/cron/nightly_vote_refresh.py`](../../scripts/cron/nightly_vote_refresh.py) → [`scripts/cron/export_from_supabase.py`](../../scripts/cron/export_from_supabase.py)。
+- **冻结门槛**：每日只读 **`threshold_versions.is_active = true`** 行的 `thresholds_json`，**不重算**动态门槛；门槛版本更新只在 P18.5 月度任务中发生。
+
+职责（与脚本实现一致）：
+
+1. 下载 Kaggle daily update（`kaggle datasets download alanvourch/tmdb-movies-daily-updates`，CLI 多路回退）。
+2. `run_cleaning_pipeline(..., frozen_year_thresholds=...)` 得到当日 cleaned df。
+3. 与 Supabase `movies` diff：
+   - **现有 id**：批量 upsert 整行（保留 `x/y/z`），刷新 `vote_count` / `vote_average` / `popularity`。
+   - **新过线 id**：CPU MiniLM embedding + `rank_weighted_genre_matrix` + `one_hot_language_matrix_with_fallback`，BYTEA 以 `\\x` hex 文本写入 **`movies_pending`**。
+   - **当日未出现的在库片**：仅记 `below_threshold_observed`，**不删除**——是否剔除由月度 membership 决定。
+4. **每月 1 日**额外批量 upsert **`vote_snapshots`**。
+5. 调子进程 `export_from_supabase.py` 重导 `galaxy_data.json` / `.gz` / `galaxy_search_index.json.gz`（meta.version 形如 `YYYY.MM.DD.daily.<seq>`）。
+6. **P18.6b**：将 `galaxy_data.json.gz` / `galaxy_search_index.json.gz` 上传到 **Cloudflare R2**，写出 `galaxy_assets_manifest.json`，并在 `R2_GALAXY_PRUNE_AFTER_UPLOAD=1` 时从 `frontend/public/data/` 删除大 gzip（避免 Pages 25MiB 限制）。
+7. **P18.6**：构建 `frontend/dist` 并通过 `cloudflare/pages-action@v1.5.0` Direct Upload 部署到 **Cloudflare Pages**；GitHub Pages workflow（[`.github/workflows/deploy-pages.yml`](../../.github/workflows/deploy-pages.yml)）保留为灰度备线。
+
+每日任务不重算 UMAP 坐标，不更新 `threshold_versions`。
+
+### 11.2 Monthly Full Refit（P18.5 + P18.5b）
+
+- **Workflow**：[`.github/workflows/monthly_refit.yml`](../../.github/workflows/monthly_refit.yml)（schedule: `0 20 1 * *` UTC + `workflow_dispatch(anchor_mode=soft|hard|skip)`，runner `ubuntu-24.04`，`timeout-minutes: 210`）。
+- **入口脚本**：[`scripts/cron/monthly_refit.py`](../../scripts/cron/monthly_refit.py)。
+- **频率**：每月一次。weekly 仅 `workflow_dispatch`（**不**作为默认 schedule），与计划「日刷新 + 月度 refit」最终决策一致。
 
 职责：
 
-1. 下载 Kaggle daily update。
-2. 执行清洗，得到当前完整 cleaned df。
-3. 与 Supabase `movies` diff。
-4. 对已有 id 更新 `vote_count`、`vote_average`、`popularity`。
-5. 对新通过门槛的 id 计算 feature vectors，写入 `movies_pending`。
-6. 重导 `galaxy_data.json.gz` 与 `galaxy_search_index.json.gz`。
-7. 部署到 Cloudflare Pages。
-
-每日任务不重算 UMAP 坐标。
-
-### 11.2 Weekly / Monthly Full Refit
-
-频率：由 Phase 18.1 CPU benchmark 决定，默认优先每周，若耗时或配额压力过高则改月度。
-
-职责：
-
-1. 从 Supabase 拉取 `movies` + `movies_pending`。
-2. 复用/重算特征矩阵。
-3. 使用当前 production 参数全量 `fit_transform`。
-4. 用 `galaxy_v1_reference` 做 Procrustes 对齐。
-5. 写回 `movies.x/y`。
-6. 将 pending 新片合入 movies，清空 pending。
-7. 重导并部署静态 JSON。
+1. 拉取 Kaggle 最新 raw → 重算动态门槛（`compute_year_to_vote_threshold`），写入新行并 active **`threshold_versions`**（注：当前实现写入时机在 UMAP 之前；锚点 hard fail 时可能产生「门槛已切、坐标未更新」的中间态，运维需知情）。
+2. 加载 **embedding 四件套**（`cleaned.csv` / `text_embeddings.npy` / `genre_vectors.npy` / `language_vectors.npy`），来源优先级：`GALAXY_EMBED_BUNDLE_URL` zip → Actions cache → 仓库内副本；新过线但缓存缺失的 id 走 **`movies_pending`** BYTEA 还原或当场重编码。
+3. `fuse_modalities` + `_fit_umap_learn(densmap=True, n_neighbors=300, min_dist=0.4, metric=cosine, random_state=42)` 全量 `fit_transform`。
+4. 调用 `align_to_reference`（[`scripts/feature_engineering/procrustes_align.py`](../../scripts/feature_engineering/procrustes_align.py)）对齐到 **`galaxy_v1_reference`**（永久不变）。
+5. **P18.5b 锚点闸**（环境变量 `MONTHLY_ANCHOR_MODE`，CI 默认 `soft`）：
+   - **`soft`**（默认）：`mean_anchor_l2 > --anchor-rmse-abort (0.25)` 仅 WARN；只有 `mean > MONTHLY_ANCHOR_SOFT_FAIL_MAX`（默认 50）或非有限值才 fail。
+   - **`hard`**：超 `--anchor-rmse-abort` 即 fail。
+   - **`skip`**：不因锚点残差 fail（仅排障使用）。
+   - 结构性错误（`n_anchors < 2` / NaN / Inf / export validate 失败 / 四件套缺失）始终 fail。
+6. 把对齐后 (x, y) upsert 回 `movies`；当月已合并的 pending 行 DELETE。
+7. 调 `export_from_supabase.py` 导出 `meta.version = YYYY.MM.DD.monthly.<seq>` 与 `meta.threshold_version`。
+8. **P18.5b artifact**：写出根目录 `monthly_refit_meta.json` 并随 `galaxy-export-monthly-<run_id>` 一并 `actions/upload-artifact`；字段含 `anchor_mean_l2`/`anchor_max_l2`/`n_anchors`/`n_fit`/`cleaned_rows`/`cache_bundle_rows`/`membership_count`/`threshold_version`/`raw_source`/`bundle_fingerprint`/`anchor_mode` 等。日志同时按 **`monthly_refit_kv`** 单行键值打印，便于 `grep`。
+9. **P18.6 / P18.6b** 末端步骤与 nightly 一致：上传 R2 → 构建并 Direct Upload Pages。
 
 ### 11.3 Procrustes 对齐
 
-周期性 refit 后，UMAP 输出可能出现任意旋转、反射、平移与尺度漂移。为保持用户长期空间记忆，所有常规 refit 必须对齐到 v1 reference：
+月度 refit 后，UMAP 输出可能出现任意旋转、反射、平移与尺度漂移。为保持用户长期空间记忆，所有常规 refit 必须对齐到 `galaxy_v1_reference`：
 
-1. 取新旧共同 id。
-2. 中心化新坐标与 v1 坐标。
-3. 求最优正交变换与尺度。
-4. 应用到本次全部点，包括新电影。
+1. 取新旧共同 id（`common_mask`，要求 `n_common >= 2`）。
+2. 中心化新坐标 `A` 与 v1 坐标 `B`。
+3. `scipy.linalg.orthogonal_procrustes` 求 `R`（允许反射）；用闭式标量 `c = ⟨A R, B⟩_F / ‖A R‖_F²` 求均匀缩放。
+4. 应用 `aligned = c · (new_xy − A_mean) @ R + B_mean` 到全部点（含尚无 v1 条目的新片）。
 
 该过程不是前端动画；它是数据层稳定化步骤。
 
+### 11.4 锚点观测期与 P95 收紧
+
+P18.5b 上线初期采用「软闸 + 强日志 + artifact」策略，原因是 GHA 使用 Kaggle **日更 raw**、四件套 zip 来自**本机较早快照**时不可能字节级恒等，全量 refit 后 `mean_anchor_l2` 常显著大于 0.25。
+
+- **观测期**：累积数月 `monthly_refit_meta.json` 与 `monthly_refit_kv` 日志，统计 P95 / max；不强制每月 mean L2 < 0.25 作为门禁。
+- **收紧路径**：观测足够样本后，在新一轮 PR 中明确 P95 阈值 → 把 `MONTHLY_ANCHOR_MODE` 默认改回 `hard`、调整 `--anchor-rmse-abort`，或保留 `soft` 但下调 `MONTHLY_ANCHOR_SOFT_FAIL_MAX`。
+- **临时 unblock**：`workflow_dispatch` 可选 `anchor_mode = skip`，仅用于排障。
+
+### 11.5 Runner 资源与 Fallback
+
+- 当前 GHA 实测：`ubuntu-24.04` public runner（4 CPU / 16GB RAM / 14GB SSD）下 monthly UMAP 墙钟约 10–12 分钟，全 job 在 `timeout-minutes: 210` 内。
+- 若未来公共 runner 资源压力变大或 OOM：降级为**季度/半年度本地机器** full refit，仅由 `workflow_dispatch` 跑「接收产物 + 部署」的轻量 job；daily nightly 自动化保留。
+
 ## 12. 部署
 
-### 12.1 当前部署
-
-当前静态部署可使用 GitHub Pages / Vercel / Netlify。前端加载：
+### 12.1 当前部署架构（Phase 18 出口）
 
 ```text
-BASE_URL + "data/galaxy_data.json.gz"
-BASE_URL + "data/galaxy_search_index.json.gz"
+[Browser]
+   ├── 前端 bundle  ←  Cloudflare Pages（the-movie-cosmos.pages.dev）
+   └── galaxy_data.json.gz / galaxy_search_index.json.gz
+                    ←  Cloudflare R2（公开读 + CORS）
+                       ↑
+                       └─ GitHub Actions（nightly / monthly）写入
+
+[GitHub Pages]（灰度备线，仍由 push-to-main workflow 部署）
 ```
 
-加载逻辑支持：
+- **Pages 职责**：托管 `frontend/dist`（前端 React+Three.js 应用壳）。**Direct Upload via `cloudflare/pages-action@v1.5.0`** 作为生产发布主链路；Pages 侧 Git 自动构建已 **Disconnect**，避免与 CI 行为冲突。
+- **R2 职责**：托管所有 **超过 Cloudflare Pages 单文件 25MiB 上限** 的静态对象（当前主要是 `galaxy_data.json.gz`，约 31MB）。Bucket 配置公开读（`r2.dev` 子域或自定义域），CORS 允许 Pages 站点源 `GET` / `HEAD`。
+- **前端 URL 解析**（[`frontend/src/lib/galaxyAssetUrls.ts`](../../frontend/src/lib/galaxyAssetUrls.ts) 优先级）：
+  1. 构建期 `VITE_GALAXY_DATA_GZIP_URL` / `VITE_GALAXY_SEARCH_INDEX_GZIP_URL`
+  2. 运行时 `?dataset=` 实验参数
+  3. `data/galaxy_assets_manifest.json`（由 [`scripts/cron/upload_galaxy_r2.py`](../../scripts/cron/upload_galaxy_r2.py) 在每次 cron 写入，包含 `galaxy_data_gzip_url` / `galaxy_search_index_gzip_url` / `data_version`）
+  4. 默认同源 `BASE_URL + data/*.json.gz`（仅当 R2 secrets 全部缺失时才会到达此回退路径）
+- **GitHub Pages**：[`.github/workflows/deploy-pages.yml`](../../.github/workflows/deploy-pages.yml) 仍在 push 到 `main` 时部署到 GitHub Pages，作为灰度备线 1–2 周内可用；不依赖 R2，浏览器在该路径上仍走同源 gzip。
+- **数据加载技术**（不变）：HTTP 层透明 gzip 或原始 gzip bytes + `DecompressionStream`，由 `frontend/src/data/loadGalaxyGzip.ts` 处理。
+- **Vite `base`**：仓库默认 `process.env.VITE_BASE_PATH ?? '/'`（适配 Pages 根路径与自定义域）；GitHub Pages 子路径部署时由 [`.github/workflows/deploy-pages.yml`](../../.github/workflows/deploy-pages.yml) 注入对应 `VITE_BASE_PATH` 即可。
 
-- HTTP 层透明 gzip
-- 原始 gzip bytes + `DecompressionStream`
+### 12.2 Secrets 与运维分工
 
-### 12.2 Phase 18 目标部署
+| 用途 | Secret | 备注 |
+|------|--------|------|
+| Supabase 写库 / 读取 | `SUPABASE_URL`、`SUPABASE_SERVICE_ROLE_KEY` | nightly + monthly 共用；`service_role` 绕过 RLS（参考 P18.3 `REVOKE UPDATE,DELETE ON galaxy_v1_reference FROM service_role`） |
+| Kaggle daily update | `KAGGLE_USERNAME`、`KAGGLE_KEY` | nightly + monthly 共用 |
+| 月度 embedding bundle | `GALAXY_EMBED_BUNDLE_URL` | 单行 http(s) zip 直链；`monthly_refit.yml` trim/CRLF 清洗后再 `curl` |
+| Cloudflare Pages 部署 | `CLOUDFLARE_API_TOKEN`、`CLOUDFLARE_ACCOUNT_ID`、`CLOUDFLARE_PAGES_PROJECT_NAME` | API Token 仅需 **Account → Cloudflare Pages → Edit** |
+| Cloudflare R2 上传 | `R2_ACCOUNT_ID`、`R2_ACCESS_KEY_ID`、`R2_SECRET_ACCESS_KEY`、`R2_BUCKET`、`R2_PUBLIC_BASE_URL` | 5 个变量缺一即 R2 step 安全 skip（不阻塞 nightly/monthly） |
 
-目标：
+### 12.3 P18 范围外
 
-- Cloudflare Pages 托管前端与静态数据。
-- GitHub Actions cron 生成产物后触发 Cloudflare Pages 部署。
-- GitHub Pages 保留 1-2 周作为灰度备线。
-
-国内访问优化不属于 Phase 18 出口；如需要，后续再评估 ICP 备案与国内 OSS/COS 镜像。
+- **国内访问 / 备案 / 大陆 CDN 镜像**：不在 Phase 18 出口；规划为 Phase 19+。
+- **R2 「按版本 key」上传与长缓存 immutable** 策略：当前为 `galaxy/galaxy_data.json.gz` 固定 key + manifest `?v=data_version` query；可选增强见 [P18.6b 操作手册](../guides/P18.6b%20Cloudflare%20R2%20上线操作手册.md) §10。
+- **Deprecation**：`cloudflare/pages-action@v1.5.0` 已被官方标记为 deprecated（建议迁 `wrangler-action`），Node 20 actions 也将在未来淘汰；本期保留为可复现固定版本，待下一 phase 升级。
 
 ## 13. 版本化与验收
 

@@ -19,10 +19,10 @@ todos:
     status: completed
   - id: p185-monthly-refit
     content: P18.5 GH Actions monthly：Kaggle/raw、threshold、全量 UMAP+Procrustes、写 movies、export、validate；weekly 仅 workflow_dispatch。验收优先 Supabase+GHA+产物完整链；四件套与 Kaggle 快照对齐（本地定期重打 zip）。锚点残差见 p185b 软闸策略，不在此 todo 内重复实现细节
-    status: pending
+    status: completed
   - id: p185b-monthly-anchor-observability
     content: P18.5b 锚点软闸+观测：monthly_refit 与 workflow 打结构化日志（mean/max L2、n_anchors、cleaned 行数、membership、threshold_version、可选 bundle/raw 指纹）；artifact 上传 monthly_refit_meta.json（或等价）；仅极端残差或结构性错误 fail CI；记录数周后 P95 再定硬闸/告警；workflow_dispatch 可临时跳过软闸以 unblock
-    status: pending
+    status: completed
   - id: p186-cf-pages-cutover
     content: P18.6 Cloudflare Pages + 自定义域名；P18.4/P18.5（及 p185b artifact）末尾 pages-action 部署；保留 GitHub Pages 灰度 1–2 周；部署不依赖锚点硬阈值通过
     status: pending

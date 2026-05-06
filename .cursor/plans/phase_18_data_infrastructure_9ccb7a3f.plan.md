@@ -28,7 +28,7 @@ todos:
     status: completed
   - id: p186b-r2-galaxy-assets
     content: P18.6b Cloudflare R2：将 galaxy_data.json.gz / galaxy_search_index.json.gz 等大文件上传至 R2（绕 Pages 25MiB）；GHA nightly/monthly 写入对象 + 可选小 manifest（版本/URL）；公开读域名或 r2.dev + CORS；前端/环境变量指向 R2 URL；定价与 ops 见 docs 或 Cloudflare R2 pricing
-    status: pending
+    status: completed
   - id: p187-doc-sync-acceptance
     content: P18.7 文档同步 (Tech Spec / Data Pipeline / README) + 实施报告 + 出口验收清单
     status: pending

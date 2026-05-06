@@ -4,6 +4,15 @@ on:
   schedule:
     - cron: "0 20 1 * *" # 20:00 UTC on the 1st of each month (~04:00 Beijing 2nd)
   workflow_dispatch:
+    inputs:
+      anchor_mode:
+        description: "P18.5b Procrustes anchor gate (see scripts/cron/monthly_refit.py)."
+        type: choice
+        default: soft
+        options:
+          - soft
+          - hard
+          - skip
 
 permissions:
   contents: read
@@ -114,6 +123,8 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
           KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
+          MONTHLY_ANCHOR_MODE: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.anchor_mode) || 'soft' }}
+          MONTHLY_ANCHOR_SOFT_FAIL_MAX: "50"
         run: |
           set -euo pipefail
           python scripts/cron/monthly_refit.py
@@ -123,6 +134,7 @@ jobs:
           name: galaxy-export-monthly-${{ github.run_id }}
           if-no-files-found: warn
           path: |
+            monthly_refit_meta.json
             frontend/public/data/galaxy_data.json
             frontend/public/data/galaxy_data.json.gz
             frontend/public/data/galaxy_search_index.json.gz

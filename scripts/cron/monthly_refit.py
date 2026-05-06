@@ -8,7 +8,9 @@ Requires cached ``data/output/{cleaned.csv,text_embeddings.npy,genre_vectors.npy
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib.util
+import json
 import os
 import shutil
 import subprocess
@@ -113,19 +115,124 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         type=float,
         default=0.25,
         help=(
-            "Abort if mean L2 residual vs galaxy_v1_reference after Procrustes exceeds this. "
-            "Full monthly refit (different N + mixed cached/re-encoded rows) often yields >> 0.25 — "
-            "use --skip-anchor-rmse-abort after reviewing logs, or tighten embedding bundle parity."
+            "In anchor_mode=hard: abort when mean anchor L2 exceeds this. "
+            "In soft mode: warn above this value but continue unless mean exceeds --anchor-soft-fail-max / env. "
+            "Typical monthly drift can exceed 0.25 when Kaggle raw and embedding bundle differ — use soft on CI."
         ),
     )
     p.add_argument(
         "--skip-anchor-rmse-abort",
         action="store_true",
-        help="Log anchor mean/max L2 but do not abort when above --anchor-rmse-abort (still exits 0 if rest succeeds)",
+        help="Deprecated: same as anchor_mode=skip. Log anchor mean/max L2 but never fail the job on residual.",
+    )
+    p.add_argument(
+        "--anchor-mode",
+        choices=("soft", "hard", "skip"),
+        default=None,
+        help=(
+            "P18.5b gate: soft = warn above --anchor-rmse-abort, fail only above MONTHLY_ANCHOR_SOFT_FAIL_MAX (or --anchor-soft-fail-max); "
+            "hard = fail above --anchor-rmse-abort; skip = never fail on anchor residual. "
+            "Default when unset: MONTHLY_ANCHOR_MODE env, else hard (local)."
+        ),
+    )
+    p.add_argument(
+        "--anchor-soft-fail-max",
+        type=float,
+        default=None,
+        help="In soft mode, abort if mean anchor L2 exceeds this (default: env MONTHLY_ANCHOR_SOFT_FAIL_MAX or 50).",
     )
     p.add_argument("--dry-run", action="store_true", help="No Supabase writes / no export subprocess")
     p.add_argument("--skip-export", action="store_true", help="Do not run export_from_supabase.py after refit")
     return p.parse_args(argv)
+
+
+_META_OUT = _REPO_ROOT / "monthly_refit_meta.json"
+
+
+def _bundle_fingerprint(cache_dir: Path, names: tuple[str, ...]) -> str:
+    """Stable-ish ops fingerprint: name + size + mtime_ns per file (no full-file hash of huge npy)."""
+    h = hashlib.sha256()
+    for name in names:
+        p = cache_dir / name
+        st = p.stat()
+        h.update(name.encode("utf-8", errors="replace"))
+        h.update(str(st.st_size).encode("ascii"))
+        h.update(str(st.st_mtime_ns).encode("ascii"))
+        h.update(b"|")
+    return h.hexdigest()[:16]
+
+
+def _raw_fingerprint(path: Path, *, max_bytes: int = 4_000_000) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as fp:
+        digest.update(fp.read(max_bytes))
+    digest.update(str(path.stat().st_size).encode("ascii"))
+    return digest.hexdigest()[:16]
+
+
+def _write_monthly_meta(payload: dict[str, Any]) -> None:
+    payload = dict(payload)
+    payload.setdefault("written_at", datetime.now(timezone.utc).isoformat())
+    out = _META_OUT
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    print(f"[P18.5 monthly] wrote {out}", flush=True)
+
+
+def _print_monthly_kv(d: dict[str, Any]) -> None:
+    """Single-line grep-friendly observability (P18.5b)."""
+    parts = [f"{k}={v}" for k, v in sorted(d.items(), key=lambda kv: kv[0])]
+    print("monthly_refit_kv " + " ".join(parts), flush=True)
+
+
+def _resolve_anchor_mode(args: argparse.Namespace) -> tuple[str, float]:
+    if bool(getattr(args, "skip_anchor_rmse_abort", False)):
+        print("[P18.5 monthly] note: --skip-anchor-rmse-abort sets anchor_mode=skip", flush=True)
+        return "skip", _resolve_soft_fail_max(args)
+    if args.anchor_mode is not None:
+        return str(args.anchor_mode).strip().lower(), _resolve_soft_fail_max(args)
+    env = os.environ.get("MONTHLY_ANCHOR_MODE", "").strip().lower()
+    if env in ("soft", "hard", "skip"):
+        return env, _resolve_soft_fail_max(args)
+    return "hard", _resolve_soft_fail_max(args)
+
+
+def _resolve_soft_fail_max(args: argparse.Namespace) -> float:
+    if args.anchor_soft_fail_max is not None:
+        return float(args.anchor_soft_fail_max)
+    raw = os.environ.get("MONTHLY_ANCHOR_SOFT_FAIL_MAX", "").strip()
+    if raw:
+        return float(raw)
+    return 50.0
+
+
+def _anchor_residual_gate(
+    *,
+    mean_anchor: float,
+    max_anchor: float,
+    mode: str,
+    rmse_abort: float,
+    soft_fail_max: float,
+) -> tuple[bool, str]:
+    """Return (ok, reason). ok=False means exit 1."""
+    if not np.isfinite(mean_anchor) or not np.isfinite(max_anchor):
+        return False, "non_finite_anchor_metrics"
+    if mode == "skip":
+        return True, ""
+    if mode == "hard":
+        if mean_anchor > rmse_abort:
+            return False, f"hard_mean_anchor>{rmse_abort}"
+        return True, ""
+    # soft
+    if mean_anchor > soft_fail_max:
+        return False, f"soft_mean_anchor>{soft_fail_max}"
+    if mean_anchor > rmse_abort:
+        print(
+            f"[P18.5 monthly] WARN anchor soft-band: mean_anchor_l2={mean_anchor:.6g} > anchor_rmse_abort={rmse_abort} "
+            f"(continuing; fail only above soft_fail_max={soft_fail_max})",
+            flush=True,
+        )
+    return True, ""
 
 
 def _resolve_kaggle_csv(root: Path) -> Path:
@@ -347,6 +454,12 @@ def main(argv: list[str] | None = None) -> int:
             raw_path = _download_kaggle_to(tmp_dir)
 
         print(f"[P18.5 monthly] Using raw CSV: {raw_path}", flush=True)
+        raw_fp = _raw_fingerprint(raw_path)
+        bundle_fp = _bundle_fingerprint(cache_dir, req)
+        print(
+            f"[P18.5 monthly] raw_sha256prefix={raw_fp} bundle_fingerprint={bundle_fp}",
+            flush=True,
+        )
         raw = load_raw_csv(raw_path)
         print(f"[P18.5 monthly] raw.shape={raw.shape}", flush=True)
 
@@ -422,6 +535,12 @@ def main(argv: list[str] | None = None) -> int:
         from supabase import create_client  # noqa: WPS433
 
         supabase = create_client(url, key)
+
+        anchor_mode, soft_fail_max = _resolve_anchor_mode(args)
+        print(
+            f"[P18.5 monthly] resolved anchor_mode={anchor_mode!r} anchor_soft_fail_max={soft_fail_max}",
+            flush=True,
+        )
 
         run_num = os.environ.get("GITHUB_RUN_NUMBER", "0").strip() or "0"
         utc_now = datetime.now(timezone.utc)
@@ -552,27 +671,54 @@ def main(argv: list[str] | None = None) -> int:
             - np.asarray([ref_xy_by_id[mid] for mid in ids_arr[anchor_mask]], dtype=np.float64),
             axis=1,
         )
-        mean_anchor = float(np.mean(res))
-        max_anchor = float(np.max(res))
+        n_anchors = int(np.sum(anchor_mask))
+        mean_anchor = float(np.mean(res)) if res.size else float("nan")
+        max_anchor = float(np.max(res)) if res.size else 0.0
         print(
             f"[P18.5 monthly] anchor L2 vs galaxy_v1_reference after align: mean={mean_anchor:.6g} max={max_anchor:.6g} "
-            f"n_anchors={int(np.sum(anchor_mask)):,}",
+            f"n_anchors={n_anchors:,}",
             flush=True,
         )
-        thresh = float(args.anchor_rmse_abort)
-        if mean_anchor > thresh:
-            if args.skip_anchor_rmse_abort:
-                print(
-                    f"[P18.5 monthly] WARN: mean anchor residual {mean_anchor:.6g} > --anchor-rmse-abort={thresh} "
-                    "(continuing because --skip-anchor-rmse-abort)",
-                    flush=True,
-                )
-            else:
-                print(
-                    f"[P18.5 monthly] ABORT: mean anchor residual {mean_anchor:.6g} > --anchor-rmse-abort={thresh}",
-                    flush=True,
-                )
-                return 1
+        rmse_abort = float(args.anchor_rmse_abort)
+        raw_source = f"{raw_path.name}:sha256prefix={raw_fp}"
+        kv_obs: dict[str, Any] = {
+            "anchor_max_l2": f"{max_anchor:.8g}",
+            "anchor_mean_l2": f"{mean_anchor:.8g}",
+            "anchor_mode": anchor_mode,
+            "anchor_rmse_abort": f"{rmse_abort:.8g}",
+            "anchor_soft_fail_max": f"{soft_fail_max:.8g}",
+            "bundle_fingerprint": bundle_fp,
+            "cache_bundle_rows": str(n_cache),
+            "cleaned_rows": str(int(len(cleaned))),
+            "membership_count": str(n_fit),
+            "n_anchors": str(n_anchors),
+            "n_fit": str(n_fit),
+            "raw_source": raw_source,
+            "threshold_version": ver_label,
+        }
+        _print_monthly_kv(kv_obs)
+
+        gate_ok, gate_reason = _anchor_residual_gate(
+            mean_anchor=mean_anchor,
+            max_anchor=max_anchor,
+            mode=anchor_mode,
+            rmse_abort=rmse_abort,
+            soft_fail_max=soft_fail_max,
+        )
+        if not gate_ok:
+            meta_fail = {
+                **kv_obs,
+                "abort_reason": gate_reason,
+                "status": "aborted_anchor_residual",
+                "threshold_version": ver_label,
+            }
+            _write_monthly_meta(meta_fail)
+            print(
+                f"[P18.5 monthly] ABORT anchor gate: mode={anchor_mode!r} reason={gate_reason!r} "
+                f"mean_anchor_l2={mean_anchor:.6g} rmse_abort={rmse_abort} soft_fail_max={soft_fail_max}",
+                flush=True,
+            )
+            return 1
 
         cleaned_set = set(cleaned_ids_sorted)
         db_ids = set(db_by_id.keys())
@@ -581,6 +727,9 @@ def main(argv: list[str] | None = None) -> int:
             f"[P18.5 monthly] below-threshold existing movies (left unchanged): {len(below_thr):,}",
             flush=True,
         )
+        kv_obs["below_threshold_count"] = str(len(below_thr))
+        kv_obs["db_movie_count"] = str(len(db_by_id))
+        kv_obs["pending_count"] = str(len(pending_by_id))
 
         now_iso = utc_now.isoformat()
         upserts: list[dict[str, Any]] = []
@@ -609,6 +758,7 @@ def main(argv: list[str] | None = None) -> int:
             print(f"[P18.5 monthly] upserted movies [{i}, {i + len(part)})", flush=True)
 
         merged_pending = [mid for mid in cleaned_ids_sorted if mid in pending_by_id]
+        kv_obs["merged_pending_count"] = str(len(merged_pending))
         if merged_pending:
             for i in range(0, len(merged_pending), chunk):
                 part = merged_pending[i : i + chunk]
@@ -633,6 +783,9 @@ def main(argv: list[str] | None = None) -> int:
                 env={**os.environ, "PYTHONUNBUFFERED": "1"},
             )
             if ex.returncode != 0:
+                _write_monthly_meta(
+                    {**kv_obs, "status": "aborted_export", "threshold_version": ver_label}
+                )
                 raise SystemExit(ex.returncode)
             val = subprocess.run(
                 [
@@ -644,8 +797,21 @@ def main(argv: list[str] | None = None) -> int:
                 cwd=str(_REPO_ROOT),
             )
             if val.returncode != 0:
+                meta_val = {
+                    **kv_obs,
+                    "status": "aborted_validate",
+                    "threshold_version": ver_label,
+                }
+                _write_monthly_meta(meta_val)
                 raise SystemExit(val.returncode)
 
+        meta_ok = {
+            **kv_obs,
+            "status": "success",
+            "threshold_version": ver_label,
+        }
+        _write_monthly_meta(meta_ok)
+        _print_monthly_kv({**kv_obs, "status": "success"})
         print(f"[P18.5 monthly] completed threshold_version={ver_label!r}", flush=True)
         return 0
     finally:

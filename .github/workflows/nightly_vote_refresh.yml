@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  deployments: write
 
 concurrency:
   group: p18-4-nightly-vote-refresh
@@ -15,7 +16,7 @@ concurrency:
 jobs:
   refresh:
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 90
     env:
       PYTHONUNBUFFERED: "1"
       OMP_NUM_THREADS: "4"
@@ -57,11 +58,27 @@ jobs:
             frontend/public/data/galaxy_data.json.gz
             frontend/public/data/galaxy_search_index.json.gz
 
-      # P18.6: uncomment after Cloudflare Pages + secrets are configured.
-      # - name: Deploy to Cloudflare Pages
-      #   uses: cloudflare/pages-action@v1
-      #   with:
-      #     apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      #     accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      #     projectName: ${{ secrets.CLOUDFLARE_PAGES_PROJECT_NAME }}
-      #     directory: frontend/dist
+      # P18.6: Direct Upload to Cloudflare Pages (GitHub Pages workflow remains for gray release).
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Upgrade npm (Linux optional native deps)
+        run: npm i -g npm@10.8.3
+
+      - name: Install and build frontend (embed cron-exported galaxy_data)
+        run: |
+          set -euo pipefail
+          rm -rf node_modules frontend/node_modules package-lock.json
+          npm install --include=optional --no-audit --no-fund
+          npm run build -w frontend
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/pages-action@v1.5.0
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: ${{ secrets.CLOUDFLARE_PAGES_PROJECT_NAME }}
+          directory: frontend/dist
+          wranglerVersion: "3"
+          gitHubToken: ${{ github.token }}

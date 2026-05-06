@@ -10,7 +10,8 @@ const dirname = path.dirname(fileURLToPath(import.meta.url))
 const workspaceModules = path.resolve(dirname, '../node_modules')
 
 export default defineConfig({
-  base: '/chronicle_v3_3d_galaxy/',
+  // Default to root path for Cloudflare Pages; override for subpath deployments.
+  base: process.env.VITE_BASE_PATH ?? '/',
   plugins: [react(), tailwindcss(), glsl()],
   server: {
     host: '127.0.0.1',

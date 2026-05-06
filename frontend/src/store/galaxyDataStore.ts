@@ -1,8 +1,9 @@
 import { create } from 'zustand'
 
 import type { GalaxyGzipProgress } from '@/data/loadGalaxyGzip'
+import { resolveGalaxyDataGzipUrl } from '@/lib/galaxyAssetUrls'
 import type { GalaxyData } from '@/types/galaxy'
-import { loadGalaxyData } from '@/utils/loadGalaxyData'
+import { galaxyDataDefaultUrl, loadGalaxyData } from '@/utils/loadGalaxyData'
 
 export type GalaxyLoadStatus = 'idle' | 'loading' | 'ready' | 'error'
 
@@ -24,11 +25,12 @@ export const useGalaxyDataStore = create<GalaxyDataStoreState>((set) => ({
   fetchGalaxyData: async (url) => {
     set({ status: 'loading', errorMessage: null, loadProgress: null })
     try {
-      const data = await loadGalaxyData(
-        url !== undefined
-          ? { url, onProgress: (p) => set({ loadProgress: p }) }
-          : { onProgress: (p) => set({ loadProgress: p }) },
-      )
+      const resolved =
+        url !== undefined ? url : await resolveGalaxyDataGzipUrl(galaxyDataDefaultUrl())
+      const data = await loadGalaxyData({
+        url: resolved,
+        onProgress: (p) => set({ loadProgress: p }),
+      })
       set({ status: 'ready', data, errorMessage: null, loadProgress: null })
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)

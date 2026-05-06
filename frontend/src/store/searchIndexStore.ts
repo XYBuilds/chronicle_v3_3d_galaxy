@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 
-import { loadSearchIndex } from '@/data/loadSearchIndex'
+import { loadSearchIndex, searchIndexDefaultUrl } from '@/data/loadSearchIndex'
+import { resolveSearchIndexGzipUrl } from '@/lib/galaxyAssetUrls'
 import type { Meta } from '@/types/galaxy'
 import type { SearchIndex } from '@/types/searchIndex'
 
@@ -38,7 +39,8 @@ export const useSearchIndexStore = create<SearchIndexStoreState>((set, get) => (
     set({ status: 'loading', errorMessage: null })
     try {
       const genrePaletteKeys = Object.keys(meta.genre_palette)
-      const data = await loadSearchIndex({ genrePaletteKeys })
+      const indexUrl = await resolveSearchIndexGzipUrl(searchIndexDefaultUrl())
+      const data = await loadSearchIndex({ url: indexUrl, genrePaletteKeys })
       set({ status: 'ready', data, errorMessage: null })
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)

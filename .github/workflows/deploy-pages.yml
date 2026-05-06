@@ -1,3 +1,4 @@
+# P18.6 gray release: keep GitHub Pages deploy alongside Cloudflare Pages for 1–2 weeks after cutover.
 name: Deploy GitHub Pages
 
 on:

@@ -25,7 +25,7 @@ todos:
     status: completed
   - id: p186-cf-pages-cutover
     content: P18.6 Cloudflare Pages + 自定义域名；P18.4/P18.5（及 p185b artifact）末尾 pages-action 部署；保留 GitHub Pages 灰度 1–2 周；部署不依赖锚点硬阈值通过
-    status: pending
+    status: completed
   - id: p187-doc-sync-acceptance
     content: P18.7 文档同步 (Tech Spec / Data Pipeline / README) + 实施报告 + 出口验收清单
     status: pending

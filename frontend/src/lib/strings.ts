@@ -1,5 +1,5 @@
 /**
- * HUD copy: English in `./locales/en.json`, Chinese in `./locales/zh.json`.
+ * HUD copy: `./locales/{en,zh,es}.json`.
  * Runtime locale via {@link useStrings}; non-React paths use {@link getStrings}.
  */
 
@@ -92,6 +92,7 @@ export type LocaleStrings = ReturnType<typeof buildStrings>
 const STRINGS_BY_LOCALE: Record<LocaleId, LocaleStrings> = {
   en: buildStrings('en'),
   zh: buildStrings('zh'),
+  es: buildStrings('es'),
 }
 
 export function useStrings(): LocaleStrings {

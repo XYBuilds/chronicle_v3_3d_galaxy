@@ -60,7 +60,8 @@
     "close": "关闭",
     "toggleLanguage": "选择界面语言",
     "languageEnglish": "English",
-    "languageChinese": "中文"
+    "languageChinese": "中文",
+    "languageSpanish": "西班牙语"
   },
   "timeline": {
     "label": "时间轴（上映年份）",

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import en from './en.json'
+import es from './es.json'
 import zh from './zh.json'
 
 /** Collect dot-paths for leaf values; array indices use [n] segments. */
@@ -19,12 +20,19 @@ function leafPaths(value: unknown, prefix = ''): string[] {
   })
 }
 
+const canonicalPaths = leafPaths(en).sort()
+
 describe('locale JSON schema parity', () => {
-  it('en.json and zh.json have identical leaf key paths', () => {
-    expect(leafPaths(zh).sort()).toEqual(leafPaths(en).sort())
+  it('zh.json matches en.json leaf key paths', () => {
+    expect(leafPaths(zh).sort()).toEqual(canonicalPaths)
   })
 
-  it('focusVoteReference tier label counts match', () => {
+  it('es.json matches en.json leaf key paths', () => {
+    expect(leafPaths(es).sort()).toEqual(canonicalPaths)
+  })
+
+  it('focusVoteReference tier label counts match en', () => {
     expect(zh.focusVoteReference.tierLabels.length).toBe(en.focusVoteReference.tierLabels.length)
+    expect(es.focusVoteReference.tierLabels.length).toBe(en.focusVoteReference.tierLabels.length)
   })
 })

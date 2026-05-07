@@ -1,0 +1,128 @@
+{
+  "loading": {
+    "title": "Cargando datos de la galaxia",
+    "phaseDownload": "Descarga",
+    "phaseDecompress": "Descompresión",
+    "phaseParse": "Análisis",
+    "phaseIndex": "Índice de búsqueda",
+    "phaseIndexSkipped": "Índice de búsqueda — omitido",
+    "phaseIndexFailed": "Índice de búsqueda — error"
+  },
+  "cover": {
+    "title": "Listo",
+    "start": "Entrar",
+    "startAriaLabel": "Entrar — ir a la galaxia e inicializar los gráficos"
+  },
+  "galaxyData": {
+    "downloadProgress": "Descargado {{downloadedMb}} / {{totalMb}}",
+    "downloadProgressPartial": "Descargado {{downloadedMb}}",
+    "decompressingGzip": "Descomprimiendo gzip…",
+    "parsingJson": "Analizando JSON…",
+    "gzipUnsupported": "[GalaxyData] Este navegador no puede descomprimir gzip (DecompressionStream). Use Safari 16.4+, Chrome 80+ o Firefox 113+.",
+    "networkErrorHint": " (error de red: compruebe la conexión o el alcance)",
+    "requestFailed": "[GalaxyData] Falló la solicitud a {{url}}{{hint}}: {{detail}}",
+    "httpNotOk": "[GalaxyData] HTTP {{status}} {{statusText}} — {{url}} — asegúrese de que {{deployHintPath}} esté desplegado",
+    "emptyResponseBody": "[GalaxyData] Cuerpo de respuesta vacío",
+    "jsonParseFailed": "[GalaxyData] Error al analizar JSON: {{detail}}"
+  },
+  "error": {
+    "title": "No se pudieron cargar los datos de la galaxia",
+    "retry": "Reintentar",
+    "reloadPage": "Recargar página",
+    "showErrorDetails": "Mostrar detalles del error",
+    "hideErrorDetails": "Ocultar detalles del error",
+    "detailsRegionLabel": "Error en bruto y sugerencias para desarrolladores",
+    "noErrorText": "No se registró ningún mensaje de error.",
+    "localDevHintBeforeCode": "Desarrollo local: ejecute el pipeline en Python para generar ",
+    "localDevBetweenCodes": " (gitignored); los scripts de exportación también escriben ",
+    "localDevHintAfterCode": " para que los cargue el frontend."
+  },
+  "searchBar": {
+    "tabMovie": "Títulos",
+    "tabPerson": "Personas",
+    "tabGenre": "Géneros",
+    "noIndexInBundle": "Este paquete de datos no incluye el índice de búsqueda (meta.has_search_index)",
+    "indexNotExported": "No se exportó galaxy_search_index.json.gz",
+    "indexLoading": "Cargando índice de búsqueda…",
+    "indexLoadFailed": "Error al cargar el índice de búsqueda",
+    "indexNotReady": "Índice de búsqueda no disponible",
+    "searchUnavailable": "Búsqueda no disponible",
+    "placeholderMovie": "Buscar títulos de películas…",
+    "placeholderPerson": "Director / Productor / Reparto …",
+    "placeholderGenre": "Drama / Comedia / Thriller …",
+    "placeholderDisabled": "Índice de búsqueda no disponible",
+    "clear": "Borrar búsqueda"
+  },
+  "hud": {
+    "openInfo": "Abrir panel de información (contenido provisional)",
+    "toggleFullscreen": "Pantalla completa (F)",
+    "focusSearch": "Enfocar búsqueda (Cmd/Ctrl+K)",
+    "close": "Cerrar",
+    "toggleLanguage": "Elegir idioma de la interfaz",
+    "languageEnglish": "English",
+    "languageChinese": "中文",
+    "languageSpanish": "Español"
+  },
+  "timeline": {
+    "label": "Línea de tiempo (año de estreno)",
+    "axisDescription": "Eje de año de estreno de {{minYear}} a {{maxYear}}, enfoque de la vista cerca de {{focusYear}}",
+    "sliderAriaLabel": "Enfoque del año de estreno"
+  },
+  "info": {
+    "modalTitle": "Acerca de esta experiencia",
+    "modalSubtitle": "Panel provisional: el texto y los enlaces se finalizarán antes del lanzamiento.",
+    "introHeading": "Resumen",
+    "introBody": "(Provisional) TMDB Movie Cosmos: ~60.000 películas como una galaxia de partículas 2,5D; línea de tiempo, búsqueda (títulos / personas / géneros) y resaltado multiselección. Texto de producto pendiente.",
+    "dataHeading": "Fuentes de datos",
+    "dataBody": "(Provisional) Las atribuciones y referencias se añadirán al cierre; aquí aún no hay ninguna.",
+    "stackHeading": "Stack",
+    "stackBody": "(Provisional) Vite + React + Three.js (galaxia instanciada / postprocesado), Zustand, pipeline de exportación gzip. Resumen pendiente.",
+    "linksHeading": "Enlaces",
+    "linksBody": "(Provisional) Los enlaces se proporcionarán al cierre."
+  },
+  "scene": {
+    "webgl2Required": "[Scene] Se requiere WebGL2 (`gl_InstanceID`, doble pipeline InstancedMesh). Actualice el navegador o active la aceleración por hardware (línea base de la fase 7.2)."
+  },
+  "drawer": {
+    "fallbackTitle": "Película",
+    "posterAlt": "Póster de {{title}}",
+    "posterPlaceholder": "Imagen del póster",
+    "sheetDescription": "{{title}}, estrenada el {{releaseDate}}.",
+    "sheetDescriptionEmpty": "Ninguna película seleccionada.",
+    "votesLine": "{{count}} votos",
+    "sections": {
+      "overview": "Resumen",
+      "details": "Detalles",
+      "cast": "Reparto"
+    },
+    "details": {
+      "missingValue": "/",
+      "runtime": "Duración",
+      "runtimeMinutes": "{{minutes}} min",
+      "language": "Idioma",
+      "director": "Director",
+      "writers": "Guionistas",
+      "directorOfPhotography": "Director de fotografía",
+      "producers": "Productores",
+      "composer": "Compositor",
+      "budget": "Presupuesto",
+      "revenue": "Taquilla"
+    },
+    "links": {
+      "tmdb": "TMDB",
+      "imdb": "IMDb"
+    }
+  },
+  "focusLReference": {
+    "ariaLabel": "{{rating}} de 10 en el espectro OKLab L para {{filmTitle}}; diez bandas a medios pasos de valoración"
+  },
+  "focusVoteReference": {
+    "tierLabels": [
+      "10 votos",
+      "100 votos",
+      "1.000 votos",
+      "10.000 votos",
+      "100.000 votos"
+    ]
+  }
+}

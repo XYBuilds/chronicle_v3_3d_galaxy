@@ -42,6 +42,7 @@ export function LanguageSwitch() {
   const labels: Record<LocaleId, string> = {
     en: s.hud.languageEnglish,
     zh: s.hud.languageChinese,
+    es: s.hud.languageSpanish,
   }
 
   return (

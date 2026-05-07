@@ -60,7 +60,8 @@
     "close": "Close",
     "toggleLanguage": "Choose interface language",
     "languageEnglish": "English",
-    "languageChinese": "中文"
+    "languageChinese": "中文",
+    "languageSpanish": "Español"
   },
   "timeline": {
     "label": "Timeline (release year)",

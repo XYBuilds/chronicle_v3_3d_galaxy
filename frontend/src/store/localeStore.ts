@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-import { DEFAULT_LOCALE, type LocaleId } from '@/lib/locales'
+import { DEFAULT_LOCALE, isLocaleId, type LocaleId } from '@/lib/locales'
 
 const STORAGE_KEY = 'tmc.locale'
 
@@ -9,15 +9,16 @@ export function resolveInitialLocale(): LocaleId {
   if (typeof window === 'undefined') return DEFAULT_LOCALE
   const params = new URLSearchParams(window.location.search)
   const q = params.get('lang')
-  if (q === 'zh' || q === 'en') return q
+  if (isLocaleId(q)) return q
   try {
     const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored === 'zh' || stored === 'en') return stored
+    if (isLocaleId(stored)) return stored
   } catch {
     /* private mode / quota */
   }
   const nav = navigator.language?.toLowerCase() ?? ''
   if (nav.startsWith('zh')) return 'zh'
+  if (nav.startsWith('es')) return 'es'
   return DEFAULT_LOCALE
 }
 

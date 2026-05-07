@@ -28,6 +28,11 @@
   "error": {
     "title": "Could not load galaxy data",
     "retry": "Retry",
+    "reloadPage": "Reload page",
+    "showErrorDetails": "Show error details",
+    "hideErrorDetails": "Hide error details",
+    "detailsRegionLabel": "Raw error and developer hints",
+    "noErrorText": "No error message was recorded.",
     "localDevHintBeforeCode": "Local dev: run the Python pipeline to generate ",
     "localDevBetweenCodes": " (gitignored); export scripts also write ",
     "localDevHintAfterCode": " for the frontend to load."

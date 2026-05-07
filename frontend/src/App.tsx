@@ -4,6 +4,7 @@ import { MovieDetailDrawer } from '@/components/Drawer'
 import { SearchBar } from '@/components/SearchBar'
 import { useThemeFromQuery } from '@/hooks/useThemeFromQuery'
 import { useTimelineOrientationFromQuery } from '@/hooks/useTimelineOrientationFromQuery'
+import { LoadFailurePage } from '@/components/LoadFailurePage'
 import { Loading } from '@/components/Loading'
 import { MovieTooltip } from '@/components/MovieTooltip'
 import { Timeline } from '@/components/Timeline'
@@ -170,24 +171,7 @@ function App() {
 
   if (phase === 'galaxy-error') {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-6 text-center text-foreground">
-        <h1 className="text-lg font-medium">{STRINGS.error.title}</h1>
-        <p className="max-w-lg text-sm text-muted-foreground whitespace-pre-wrap">{errorMessage}</p>
-        <p className="text-xs text-muted-foreground">
-          {STRINGS.error.localDevHintBeforeCode}
-          <code className="rounded bg-muted px-1 py-0.5">frontend/public/data/galaxy_data.json</code>
-          {STRINGS.error.localDevBetweenCodes}
-          <code className="rounded bg-muted px-1 py-0.5">galaxy_data.json.gz</code>
-          {STRINGS.error.localDevHintAfterCode}
-        </p>
-        <button
-          type="button"
-          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
-          onClick={() => void fetchGalaxyData()}
-        >
-          {STRINGS.error.retry}
-        </button>
-      </div>
+      <LoadFailurePage errorMessage={errorMessage} onRetry={() => void fetchGalaxyData()} />
     )
   }
 

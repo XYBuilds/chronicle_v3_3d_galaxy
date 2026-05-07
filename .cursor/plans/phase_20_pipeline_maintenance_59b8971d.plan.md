@@ -10,7 +10,7 @@ todos:
     status: completed
   - id: p203-load-failure
     content: P20.3 抽离 App.tsx galaxy-error 分支为 LoadFailurePage 组件（折叠错误详情 + retry/reload 双按钮）；Storybook 4 fixture
-    status: pending
+    status: completed
   - id: p204-cache-control
     content: "P20.4 upload_galaxy_r2.py 上传时写 Cache-Control: immutable；frontend/public/_headers 给 manifest 设短 TTL"
     status: pending

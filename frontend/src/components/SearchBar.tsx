@@ -165,6 +165,12 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
     return map
   }, [allGenreNames, selectedGenres, movieIdsByGenre, currentIntersection])
 
+  /** Grid hides badges already shown in the selected strip above. */
+  const candidateGenreNames = useMemo(
+    () => allGenreNames.filter((g) => !selectedGenres.includes(g)),
+    [allGenreNames, selectedGenres],
+  )
+
   /** Genre ↔ store: layout-only so ESC (`clearSearch`) cannot race a late `useEffect` re-applying `searchMode: 'genre'`. */
   const prevSearchModeRef = useRef(searchMode)
   useLayoutEffect(() => {
@@ -421,19 +427,17 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
               </div>
             )}
             <div className="flex flex-wrap gap-1.5">
-              {allGenreNames.map((g) => {
-                const isSelected = selectedGenres.includes(g)
+              {candidateGenreNames.map((g) => {
                 const previewN = previewCountIfAdded.get(g) ?? 0
-                const disabled = !isSelected && previewN === 0
+                const disabled = previewN === 0
                 return (
                   <GenreBadge
                     key={g}
                     name={g}
                     size="sm"
                     paletteHex={genrePalette?.[g]}
-                    selected={isSelected}
                     disabled={disabled}
-                    previewCount={!isSelected ? previewN : undefined}
+                    previewCount={previewN}
                     onClick={() => {
                       if (disabled) return
                       toggleGenre(g)

@@ -35,6 +35,8 @@ jobs:
           npm install --include=optional --no-audit --no-fund
 
       - name: Build
+        env:
+          VITE_CF_BEACON_TOKEN: ${{ secrets.CF_WEB_ANALYTICS_BEACON_TOKEN }}
         run: npm run build -w frontend
 
       - uses: actions/upload-pages-artifact@v3

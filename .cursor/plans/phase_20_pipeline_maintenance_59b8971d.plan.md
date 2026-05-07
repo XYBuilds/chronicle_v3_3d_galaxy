@@ -16,7 +16,7 @@ todos:
     status: completed
   - id: p205-cf-analytics
     content: P20.5 接入 Cloudflare Web Analytics beacon（cookie-free，token 走 VITE_CF_BEACON_TOKEN）
-    status: pending
+    status: completed
   - id: p206-doc-sync-report
     content: P20.6 同步 Tech Spec / Data Pipeline / README + 撰写 Phase 20 实施报告
     status: pending

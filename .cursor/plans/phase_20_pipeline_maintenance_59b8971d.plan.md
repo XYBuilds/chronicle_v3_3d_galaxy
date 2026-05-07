@@ -4,7 +4,7 @@ overview: Phase 20 收口数据管线运维债务：升级 wrangler/Node、固�
 todos:
   - id: p201-wrangler-node
     content: P20.1 升级两处 workflow 的 cloudflare/pages-action → cloudflare/wrangler-action@v3 + Node 20 → 24，审计其它 actions 版本
-    status: pending
+    status: completed
   - id: p202-dim-drift
     content: P20.2 新增 language_palette.py（FROZEN_LANG_ORDER_V1 + assert_all_languages_in_frozen_v1）+ dim_drift_detector.py 统一入口；接入 nightly/monthly；workflow 加 force_skip_dim_check 输入；写入 monthly_refit_meta.json
     status: pending

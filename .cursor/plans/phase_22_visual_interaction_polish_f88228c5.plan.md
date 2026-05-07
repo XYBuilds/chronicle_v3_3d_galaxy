@@ -23,11 +23,11 @@ todos:
   - id: p227-rename-the-movie-cosmos
     content: P22.7 README / index.html title / docs / locales 中 Product name 统一为 'The Movie Cosmos'（不动仓库/目录/git remote）
     status: pending
-  - id: p228-doc-sync-report
-    content: P22.8 同步 Tech Spec / Design Spec / 视觉参数总表 / Data Pipeline / README + Phase 22 实施报告
+  - id: p228-focus-drag-invert-mode
+    content: P22.8 focus 态轨道拖拽新增反向模式（yaw/pitch 取反）用于实验；支持 query 或开关切换，不改默认模式
     status: pending
-  - id: p229-focus-drag-invert-mode
-    content: P22.9 focus 态轨道拖拽新增反向模式（yaw/pitch 取反）用于实验；支持 query 或开关切换，不改默认模式
+  - id: p229-doc-sync-report
+    content: P22.9 同步 Tech Spec / Design Spec / 视觉参数总表 / Data Pipeline / README + Phase 22 实施报告
     status: pending
 isProject: false
 ---
@@ -76,15 +76,17 @@ flowchart TD
     P225["P22.5 drawer 退出按钮 floating 底部"]
     P226["P22.6 constellation 三链拆分 + hover 高亮"]
     P227["P22.7 产品命名统一 The Movie Cosmos"]
-    P228["P22.8 SSOT 同步 + 实施报告"]
+    P228["P22.8 focus 拖拽方向反向模式"]
+    P229["P22.9 SSOT 同步 + 实施报告"]
 
     P224 --> P225
-    P221 --> P228
-    P222 --> P228
-    P223 --> P228
-    P225 --> P228
-    P226 --> P228
-    P227 --> P228
+    P221 --> P229
+    P222 --> P229
+    P223 --> P229
+    P225 --> P229
+    P226 --> P229
+    P227 --> P229
+    P228 --> P229
 ```
 
 P22.4 必须先于 P22.5（floating 退出按钮位置依赖底部空出）。其余项互相独立。
@@ -449,35 +451,7 @@ function updateConstellationHover(hoveredMovieId: number | null) {
 
 ---
 
-## P22.8 SSOT 同步 + 实施报告
-
-### 改动
-
-**Tech Spec** ([`docs/project_docs/TMDB 电影宇宙 Tech Spec.md`](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md))：
-- §渲染：加 `NEAR_CULL_WORLD_Z` 章节（P22.1）
-- §Active sphere：注明 P22.2 R 上限调整与 dial 值
-- §Timeline：删除 horizontal 路径描述，改为 vertical only
-
-**Design Spec** ([`docs/project_docs/TMDB 电影宇宙 Design Spec.md`](docs/project_docs/TMDB%20电影宇宙%20Design%20Spec.md))：
-- §交互：drawer 右上 X 已删除；focus 退出由屏幕底部 floating 按钮触发；不接受"点击空白退出 focus"
-- §视觉：海报档位 w780；constellation chain 默认 0.04 / hover 0.18；hover 触发对象 = 该岗位某颗星
-
-**视觉参数总表** ([`docs/project_docs/视觉参数总表.md`](docs/project_docs/视觉参数总表.md))：
-- 加 NEAR_CULL_WORLD_Z 行
-- 加 Constellation chain opacity 行
-- 改 active R 上限值
-
-**Data Pipeline** ([`docs/project_docs/TMDB 电影宇宙 Data Pipeline.md`](docs/project_docs/TMDB%20电影宇宙%20Data%20Pipeline.md))：
-- §poster_url 字段 base 改 w780
-
-**README** ([`README.md`](README.md))：
-- §标题与 §1 项目结构里的 product name 替换为 "The Movie Cosmos"
-
-**实施报告** [`docs/reports/Phase 22 P22 视觉与交互精修 实施报告.md`](docs/reports/Phase%2022%20P22%20视觉与交互精修%20实施报告.md)：背景、决策快照、变更清单、dial-in 最终值、验收记录、风险与回滚。
-
----
-
-## P22.9 focus 拖拽方向反向模式（实验）
+## P22.8 focus 拖拽方向反向模式（实验）
 
 ### 现状
 
@@ -532,6 +506,34 @@ P23 的开始页 cover/perlin 交互复用同一 orbit 输入链路。引入本�
 
 ---
 
+## P22.9 SSOT 同步 + 实施报告
+
+### 改动
+
+**Tech Spec** ([`docs/project_docs/TMDB 电影宇宙 Tech Spec.md`](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md))：
+- §渲染：加 `NEAR_CULL_WORLD_Z` 章节（P22.1）
+- §Active sphere：注明 P22.2 R 上限调整与 dial 值
+- §Timeline：删除 horizontal 路径描述，改为 vertical only
+
+**Design Spec** ([`docs/project_docs/TMDB 电影宇宙 Design Spec.md`](docs/project_docs/TMDB%20电影宇宙%20Design%20Spec.md))：
+- §交互：drawer 右上 X 已删除；focus 退出由屏幕底部 floating 按钮触发；不接受"点击空白退出 focus"
+- §视觉：海报档位 w780；constellation chain 默认 0.04 / hover 0.18；hover 触发对象 = 该岗位某颗星
+
+**视觉参数总表** ([`docs/project_docs/视觉参数总表.md`](docs/project_docs/视觉参数总表.md))：
+- 加 NEAR_CULL_WORLD_Z 行
+- 加 Constellation chain opacity 行
+- 改 active R 上限值
+
+**Data Pipeline** ([`docs/project_docs/TMDB 电影宇宙 Data Pipeline.md`](docs/project_docs/TMDB%20电影宇宙%20Data%20Pipeline.md))：
+- §poster_url 字段 base 改 w780
+
+**README** ([`README.md`](README.md))：
+- §标题与 §1 项目结构里的 product name 替换为 "The Movie Cosmos"
+
+**实施报告** [`docs/reports/Phase 22 P22 视觉与交互精修 实施报告.md`](docs/reports/Phase%2022%20P22%20视觉与交互精修%20实施报告.md)：背景、决策快照、变更清单、dial-in 最终值、验收记录、风险与回滚。
+
+---
+
 ## 验收清单（出口）
 
 - [ ] P22.1 推近条带极近 idle 星消失，focus 例外保留；picking 同步无鬼影；dial 值写入参数总表
@@ -541,8 +543,8 @@ P23 的开始页 cover/perlin 交互复用同一 orbit 输入链路。引入本�
 - [ ] P22.5 drawer 右上 X 删除；屏幕底部 "Exit focus" 按钮 focus 时可见可点；i18n EN/zh 双语
 - [ ] P22.6 constellation 拆 3 mesh；hover 一颗星该岗位高亮（多岗位星支持多链同时高亮）
 - [ ] P22.7 README / Tech Spec / Design Spec / index.html title / locales 内品牌统一
-- [ ] P22.8 五份 SSOT 文档与实施报告归档
-- [ ] P22.9 focus 拖拽反向模式可通过 query 切换；默认 normal；开始页可复用
+- [ ] P22.8 focus 拖拽反向模式可通过 query 切换；默认 normal；开始页可复用
+- [ ] P22.9 五份 SSOT 文档与实施报告归档
 
 ## 风险与回滚
 
@@ -559,7 +561,7 @@ P23 的开始页 cover/perlin 交互复用同一 orbit 输入链路。引入本�
 
 ## 出口准入
 
-- 所有 P22.1–P22.9 todos `completed`
+- 所有 P22.1–P22.9 todos `completed`（文档同步为最后一项 P22.9）
 - prod 部署后 7 类用户感知项 smoke 全部通过
 - dial-in 最终参数（NEAR_CULL_WORLD_Z / focus active R cap / constellation opacity 起步值）写入视觉参数总表
 - 五份 SSOT 文档与实施报告归档；旧 Timeline 代码彻底删除（grep 验证）

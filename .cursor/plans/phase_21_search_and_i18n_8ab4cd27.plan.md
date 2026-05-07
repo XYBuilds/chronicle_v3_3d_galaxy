@@ -17,11 +17,11 @@ todos:
   - id: p215-light-mode-tab-fix
     content: P21.5 SearchBar tab 选中态 light 模式对比修复 (条件 light/dark class，不改 buttonVariants)
     status: pending
-  - id: p216-doc-sync-report
-    content: P21.6 同步 Tech Spec / Design Spec / Data Pipeline / README + 撰写 Phase 21 实施报告
+  - id: p216-movie-suggestions-show-all
+    content: P21.6 电影搜索联想显示全部命中项（取消 12 条上限）；验证如“batman”可显示 “The Batman”等后缀命中
     status: pending
-  - id: p217-movie-suggestions-show-all
-    content: P21.7 电影搜索联想显示全部命中项（取消 12 条上限）；验证如“batman”可显示 “The Batman”等后缀命中
+  - id: p217-doc-sync-report
+    content: P21.7 同步 Tech Spec / Design Spec / Data Pipeline / README + 撰写 Phase 21 实施报告
     status: pending
 isProject: false
 ---
@@ -64,13 +64,15 @@ flowchart TD
     P213["P21.3 Genre badge AND 多选"]
     P214["P21.4 SearchBar idle/active outline"]
     P215["P21.5 Light 模式 tab 选中对比"]
-    P216["P21.6 SSOT 同步 + 实施报告"]
+    P216["P21.6 电影联想显示全部命中"]
+    P217["P21.7 SSOT 同步 + 实施报告"]
 
-    P211 --> P216
-    P212 --> P216
+    P211 --> P217
+    P212 --> P217
     P214 --> P213
     P213 --> P215
     P215 --> P216
+    P216 --> P217
 ```
 
 P21.1 / P21.2 互相独立，可并行。P21.4 (SearchBar 容器) → P21.3 (重写 genre tab) → P21.5 (验证 light) 顺序串行避免合并冲突。
@@ -511,29 +513,7 @@ className={cn(
 
 ---
 
-## P21.6 SSOT 同步 + 实施报告
-
-### 改动
-
-**Tech Spec** ([`docs/project_docs/TMDB 电影宇宙 Tech Spec.md`](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md))：
-- §4.3 / §4.5 把 `normalize_for_search` v2 写法和 `meta.search_normalize_version` 字段加上
-- §HUD 加 i18n 小节：`useLocaleStore` + `?lang=` query + LanguageSwitch 位置
-
-**Design Spec** ([`docs/project_docs/TMDB 电影宇宙 Design Spec.md`](docs/project_docs/TMDB%20电影宇宙%20Design%20Spec.md))：
-- §搜索：Genre tab 改 AND 多选 badge；列举死路 disable 行为
-- §搜索：SearchBar idle/active 双态；列触发条件
-- §HUD：右上按钮组顺序 Info → Lang → Fullscreen
-
-**Data Pipeline** ([`docs/project_docs/TMDB 电影宇宙 Data Pipeline.md`](docs/project_docs/TMDB%20电影宇宙%20Data%20Pipeline.md))：
-- 4.x 章节注明 `title_normalized` 已升级 v2，旧 v1 数据兼容策略
-
-**README** ([`README.md`](README.md))：§HUD / 多语言一段简介
-
-**实施报告** [`docs/reports/Phase 21 P21 搜索 v2 与 i18n 实施报告.md`](docs/reports/Phase%2021%20P21%20搜索%20v2%20与%20i18n%20实施报告.md)：背景、决策、变更清单、验收记录、风险与回滚。
-
----
-
-## P21.7 电影联想显示全部命中
+## P21.6 电影联想显示全部命中
 
 ### 现状
 
@@ -591,6 +571,28 @@ it('does not cap movie suggestions at 12', () => {
 
 ---
 
+## P21.7 SSOT 同步 + 实施报告
+
+### 改动
+
+**Tech Spec** ([`docs/project_docs/TMDB 电影宇宙 Tech Spec.md`](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md))：
+- §4.3 / §4.5 把 `normalize_for_search` v2 写法和 `meta.search_normalize_version` 字段加上
+- §HUD 加 i18n 小节：`useLocaleStore` + `?lang=` query + LanguageSwitch 位置
+
+**Design Spec** ([`docs/project_docs/TMDB 电影宇宙 Design Spec.md`](docs/project_docs/TMDB%20电影宇宙%20Design%20Spec.md))：
+- §搜索：Genre tab 改 AND 多选 badge；列举死路 disable 行为
+- §搜索：SearchBar idle/active 双态；列触发条件
+- §HUD：右上按钮组顺序 Info → Lang → Fullscreen
+
+**Data Pipeline** ([`docs/project_docs/TMDB 电影宇宙 Data Pipeline.md`](docs/project_docs/TMDB%20电影宇宙%20Data%20Pipeline.md))：
+- 4.x 章节注明 `title_normalized` 已升级 v2，旧 v1 数据兼容策略
+
+**README** ([`README.md`](README.md))：§HUD / 多语言一段简介
+
+**实施报告** [`docs/reports/Phase 21 P21 搜索 v2 与 i18n 实施报告.md`](docs/reports/Phase%2021%20P21%20搜索%20v2%20与%20i18n%20实施报告.md)：背景、决策、变更清单、验收记录、风险与回滚。
+
+---
+
 ## 验收清单（出口）
 
 - [ ] P21.1 Python + TS normalize 同步切到 v2；CJK / 重音 / Cyrillic / Hangul 6 例单测通过；重导出后 `meta.search_normalize_version === "v2"`
@@ -601,8 +603,8 @@ it('does not cap movie suggestions at 12', () => {
 - [ ] P21.3 Genre tab 不再是输入联想；19 个 badge 颜色正确；多选交集计算实时；死路 badge 灰且不可点
 - [ ] P21.4 SearchBar 不交互时透明 outline；hover/focus/panel 任一即实底
 - [ ] P21.5 light 模式 tab 选中明显可辨；dark 模式无明显回退
-- [ ] P21.7 电影联想不再截断 12 条；`batman` 查询能看到 `The Batman`
-- [ ] P21.6 三份 SSOT 文档与实施报告归档
+- [ ] P21.6 电影联想不再截断 12 条；`batman` 查询能看到 `The Batman`
+- [ ] P21.7 三份 SSOT 文档与实施报告归档
 
 ## 风险与回滚
 

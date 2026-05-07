@@ -12,6 +12,7 @@ import {
   scoreGenresForQuery,
   scoreMoviesForQuery,
   scorePeopleForQuery,
+  searchMinQueryLengthForTrim,
 } from '@/utils/searchScore'
 
 function baseMovie(over: Partial<Movie> & Pick<Movie, 'id' | 'title'>): Movie {
@@ -54,17 +55,73 @@ function baseMovie(over: Partial<Movie> & Pick<Movie, 'id' | 'title'>): Movie {
   }
 }
 
-describe('normalizeForSearch', () => {
-  it('strips accents and lowercases ASCII', () => {
-    expect(normalizeForSearch('Café')).toBe('cafe')
+describe('normalizeForSearch (v2 Unicode)', () => {
+  it('preserves Japanese kana / kanji', () => {
+    expect(normalizeForSearch('映画 五等分の花嫁')).toContain('五等分')
+  })
+  it('preserves Chinese characters', () => {
+    expect(normalizeForSearch('霸王别姬')).toBe('霸王别姬')
+  })
+  it('preserves Cyrillic', () => {
+    expect(normalizeForSearch('Москва')).toBe('москва')
+  })
+  it('preserves Hangul', () => {
+    expect(normalizeForSearch('기생충')).toBe('기생충')
+  })
+  it('lowercase preserves sharp s (JS differs from Python casefold ss)', () => {
+    expect(normalizeForSearch('Straße')).toBe('straße')
+  })
+  it('strips combining marks when NFKC leaves a separate Mn', () => {
+    expect(normalizeForSearch('q\u0307')).toBe('q')
+  })
+})
+
+describe('scoreMoviesForQuery with CJK', () => {
+  it('matches Japanese substring in title_normalized', () => {
+    const movies = [
+      baseMovie({
+        id: 1,
+        title: 'The Quintessential Quintuplets',
+        original_title: '映画 五等分の花嫁',
+        title_normalized: 'the quintessential quintuplets 映画 五等分の花嫁',
+      }),
+    ]
+    expect(scoreMoviesForQuery(movies, '五等分').length).toBe(1)
+  })
+})
+
+describe('searchMinQueryLengthForTrim', () => {
+  it('uses 3 for Latin-only short strings', () => {
+    expect(searchMinQueryLengthForTrim('')).toBe(SEARCH_MIN_QUERY_LEN)
+    expect(searchMinQueryLengthForTrim('ab')).toBe(3)
+    expect(searchMinQueryLengthForTrim('star')).toBe(3)
+  })
+  it('uses 1 when query contains Han', () => {
+    expect(searchMinQueryLengthForTrim('霸')).toBe(1)
+    expect(searchMinQueryLengthForTrim('五等分')).toBe(1)
+  })
+  it('uses 1 for Hiragana / Katakana / Hangul', () => {
+    expect(searchMinQueryLengthForTrim('あ')).toBe(1)
+    expect(searchMinQueryLengthForTrim('ア')).toBe(1)
+    expect(searchMinQueryLengthForTrim('한')).toBe(1)
   })
 })
 
 describe('SEARCH_MIN_QUERY_LEN', () => {
-  it('blocks short queries', () => {
+  it('blocks short Latin queries', () => {
     const movies = [baseMovie({ id: 1, title: 'Abcdef', title_normalized: 'abcdef' })]
     expect(scoreMoviesForQuery(movies, 'ab').length).toBe(0)
     expect(SEARCH_MIN_QUERY_LEN).toBe(3)
+  })
+  it('allows single Han character for movie search', () => {
+    const movies = [
+      baseMovie({
+        id: 1,
+        title: 'Test',
+        title_normalized: 'test 霸王别姬',
+      }),
+    ]
+    expect(scoreMoviesForQuery(movies, '霸').length).toBe(1)
   })
 })
 
@@ -150,7 +207,7 @@ describe('scorePeopleForQuery', () => {
     expect(hits[0]!.tier).toBe('prefix')
   })
 
-  it('uses contains when no token prefix', () => {
+  it('treats substring prefix of a token as prefix tier (pac → pacino)', () => {
     const index: SearchIndex = {
       version: '1',
       people: {
@@ -160,7 +217,7 @@ describe('scorePeopleForQuery', () => {
     }
     const hits = scorePeopleForQuery(index, 'pac')
     expect(hits.length).toBe(1)
-    expect(hits[0]!.tier).toBe('contains')
+    expect(hits[0]!.tier).toBe('prefix')
   })
 
   it('sorts same tier by movie_ids length', () => {

@@ -4,7 +4,7 @@ overview: Phase 21 解决两个用户感知最强的痛点：搜索的 CJK 失�
 todos:
   - id: p211-cjk-normalize-v2
     content: P21.1 Python + TS normalize_for_search v2 (NFKC + Mn 滤除 + casefold)；5 处 Python 调用点切换；meta.search_normalize_version=v2；6 例单测 (中/日/俄/韩/重音/合成)；触发重导出
-    status: pending
+    status: completed
   - id: p212-i18n-locale-store
     content: P21.2 zh.json + LocaleStore + useLocaleFromQuery + useStrings hook + LanguageSwitch HUD 组件 (右上 Info/Lang/Fullscreen 顺序)；调用点全量迁移到 useStrings
     status: pending
@@ -25,7 +25,6 @@ todos:
     status: pending
 isProject: false
 ---
-
 
 # Phase 21 — 搜索 v2 + i18n
 
@@ -497,11 +496,15 @@ className={cn(
 **风险**：`default` 在 dark 模式下也是 primary 色（亮色块），可能比目前 `secondary` 太突出。需 dial：
 - 备选：自定义 class
   
-  ```tsx
+  
+
+```tsx
   hudTab === tab
     ? 'bg-foreground text-background shadow-sm dark:bg-secondary dark:text-secondary-foreground'
     : 'bg-transparent text-muted-foreground hover:bg-muted/50'
-  ```
+  
+
+```
 
 我建议先实现备选（条件分 light/dark），不动 buttonVariants。
 
@@ -615,7 +618,7 @@ it('does not cap movie suggestions at 12', () => {
 | useStrings hook 切换大量调用点导致大 PR / 合并冲突                                 | 中   | 单 commit 完整迁移；同步 Storybook 用静态 STRINGS 兜底                                       |
 | `default` variant 在 dark 模式下过度突出 tab                                       | 低   | 实施期采用条件 light/dark class（不改 buttonVariants）；验收时 dial                          |
 | Genre badge 多选交集计算开销（19 × 60K id × 5 选）慢                               | 低   | `Set<number>` 交集实测 ms 级；如需优化可改 `Uint32Array` + 排序双指针                        |
-| 电影联想取消上限后，极端查询命中过多导致渲染列表变长                                | 低   | 保留滚动容器；必要时加 dev 告警；若未来出现性能问题再上虚拟列表（不在本 phase）              |
+| 电影联想取消上限后，极端查询命中过多导致渲染列表变长                               | 低   | 保留滚动容器；必要时加 dev 告警；若未来出现性能问题再上虚拟列表（不在本 phase）              |
 | zh 翻译质量参差导致 HUD 误导                                                       | 中   | 关键术语保留英文（"UMAP"、"Procrustes"）；翻译评审一次                                       |
 
 ## 出口准入

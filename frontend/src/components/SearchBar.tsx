@@ -22,11 +22,12 @@ import { useSearchIndexStore } from '@/store/searchIndexStore'
 import type { Movie } from '@/types/galaxy'
 import type { TextHighlightRange } from '@/utils/searchScore'
 import {
-  SEARCH_MIN_QUERY_LEN,
+  SEARCH_QUERY_DEBOUNCE_MS,
   formatMovieSuggestionLabel,
   scoreGenresForQuery,
   scoreMoviesForQuery,
   scorePeopleForQuery,
+  searchMinQueryLengthForTrim,
 } from '@/utils/searchScore'
 
 export type SearchHudTab = 'movie' | 'person' | 'genre'
@@ -93,7 +94,7 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
 
   const [debouncedQuery, setDebouncedQuery] = useState(searchQuery)
   useEffect(() => {
-    const t = window.setTimeout(() => setDebouncedQuery(searchQuery), 200)
+    const t = window.setTimeout(() => setDebouncedQuery(searchQuery), SEARCH_QUERY_DEBOUNCE_MS)
     return () => window.clearTimeout(t)
   }, [searchQuery])
 
@@ -107,7 +108,8 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
 
   const resultRows = useMemo((): ResultRow[] => {
     const q = deferredQuery
-    if (q.trim().length < SEARCH_MIN_QUERY_LEN) return []
+    const trimmed = q.trim()
+    if (trimmed.length < searchMinQueryLengthForTrim(trimmed)) return []
     if (!searchIndex) return []
 
     if (hudTab === 'movie') {
@@ -146,8 +148,9 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
     setSearchResults(suggestions)
   }, [resultRows])
 
-  const debouncedTrimLen = debouncedQuery.trim().length
-  const canShowList = debouncedTrimLen >= SEARCH_MIN_QUERY_LEN && resultRows.length > 0
+  const debouncedTrimmed = debouncedQuery.trim()
+  const debouncedMinLen = searchMinQueryLengthForTrim(debouncedTrimmed)
+  const canShowList = debouncedTrimmed.length >= debouncedMinLen && resultRows.length > 0
   const panelVisible = listOpen && canShowList
 
   const activeRowIndex =
@@ -322,10 +325,12 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value)
-              setListOpen(e.target.value.trim().length >= SEARCH_MIN_QUERY_LEN)
+              const t = e.target.value.trim()
+              setListOpen(t.length >= searchMinQueryLengthForTrim(t))
             }}
             onFocus={() => {
-              if (searchQuery.trim().length >= SEARCH_MIN_QUERY_LEN && resultRows.length > 0) {
+              const t = searchQuery.trim()
+              if (t.length >= searchMinQueryLengthForTrim(t) && resultRows.length > 0) {
                 setListOpen(true)
               }
             }}

@@ -277,12 +277,12 @@ def _pending_row_from_cleaned(
 ) -> dict[str, Any]:
     mid = int(float(row["id"]))
     z, _j = decimal_year_with_jitter(str(row["release_date"]).strip(), mid)
-    from export.export_search_index import normalize_for_search  # noqa: WPS433
+    from export.export_search_index import normalize_for_search_v2  # noqa: WPS433
 
     title_s = str(row.get("title", "")).strip()
     orig_s = str(row.get("original_title", "")).strip()
-    t_norm = normalize_for_search(title_s)
-    o_norm = normalize_for_search(orig_s)
+    t_norm = normalize_for_search_v2(title_s)
+    o_norm = normalize_for_search_v2(orig_s)
     if not o_norm or o_norm == t_norm:
         title_normalized = t_norm
     else:

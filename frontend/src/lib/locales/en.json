@@ -58,10 +58,7 @@
     "toggleFullscreen": "Toggle fullscreen (F)",
     "focusSearch": "Focus search (Cmd/Ctrl+K)",
     "close": "Close",
-    "toggleLanguage": "Choose interface language",
-    "languageEnglish": "English",
-    "languageChinese": "中文",
-    "languageSpanish": "Español"
+    "toggleLanguage": "Choose interface language"
   },
   "timeline": {
     "label": "Timeline (release year)",

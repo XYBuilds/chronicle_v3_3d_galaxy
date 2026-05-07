@@ -2,7 +2,7 @@ import { Languages } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
-import { LOCALE_IDS, type LocaleId } from '@/lib/locales'
+import { LOCALE_IDS, LOCALE_NATIVE_LABELS, type LocaleId } from '@/lib/locales'
 import { useStrings } from '@/lib/strings'
 import { useLocaleStore } from '@/store/localeStore'
 import { cn } from '@/lib/utils'
@@ -37,12 +37,6 @@ export function LanguageSwitch() {
   const pick = (id: LocaleId) => {
     setLocale(id)
     setOpen(false)
-  }
-
-  const labels: Record<LocaleId, string> = {
-    en: s.hud.languageEnglish,
-    zh: s.hud.languageChinese,
-    es: s.hud.languageSpanish,
   }
 
   return (
@@ -87,7 +81,9 @@ export function LanguageSwitch() {
                 )}
                 onClick={() => pick(id)}
               >
-                <span className="flex-1">{labels[id]}</span>
+                <span className="flex-1" lang={id}>
+                  {LOCALE_NATIVE_LABELS[id]}
+                </span>
                 {locale === id ? (
                   <span className="text-xs text-white/70" aria-hidden>
                     ✓

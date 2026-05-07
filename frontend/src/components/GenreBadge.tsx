@@ -81,8 +81,9 @@ export function GenreBadge({
         !disabled && 'cursor-pointer',
         !disabled && !selected && 'hover:brightness-110 dark:hover:brightness-125',
         !isGenre && 'border-border bg-muted/40 text-foreground',
-        isGenre && !disabled && 'badge-genre border text-foreground',
-        selected && isGenre && 'ring-1 ring-foreground/25',
+        /** `badge-genre` only pairs with Badge `group/badge`; plain buttons need `.genre-chip-tint` + `--genre-color` (see index.css). */
+        isGenre && n && 'genre-chip-tint text-foreground',
+        selected && isGenre && n && 'ring-1 ring-foreground/25',
       )}
       style={isGenre && n ? surface : undefined}
     >

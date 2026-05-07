@@ -50,6 +50,7 @@ export function getGenreChipSurfaceStyle(normalizedHex: string): CSSProperties {
   if (!rgb) return {}
   const [r, g, b] = rgb
   return {
+    ['--genre-color' as string]: normalizedHex,
     background: `rgb(${r} ${g} ${b} / 0.18)`,
     borderColor: `rgb(${r} ${g} ${b} / 0.6)`,
   }

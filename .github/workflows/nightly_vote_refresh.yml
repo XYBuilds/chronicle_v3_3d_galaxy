@@ -75,10 +75,7 @@ jobs:
       # P18.6: Direct Upload to Cloudflare Pages (GitHub Pages workflow remains for gray release).
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
-
-      - name: Upgrade npm (Linux optional native deps)
-        run: npm i -g npm@10.8.3
+          node-version: "24"
 
       - name: Install and build frontend (embed cron-exported galaxy_data)
         run: |
@@ -88,11 +85,9 @@ jobs:
           npm run build -w frontend
 
       - name: Deploy to Cloudflare Pages
-        uses: cloudflare/pages-action@v1.5.0
+        uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: ${{ secrets.CLOUDFLARE_PAGES_PROJECT_NAME }}
-          directory: frontend/dist
-          wranglerVersion: "3"
+          command: pages deploy frontend/dist --project-name=${{ secrets.CLOUDFLARE_PAGES_PROJECT_NAME }} --branch=${{ github.ref_name }}
           gitHubToken: ${{ github.token }}

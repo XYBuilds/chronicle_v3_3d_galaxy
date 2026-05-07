@@ -4,7 +4,7 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js'
 
 import { setGalaxyCameraZ } from '@/lib/galaxyCameraZBridge'
-import { STRINGS } from '@/lib/strings'
+import { getStrings } from '@/lib/strings'
 import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
 import { useSearchIndexStore } from '@/store/searchIndexStore'
 import type { Meta, Movie } from '@/types/galaxy'
@@ -189,7 +189,7 @@ export function mountGalaxyScene(
 
   if (!renderer.capabilities.isWebGL2) {
     renderer.dispose()
-    throw new Error(STRINGS.scene.webgl2Required)
+    throw new Error(getStrings().scene.webgl2Required)
   }
 
   const gl = renderer.getContext()

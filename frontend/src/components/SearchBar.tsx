@@ -9,7 +9,7 @@ import {
 } from 'react'
 import { buttonVariants } from '@/components/ui/button-variants'
 import { CloseButton } from '@/components/ui/close-button'
-import { STRINGS } from '@/lib/strings'
+import { useStrings } from '@/lib/strings'
 import { cn } from '@/lib/utils'
 import {
   clearSearch,
@@ -82,6 +82,7 @@ function sortIdsByRelease(ids: readonly number[], movieById: ReadonlyMap<number,
 }
 
 export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchBarProps) {
+  const ui = useStrings()
   const searchQuery = useGalaxyInteractionStore((s) => s.searchQuery)
   const indexStatus = useSearchIndexStore((s) => s.status)
   const searchIndex = useSearchIndexStore((s) => s.data)
@@ -247,15 +248,15 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
 
   const disabledReason =
     !hasSearchIndex
-      ? STRINGS.searchBar.noIndexInBundle
+      ? ui.searchBar.noIndexInBundle
       : indexStatus === 'skipped'
-        ? STRINGS.searchBar.indexNotExported
+        ? ui.searchBar.indexNotExported
         : indexStatus === 'loading'
-          ? STRINGS.searchBar.indexLoading
+          ? ui.searchBar.indexLoading
           : indexStatus === 'error'
-            ? (indexError ?? STRINGS.searchBar.indexLoadFailed)
+            ? (indexError ?? ui.searchBar.indexLoadFailed)
             : indexStatus !== 'ready'
-              ? STRINGS.searchBar.indexNotReady
+              ? ui.searchBar.indexNotReady
               : null
 
   const isBlocked = disabledReason !== null
@@ -289,10 +290,10 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
               onClick={() => onTabChange(tab)}
             >
               {tab === 'movie'
-                ? STRINGS.searchBar.tabMovie
+                ? ui.searchBar.tabMovie
                 : tab === 'person'
-                  ? STRINGS.searchBar.tabPerson
-                  : STRINGS.searchBar.tabGenre}
+                  ? ui.searchBar.tabPerson
+                  : ui.searchBar.tabGenre}
             </button>
           ))}
         </div>
@@ -311,12 +312,12 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
             disabled={isBlocked}
             placeholder={
               isBlocked
-                ? STRINGS.searchBar.placeholderDisabled
+                ? ui.searchBar.placeholderDisabled
                 : hudTab === 'movie'
-                  ? STRINGS.searchBar.placeholderMovie
+                  ? ui.searchBar.placeholderMovie
                   : hudTab === 'person'
-                    ? STRINGS.searchBar.placeholderPerson
-                    : STRINGS.searchBar.placeholderGenre
+                    ? ui.searchBar.placeholderPerson
+                    : ui.searchBar.placeholderGenre
             }
             className={cn(
               'h-9 w-full min-w-0 rounded-lg border border-input bg-background/80 px-3 pr-9 text-sm text-foreground outline-none',
@@ -367,7 +368,7 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
           {searchQuery.length > 0 && !isBlocked && (
             <CloseButton
               variant="ghostSm"
-              label={STRINGS.searchBar.clear}
+              label={ui.searchBar.clear}
               className="absolute right-1 top-1/2 -translate-y-1/2"
               onClick={onClear}
             />

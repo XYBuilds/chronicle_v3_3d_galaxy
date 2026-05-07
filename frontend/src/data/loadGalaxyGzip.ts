@@ -1,4 +1,4 @@
-import { STRINGS } from '@/lib/strings'
+import { getStrings } from '@/lib/strings'
 
 export type GalaxyGzipLoadPhase = 'download' | 'decompress' | 'parse'
 
@@ -37,8 +37,8 @@ async function readBodyWithProgress(
       downloadedBytes += value.byteLength
       const message =
         totalBytes !== null
-          ? STRINGS.galaxyData.downloadProgress(mb(downloadedBytes), mb(totalBytes))
-          : STRINGS.galaxyData.downloadProgressPartial(mb(downloadedBytes))
+          ? getStrings().galaxyData.downloadProgress(mb(downloadedBytes), mb(totalBytes))
+          : getStrings().galaxyData.downloadProgressPartial(mb(downloadedBytes))
       emit(onProgress, { phase: 'download', downloadedBytes, totalBytes, message })
     }
   }
@@ -53,7 +53,7 @@ async function readBodyWithProgress(
 
 async function gunzipBuffer(u8: Uint8Array): Promise<string> {
   if (typeof DecompressionStream === 'undefined') {
-    throw new Error(STRINGS.galaxyData.gzipUnsupported)
+    throw new Error(getStrings().galaxyData.gzipUnsupported)
   }
   const gzipStream = new DecompressionStream('gzip') as TransformStream<Uint8Array, Uint8Array>
   const stream = new ReadableStream<Uint8Array>({
@@ -79,9 +79,9 @@ export async function fetchGunzippedJson(
   try {
     res = await fetch(url)
   } catch (e) {
-    const hint = e instanceof TypeError ? STRINGS.galaxyData.networkErrorHint : ''
+    const hint = e instanceof TypeError ? getStrings().galaxyData.networkErrorHint : ''
     throw new Error(
-      STRINGS.galaxyData.requestFailed(url, hint, e instanceof Error ? e.message : String(e)),
+      getStrings().galaxyData.requestFailed(url, hint, e instanceof Error ? e.message : String(e)),
     )
   }
 
@@ -89,7 +89,7 @@ export async function fetchGunzippedJson(
     const tail = url.includes('search_index')
       ? 'frontend/public/data/galaxy_search_index.json.gz'
       : 'frontend/public/data/galaxy_data.json.gz'
-    throw new Error(STRINGS.galaxyData.httpNotOk(res.status, res.statusText, url, tail))
+    throw new Error(getStrings().galaxyData.httpNotOk(res.status, res.statusText, url, tail))
   }
 
   const cl = res.headers.get('Content-Length')
@@ -97,7 +97,7 @@ export async function fetchGunzippedJson(
   const totalBytes = Number.isFinite(parsedLen) ? parsedLen : null
   const body = res.body
   if (!body) {
-    throw new Error(STRINGS.galaxyData.emptyResponseBody)
+    throw new Error(getStrings().galaxyData.emptyResponseBody)
   }
 
   const bytes = await readBodyWithProgress(body, totalBytes, onProgress)
@@ -108,7 +108,7 @@ export async function fetchGunzippedJson(
       phase: 'decompress',
       downloadedBytes: bytes.byteLength,
       totalBytes,
-      message: STRINGS.galaxyData.decompressingGzip,
+      message: getStrings().galaxyData.decompressingGzip,
     })
     text = await gunzipBuffer(bytes)
   } else {
@@ -119,12 +119,12 @@ export async function fetchGunzippedJson(
     phase: 'parse',
     downloadedBytes: bytes.byteLength,
     totalBytes,
-    message: STRINGS.galaxyData.parsingJson,
+    message: getStrings().galaxyData.parsingJson,
   })
 
   try {
     return JSON.parse(text) as unknown
   } catch (e) {
-    throw new Error(STRINGS.galaxyData.jsonParseFailed(e instanceof Error ? e.message : String(e)))
+    throw new Error(getStrings().galaxyData.jsonParseFailed(e instanceof Error ? e.message : String(e)))
   }
 }

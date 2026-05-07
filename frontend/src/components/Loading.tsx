@@ -1,5 +1,5 @@
 import type { GalaxyGzipProgress } from '@/data/loadGalaxyGzip'
-import { STRINGS } from '@/lib/strings'
+import { useStrings } from '@/lib/strings'
 import { cn } from '@/lib/utils'
 
 export type LoadingIndexStatus = 'pending' | 'loading' | 'ready' | 'skipped' | 'error'
@@ -67,24 +67,20 @@ function computeBarWidth(
   return { widthPct: 75, indeterminate: false }
 }
 
-function indexRowLabel(indexStatus: LoadingIndexStatus): string {
-  if (indexStatus === 'skipped') return STRINGS.loading.phaseIndexSkipped
-  if (indexStatus === 'error') return STRINGS.loading.phaseIndexFailed
-  return STRINGS.loading.phaseIndex
-}
-
 /**
  * Full-screen loading overlay: gzip + search-index progress (four steps) and optional Cover Start.
  */
 export function Loading({
   className,
-  label = STRINGS.loading.title,
+  label: labelProp,
   progress = null,
   gzipDone = false,
   indexStatus = 'pending',
   mode = 'loading',
   onStart,
 }: LoadingProps) {
+  const s = useStrings()
+  const label = labelProp ?? s.loading.title
   const effectiveGzipDone = gzipDone || mode === 'await-start'
   const { widthPct, indeterminate } = computeBarWidth(progress, indexStatus, effectiveGzipDone)
 
@@ -92,9 +88,15 @@ export function Loading({
     mode === 'await-start' || (mode === 'loading' && (progress !== null || gzipDone))
   const busy = mode === 'loading'
 
+  const indexRowLabel = (() => {
+    if (indexStatus === 'skipped') return s.loading.phaseIndexSkipped
+    if (indexStatus === 'error') return s.loading.phaseIndexFailed
+    return s.loading.phaseIndex
+  })()
+
   const footerMessage = (() => {
     if (progress?.message) return progress.message
-    if (effectiveGzipDone && indexStatus === 'loading') return STRINGS.searchBar.indexLoading
+    if (effectiveGzipDone && indexStatus === 'loading') return s.searchBar.indexLoading
     return null
   })()
 
@@ -117,7 +119,7 @@ export function Loading({
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 px-6">
         {mode === 'await-start' ? (
           <h1 id="cover-title" className="sr-only">
-            {STRINGS.cover.title}
+            {s.cover.title}
           </h1>
         ) : null}
 
@@ -131,7 +133,7 @@ export function Loading({
                   gzipPhaseDone(progress, 'download', effectiveGzipDone) && 'text-primary',
                 )}
               >
-                {STRINGS.loading.phaseDownload}
+                {s.loading.phaseDownload}
               </li>
               <li
                 className={cn(
@@ -140,7 +142,7 @@ export function Loading({
                   gzipPhaseDone(progress, 'decompress', effectiveGzipDone) && 'text-primary',
                 )}
               >
-                {STRINGS.loading.phaseDecompress}
+                {s.loading.phaseDecompress}
               </li>
               <li
                 className={cn(
@@ -149,7 +151,7 @@ export function Loading({
                   gzipPhaseDone(progress, 'parse', effectiveGzipDone) && 'text-primary',
                 )}
               >
-                {STRINGS.loading.phaseParse}
+                {s.loading.phaseParse}
               </li>
               <li
                 className={cn(
@@ -160,7 +162,7 @@ export function Loading({
                   indexErrorStyle && 'font-medium text-destructive',
                 )}
               >
-                {indexRowLabel(indexStatus)}
+                {indexRowLabel}
               </li>
             </ol>
             <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
@@ -184,11 +186,11 @@ export function Loading({
           <button
             type="button"
             autoFocus
-            aria-label={STRINGS.cover.startAriaLabel}
+            aria-label={s.cover.startAriaLabel}
             onClick={onStart}
             className="rounded-md bg-primary px-6 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 focus-visible:ring-2 focus-visible:ring-[--ui-edge-color-strong]"
           >
-            {STRINGS.cover.start}
+            {s.cover.start}
           </button>
         </div>
       ) : null}

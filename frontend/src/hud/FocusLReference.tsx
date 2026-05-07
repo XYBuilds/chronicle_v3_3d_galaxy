@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { Star } from 'lucide-react'
 
 import { srgb01FromHueAndVoteNorm, srgb01ToCss } from '@/lib/colorMath'
-import { STRINGS } from '@/lib/strings'
+import { useStrings } from '@/lib/strings'
 import { useGalaxyDataStore } from '@/store/galaxyDataStore'
 import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
 import type { Movie } from '@/types/galaxy'
@@ -26,6 +26,7 @@ function primaryHueRad(movie: Movie, palette: Record<string, string>): number {
  * P14.7.1 — Vertical spectrum to the left of the on-screen planet (after horizontal Timeline layout review).
  */
 export function FocusLReference() {
+  const str = useStrings()
   const selectedMovieId = useGalaxyInteractionStore((s) => s.selectedMovieId)
   const snap = useGalaxyInteractionStore((s) => s.focusLightnessSnap)
   const data = useGalaxyDataStore((s) => s.data)
@@ -63,7 +64,7 @@ export function FocusLReference() {
         'left-[max(0.75rem,calc(50vw-22rem))]',
       )}
       role="img"
-      aria-label={STRINGS.focusLReference.ariaLabel(ratingStr, movie.title)}
+      aria-label={str.focusLReference.ariaLabel(ratingStr, movie.title)}
     >
       <div className="relative flex h-[min(70vh,28rem)] w-2.5 shrink-0 flex-col-reverse overflow-hidden">
         {style.stripeColors.map((bg, k) => (

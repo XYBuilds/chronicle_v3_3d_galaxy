@@ -5,7 +5,7 @@ import {
   computeLogVoteRangeFromMovies,
   focusShellRadiiForVoteTiers,
 } from '@/lib/galaxyVoteSize'
-import { STRINGS } from '@/lib/strings'
+import { getStrings } from '@/lib/strings'
 import type { Movie } from '@/types/galaxy'
 
 // ---------------------------------------------------------------------------
@@ -162,7 +162,7 @@ export function createFocusSizeReferenceRings(movies: readonly Movie[]): FocusSi
   /** Fixed azimuth (rad) in ring local XY for all tiers — seeded by `movieId`. */
   let sharedLabelAzimuth = 0
 
-  const tierLabels = STRINGS.focusVoteReference.tierLabels
+  const tierLabels = getStrings().focusVoteReference.tierLabels
   console.assert(
     tierLabels.length === FOCUS_VOTE_REFERENCE_TIERS.length,
     '[FocusSizeReferenceRings] tierLabels vs FOCUS_VOTE_REFERENCE_TIERS',

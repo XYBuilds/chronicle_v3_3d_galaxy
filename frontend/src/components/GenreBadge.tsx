@@ -3,8 +3,11 @@ import { CloseButton } from '@/components/ui/close-button'
 import { getGenreChipSurfaceStyle, normalizeGenreHex } from '@/lib/genreColor'
 import { cn } from '@/lib/utils'
 
-const chipClass =
+const chipClassMd =
   'h-7 max-w-full shrink-0 rounded-full text-[0.72rem] font-medium transition-colors duration-150'
+/** Candidate grid — one step smaller than selected strip. */
+const chipClassSm =
+  'h-6 max-w-full shrink-0 rounded-full text-[0.62rem] font-medium transition-colors duration-150'
 
 export interface GenreBadgeProps {
   name: string
@@ -18,6 +21,8 @@ export interface GenreBadgeProps {
   /** Selected strip: optional remove control. */
   onRemove?: () => void
   removeAriaLabel?: string
+  /** `sm` — SearchBar genre grid candidates; default strip / removable row stays `md`. */
+  size?: 'md' | 'sm'
 }
 
 /**
@@ -33,6 +38,7 @@ export function GenreBadge({
   onClick,
   onRemove,
   removeAriaLabel,
+  size = 'md',
 }: GenreBadgeProps) {
   const raw = paletteHex?.trim()
   const n = raw ? normalizeGenreHex(raw) : null
@@ -52,7 +58,7 @@ export function GenreBadge({
     return (
       <Badge
         variant={isGenre ? 'genre' : 'outline'}
-        className={cn(chipClass, 'inline-flex max-w-full items-center gap-1 px-2 pr-1')}
+        className={cn(chipClassMd, 'inline-flex max-w-full items-center gap-1 px-2 pr-1')}
         style={surface}
       >
         <span className="flex min-w-0 flex-1 items-center gap-1 pl-1">{label}</span>
@@ -69,13 +75,16 @@ export function GenreBadge({
     )
   }
 
+  const chipClass = size === 'sm' ? chipClassSm : chipClassMd
+
   return (
     <button
       type="button"
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        'inline-flex items-center gap-1 rounded-full border border-transparent px-3 py-0.5 text-left',
+        'inline-flex items-center rounded-full border border-transparent text-left',
+        size === 'sm' ? 'gap-0.5 px-2 py-px' : 'gap-1 px-3 py-0.5',
         chipClass,
         disabled && 'cursor-not-allowed opacity-40',
         !disabled && 'cursor-pointer',

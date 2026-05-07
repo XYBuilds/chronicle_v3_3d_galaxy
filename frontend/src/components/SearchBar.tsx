@@ -429,6 +429,7 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
                   <GenreBadge
                     key={g}
                     name={g}
+                    size="sm"
                     paletteHex={genrePalette?.[g]}
                     selected={isSelected}
                     disabled={disabled}

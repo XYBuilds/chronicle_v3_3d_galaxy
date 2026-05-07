@@ -6,7 +6,7 @@ import { useLocaleStore } from '@/store/localeStore'
 const LANG_PARAM = 'lang'
 
 /**
- * P21.2: `?lang=en|zh|es` applies locale to HUD copy (mirrors {@link useThemeFromQuery}).
+ * P21.2: `?lang=` applies a supported UI locale.
  * Precedence at boot is resolved in {@link resolveInitialLocale}; this effect re-syncs after mount.
  */
 export function useLocaleFromQuery(): void {

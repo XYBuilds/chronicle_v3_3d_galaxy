@@ -1,8 +1,20 @@
 import { create } from 'zustand'
 
-import { DEFAULT_LOCALE, isLocaleId, type LocaleId } from '@/lib/locales'
+import {
+  DEFAULT_LOCALE,
+  isLocaleId,
+  localeToHtmlLang,
+  type LocaleId,
+} from '@/lib/locales'
 
 const STORAGE_KEY = 'tmc.locale'
+
+/** Sets `<html lang>` and `dir` for RTL (Arabic). */
+export function syncHtmlLangDir(locale: LocaleId): void {
+  if (typeof document === 'undefined') return
+  document.documentElement.lang = localeToHtmlLang(locale)
+  document.documentElement.dir = locale === 'ar' ? 'rtl' : 'ltr'
+}
 
 /** Query → localStorage → navigator.language → default (plan P21.2). */
 export function resolveInitialLocale(): LocaleId {
@@ -17,8 +29,19 @@ export function resolveInitialLocale(): LocaleId {
     /* private mode / quota */
   }
   const nav = navigator.language?.toLowerCase() ?? ''
+  if (
+    nav.startsWith('zh-tw') ||
+    nav.startsWith('zh-hk') ||
+    nav.startsWith('zh-mo') ||
+    nav === 'zh-hant'
+  ) {
+    return 'zh-Hant'
+  }
   if (nav.startsWith('zh')) return 'zh'
+  if (nav.startsWith('ja')) return 'ja'
   if (nav.startsWith('es')) return 'es'
+  if (nav.startsWith('fr')) return 'fr'
+  if (nav.startsWith('ar')) return 'ar'
   return DEFAULT_LOCALE
 }
 
@@ -35,6 +58,7 @@ export const useLocaleStore = create<LocaleState>((set) => ({
     } catch {
       /* ignore */
     }
+    syncHtmlLangDir(l)
     set({ locale: l })
     if (typeof window !== 'undefined') {
       const u = new URL(window.location.href)
@@ -43,3 +67,5 @@ export const useLocaleStore = create<LocaleState>((set) => ({
     }
   },
 }))
+
+syncHtmlLangDir(useLocaleStore.getState().locale)

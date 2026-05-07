@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
+import ar from './ar.json'
 import en from './en.json'
 import es from './es.json'
+import fr from './fr.json'
+import ja from './ja.json'
 import zh from './zh.json'
+import zhHant from './zh-Hant.json'
 
 /** Collect dot-paths for leaf values; array indices use [n] segments. */
 function leafPaths(value: unknown, prefix = ''): string[] {
@@ -22,17 +26,21 @@ function leafPaths(value: unknown, prefix = ''): string[] {
 
 const canonicalPaths = leafPaths(en).sort()
 
+const bundles = [
+  ['zh', zh],
+  ['zh-Hant', zhHant],
+  ['es', es],
+  ['ja', ja],
+  ['fr', fr],
+  ['ar', ar],
+] as const
+
 describe('locale JSON schema parity', () => {
-  it('zh.json matches en.json leaf key paths', () => {
-    expect(leafPaths(zh).sort()).toEqual(canonicalPaths)
+  it.each(bundles)('%s matches en.json leaf key paths', (_name, bundle) => {
+    expect(leafPaths(bundle).sort()).toEqual(canonicalPaths)
   })
 
-  it('es.json matches en.json leaf key paths', () => {
-    expect(leafPaths(es).sort()).toEqual(canonicalPaths)
-  })
-
-  it('focusVoteReference tier label counts match en', () => {
-    expect(zh.focusVoteReference.tierLabels.length).toBe(en.focusVoteReference.tierLabels.length)
-    expect(es.focusVoteReference.tierLabels.length).toBe(en.focusVoteReference.tierLabels.length)
+  it.each(bundles)('%s focusVoteReference tier count matches en', (_name, bundle) => {
+    expect(bundle.focusVoteReference.tierLabels.length).toBe(en.focusVoteReference.tierLabels.length)
   })
 })

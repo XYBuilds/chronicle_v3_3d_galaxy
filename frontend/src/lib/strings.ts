@@ -1,10 +1,10 @@
 /**
- * HUD copy: `./locales/{en,zh,es}.json`.
+ * HUD copy: `./locales/*.json` (see {@link LOCALE_IDS}).
  * Runtime locale via {@link useStrings}; non-React paths use {@link getStrings}.
  */
 
 import type { LocaleId } from './locales'
-import { LOCALES } from './locales'
+import { LOCALES, LOCALE_IDS } from './locales'
 import { useLocaleStore } from '@/store/localeStore'
 
 /** Replace `{{key}}` segments in order; values must be strings (coerce numbers at call sites if needed). */
@@ -89,11 +89,9 @@ export function buildStrings(localeId: LocaleId) {
 
 export type LocaleStrings = ReturnType<typeof buildStrings>
 
-const STRINGS_BY_LOCALE: Record<LocaleId, LocaleStrings> = {
-  en: buildStrings('en'),
-  zh: buildStrings('zh'),
-  es: buildStrings('es'),
-}
+const STRINGS_BY_LOCALE = Object.fromEntries(
+  LOCALE_IDS.map((id) => [id, buildStrings(id)]),
+) as Record<LocaleId, LocaleStrings>
 
 export function useStrings(): LocaleStrings {
   const locale = useLocaleStore((s) => s.locale)

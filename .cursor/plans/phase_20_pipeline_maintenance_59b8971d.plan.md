@@ -19,7 +19,7 @@ todos:
     status: completed
   - id: p206-doc-sync-report
     content: P20.6 同步 Tech Spec / Data Pipeline / README + 撰写 Phase 20 实施报告
-    status: pending
+    status: completed
 isProject: false
 ---
 

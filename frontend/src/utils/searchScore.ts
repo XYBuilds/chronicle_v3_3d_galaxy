@@ -46,8 +46,24 @@ const MOVIE_RESULT_CAP = 12
 const PERSON_RESULT_CAP = 8
 const GENRE_RESULT_CAP = 5
 
-/** Min trimmed query length before any search runs (Design §4.2). */
+/** Min trimmed query length before any search runs (Design §4.2) — Latin / Cyrillic / Arabic etc. */
 export const SEARCH_MIN_QUERY_LEN = 3
+
+/** Design Spec §4.2 — debounce before scoring; pairs with `useDeferredValue` in SearchBar. */
+export const SEARCH_QUERY_DEBOUNCE_MS = 200
+
+/** Han + Japanese kana + Hangul syllables: one grapheme may trigger search (P21+). */
+const RE_IDEOGRAPHIC_CJK_QUERY = /\p{Script=Han}|\p{Script=Hiragana}|\p{Script=Katakana}|\p{Script=Hangul}/u
+
+/**
+ * Minimum trimmed character length before running autocomplete scoring.
+ * Ideographic CJK queries: 1; otherwise {@link SEARCH_MIN_QUERY_LEN}.
+ */
+export function searchMinQueryLengthForTrim(trimmed: string): number {
+  if (trimmed.length === 0) return SEARCH_MIN_QUERY_LEN
+  if (RE_IDEOGRAPHIC_CJK_QUERY.test(trimmed)) return 1
+  return SEARCH_MIN_QUERY_LEN
+}
 
 export function moviePopularityScore(m: Movie): number {
   return Math.log10(m.vote_count + 1) * m.vote_average
@@ -101,8 +117,11 @@ function rangesForCaseInsensitiveSubstring(label: string, queryRaw: string): Tex
 }
 
 export function scoreMoviesForQuery(movies: readonly Movie[], queryRaw: string): MovieSearchHit[] {
-  const query = normalizeForSearch(queryRaw.trim())
-  if (query.length < SEARCH_MIN_QUERY_LEN) return []
+  const trimmed = queryRaw.trim()
+  if (trimmed.length === 0) return []
+  const minLen = searchMinQueryLengthForTrim(trimmed)
+  const query = normalizeForSearch(trimmed)
+  if (query.length < minLen) return []
 
   const hits: MovieSearchHit[] = []
   for (const m of movies) {
@@ -151,8 +170,11 @@ function personMatchTier(normKey: string, query: string): MatchTier | null {
 }
 
 export function scorePeopleForQuery(index: SearchIndex, queryRaw: string): PersonSearchHit[] {
-  const query = normalizeForSearch(queryRaw.trim())
-  if (query.length < SEARCH_MIN_QUERY_LEN) return []
+  const trimmed = queryRaw.trim()
+  if (trimmed.length === 0) return []
+  const minLen = searchMinQueryLengthForTrim(trimmed)
+  const query = normalizeForSearch(trimmed)
+  if (query.length < minLen) return []
 
   const hits: PersonSearchHit[] = []
   for (const [personKey, entry] of Object.entries(index.people)) {
@@ -178,8 +200,11 @@ export function scorePeopleForQuery(index: SearchIndex, queryRaw: string): Perso
 }
 
 export function scoreGenresForQuery(index: SearchIndex, queryRaw: string): GenreSearchHit[] {
-  const query = normalizeForSearch(queryRaw.trim())
-  if (query.length < SEARCH_MIN_QUERY_LEN) return []
+  const trimmed = queryRaw.trim()
+  if (trimmed.length === 0) return []
+  const minLen = searchMinQueryLengthForTrim(trimmed)
+  const query = normalizeForSearch(trimmed)
+  if (query.length < minLen) return []
 
   const hits: GenreSearchHit[] = []
   for (const [genreName, g] of Object.entries(index.genres)) {

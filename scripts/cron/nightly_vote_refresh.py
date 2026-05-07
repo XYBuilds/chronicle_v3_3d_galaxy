@@ -24,6 +24,7 @@ if str(_SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS_DIR))
 
 from export.export_galaxy_json import decimal_year_with_jitter  # noqa: E402
+from feature_engineering.dim_drift_detector import DimDriftError, assert_no_dim_drift  # noqa: E402
 from feature_engineering.genre_encoding import (  # noqa: E402
     DEFAULT_GENRE_WEIGHT_RATIO,
     rank_weighted_genre_matrix,
@@ -41,6 +42,11 @@ from feature_engineering.text_embedding import (  # noqa: E402
     l2_normalize_rows as l2_normalize_rows_text,
 )
 from pipeline.cleaning import load_raw_csv, run_cleaning_pipeline  # noqa: E402
+
+
+def _env_dim_drift_force_skip() -> bool:
+    v = os.environ.get("DIM_DRIFT_FORCE_SKIP", "").strip().lower()
+    return v in ("1", "true", "yes", "on")
 
 
 def _release_date_iso(row: pd.Series) -> str:
@@ -380,6 +386,12 @@ def main(argv: list[str] | None = None) -> int:
 
         cleaned, steps = run_cleaning_pipeline(raw, frozen_year_thresholds=frozen)
         print(f"[P18.4 nightly] cleaned.shape={cleaned.shape} last_step={steps[-1].name}", flush=True)
+
+        try:
+            assert_no_dim_drift(cleaned, force_skip=_env_dim_drift_force_skip())
+        except DimDriftError as err:
+            print(f"[P18.4 nightly] ABORT dim drift: {err}", flush=True)
+            return 1
 
         if args.dry_run:
             print("[P18.4 nightly] --dry-run: skip Supabase writes / export", flush=True)

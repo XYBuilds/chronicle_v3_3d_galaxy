@@ -7,7 +7,7 @@ todos:
     status: completed
   - id: p202-dim-drift
     content: P20.2 新增 language_palette.py（FROZEN_LANG_ORDER_V1 + assert_all_languages_in_frozen_v1）+ dim_drift_detector.py 统一入口；接入 nightly/monthly；workflow 加 force_skip_dim_check 输入；写入 monthly_refit_meta.json
-    status: pending
+    status: completed
   - id: p203-load-failure
     content: P20.3 抽离 App.tsx galaxy-error 分支为 LoadFailurePage 组件（折叠错误详情 + retry/reload 双按钮）；Storybook 4 fixture
     status: pending

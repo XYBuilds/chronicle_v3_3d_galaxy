@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: "0 20 * * *" # 20:00 UTC daily (~04:00 Beijing next day)
   workflow_dispatch:
+    inputs:
+      force_skip_dim_check:
+        type: boolean
+        default: false
+        description: "P20.2 Skip dimension drift check (emergency unblock only; bump palettes for real fixes)."
 
 permissions:
   contents: read
@@ -45,6 +50,7 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
           KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
+          DIM_DRIFT_FORCE_SKIP: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.force_skip_dim_check || false }}
         run: |
           set -euo pipefail
           python scripts/cron/nightly_vote_refresh.py

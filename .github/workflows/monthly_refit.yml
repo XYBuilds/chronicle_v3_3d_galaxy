@@ -13,6 +13,10 @@ on:
           - soft
           - hard
           - skip
+      force_skip_dim_check:
+        type: boolean
+        default: false
+        description: "P20.2 Skip dimension drift check (emergency unblock only; bump palettes for real fixes)."
 
 permissions:
   contents: read
@@ -126,6 +130,7 @@ jobs:
           KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
           MONTHLY_ANCHOR_MODE: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.anchor_mode) || 'soft' }}
           MONTHLY_ANCHOR_SOFT_FAIL_MAX: "50"
+          DIM_DRIFT_FORCE_SKIP: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.force_skip_dim_check || false }}
         run: |
           set -euo pipefail
           python scripts/cron/monthly_refit.py

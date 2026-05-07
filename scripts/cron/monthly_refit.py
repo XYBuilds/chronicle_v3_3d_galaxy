@@ -29,6 +29,7 @@ if str(_SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS_DIR))
 
 from export.export_galaxy_json import decimal_year_with_jitter  # noqa: E402
+from feature_engineering.dim_drift_detector import DimDriftError, assert_no_dim_drift  # noqa: E402
 from feature_engineering.genre_encoding import (  # noqa: E402
     DEFAULT_GENRE_WEIGHT_RATIO,
     rank_weighted_genre_matrix,
@@ -195,6 +196,11 @@ def _resolve_anchor_mode(args: argparse.Namespace) -> tuple[str, float]:
     if env in ("soft", "hard", "skip"):
         return env, _resolve_soft_fail_max(args)
     return "hard", _resolve_soft_fail_max(args)
+
+
+def _env_dim_drift_force_skip() -> bool:
+    v = os.environ.get("DIM_DRIFT_FORCE_SKIP", "").strip().lower()
+    return v in ("1", "true", "yes", "on")
 
 
 def _resolve_soft_fail_max(args: argparse.Namespace) -> float:
@@ -466,6 +472,22 @@ def main(argv: list[str] | None = None) -> int:
         df_pre, _steps_pre, _base_pre = run_cleaning_pipeline_before_vote_threshold(raw)
         print(f"[P18.5 monthly] pre-threshold.shape={df_pre.shape}", flush=True)
 
+        try:
+            dim_drift_report = assert_no_dim_drift(
+                df_pre,
+                force_skip=_env_dim_drift_force_skip(),
+            )
+        except DimDriftError as err:
+            _write_monthly_meta(
+                {
+                    "status": "aborted_dim_drift",
+                    **err.report,
+                    "raw_source": f"{raw_path.name}:sha256prefix={raw_fp}",
+                }
+            )
+            print(f"[P18.5 monthly] ABORT dim drift: {err}", flush=True)
+            return 1
+
         thr_map = compute_year_to_vote_threshold(
             df_pre,
             quantile=QUANTILE,
@@ -708,6 +730,7 @@ def main(argv: list[str] | None = None) -> int:
         if not gate_ok:
             meta_fail = {
                 **kv_obs,
+                **dim_drift_report,
                 "abort_reason": gate_reason,
                 "status": "aborted_anchor_residual",
                 "threshold_version": ver_label,
@@ -784,7 +807,7 @@ def main(argv: list[str] | None = None) -> int:
             )
             if ex.returncode != 0:
                 _write_monthly_meta(
-                    {**kv_obs, "status": "aborted_export", "threshold_version": ver_label}
+                    {**kv_obs, **dim_drift_report, "status": "aborted_export", "threshold_version": ver_label}
                 )
                 raise SystemExit(ex.returncode)
             val = subprocess.run(
@@ -799,6 +822,7 @@ def main(argv: list[str] | None = None) -> int:
             if val.returncode != 0:
                 meta_val = {
                     **kv_obs,
+                    **dim_drift_report,
                     "status": "aborted_validate",
                     "threshold_version": ver_label,
                 }
@@ -807,6 +831,7 @@ def main(argv: list[str] | None = None) -> int:
 
         meta_ok = {
             **kv_obs,
+            **dim_drift_report,
             "status": "success",
             "threshold_version": ver_label,
         }

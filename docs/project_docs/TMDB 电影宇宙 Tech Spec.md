@@ -199,7 +199,7 @@ Output
 * **UMAP 超参数**：`n_neighbors`、`min_dist`、`metric` 等**不在此文档锁死数值**；由实验阶段**手动调参**，并将最终取值写入运行配置与产物元数据（与宇宙数据版本号一并记录）。  
 * **UMAP 随机种子（可复现）**：`umap-learn` 与 **cuML** 调用中均须传入 **`random_state=42`**（固定整数，**不可省略**）。同一套输入特征、超参与**同一后端**下，重跑管线应得到**稳定可比对**的 (X, Y) 拓扑（在相同 `torch` / `numpy` 及 **`umap-learn` 或 `cuml` 等版本**前提下的各自语义下）。`umap-learn` 与 `cuml` 之间、或库大版本升级导致的数值漂移，须在变更日志中注明；**故意**更换 `random_state` 视为新宇宙版本，须 bump 版本号并重新 `fit`/`fit_transform`。该值须写入 `meta.umap_params.random_state`。  
 * **排除字段**：绝对排除 release\_date、vote\_count、vote\_average、revenue、budget 以及具有强共线性的 spoken\_languages 和 production\_countries。  
-* **数据驱动原则**：genre 集合、language 集合及其对应的向量维度（N\_genre、N\_lang）均须在管线运行时**从当前数据源动态计算**，严禁写死为常量。所有依赖这些维度的下游数值（如 `1/√d` 缩放因子、色板 hueStep、One-hot 编码宽度等）也必须跟随动态计算。此原则同样适用于 `vote_count`/`vote_average` 的值域边界——映射函数的输入范围由实际数据的 min/max 决定，不可硬编码。
+* **数据驱动原则（P20 更新）**：`N_genre` 维度仍随特征工程配置计算；`N_lang` 在 **P20.2** 起改为基于 frozen 词表版本（`lang_palette_version`）受控扩展，而非静默随当日数据膨胀。nightly/monthly 在 cleaning 后统一执行维度漂移探测：发现未知 genre/language 时默认 **fail CI**，仅在 `workflow_dispatch` 显式启用 `force_skip_dim_check` 时临时放行并记录到 `monthly_refit_meta.json`。`vote_count`/`vote_average` 的值域边界仍由数据 min/max 决定，不可硬编码。
 
 ### **2.1.1 文本 Embedding 规范（overview + tagline）**
 
@@ -473,7 +473,7 @@ galaxy_data.json.gz  +  galaxy_search_index.json.gz
     ├── Cloudflare R2          ← upload_galaxy_r2.py + galaxy_assets_manifest.json
     │   (绕 Pages 单文件 25MiB 硬限；公开读 + CORS)
     └── frontend/dist 仅含 manifest 与小静态资源
-        └── Cloudflare Pages   ← cloudflare/pages-action@v1.5.0 (Direct Upload)
+        └── Cloudflare Pages   ← cloudflare/wrangler-action@v3 (Direct Upload)
             └── (灰度备线) GitHub Pages by .github/workflows/deploy-pages.yml
     ↓
 Browser
@@ -484,6 +484,7 @@ Browser
 * **Supabase** 仅作 source of truth；前端不直连数据库。
 * **每日任务（P18.4）** 沿用 frozen `threshold_versions`，只刷新 `vote_count` / `vote_average` / `popularity`，新过线片入 `movies_pending`；不重算 UMAP 坐标。
 * **月度任务（P18.5 + P18.5b）** 重算 dynamic threshold + 全量 `fit_transform` + Procrustes 对齐 `galaxy_v1_reference`；锚点采用 **软闸**（`MONTHLY_ANCHOR_MODE` 默认 `soft`），仅极端残差或结构性错误 fail；产出 `monthly_refit_meta.json` artifact 供 P95 收紧观测。
+* **维度漂移守卫（P20.2）**：nightly / monthly 在 cleaning 后、写库/UMAP 前统一调用 `assert_no_dim_drift`，同时校验 `genre_palette_version` 与 `lang_palette_version`；默认 fail-loud，紧急场景可经 `force_skip_dim_check` 单次放行并留痕。
 * **Cloudflare Pages** 仅托管前端 bundle；Pages 侧 Git 自动构建已 Disconnect，发布主链路为 GitHub Actions Direct Upload。
 * **Cloudflare R2** 托管 `galaxy_*.json.gz`，前端通过 `frontend/src/lib/galaxyAssetUrls.ts` 按「`VITE_*` → `?dataset=` → manifest → 同源默认」优先级解析 URL。
 * **GitHub Pages** 通过 `.github/workflows/deploy-pages.yml` 在 push 到 `main` 时部署，作为 1–2 周灰度备线；该路径仍走同源 gzip，不依赖 R2。

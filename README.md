@@ -96,8 +96,8 @@ npm run storybook -w frontend
 
 | 任务 | Workflow | 入口脚本 | 频率 | 作用 |
 |------|----------|----------|------|------|
-| **每日票数刷新** | [`.github/workflows/nightly_vote_refresh.yml`](.github/workflows/nightly_vote_refresh.yml) | [`scripts/cron/nightly_vote_refresh.py`](scripts/cron/nightly_vote_refresh.py) | `0 20 * * *` UTC + dispatch | 沿用 frozen `threshold_versions`，UPDATE `vote_count/avg/popularity`，新过线片入 `movies_pending`；导出 + R2 + Pages |
-| **月度 refit** | [`.github/workflows/monthly_refit.yml`](.github/workflows/monthly_refit.yml) | [`scripts/cron/monthly_refit.py`](scripts/cron/monthly_refit.py) | `0 20 1 * *` UTC + dispatch | 重算 dynamic threshold + 全量 DensMAP + Procrustes 对齐 v1 reference + 合并 pending；P18.5b 软闸；导出 + R2 + Pages |
+| **每日票数刷新** | [`.github/workflows/nightly_vote_refresh.yml`](.github/workflows/nightly_vote_refresh.yml) | [`scripts/cron/nightly_vote_refresh.py`](scripts/cron/nightly_vote_refresh.py) | `0 20 * * *` UTC + dispatch | 沿用 frozen `threshold_versions`，UPDATE `vote_count/avg/popularity`，新过线片入 `movies_pending`；**含维度漂移探测（默认 fail CI）**；导出 + R2 + Pages |
+| **月度 refit** | [`.github/workflows/monthly_refit.yml`](.github/workflows/monthly_refit.yml) | [`scripts/cron/monthly_refit.py`](scripts/cron/monthly_refit.py) | `0 20 1 * *` UTC + dispatch | 重算 dynamic threshold + 全量 DensMAP + Procrustes 对齐 v1 reference + 合并 pending；P18.5b 软闸；**含维度漂移探测（默认 fail CI）**；导出 + R2 + Pages |
 | **R2 上传（被 cron 调用）** | — | [`scripts/cron/upload_galaxy_r2.py`](scripts/cron/upload_galaxy_r2.py) | 每次 cron 末端 | 上传 `galaxy_data.json.gz` / `galaxy_search_index.json.gz` 到 R2，写 `galaxy_assets_manifest.json` |
 | **从 Supabase 导出**（被 cron 调用） | — | [`scripts/cron/export_from_supabase.py`](scripts/cron/export_from_supabase.py) | 每次 cron | 分页 + 并行拉 `movies` → `build_galaxy_payload` → 写 `frontend/public/data/*` |
 | **Phase 18.1b 基准** | [`.github/workflows/phase18_refit_benchmark.yml`](.github/workflows/phase18_refit_benchmark.yml) | [`scripts/experiments/phase18_core_refit_benchmark.py`](scripts/experiments/phase18_core_refit_benchmark.py) | 仅 dispatch | 在 `ubuntu-24.04` 上跑 fusion → DensMAP → Procrustes → export，得墙钟与峰值 RSS |
@@ -124,6 +124,7 @@ npm run storybook -w frontend
 | 月度 bundle | `GALAXY_EMBED_BUNDLE_URL` | 单行 http(s) zip 直链；workflow 已 trim/CRLF 兼容 |
 | Cloudflare Pages | `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` / `CLOUDFLARE_PAGES_PROJECT_NAME` | API Token 仅需 **Account → Pages → Edit** |
 | Cloudflare R2 | `R2_ACCOUNT_ID` / `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` / `R2_BUCKET` / `R2_PUBLIC_BASE_URL` | 5 个变量缺一即 R2 step 安全 skip |
+| CF Web Analytics | `CF_WEB_ANALYTICS_BEACON_TOKEN`（CI Secret） / `VITE_CF_BEACON_TOKEN`（构建注入名） | 用于注入 Cloudflare beacon；未配置时构建仍成功 |
 
 ---
 
@@ -131,7 +132,7 @@ npm run storybook -w frontend
 
 ```
 Browser
-  ├── 前端 bundle  ←  Cloudflare Pages（Direct Upload via cloudflare/pages-action）
+  ├── 前端 bundle  ←  Cloudflare Pages（Direct Upload via cloudflare/wrangler-action@v3）
   └── galaxy_*.json.gz
                 ←  Cloudflare R2（公开读 + CORS；优先级见 frontend/src/lib/galaxyAssetUrls.ts）
 

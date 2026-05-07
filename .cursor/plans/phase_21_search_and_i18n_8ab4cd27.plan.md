@@ -13,7 +13,7 @@ todos:
     status: completed
   - id: p214-searchbar-idle-active
     content: "P21.4 SearchBar 容器 data-state=idle|active；触发: focus 内 OR hover 容器 OR results panel；idle 态 outline 无背景"
-    status: pending
+    status: completed
   - id: p215-light-mode-tab-fix
     content: P21.5 SearchBar tab 选中态 light 模式对比修复 (条件 light/dark class，不改 buttonVariants)
     status: pending

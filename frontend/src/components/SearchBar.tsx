@@ -95,6 +95,9 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
   const [hudTab, setHudTab] = useState<SearchHudTab>('movie')
   const [listOpen, setListOpen] = useState(false)
   const [highlightIndex, setHighlightIndex] = useState(-1)
+  /** P21.4 — container idle/active: outline-only vs solid panel (hover | focus | suggestions open). */
+  const [hoverInside, setHoverInside] = useState(false)
+  const [focusInside, setFocusInside] = useState(false)
   const panelRootRef = useRef<HTMLDivElement>(null)
 
   /** P21.3 — Genre tab AND multi-select (badges); orthogonal to movie/person query text. */
@@ -252,6 +255,8 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
   const canShowList = debouncedTrimmed.length >= debouncedMinLen && resultRows.length > 0
   const panelVisible = hudTab !== 'genre' && listOpen && canShowList
 
+  const isActive = hoverInside || focusInside || panelVisible
+
   const activeRowIndex =
     !panelVisible || resultRows.length === 0
       ? -1
@@ -365,13 +370,31 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
     >
       <div
         ref={panelRootRef}
+        data-state={isActive ? 'active' : 'idle'}
+        onMouseEnter={() => setHoverInside(true)}
+        onMouseLeave={() => setHoverInside(false)}
+        onFocusCapture={() => setFocusInside(true)}
+        onBlurCapture={(e) => {
+          if (!panelRootRef.current?.contains(e.relatedTarget as Node | null)) {
+            setFocusInside(false)
+          }
+        }}
         className={cn(
-          'rounded-xl border border-border/80 bg-popover/95 p-2 shadow-lg backdrop-blur-md',
+          'group rounded-xl p-2 transition-[background-color,backdrop-filter,box-shadow,border-color] duration-150',
+          'border data-[state=idle]:border-border/40 data-[state=active]:border-border/80',
+          'data-[state=idle]:bg-transparent data-[state=active]:bg-popover/95',
+          'data-[state=idle]:backdrop-blur-none data-[state=active]:backdrop-blur-md',
+          'data-[state=idle]:shadow-none data-[state=active]:shadow-lg',
           isBlocked && 'pointer-events-none',
         )}
         title={isBlocked ? disabledReason ?? undefined : undefined}
       >
-        <div className="mb-2 flex gap-1 rounded-lg bg-muted/40 p-0.5">
+        <div
+          className={cn(
+            'mb-2 flex gap-1 rounded-lg p-0.5 transition-colors duration-150',
+            'group-data-[state=idle]:bg-muted/20 group-data-[state=active]:bg-muted/40',
+          )}
+        >
           {(['movie', 'person', 'genre'] as const).map((tab) => (
             <button
               key={tab}
@@ -407,54 +430,54 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
               value={searchQuery}
             />
             <div className="flex flex-col gap-2 p-1">
-            <div className="border-b border-border/40 pb-2">
-              {selectedGenres.length > 0 ? (
-                <div className="flex min-h-8 flex-wrap items-start gap-1.5">
-                  <div className="flex min-w-0 flex-1 flex-wrap gap-1.5">
-                    {selectedGenres.map((g) => (
-                      <GenreBadge
-                        key={`sel-${g}`}
-                        name={g}
-                        paletteHex={genrePalette?.[g]}
-                        selected
-                        onRemove={() => toggleGenre(g)}
-                        removeAriaLabel={`${ui.searchBar.genreMultiRemove} ${g}`}
-                      />
-                    ))}
+              <div className="border-b border-border/40 pb-2">
+                {selectedGenres.length > 0 ? (
+                  <div className="flex min-h-8 flex-wrap items-start gap-1.5">
+                    <div className="flex min-w-0 flex-1 flex-wrap gap-1.5">
+                      {selectedGenres.map((g) => (
+                        <GenreBadge
+                          key={`sel-${g}`}
+                          name={g}
+                          paletteHex={genrePalette?.[g]}
+                          selected
+                          onRemove={() => toggleGenre(g)}
+                          removeAriaLabel={`${ui.searchBar.genreMultiRemove} ${g}`}
+                        />
+                      ))}
+                    </div>
+                    <span className="shrink-0 self-start pt-0.5 text-xs tabular-nums text-muted-foreground">
+                      {currentIntersection?.size ?? 0} {ui.searchBar.genreMultiMatches}
+                    </span>
                   </div>
-                  <span className="shrink-0 self-start pt-0.5 text-xs tabular-nums text-muted-foreground">
-                    {currentIntersection?.size ?? 0} {ui.searchBar.genreMultiMatches}
-                  </span>
-                </div>
-              ) : (
-                <div className="flex min-h-8 items-center">
-                  <p className="px-1 text-xs leading-snug text-muted-foreground">
-                    {ui.searchBar.genreMultiEmptyHint}
-                  </p>
-                </div>
-              )}
+                ) : (
+                  <div className="flex min-h-8 items-center">
+                    <p className="px-1 text-xs leading-snug text-muted-foreground">
+                      {ui.searchBar.genreMultiEmptyHint}
+                    </p>
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {candidateGenreNames.map((g) => {
+                  const previewN = previewCountIfAdded.get(g) ?? 0
+                  const disabled = previewN === 0
+                  return (
+                    <GenreBadge
+                      key={g}
+                      name={g}
+                      size="sm"
+                      paletteHex={genrePalette?.[g]}
+                      disabled={disabled}
+                      previewCount={previewN}
+                      onClick={() => {
+                        if (disabled) return
+                        toggleGenre(g)
+                      }}
+                    />
+                  )
+                })}
+              </div>
             </div>
-            <div className="flex flex-wrap gap-1.5">
-              {candidateGenreNames.map((g) => {
-                const previewN = previewCountIfAdded.get(g) ?? 0
-                const disabled = previewN === 0
-                return (
-                  <GenreBadge
-                    key={g}
-                    name={g}
-                    size="sm"
-                    paletteHex={genrePalette?.[g]}
-                    disabled={disabled}
-                    previewCount={previewN}
-                    onClick={() => {
-                      if (disabled) return
-                      toggleGenre(g)
-                    }}
-                  />
-                )
-              })}
-            </div>
-          </div>
           </>
         ) : (
           <>
@@ -478,7 +501,8 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
                       : ui.searchBar.placeholderPerson
                 }
                 className={cn(
-                  'h-9 w-full min-w-0 rounded-lg border border-input bg-background/80 px-3 pr-9 text-sm text-foreground outline-none',
+                  'h-9 w-full min-w-0 rounded-lg border border-input px-3 pr-9 text-sm text-foreground outline-none',
+                  'group-data-[state=idle]:bg-background/30 group-data-[state=active]:bg-background/80',
                   'placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40',
                 )}
                 value={searchQuery}

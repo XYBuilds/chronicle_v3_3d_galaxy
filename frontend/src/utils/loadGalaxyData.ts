@@ -98,6 +98,13 @@ function validateMeta(meta: unknown): asserts meta is Meta {
   ) {
     throw new Error('[GalaxyData] meta.has_search_index must be a boolean when present')
   }
+  if (
+    'search_normalize_version' in meta &&
+    meta.search_normalize_version !== undefined &&
+    typeof meta.search_normalize_version !== 'string'
+  ) {
+    throw new Error('[GalaxyData] meta.search_normalize_version must be a string when present')
+  }
   if (typeof meta.count !== 'number' || !Number.isInteger(meta.count) || meta.count < 0) {
     throw new Error(`[GalaxyData] meta.count must be a non-negative integer, got ${String(meta.count)}`)
   }
@@ -215,6 +222,12 @@ function parseAndValidate(raw: unknown): GalaxyData {
   }
   const data: GalaxyData = { meta, movies: moviesUnknown as Movie[] }
   console.assert(data.meta.count === data.movies.length, 'GalaxyData count invariant')
+  if (data.meta.search_normalize_version !== 'v2') {
+    console.warn(
+      '[GalaxyData] meta.search_normalize_version is not "v2"; CJK / non-Latin title search may be incomplete until data is re-exported.',
+      { got: data.meta.search_normalize_version },
+    )
+  }
   return data
 }
 

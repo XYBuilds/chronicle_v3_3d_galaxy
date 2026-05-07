@@ -6,15 +6,9 @@ import type { Movie } from '@/types/galaxy'
 import type { PersonEntry, SearchIndex } from '@/types/searchIndex'
 import type { SearchSuggestion } from '@/store/galaxyInteractionStore'
 
-/** NFKD + strip non-ASCII + casefold (align with Python `normalize_for_search`). */
+/** NFKC + strip Unicode marks + lowercase (mirror Python `normalize_for_search_v2`). */
 export function normalizeForSearch(text: string): string {
-  const nk = text.normalize('NFKD')
-  let ascii = ''
-  for (const ch of nk) {
-    const c = ch.codePointAt(0)!
-    if (c <= 0x7f) ascii += ch
-  }
-  return ascii.toLowerCase()
+  return text.normalize('NFKC').replace(/\p{M}/gu, '').toLowerCase()
 }
 
 export type MatchTier = 'prefix' | 'contains'

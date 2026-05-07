@@ -21,7 +21,7 @@ if str(_SCRIPTS_DIR) not in sys.path:
 
 from export.export_search_index import (  # noqa: E402
     build_search_index_dict,
-    normalize_for_search,
+    normalize_for_search_v2,
     write_search_index_gzip,
 )
 from feature_engineering.genre_encoding import (  # noqa: E402
@@ -180,9 +180,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def _title_normalized_field(title: str, original_title: str) -> str:
-    """NFKD + ASCII + casefold; concatenate distinct normalized originals with space (Tech Spec §4.3)."""
-    t = normalize_for_search(str(title).strip())
-    o = normalize_for_search(str(original_title).strip())
+    """NFKC + strip Mn + casefold (v2); concatenate distinct normalized originals with space (Tech Spec §4.3)."""
+    t = normalize_for_search_v2(str(title).strip())
+    o = normalize_for_search_v2(str(original_title).strip())
     if not o or o == t:
         return t
     return f"{t} {o}".strip()
@@ -404,6 +404,7 @@ def build_galaxy_payload(
     meta: dict[str, Any] = {
         "version": version,
         "generated_at": generated_at,
+        "search_normalize_version": "v2",
         "has_genre_hue": True,
         "has_search_index": True,
         "count": len(movies),

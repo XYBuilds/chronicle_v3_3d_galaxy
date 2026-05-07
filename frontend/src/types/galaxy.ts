@@ -37,6 +37,8 @@ export interface Meta {
   has_genre_hue?: boolean
   /** P12.1+: when true, ship `galaxy_search_index.json.gz` and `title_normalized` on each movie. */
   has_search_index?: boolean
+  /** P21.1+: `v2` = NFKC + strip marks + casefold pipeline; omit or other values = legacy bundles. */
+  search_normalize_version?: string
   count: number
   embedding_model: string
   umap_params: UmapParams
@@ -65,7 +67,7 @@ export interface Movie {
   genre_hue?: number
 
   title: string
-  /** NFKD + ASCII + casefold; required when `meta.has_search_index === true` (Tech Spec §4.3). */
+  /** Search haystack string (NFKC + strip marks + casefold when `meta.search_normalize_version === 'v2'`). */
   title_normalized?: string
   original_title: string
   overview: string

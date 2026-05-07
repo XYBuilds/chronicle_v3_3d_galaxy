@@ -54,9 +54,38 @@ function baseMovie(over: Partial<Movie> & Pick<Movie, 'id' | 'title'>): Movie {
   }
 }
 
-describe('normalizeForSearch', () => {
-  it('strips accents and lowercases ASCII', () => {
-    expect(normalizeForSearch('Café')).toBe('cafe')
+describe('normalizeForSearch (v2 Unicode)', () => {
+  it('preserves Japanese kana / kanji', () => {
+    expect(normalizeForSearch('映画 五等分の花嫁')).toContain('五等分')
+  })
+  it('preserves Chinese characters', () => {
+    expect(normalizeForSearch('霸王别姬')).toBe('霸王别姬')
+  })
+  it('preserves Cyrillic', () => {
+    expect(normalizeForSearch('Москва')).toBe('москва')
+  })
+  it('preserves Hangul', () => {
+    expect(normalizeForSearch('기생충')).toBe('기생충')
+  })
+  it('casefolds German eszett', () => {
+    expect(normalizeForSearch('Straße')).toBe('strasse')
+  })
+  it('strips combining marks when NFKC leaves a separate Mn', () => {
+    expect(normalizeForSearch('q\u0307')).toBe('q')
+  })
+})
+
+describe('scoreMoviesForQuery with CJK', () => {
+  it('matches Japanese substring in title_normalized', () => {
+    const movies = [
+      baseMovie({
+        id: 1,
+        title: 'The Quintessential Quintuplets',
+        original_title: '映画 五等分の花嫁',
+        title_normalized: 'the quintessential quintuplets 映画 五等分の花嫁',
+      }),
+    ]
+    expect(scoreMoviesForQuery(movies, '五等分').length).toBe(1)
   })
 })
 

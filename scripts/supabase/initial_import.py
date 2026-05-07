@@ -23,7 +23,7 @@ if str(_SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS_DIR))
 
 from export.export_galaxy_json import decimal_year_with_jitter  # noqa: E402
-from export.export_search_index import normalize_for_search  # noqa: E402
+from export.export_search_index import normalize_for_search_v2  # noqa: E402
 from feature_engineering.genre_encoding import parse_genre_list  # noqa: E402
 from feature_engineering.genre_palette import assert_all_genres_in_frozen_v1  # noqa: E402
 
@@ -42,8 +42,8 @@ def _split_list_cell(val: object) -> list[str]:
 
 
 def _title_normalized(title: str, original_title: str) -> str:
-    t = normalize_for_search(str(title).strip())
-    o = normalize_for_search(str(original_title).strip())
+    t = normalize_for_search_v2(str(title).strip())
+    o = normalize_for_search_v2(str(original_title).strip())
     if not o or o == t:
         return t
     return f"{t} {o}".strip()

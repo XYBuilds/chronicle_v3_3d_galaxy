@@ -5,6 +5,7 @@ export const galaxyMinimalFixture = {
   meta: {
     version: 'fixture',
     generated_at: '1970-01-01T00:00:00Z',
+    search_normalize_version: 'v2',
     count: 1,
     embedding_model: 'fixture',
     umap_params: {

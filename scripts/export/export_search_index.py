@@ -25,9 +25,20 @@ ROLE_MASK_MAX = 63
 
 
 def normalize_for_search(text: str) -> str:
-    """NFKD + ASCII fold + casefold (shared with `title_normalized` on movies)."""
+    """NFKD + ASCII fold + casefold (legacy v1; CJK is stripped — prefer ``normalize_for_search_v2``)."""
     s = unicodedata.normalize("NFKD", str(text).strip())
     s = s.encode("ascii", "ignore").decode("ascii")
+    return s.casefold()
+
+
+def normalize_for_search_v2(text: str) -> str:
+    """NFKC + strip Mn combining marks + casefold (Unicode-friendly search key).
+
+    Keeps CJK / Cyrillic / Arabic / Hangul / Devanagari. Still casefolds Latin; ``ß`` → ``ss``.
+    European precomposed accents (e.g. U+00E9) are kept; decomposed marks (e.g. q + U+0307) are stripped.
+    """
+    s = unicodedata.normalize("NFKC", str(text).strip())
+    s = "".join(c for c in s if unicodedata.category(c) != "Mn")
     return s.casefold()
 
 
@@ -40,7 +51,7 @@ def _merge_person(
     name = str(raw_name).strip()
     if not name:
         return
-    nk = normalize_for_search(name)
+    nk = normalize_for_search_v2(name)
     if not nk:
         return
     if nk not in bucket:

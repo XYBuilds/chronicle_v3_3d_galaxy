@@ -58,7 +58,9 @@
     "toggleFullscreen": "切换全屏（F）",
     "focusSearch": "聚焦搜索（Cmd/Ctrl+K）",
     "close": "关闭",
-    "toggleLanguage": "切换界面语言"
+    "toggleLanguage": "选择界面语言",
+    "languageEnglish": "English",
+    "languageChinese": "中文"
   },
   "timeline": {
     "label": "时间轴（上映年份）",

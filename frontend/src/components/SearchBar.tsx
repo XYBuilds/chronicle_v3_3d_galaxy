@@ -409,7 +409,7 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
             <div className="flex flex-col gap-2 p-1">
             <div className="border-b border-border/40 pb-2">
               {selectedGenres.length > 0 ? (
-                <div className="flex flex-wrap items-start gap-1.5">
+                <div className="flex min-h-8 flex-wrap items-start gap-1.5">
                   <div className="flex min-w-0 flex-1 flex-wrap gap-1.5">
                     {selectedGenres.map((g) => (
                       <GenreBadge
@@ -422,14 +422,16 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
                       />
                     ))}
                   </div>
-                  <span className="shrink-0 pt-0.5 text-xs tabular-nums text-muted-foreground">
+                  <span className="shrink-0 self-start pt-0.5 text-xs tabular-nums text-muted-foreground">
                     {currentIntersection?.size ?? 0} {ui.searchBar.genreMultiMatches}
                   </span>
                 </div>
               ) : (
-                <p className="px-1 text-xs leading-snug text-muted-foreground">
-                  {ui.searchBar.genreMultiEmptyHint}
-                </p>
+                <div className="flex min-h-8 items-center">
+                  <p className="px-1 text-xs leading-snug text-muted-foreground">
+                    {ui.searchBar.genreMultiEmptyHint}
+                  </p>
+                </div>
               )}
             </div>
             <div className="flex flex-wrap gap-1.5">

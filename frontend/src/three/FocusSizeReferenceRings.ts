@@ -5,7 +5,8 @@ import {
   computeLogVoteRangeFromMovies,
   focusShellRadiiForVoteTiers,
 } from '@/lib/galaxyVoteSize'
-import { STRINGS } from '@/lib/strings'
+import { getStrings } from '@/lib/strings'
+import { useLocaleStore } from '@/store/localeStore'
 import type { Movie } from '@/types/galaxy'
 
 // ---------------------------------------------------------------------------
@@ -86,7 +87,7 @@ function createRingMesh(): THREE.Mesh {
   return mesh
 }
 
-function makeLabelSprite(text: string): THREE.Sprite {
+function createLabelCanvasTexture(text: string): THREE.CanvasTexture {
   const canvas = document.createElement('canvas')
   canvas.width = LABEL_CANVAS_W
   canvas.height = LABEL_CANVAS_H
@@ -95,6 +96,7 @@ function makeLabelSprite(text: string): THREE.Sprite {
     throw new Error('[FocusSizeReferenceRings] canvas 2d context unavailable')
   }
   ctx.clearRect(0, 0, LABEL_CANVAS_W, LABEL_CANVAS_H)
+  ctx.direction = useLocaleStore.getState().locale === 'ar' ? 'rtl' : 'ltr'
   ctx.font = `100 ${LABEL_CANVAS_FONT_PX}px ${LABEL_UI_FONT_STACK}`
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
@@ -110,6 +112,11 @@ function makeLabelSprite(text: string): THREE.Sprite {
   const tex = new THREE.CanvasTexture(canvas)
   tex.colorSpace = THREE.SRGBColorSpace
   tex.needsUpdate = true
+  return tex
+}
+
+function makeLabelSprite(text: string): THREE.Sprite {
+  const tex = createLabelCanvasTexture(text)
   const mat = new THREE.SpriteMaterial({
     map: tex,
     transparent: true,
@@ -120,6 +127,33 @@ function makeLabelSprite(text: string): THREE.Sprite {
   sprite.center.set(0.5, 0.5)
   sprite.renderOrder = 2.7
   return sprite
+}
+
+/** Replace sprite billboard texture (locale change for tier vote labels). */
+function applyLabelTextToSprite(sprite: THREE.Sprite, text: string): void {
+  const mat = sprite.material as THREE.SpriteMaterial
+  mat.map?.dispose()
+  mat.map = createLabelCanvasTexture(text)
+  mat.needsUpdate = true
+}
+
+function refreshTierLabelsFromStrings(sprites: readonly THREE.Sprite[]): void {
+  const tierLabels = getStrings().focusVoteReference.tierLabels
+  console.assert(
+    tierLabels.length === sprites.length,
+    '[FocusSizeReferenceRings] tierLabels vs sprites',
+    tierLabels.length,
+    sprites.length,
+  )
+  for (let i = 0; i < sprites.length; i++) {
+    applyLabelTextToSprite(sprites[i]!, tierLabels[i]!)
+  }
+  if (import.meta.env.DEV) {
+    console.log('[FocusSizeReferenceRings] tier label textures refreshed', {
+      locale: useLocaleStore.getState().locale,
+      sample: tierLabels[2],
+    })
+  }
 }
 
 export interface FocusSizeReferenceRingsHandle {
@@ -162,7 +196,7 @@ export function createFocusSizeReferenceRings(movies: readonly Movie[]): FocusSi
   /** Fixed azimuth (rad) in ring local XY for all tiers — seeded by `movieId`. */
   let sharedLabelAzimuth = 0
 
-  const tierLabels = STRINGS.focusVoteReference.tierLabels
+  const tierLabels = getStrings().focusVoteReference.tierLabels
   console.assert(
     tierLabels.length === FOCUS_VOTE_REFERENCE_TIERS.length,
     '[FocusSizeReferenceRings] tierLabels vs FOCUS_VOTE_REFERENCE_TIERS',
@@ -177,9 +211,15 @@ export function createFocusSizeReferenceRings(movies: readonly Movie[]): FocusSi
     group.add(sprites[i]!)
   }
 
+  const unsubLocale = useLocaleStore.subscribe((state, prev) => {
+    if (state.locale === prev.locale) return
+    refreshTierLabelsFromStrings(sprites)
+  })
+
   const tmpLocal = new THREE.Vector3()
 
   const dispose = () => {
+    unsubLocale()
     for (const m of rings) {
       m.geometry.dispose()
         ; (m.material as THREE.MeshBasicMaterial).dispose()

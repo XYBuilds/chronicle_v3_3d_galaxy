@@ -20,8 +20,9 @@ import {
 } from '@/components/ui/sheet'
 import { useGalaxyDataStore } from '@/store/galaxyDataStore'
 import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
+import type { LocaleStrings } from '@/lib/strings'
+import { useStrings } from '@/lib/strings'
 import type { Movie } from '@/types/galaxy'
-import { STRINGS } from '@/lib/strings'
 import { cn } from '@/lib/utils'
 
 /** easeOutCubic — open ~300ms, close ~450ms (Phase 4.3). */
@@ -41,13 +42,14 @@ function formatVoteCount(n: number): string {
 
 /** Isolated poster + error state so remounting via `key` resets without an effect. */
 function DrawerPoster({ posterUrl, title }: { posterUrl: string; title: string }) {
+  const str = useStrings()
   const [failed, setFailed] = useState(false)
   const trimmed = posterUrl.trim()
   const show = Boolean(trimmed) && !failed
   return show ? (
     <img
       src={trimmed}
-      alt={STRINGS.drawer.posterAlt(title)}
+      alt={str.drawer.posterAlt(title)}
       className="absolute inset-0 size-full object-cover"
       loading="lazy"
       decoding="async"
@@ -56,7 +58,7 @@ function DrawerPoster({ posterUrl, title }: { posterUrl: string; title: string }
   ) : (
     <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary/20 via-accent to-secondary text-muted-foreground">
       <span className="rounded-md border border-border/60 bg-background/10 px-3 py-2 text-[0.65rem] font-bold uppercase tracking-wider backdrop-blur-sm">
-        {STRINGS.drawer.posterPlaceholder}
+        {str.drawer.posterPlaceholder}
       </span>
     </div>
   )
@@ -78,26 +80,26 @@ const detailsGroupsStackClass = 'flex flex-col gap-y-5 text-sm'
 
 const detailFieldLabelClass = 'text-xs font-semibold leading-snug text-foreground'
 
-function drawerDetailLabel(id: DrawerDetailFieldId): string {
+function drawerDetailLabel(id: DrawerDetailFieldId, str: LocaleStrings): string {
   switch (id) {
     case 'runtime':
-      return STRINGS.drawer.details.runtime
+      return str.drawer.details.runtime
     case 'language':
-      return STRINGS.drawer.details.language
+      return str.drawer.details.language
     case 'director':
-      return STRINGS.drawer.details.director
+      return str.drawer.details.director
     case 'producers':
-      return STRINGS.drawer.details.producers
+      return str.drawer.details.producers
     case 'writers':
-      return STRINGS.drawer.details.writers
+      return str.drawer.details.writers
     case 'directorOfPhotography':
-      return STRINGS.drawer.details.directorOfPhotography
+      return str.drawer.details.directorOfPhotography
     case 'musicComposer':
-      return STRINGS.drawer.details.composer
+      return str.drawer.details.composer
     case 'budget':
-      return STRINGS.drawer.details.budget
+      return str.drawer.details.budget
     case 'revenue':
-      return STRINGS.drawer.details.revenue
+      return str.drawer.details.revenue
     default: {
       const _exhaustive: never = id
       return _exhaustive
@@ -105,12 +107,18 @@ function drawerDetailLabel(id: DrawerDetailFieldId): string {
   }
 }
 
-function DrawerDetailCells({ fields }: { fields: readonly DrawerDetailField[] }) {
+function DrawerDetailCells({
+  fields,
+  str,
+}: {
+  fields: readonly DrawerDetailField[]
+  str: LocaleStrings
+}) {
   return (
     <>
       {fields.map((field) => (
         <div key={field.id} className="min-w-0">
-          <div className={detailFieldLabelClass}>{drawerDetailLabel(field.id)}</div>
+          <div className={detailFieldLabelClass}>{drawerDetailLabel(field.id, str)}</div>
           <div className="text-muted-foreground">{field.value}</div>
         </div>
       ))}
@@ -127,7 +135,8 @@ const drawerBodyScrollClass =
  * Use {@link MovieDetailDrawer} in the app; use this in Storybook with mock props.
  */
 export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailDrawerHudProps) {
-  const title = movie?.title ?? STRINGS.drawer.fallbackTitle
+  const str = useStrings()
+  const title = movie?.title ?? str.drawer.fallbackTitle
   const genrePalette = useGalaxyDataStore((s) => s.data?.meta.genre_palette) ?? null
 
   const detailGroups = useMemo(() => (movie ? buildDrawerDetailsGroups(movie) : null), [movie])
@@ -158,8 +167,8 @@ export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailD
           <SheetTitle className="pr-10 text-2xl font-bold leading-tight tracking-tight text-foreground">{title}</SheetTitle>
           <SheetDescription className="sr-only">
             {movie
-              ? STRINGS.drawer.sheetDescription(movie.title, formatReleaseDate(movie.release_date))
-              : STRINGS.drawer.sheetDescriptionEmpty}
+              ? str.drawer.sheetDescription(movie.title, formatReleaseDate(movie.release_date))
+              : str.drawer.sheetDescriptionEmpty}
           </SheetDescription>
           {movie && movie.original_title && movie.original_title !== movie.title ? (
             <p className="mt-2 text-sm font-medium leading-snug text-muted-foreground">{movie.original_title}</p>
@@ -171,7 +180,7 @@ export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailD
                   <Star className="size-3 fill-current" aria-hidden />
                   <span className="tabular-nums">{movie.vote_average.toFixed(1)}</span>
                 </span>
-                <span>{STRINGS.drawer.votesLine(formatVoteCount(movie.vote_count))}</span>
+                <span>{str.drawer.votesLine(formatVoteCount(movie.vote_count))}</span>
                 <span className="text-foreground">{formatReleaseDate(movie.release_date)}</span>
               </div>
 
@@ -185,7 +194,7 @@ export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailD
                   rel="noopener noreferrer"
                   className={externalHudLinkClass}
                 >
-                  {STRINGS.drawer.links.tmdb}
+                  {str.drawer.links.tmdb}
                   <ExternalLink className="size-3.5 opacity-80" aria-hidden />
                 </a>
                 {showImdbLink ? (
@@ -195,7 +204,7 @@ export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailD
                     rel="noopener noreferrer"
                     className={externalHudLinkClass}
                   >
-                    {STRINGS.drawer.links.imdb}
+                    {str.drawer.links.imdb}
                     <ExternalLink className="size-3.5 opacity-80" aria-hidden />
                   </a>
                 ) : null}
@@ -231,7 +240,7 @@ export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailD
             {showOverview ? (
               <section className="space-y-3">
                 <h3 className="text-[0.65rem] font-bold uppercase tracking-wider text-muted-foreground">
-                  {STRINGS.drawer.sections.overview}
+                  {str.drawer.sections.overview}
                 </h3>
                 <p className="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap">{overviewText}</p>
               </section>
@@ -240,27 +249,27 @@ export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailD
             {showDetailsSection ? (
               <section className="space-y-3">
                 <h3 className="text-[0.65rem] font-bold uppercase tracking-wider text-muted-foreground">
-                  {STRINGS.drawer.sections.details}
+                  {str.drawer.sections.details}
                 </h3>
                 <div className={detailsGroupsStackClass}>
                   {detailGroups ? (
                     <>
                       <div className={detailsGroupGridClass}>
-                        <DrawerDetailCells fields={detailGroups.group1} />
+                        <DrawerDetailCells fields={detailGroups.group1} str={str} />
                       </div>
                       {detailGroups.group2.length > 0 ? (
                         <div className={detailsGroupGridClass}>
-                          <DrawerDetailCells fields={detailGroups.group2} />
+                          <DrawerDetailCells fields={detailGroups.group2} str={str} />
                         </div>
                       ) : null}
                       {detailGroups.group3.length > 0 ? (
                         <div className={detailsGroupGridClass}>
-                          <DrawerDetailCells fields={detailGroups.group3} />
+                          <DrawerDetailCells fields={detailGroups.group3} str={str} />
                         </div>
                       ) : null}
                       {detailGroups.group4.length > 0 ? (
                         <div className={detailsGroupGridClass}>
-                          <DrawerDetailCells fields={detailGroups.group4} />
+                          <DrawerDetailCells fields={detailGroups.group4} str={str} />
                         </div>
                       ) : null}
                     </>
@@ -272,7 +281,7 @@ export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailD
             {showCast ? (
               <section className="space-y-3">
                 <h3 className="text-[0.65rem] font-bold uppercase tracking-wider text-muted-foreground">
-                  {STRINGS.drawer.sections.cast}
+                  {str.drawer.sections.cast}
                 </h3>
                 <div className="grid grid-cols-1 gap-x-8 gap-y-2.5 sm:grid-cols-2">
                   {movie.cast.map((name, i) => (

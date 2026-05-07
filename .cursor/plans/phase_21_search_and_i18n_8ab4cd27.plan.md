@@ -7,7 +7,7 @@ todos:
     status: completed
   - id: p212-i18n-locale-store
     content: P21.2 zh.json + LocaleStore + useLocaleFromQuery + useStrings hook + LanguageSwitch HUD 组件 (右上 Info/Lang/Fullscreen 顺序)；调用点全量迁移到 useStrings
-    status: pending
+    status: completed
   - id: p213-genre-badge-multi-select
     content: P21.3 Genre tab 改 AND 多选 badge：19 badge 网格 + 选中 / 死路 disable / 实时交集 count；selectionIds 写回 store；ESC 全清退出
     status: pending

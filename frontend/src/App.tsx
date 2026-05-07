@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { MovieDetailDrawer } from '@/components/Drawer'
 import { SearchBar } from '@/components/SearchBar'
+import { useLocaleFromQuery } from '@/hooks/useLocaleFromQuery'
 import { useThemeFromQuery } from '@/hooks/useThemeFromQuery'
 import { useTimelineOrientationFromQuery } from '@/hooks/useTimelineOrientationFromQuery'
 import { LoadFailurePage } from '@/components/LoadFailurePage'
@@ -12,17 +13,20 @@ import { HoverRing } from '@/hud/HoverRing'
 import { FocusLReference } from '@/hud/FocusLReference'
 import { FullscreenButton } from '@/hud/FullscreenButton'
 import { InfoButton } from '@/hud/InfoButton'
+import { LanguageSwitch } from '@/hud/LanguageSwitch'
 import { isGalaxyFullscreenAvailable, toggleGalaxyFullscreen } from '@/hud/fullscreenApi'
 import { clearSearch, useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
 import { useGalaxyDataStore } from '@/store/galaxyDataStore'
 import { useSearchIndexStore } from '@/store/searchIndexStore'
-import { STRINGS } from '@/lib/strings'
+import { useStrings } from '@/lib/strings'
 import { mountGalaxyScene } from '@/three/scene'
 
 import './App.css'
 
 function App() {
   useThemeFromQuery()
+  useLocaleFromQuery()
+  const strings = useStrings()
   const timelineOrientation = useTimelineOrientationFromQuery()
   const status = useGalaxyDataStore((s) => s.status)
   const data = useGalaxyDataStore((s) => s.data)
@@ -161,7 +165,7 @@ function App() {
     return (
       <Loading
         mode="loading"
-        label={STRINGS.loading.title}
+        label={strings.loading.title}
         progress={loadProgress}
         gzipDone={false}
         indexStatus="pending"
@@ -179,7 +183,7 @@ function App() {
     return (
       <Loading
         mode="loading"
-        label={STRINGS.searchBar.indexLoading}
+        label={strings.searchBar.indexLoading}
         progress={null}
         gzipDone
         indexStatus="loading"
@@ -193,7 +197,7 @@ function App() {
     return (
       <Loading
         mode="await-start"
-        label={STRINGS.cover.title}
+        label={strings.cover.title}
         progress={null}
         gzipDone
         indexStatus={coverIndexStatus}
@@ -210,7 +214,7 @@ function App() {
     return (
       <Loading
         mode="loading"
-        label={STRINGS.loading.title}
+        label={strings.loading.title}
         progress={loadProgress}
         gzipDone={false}
         indexStatus="pending"
@@ -230,8 +234,11 @@ function App() {
       <SearchBar hasSearchIndex={hasSearchIndex} movies={data.movies} animateZCurrentTo={animateZCurrentTo} />
       <HoverRing />
       <MovieTooltip />
-      <InfoButton />
-      <FullscreenButton />
+      <div className="pointer-events-none fixed right-3 top-3 z-40 flex items-center gap-2 sm:right-4 sm:top-4">
+        <InfoButton />
+        <LanguageSwitch />
+        <FullscreenButton />
+      </div>
       <FocusLReference />
       <Timeline orientation={timelineOrientation} />
       <MovieDetailDrawer />

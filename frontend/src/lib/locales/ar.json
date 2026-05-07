@@ -1,0 +1,125 @@
+{
+  "loading": {
+    "title": "جاري تحميل بيانات المجرة",
+    "phaseDownload": "تنزيل",
+    "phaseDecompress": "فك الضغط",
+    "phaseParse": "تحليل",
+    "phaseIndex": "فهرس البحث",
+    "phaseIndexSkipped": "فهرس البحث — تم التخطي",
+    "phaseIndexFailed": "فهرس البحث — فشل"
+  },
+  "cover": {
+    "title": "جاهز",
+    "start": "ابدأ",
+    "startAriaLabel": "ابدأ — ادخل إلى المجرة وابدأ الرسوميات"
+  },
+  "galaxyData": {
+    "downloadProgress": "تم التنزيل {{downloadedMb}} / {{totalMb}}",
+    "downloadProgressPartial": "تم التنزيل {{downloadedMb}}",
+    "decompressingGzip": "جاري فك ضغط gzip…",
+    "parsingJson": "جاري تحليل JSON…",
+    "gzipUnsupported": "[GalaxyData] لا يستطيع هذا المتصفح فك ضغط gzip (DecompressionStream). استخدم Safari 16.4+ أو Chrome 80+ أو Firefox 113+.",
+    "networkErrorHint": " (خطأ في الشبكة: تحقق من الاتصال أو إمكانية الوصول)",
+    "requestFailed": "[GalaxyData] فشل الطلب إلى {{url}}{{hint}}: {{detail}}",
+    "httpNotOk": "[GalaxyData] HTTP {{status}} {{statusText}} — {{url}} — تأكد من نشر {{deployHintPath}}",
+    "emptyResponseBody": "[GalaxyData] نص الاستجابة فارغ",
+    "jsonParseFailed": "[GalaxyData] فشل تحليل JSON: {{detail}}"
+  },
+  "error": {
+    "title": "تعذر تحميل بيانات المجرة",
+    "retry": "إعادة المحاولة",
+    "reloadPage": "إعادة تحميل الصفحة",
+    "showErrorDetails": "إظهار تفاصيل الخطأ",
+    "hideErrorDetails": "إخفاء تفاصيل الخطأ",
+    "detailsRegionLabel": "الخطأ الخام وتلميحات المطورين",
+    "noErrorText": "لم يُسجّل أي رسالة خطأ.",
+    "localDevHintBeforeCode": "تطوير محلي: شغّل مسار Python لإنشاء ",
+    "localDevBetweenCodes": " (مستبعد من git)؛ تكتب سكربتات التصدير أيضًا ",
+    "localDevHintAfterCode": " ليحمّلها الواجهة الأمامية."
+  },
+  "searchBar": {
+    "tabMovie": "العناوين",
+    "tabPerson": "الأشخاص",
+    "tabGenre": "الأنواع",
+    "noIndexInBundle": "فهرس البحث غير مضمّن في حزمة البيانات (meta.has_search_index)",
+    "indexNotExported": "لم يُصدَّر galaxy_search_index.json.gz",
+    "indexLoading": "جاري تحميل فهرس البحث…",
+    "indexLoadFailed": "فشل تحميل فهرس البحث",
+    "indexNotReady": "فهرس البحث غير جاهز",
+    "searchUnavailable": "البحث غير متاح",
+    "placeholderMovie": "ابحث عن عناوين الأفلام…",
+    "placeholderPerson": "مخرج / منتج / طاقم …",
+    "placeholderGenre": "دراما / كوميديا / إثارة …",
+    "placeholderDisabled": "فهرس البحث غير متاح",
+    "clear": "مسح البحث"
+  },
+  "hud": {
+    "openInfo": "فتح لوحة المعلومات (محتوى مؤقت)",
+    "toggleFullscreen": "تبديل ملء الشاشة (F)",
+    "focusSearch": "التركيز على البحث (Cmd/Ctrl+K)",
+    "close": "إغلاق",
+    "toggleLanguage": "اختر لغة الواجهة"
+  },
+  "timeline": {
+    "label": "الجدول الزمني (سنة الإصدار)",
+    "axisDescription": "محور سنة الإصدار من {{minYear}} إلى {{maxYear}}، تركيز العرض قرب {{focusYear}}",
+    "sliderAriaLabel": "تركيز سنة الإصدار"
+  },
+  "info": {
+    "modalTitle": "عن هذه التجربة",
+    "modalSubtitle": "لوحة مؤقتة: سيتم إنهاء النص والروابط قبل الإطلاق.",
+    "introHeading": "نظرة عامة",
+    "introBody": "(مؤقت) TMDB Movie Cosmos: نحو 60,000 فيلم كمجرة جزيئات ثنائية ونصف الأبعاد؛ الجدول الزمني والبحث (عناوين / أشخاص / أنواع) وتمييز متعدد الاختيار. نص المنتج قيد الإعداد.",
+    "dataHeading": "مصادر البيانات",
+    "dataBody": "(مؤقت) ستُضاف الإسنادات والمراجع عند الإنهاء؛ لا شيء مدرج هنا بعد.",
+    "stackHeading": "المكدس",
+    "stackBody": "(مؤقت) Vite + React + Three.js (مجرة مثيلة / معالجة لاحقة)، Zustand، مسار تصدير gzip. الملخص قيد الإعداد.",
+    "linksHeading": "روابط",
+    "linksBody": "(مؤقت) ستُوفَّر الروابط عند الإنهاء."
+  },
+  "scene": {
+    "webgl2Required": "[Scene] يتطلب WebGL2 (`gl_InstanceID`، مسار InstancedMesh مزدوج). حدّث المتصفح أو فعّل تسريع العتاد (خط أساس المرحلة 7.2)."
+  },
+  "drawer": {
+    "fallbackTitle": "فيلم",
+    "posterAlt": "ملصق {{title}}",
+    "posterPlaceholder": "صورة الملصق",
+    "sheetDescription": "{{title}}، صدر في {{releaseDate}}.",
+    "sheetDescriptionEmpty": "لم يُحدَّد فيلم.",
+    "votesLine": "{{count}} صوتًا",
+    "sections": {
+      "overview": "نظرة عامة",
+      "details": "التفاصيل",
+      "cast": "طاقم التمثيل"
+    },
+    "details": {
+      "missingValue": "/",
+      "runtime": "المدة",
+      "runtimeMinutes": "{{minutes}} د",
+      "language": "اللغة",
+      "director": "المخرج",
+      "writers": "الكُتّاب",
+      "directorOfPhotography": "مدير التصوير",
+      "producers": "المنتجون",
+      "composer": "المؤلف الموسيقي",
+      "budget": "الميزانية",
+      "revenue": "الإيرادات"
+    },
+    "links": {
+      "tmdb": "TMDB",
+      "imdb": "IMDb"
+    }
+  },
+  "focusLReference": {
+    "ariaLabel": "{{rating}} من 10 على طيف OKLab L لـ {{filmTitle}}؛ عشر شرائح بنصف درجة تقييم"
+  },
+  "focusVoteReference": {
+    "tierLabels": [
+      "10 أصوات",
+      "100 صوت",
+      "1,000 صوت",
+      "10,000 صوت",
+      "100,000 صوت"
+    ]
+  }
+}

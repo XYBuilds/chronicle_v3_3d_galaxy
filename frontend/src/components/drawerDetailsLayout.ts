@@ -4,7 +4,7 @@
  */
 
 import type { Movie } from '@/types/galaxy'
-import { STRINGS } from '@/lib/strings'
+import { getStrings } from '@/lib/strings'
 
 export type DrawerDetailFieldId =
   | 'runtime'
@@ -19,7 +19,7 @@ export type DrawerDetailFieldId =
 
 export interface DrawerDetailField {
   id: DrawerDetailFieldId
-  /** Display string (including formatted money or {@link STRINGS.drawer.details.missingValue}). */
+  /** Display string (including formatted money or missing-value slash from strings). */
   value: string
 }
 
@@ -51,14 +51,15 @@ function joinNames(arr: readonly string[]): string {
 }
 
 export function buildDrawerDetailsGroups(movie: Movie): DrawerDetailsGroups {
-  const slash = STRINGS.drawer.details.missingValue
+  const str = getStrings()
+  const slash = str.drawer.details.missingValue
 
   const rt = movie.runtime
   const lang = movie.original_language?.trim() ?? ''
   const group1: readonly [DrawerDetailField, DrawerDetailField] = [
     {
       id: 'runtime',
-      value: rt == null ? slash : STRINGS.drawer.details.runtimeMinutes(rt),
+      value: rt == null ? slash : str.drawer.details.runtimeMinutes(rt),
     },
     {
       id: 'language',

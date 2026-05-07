@@ -1,0 +1,119 @@
+{
+  "loading": {
+    "title": "正在加载星系数据",
+    "phaseDownload": "下载",
+    "phaseDecompress": "解压",
+    "phaseParse": "解析",
+    "phaseIndex": "搜索索引",
+    "phaseIndexSkipped": "搜索索引 — 已跳过",
+    "phaseIndexFailed": "搜索索引 — 失败"
+  },
+  "cover": {
+    "title": "就绪",
+    "start": "开始",
+    "startAriaLabel": "开始 — 进入星系并初始化图形"
+  },
+  "galaxyData": {
+    "downloadProgress": "已下载 {{downloadedMb}} / {{totalMb}}",
+    "downloadProgressPartial": "已下载 {{downloadedMb}}",
+    "decompressingGzip": "正在解压 gzip…",
+    "parsingJson": "正在解析 JSON…",
+    "gzipUnsupported": "[GalaxyData] 此浏览器无法解压 gzip（DecompressionStream）。请使用 Safari 16.4+、Chrome 80+ 或 Firefox 113+。",
+    "networkErrorHint": "（网络错误：请检查连接或可达性）",
+    "requestFailed": "[GalaxyData] 请求失败 {{url}}{{hint}}：{{detail}}",
+    "httpNotOk": "[GalaxyData] HTTP {{status}} {{statusText}} — {{url}} — 请确认已部署 {{deployHintPath}}",
+    "emptyResponseBody": "[GalaxyData] 响应体为空",
+    "jsonParseFailed": "[GalaxyData] JSON 解析失败：{{detail}}"
+  },
+  "error": {
+    "title": "无法加载星系数据",
+    "retry": "重试",
+    "reloadPage": "刷新页面",
+    "showErrorDetails": "显示错误详情",
+    "hideErrorDetails": "隐藏错误详情",
+    "detailsRegionLabel": "原始错误与开发者提示",
+    "noErrorText": "未记录错误信息。",
+    "localDevHintBeforeCode": "本地开发：运行 Python 流水线生成 ",
+    "localDevBetweenCodes": "（gitignore）；导出脚本还会写入 ",
+    "localDevHintAfterCode": " 供前端加载。"
+  },
+  "searchBar": {
+    "tabMovie": "片名",
+    "tabPerson": "影人",
+    "tabGenre": "流派",
+    "noIndexInBundle": "此数据包未包含搜索索引（meta.has_search_index）",
+    "indexNotExported": "未导出 galaxy_search_index.json.gz",
+    "indexLoading": "正在加载搜索索引…",
+    "indexLoadFailed": "搜索索引加载失败",
+    "indexNotReady": "搜索索引未就绪",
+    "searchUnavailable": "搜索不可用",
+    "placeholderMovie": "搜索影片片名…",
+    "placeholderPerson": "导演 / 制片 / 演员 …",
+    "placeholderGenre": "剧情 / 喜剧 / 惊悚 …",
+    "placeholderDisabled": "搜索索引不可用",
+    "clear": "清除搜索"
+  },
+  "hud": {
+    "openInfo": "打开信息面板（占位内容）",
+    "toggleFullscreen": "切换全屏（F）",
+    "focusSearch": "聚焦搜索（Cmd/Ctrl+K）",
+    "close": "关闭",
+    "toggleLanguage": "选择界面语言"
+  },
+  "timeline": {
+    "label": "时间轴（上映年份）",
+    "axisDescription": "上映年份轴：{{minYear}} 至 {{maxYear}}，视图焦点约在 {{focusYear}}",
+    "sliderAriaLabel": "上映年份焦点"
+  },
+  "info": {
+    "modalTitle": "关于本体验",
+    "modalSubtitle": "占位面板：上线前将完善文案与链接。",
+    "introHeading": "概述",
+    "introBody": "（占位）TMDB 电影宇宙：约 60,000 部影片构成的 2.5D 粒子星系；时间轴、搜索（片名 / 影人 / 流派）与多选高亮。正式文案待定。",
+    "dataHeading": "数据来源",
+    "dataBody": "（占位）致谢与引用将在收尾阶段补充；此处尚未列出。",
+    "stackHeading": "技术栈",
+    "stackBody": "（占位）Vite + React + Three.js（实例化星系 / 后期）、Zustand、gzip 导出流水线。摘要待定。",
+    "linksHeading": "链接",
+    "linksBody": "（占位）链接将在收尾阶段提供。"
+  },
+  "scene": {
+    "webgl2Required": "[Scene] 需要 WebGL2（`gl_InstanceID`、双 InstancedMesh 管线）。请升级浏览器或启用硬件加速（Phase 7.2 基线）。"
+  },
+  "drawer": {
+    "fallbackTitle": "影片",
+    "posterAlt": "{{title}} 的海报",
+    "posterPlaceholder": "海报图片",
+    "sheetDescription": "{{title}}，上映日期 {{releaseDate}}。",
+    "sheetDescriptionEmpty": "未选择影片。",
+    "votesLine": "{{count}} 票",
+    "sections": {
+      "overview": "简介",
+      "details": "详情",
+      "cast": "演员"
+    },
+    "details": {
+      "missingValue": "/",
+      "runtime": "片长",
+      "runtimeMinutes": "{{minutes}} 分钟",
+      "language": "语言",
+      "director": "导演",
+      "writers": "编剧",
+      "directorOfPhotography": "摄影指导",
+      "producers": "制片人",
+      "composer": "配乐",
+      "budget": "预算",
+      "revenue": "票房"
+    },
+    "links": {
+      "tmdb": "TMDB",
+      "imdb": "IMDb"
+    }
+  },
+  "focusLReference": {
+    "ariaLabel": "影片 {{filmTitle}} 在 OKLab L 谱上的 {{rating}} / 10；十个档位对应半档评分"
+  },
+  "focusVoteReference": {
+    "tierLabels": ["10 票", "100 票", "1,000 票", "10,000 票", "100,000 票"]
+  }
+}

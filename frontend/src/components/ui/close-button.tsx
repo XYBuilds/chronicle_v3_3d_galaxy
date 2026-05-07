@@ -2,7 +2,7 @@ import { forwardRef, type ButtonHTMLAttributes } from 'react'
 import { X } from 'lucide-react'
 import { cva, type VariantProps } from 'class-variance-authority'
 
-import { STRINGS } from '@/lib/strings'
+import { useStrings } from '@/lib/strings'
 import { cn } from '@/lib/utils'
 
 const closeBtnVariants = cva(
@@ -26,7 +26,7 @@ const closeBtnVariants = cva(
 export interface CloseButtonProps
   extends ButtonHTMLAttributes<HTMLButtonElement>,
   VariantProps<typeof closeBtnVariants> {
-  /** Required for a11y; defaults to STRINGS.hud.close */
+  /** Required for a11y; defaults to localized hud.close */
   label?: string
 }
 
@@ -34,11 +34,12 @@ export const CloseButton = forwardRef<HTMLButtonElement, CloseButtonProps>(funct
   { variant, label, className, type = 'button', ...rest },
   ref,
 ) {
+  const s = useStrings()
   return (
     <button
       ref={ref}
       type={type}
-      aria-label={label ?? STRINGS.hud.close}
+      aria-label={label ?? s.hud.close}
       className={cn(closeBtnVariants({ variant }), className)}
       {...rest}
     >

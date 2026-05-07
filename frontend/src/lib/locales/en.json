@@ -57,7 +57,8 @@
     "openInfo": "Open info panel (placeholder content)",
     "toggleFullscreen": "Toggle fullscreen (F)",
     "focusSearch": "Focus search (Cmd/Ctrl+K)",
-    "close": "Close"
+    "close": "Close",
+    "toggleLanguage": "Choose interface language"
   },
   "timeline": {
     "label": "Timeline (release year)",

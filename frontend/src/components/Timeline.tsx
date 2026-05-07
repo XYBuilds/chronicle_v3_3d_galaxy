@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react'
 
 import { getGalaxyCameraZ, setGalaxyCameraZ, subscribeGalaxyCameraZ } from '@/lib/galaxyCameraZBridge'
-import { STRINGS } from '@/lib/strings'
+import { useStrings } from '@/lib/strings'
 import { useGalaxyDataStore } from '@/store/galaxyDataStore'
 import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
 import { cn } from '@/lib/utils'
@@ -99,6 +99,7 @@ export function TimelineHud({
   orientation = 'horizontal',
   className,
 }: TimelineHudProps) {
+  const str = useStrings()
   const [zMinRaw, zMaxRaw] = zRange
   const zMin = Math.min(zMinRaw, zMaxRaw)
   const zMax = Math.max(zMinRaw, zMaxRaw)
@@ -158,7 +159,7 @@ export function TimelineHud({
   const interactive = Boolean(onZCurrentChange)
   const ariaOrientation = orientation === 'horizontal' ? 'horizontal' : 'vertical'
 
-  const outerAriaLabel = STRINGS.timeline.axisDescription(
+  const outerAriaLabel = str.timeline.axisDescription(
     Math.round(zMin),
     Math.round(zMax),
     labelYear,
@@ -219,7 +220,7 @@ export function TimelineHud({
           aria-valuemax={interactive ? Math.round(zMax) : undefined}
           aria-valuenow={interactive ? labelYear : undefined}
           aria-orientation={interactive ? ariaOrientation : undefined}
-          aria-label={interactive ? STRINGS.timeline.sliderAriaLabel : undefined}
+          aria-label={interactive ? str.timeline.sliderAriaLabel : undefined}
           onPointerDown={onTrackPointerDown}
           onPointerMove={onTrackPointerMove}
           onPointerUp={endTrackDrag}
@@ -311,7 +312,7 @@ export function TimelineHud({
         aria-valuemax={interactive ? Math.round(zMax) : undefined}
         aria-valuenow={interactive ? labelYear : undefined}
         aria-orientation={interactive ? ariaOrientation : undefined}
-        aria-label={interactive ? STRINGS.timeline.sliderAriaLabel : undefined}
+        aria-label={interactive ? str.timeline.sliderAriaLabel : undefined}
         onPointerDown={onTrackPointerDown}
         onPointerMove={onTrackPointerMove}
         onPointerUp={endTrackDrag}

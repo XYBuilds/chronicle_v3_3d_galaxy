@@ -6,18 +6,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import {
-  INFO_DATA_BODY,
-  INFO_DATA_HEADING,
-  INFO_INTRO_BODY,
-  INFO_INTRO_HEADING,
-  INFO_LINKS_BODY,
-  INFO_LINKS_HEADING,
-  INFO_MODAL_TITLE,
-  INFO_STACK_BODY,
-  INFO_STACK_HEADING,
-} from '@/hud/infoCopy'
-import { STRINGS } from '@/lib/strings'
+import { useStrings } from '@/lib/strings'
 
 export interface InfoModalProps {
   open: boolean
@@ -34,8 +23,10 @@ function Section({ title, body }: { title: string; body: string }) {
   )
 }
 
-/** 居中 Modal：占位文案收尾改 `infoCopy.ts`；壳体较 `dialog` 默认（32rem×42rem）放大一档。 */
+/** 居中 Modal：占位文案收尾改 `lib/locales/*.json`；壳体较 `dialog` 默认（32rem×42rem）放大一档。 */
 export function InfoModal({ open, onOpenChange }: InfoModalProps) {
+  const s = useStrings()
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
@@ -45,19 +36,19 @@ export function InfoModal({ open, onOpenChange }: InfoModalProps) {
       >
         <DialogHeader className="relative z-20 shrink-0 gap-0 border-b border-border/70 bg-popover px-6 pb-5 pt-7 text-left shadow-[0_6px_18px_-10px_color-mix(in_oklch,var(--foreground)_10%,transparent)] sm:px-7">
           <DialogTitle className="pr-10 text-2xl font-bold leading-tight tracking-tight text-foreground">
-            {INFO_MODAL_TITLE}
+            {s.info.modalTitle}
           </DialogTitle>
           <DialogDescription className="mt-2 text-sm font-medium leading-snug text-muted-foreground">
-            {STRINGS.info.modalSubtitle}
+            {s.info.modalSubtitle}
           </DialogDescription>
         </DialogHeader>
 
         <ScrollArea className="min-h-0 max-h-[min(78dvh,34rem)] flex-1">
           <div className="flex flex-col gap-7 px-6 py-5 sm:px-7 pb-6 motion-safe:scroll-smooth">
-            <Section title={INFO_INTRO_HEADING} body={INFO_INTRO_BODY} />
-            <Section title={INFO_DATA_HEADING} body={INFO_DATA_BODY} />
-            <Section title={INFO_STACK_HEADING} body={INFO_STACK_BODY} />
-            <Section title={INFO_LINKS_HEADING} body={INFO_LINKS_BODY} />
+            <Section title={s.info.introHeading} body={s.info.introBody} />
+            <Section title={s.info.dataHeading} body={s.info.dataBody} />
+            <Section title={s.info.stackHeading} body={s.info.stackBody} />
+            <Section title={s.info.linksHeading} body={s.info.linksBody} />
           </div>
         </ScrollArea>
       </DialogContent>

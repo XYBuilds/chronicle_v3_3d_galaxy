@@ -1,0 +1,119 @@
+{
+  "loading": {
+    "title": "ギャラクシーデータを読み込み中",
+    "phaseDownload": "ダウンロード",
+    "phaseDecompress": "解凍",
+    "phaseParse": "解析",
+    "phaseIndex": "検索インデックス",
+    "phaseIndexSkipped": "検索インデックス — スキップ",
+    "phaseIndexFailed": "検索インデックス — 失敗"
+  },
+  "cover": {
+    "title": "準備完了",
+    "start": "開始",
+    "startAriaLabel": "開始 — ギャラクシーへ進みグラフィックスを初期化"
+  },
+  "galaxyData": {
+    "downloadProgress": "ダウンロード済み {{downloadedMb}} / {{totalMb}}",
+    "downloadProgressPartial": "ダウンロード済み {{downloadedMb}}",
+    "decompressingGzip": "gzip を解凍中…",
+    "parsingJson": "JSON を解析中…",
+    "gzipUnsupported": "[GalaxyData] このブラウザは gzip を解凍できません（DecompressionStream）。Safari 16.4+、Chrome 80+、または Firefox 113+ をご利用ください。",
+    "networkErrorHint": " （ネットワークエラー：接続または到達可能性を確認してください）",
+    "requestFailed": "[GalaxyData] リクエスト失敗 {{url}}{{hint}}：{{detail}}",
+    "httpNotOk": "[GalaxyData] HTTP {{status}} {{statusText}} — {{url}} — {{deployHintPath}} がデプロイされているか確認してください",
+    "emptyResponseBody": "[GalaxyData] レスポンス本文が空です",
+    "jsonParseFailed": "[GalaxyData] JSON の解析に失敗しました：{{detail}}"
+  },
+  "error": {
+    "title": "ギャラクシーデータを読み込めませんでした",
+    "retry": "再試行",
+    "reloadPage": "ページを再読み込み",
+    "showErrorDetails": "エラー詳細を表示",
+    "hideErrorDetails": "エラー詳細を非表示",
+    "detailsRegionLabel": "生エラーと開発者向けヒント",
+    "noErrorText": "エラーメッセージは記録されていません。",
+    "localDevHintBeforeCode": "ローカル開発：Python パイプラインを実行して次を生成 ",
+    "localDevBetweenCodes": " （gitignore）；エクスポートスクリプトは次も書き込み ",
+    "localDevHintAfterCode": " フロントエンドが読み込みます。"
+  },
+  "searchBar": {
+    "tabMovie": "タイトル",
+    "tabPerson": "人物",
+    "tabGenre": "ジャンル",
+    "noIndexInBundle": "このデータバンドルに検索インデックスが含まれていません（meta.has_search_index）",
+    "indexNotExported": "galaxy_search_index.json.gz がエクスポートされていません",
+    "indexLoading": "検索インデックスを読み込み中…",
+    "indexLoadFailed": "検索インデックスの読み込みに失敗しました",
+    "indexNotReady": "検索インデックスが準備できていません",
+    "searchUnavailable": "検索を利用できません",
+    "placeholderMovie": "映画タイトルを検索…",
+    "placeholderPerson": "監督 / プロデューサー / キャスト …",
+    "placeholderGenre": "ドラマ / コメディ / スリラー …",
+    "placeholderDisabled": "検索インデックスが利用できません",
+    "clear": "検索をクリア"
+  },
+  "hud": {
+    "openInfo": "情報パネルを開く（プレースホルダー）",
+    "toggleFullscreen": "全画面切替（F）",
+    "focusSearch": "検索にフォーカス（Cmd/Ctrl+K）",
+    "close": "閉じる",
+    "toggleLanguage": "表示言語を選択"
+  },
+  "timeline": {
+    "label": "タイムライン（公開年）",
+    "axisDescription": "公開年 {{minYear}} 〜 {{maxYear}} の軸、ビューのフォーカスは {{focusYear}} 付近",
+    "sliderAriaLabel": "公開年のフォーカス"
+  },
+  "info": {
+    "modalTitle": "この体験について",
+    "modalSubtitle": "プレースホルダーパネル：公開前に文言とリンクを確定します。",
+    "introHeading": "概要",
+    "introBody": "（プレースホルダー）TMDB Movie Cosmos：約 60,000 本の映画を 2.5D 粒子ギャラクシーとして表示。タイムライン、検索（タイトル / 人物 / ジャンル）、複数選択ハイライト。製品文言は未定。",
+    "dataHeading": "データソース",
+    "dataBody": "（プレースホルダー）帰属と参考文献は仕上げ時に追加予定。現在未記載。",
+    "stackHeading": "スタック",
+    "stackBody": "（プレースホルダー）Vite + React + Three.js（インスタンス化ギャラクシー / ポストプロセス）、Zustand、gzip エクスポートパイプライン。概要は未定。",
+    "linksHeading": "リンク",
+    "linksBody": "（プレースホルダー）リンクは仕上げ時に提供予定。"
+  },
+  "scene": {
+    "webgl2Required": "[Scene] WebGL2 が必要です（`gl_InstanceID`、デュアル InstancedMesh パイプライン）。ブラウザを更新するかハードウェアアクセラレーションを有効にしてください（Phase 7.2 ベースライン）。"
+  },
+  "drawer": {
+    "fallbackTitle": "映画",
+    "posterAlt": "{{title}} のポスター",
+    "posterPlaceholder": "ポスター画像",
+    "sheetDescription": "{{title}}、公開日 {{releaseDate}}。",
+    "sheetDescriptionEmpty": "映画が選択されていません。",
+    "votesLine": "{{count}} 票",
+    "sections": {
+      "overview": "あらすじ",
+      "details": "詳細",
+      "cast": "キャスト"
+    },
+    "details": {
+      "missingValue": "/",
+      "runtime": "上映時間",
+      "runtimeMinutes": "{{minutes}} 分",
+      "language": "言語",
+      "director": "監督",
+      "writers": "脚本",
+      "directorOfPhotography": "撮影監督",
+      "producers": "プロデューサー",
+      "composer": "音楽",
+      "budget": "製作費",
+      "revenue": "興行収入"
+    },
+    "links": {
+      "tmdb": "TMDB",
+      "imdb": "IMDb"
+    }
+  },
+  "focusLReference": {
+    "ariaLabel": "{{filmTitle}} の OKLab L スペクトラムにおける {{rating}} / 10；半刻み評価に対応する 10 段階"
+  },
+  "focusVoteReference": {
+    "tierLabels": ["10 票", "100 票", "1,000 票", "10,000 票", "100,000 票"]
+  }
+}

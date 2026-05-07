@@ -60,6 +60,7 @@ isProject: false
 - cover 阶段：**scene 必须已 mount**，cover mode 通过 uniform 屏蔽非 today instance 渲染
 - Perlin 球 hover：**保留正常 MovieTooltip**，但内容剪裁为 title + genres（不显示评分 / 年份等）
 - 其它 idle 星：**屏蔽 hover/click**（pickable mask）
+- cover/perlin 拖拽：复用 P22.9 的 orbit 方向模式（支持 `normal` / `inverted` A/B）
 - OG image：**nightly Pillow 合成** 一张 1200×630 png
 - 域名：**用户自购**，我负责接入；保留 *.pages.dev 作备线
 
@@ -370,6 +371,7 @@ if ((e.key === 'Enter' || e.key === ' ') && coverModeStore.getState().coverMode)
 - 鼠标移开 today：tooltip 消失
 - Click today 球：背景淡出 + drawer 滑入 + 进入 P11.1 perlin focus
 - Enter / Space 等同点击
+- `?orbitDrag=inverted` 在 cover/perlin 阶段同样生效（用于直觉测试）
 - ESC 在 cover 阶段不退出（用户没有"取消 today"语义；ESC 留给 focus 退出 P22）—— 或一致退出至"无 cover 无 focus"，**待验收时拍**
 - a11y：cover 阶段 `<button role="button">` 包裹 perlin 球？或仅依赖 canvas + Enter — 推荐前者（可 Tab focus）
 

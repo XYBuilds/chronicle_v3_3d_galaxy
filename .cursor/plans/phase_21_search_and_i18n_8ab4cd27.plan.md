@@ -1,6 +1,6 @@
 ---
 name: phase 21 search and i18n
-overview: Phase 21 解决两个用户感知最强的痛点：搜索的 CJK 失效与界面只支持英文。统一升级到 Unicode-friendly normalize（v2，title + 人名 + genre 同步）、引入 EN/中文双语 HUD、把 Genre 文本搜索改为 AND 多选 badge（带死路预测）、SearchBar 加 idle/active 两态降噪、修 light 模式 tab 选中对比度问题。
+overview: Phase 21 解决两个用户感知最强的痛点：搜索的 CJK 失效与界面只支持英文。统一升级到 Unicode-friendly normalize（v2，title + 人名 + genre 同步）、引入 EN/中文双语 HUD、把 Genre 文本搜索改为 AND 多选 badge（带死路预测）、电影联想改为显示全部命中、SearchBar 加 idle/active 两态降噪、修 light 模式 tab 选中对比度问题。
 todos:
   - id: p211-cjk-normalize-v2
     content: P21.1 Python + TS normalize_for_search v2 (NFKC + Mn 滤除 + casefold)；5 处 Python 调用点切换；meta.search_normalize_version=v2；6 例单测 (中/日/俄/韩/重音/合成)；触发重导出
@@ -20,6 +20,9 @@ todos:
   - id: p216-doc-sync-report
     content: P21.6 同步 Tech Spec / Design Spec / Data Pipeline / README + 撰写 Phase 21 实施报告
     status: pending
+  - id: p217-movie-suggestions-show-all
+    content: P21.7 电影搜索联想显示全部命中项（取消 12 条上限）；验证如“batman”可显示 “The Batman”等后缀命中
+    status: pending
 isProject: false
 ---
 
@@ -32,6 +35,7 @@ isProject: false
 - CJK / Unicode normalize v2（Python + TS 同步）+ 重导出
 - EN/中文双语切换（HUD 文案 only）+ HUD 右上加 LanguageSwitch
 - Genre tab 改 AND 多选 badge + 死路 disable
+- 电影搜索联想显示全部命中（不再截断 12 条）
 - SearchBar 容器 idle/active 双态（outline / 实底）
 - Light 模式 tab 选中态对比度修复
 
@@ -49,6 +53,7 @@ isProject: false
 - Genre 多选：**AND** + **死路 badge disable**（计算交集为 0 即灰）
 - SearchBar idle/active 触发：**focus 内 OR hover 容器内 OR results panel 展开**，三者任一即 active
 - Light 模式 tab：选中态从 `secondary` 升级到 `default` 颜色对比
+- 电影联想：**展示全部命中项**（不再 `slice(0, 12)`；保留 prefix > contains 排序）
 
 ## 子节点执行顺序
 
@@ -528,6 +533,64 @@ className={cn(
 
 ---
 
+## P21.7 电影联想显示全部命中
+
+### 现状
+
+[`frontend/src/utils/searchScore.ts`](frontend/src/utils/searchScore.ts) 当前硬编码：
+
+```ts
+const MOVIE_RESULT_CAP = 12
+...
+return hits.slice(0, MOVIE_RESULT_CAP)
+```
+
+这会导致查询词命中很多时被截断，典型如输入 `batman`，后缀包含命中（例如 `The Batman`）可能因排序靠后被裁掉。
+
+### 实施
+
+移除 movie 联想上限：
+
+```ts
+// 删除 MOVIE_RESULT_CAP 常量
+// 保留排序规则（prefix 优先，随后按 popularity score 降序）
+return hits
+```
+
+为避免列表过长影响性能与可用性，保留 SearchBar 现有滚动容器（`max-h-72 overflow-y-auto`），并在需要时加轻量优化：
+- 仅当命中量 > 300 时打印一次 dev warn（性能可观测）
+- 不引入虚拟滚动（本 phase 不做）
+
+### 单测
+
+在 [`frontend/src/utils/searchScore.spec.ts`](frontend/src/utils/searchScore.spec.ts) 新增：
+
+```ts
+it('does not cap movie suggestions at 12', () => {
+  const movies = Array.from({ length: 20 }, (_, i) =>
+    baseMovie({
+      id: i + 1,
+      title: i === 19 ? 'The Batman' : `Batman ${i}`,
+      title_normalized: i === 19 ? 'the batman' : `batman ${i}`,
+      vote_count: 1000 - i,
+      vote_average: 7,
+    }),
+  )
+  const hits = scoreMoviesForQuery(movies, 'batman')
+  expect(hits.length).toBe(20)
+  expect(hits.some((h) => h.movie.title === 'The Batman')).toBe(true)
+})
+```
+
+### 验收
+
+- 搜索 `batman` 时联想列表包含 `The Batman`
+- 命中项数量可超过 12 且可滚动浏览
+- 排序规则保持不变（prefix 仍优先于 contains）
+- 在 100+ 命中下输入响应仍可接受（无明显卡顿）
+
+---
+
 ## 验收清单（出口）
 
 - [ ] P21.1 Python + TS normalize 同步切到 v2；CJK / 重音 / Cyrillic / Hangul 6 例单测通过；重导出后 `meta.search_normalize_version === "v2"`
@@ -538,6 +601,7 @@ className={cn(
 - [ ] P21.3 Genre tab 不再是输入联想；19 个 badge 颜色正确；多选交集计算实时；死路 badge 灰且不可点
 - [ ] P21.4 SearchBar 不交互时透明 outline；hover/focus/panel 任一即实底
 - [ ] P21.5 light 模式 tab 选中明显可辨；dark 模式无明显回退
+- [ ] P21.7 电影联想不再截断 12 条；`batman` 查询能看到 `The Batman`
 - [ ] P21.6 三份 SSOT 文档与实施报告归档
 
 ## 风险与回滚
@@ -549,11 +613,12 @@ className={cn(
 | useStrings hook 切换大量调用点导致大 PR / 合并冲突                                 | 中   | 单 commit 完整迁移；同步 Storybook 用静态 STRINGS 兜底                                       |
 | `default` variant 在 dark 模式下过度突出 tab                                       | 低   | 实施期采用条件 light/dark class（不改 buttonVariants）；验收时 dial                          |
 | Genre badge 多选交集计算开销（19 × 60K id × 5 选）慢                               | 低   | `Set<number>` 交集实测 ms 级；如需优化可改 `Uint32Array` + 排序双指针                        |
+| 电影联想取消上限后，极端查询命中过多导致渲染列表变长                                | 低   | 保留滚动容器；必要时加 dev 告警；若未来出现性能问题再上虚拟列表（不在本 phase）              |
 | zh 翻译质量参差导致 HUD 误导                                                       | 中   | 关键术语保留英文（"UMAP"、"Procrustes"）；翻译评审一次                                       |
 
 ## 出口准入
 
-- 所有 P21.1–P21.6 todos `completed`
+- 所有 P21.1–P21.7 todos `completed`
 - CJK / Unicode 6 例 + 中文 i18n 切换 + Genre AND 多选 + idle/active 状态 + light tab 对比，5 类用户感知项均已 demo 通过
 - 三份 SSOT 文档 + 实施报告归档
 - 部署到 prod，至少手动 smoke 5 类场景

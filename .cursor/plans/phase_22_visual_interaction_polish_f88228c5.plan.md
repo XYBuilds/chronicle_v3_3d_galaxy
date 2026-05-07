@@ -1,6 +1,6 @@
 ---
 name: phase 22 visual interaction polish
-overview: Phase 22 收口视觉与交互层债务：相机最近裁剪（idle 星过近不渲染）、focus active R 上限调小、drawer 关闭按钮删除并改为屏幕底部 floating 退出按钮、Timeline 永久切 vertical 左侧（删除横版与遗留 vertical 实现）、constellation 三链拆分 + hover 该岗位高亮、海报升级 w780、产品命名统一 "The Movie Cosmos"。
+overview: Phase 22 收口视觉与交互层债务：相机最近裁剪（idle 星过近不渲染）、focus active R 上限调小、focus 拖拽方向支持反向测试模式、drawer 关闭按钮删除并改为屏幕底部 floating 退出按钮、Timeline 永久切 vertical 左侧（删除横版与遗留 vertical 实现）、constellation 三链拆分 + hover 该岗位高亮、海报升级 w780、产品命名统一 "The Movie Cosmos"。
 todos:
   - id: p221-near-cull
     content: P22.1 相机近裁：世界 Z 距离 < NEAR_CULL_WORLD_Z 不渲染（focus 例外）；vertex shader + picking 同步
@@ -26,6 +26,9 @@ todos:
   - id: p228-doc-sync-report
     content: P22.8 同步 Tech Spec / Design Spec / 视觉参数总表 / Data Pipeline / README + Phase 22 实施报告
     status: pending
+  - id: p229-focus-drag-invert-mode
+    content: P22.9 focus 态轨道拖拽新增反向模式（yaw/pitch 取反）用于实验；支持 query 或开关切换，不改默认模式
+    status: pending
 isProject: false
 ---
 
@@ -40,6 +43,7 @@ isProject: false
 - drawer SheetClose 删除 + 屏幕底部 floating 退出按钮（focus 退出）
 - Timeline 永久 vertical 左侧（重写当前 horizontal 路径为 vertical；删除遗留 vertical 路径与 `useTimelineOrientationFromQuery`）
 - constellation 拆 3 mesh（producers / crew / cast）+ 每条独立 opacity uniform；默认 0.04 / hover 0.18 起步；hover 一颗星 → 该星所属 chain 高亮
+- focus 轨道拖拽新增方向反转测试模式（更贴合遮挡背景下的直觉）
 - 海报 `w500 → w780`（export 阶段换 URL，不前端 dpr 自适应）
 - 产品命名统一 "The Movie Cosmos"（仅文档 + HUD，不动 repo / git remote / scripts 目录）
 
@@ -57,6 +61,7 @@ isProject: false
 - Timeline 改 vertical 后，底部空间让给该退出按钮
 - constellation hover 起步值：**默认 0.04 / hover 0.18**，留 dial-in 余地
 - constellation hover 触发对象：**hover 该岗位的某颗星**（不是 hover 线本身）
+- focus 拖拽方向：新增 **反向模式** 供 A/B 测试，默认仍保持当前方向
 - 海报：**export 阶段换 URL**
 - 命名统一：**仅文档 / HUD**
 
@@ -472,6 +477,61 @@ function updateConstellationHover(hoveredMovieId: number | null) {
 
 ---
 
+## P22.9 focus 拖拽方向反向模式（实验）
+
+### 现状
+
+[`frontend/src/three/camera.ts`](frontend/src/three/camera.ts) 的 orbit 拖拽使用：
+
+```ts
+export const ORBIT_YAW_SPEED = 0.003
+export const ORBIT_PITCH_SPEED = 0.003
+```
+
+当前 focus 态鼠标拖动与相机旋转方向一致。用户希望新增“方向相反”的可切换模式，便于在遮挡背景较重（尤其开始页）时测试直觉是否更好。
+
+### 实施
+
+在 orbit 输入链路新增方向乘子（不改默认）：
+
+```ts
+type OrbitDragDirectionMode = 'normal' | 'inverted'
+
+function orbitDirectionSign(mode: OrbitDragDirectionMode): number {
+  return mode === 'inverted' ? -1 : 1
+}
+```
+
+在处理 pointer delta 的地方（`scene.ts` 或 `camera.ts` 当前 focus orbit 分支）：
+
+```ts
+const sign = orbitDirectionSign(currentMode)
+yaw += dx * ORBIT_YAW_SPEED * sign
+pitch += dy * ORBIT_PITCH_SPEED * sign
+```
+
+**切换入口（测试用）**：
+- `?orbitDrag=inverted|normal` query（推荐，最轻）
+- 可选 dev-only 全局开关：`window.__galaxyOrbitDragMode = 'inverted'`
+
+默认 `normal`，不影响线上既有手感；仅在显式指定时启用 `inverted`。
+
+### 与 P23 关系
+
+P23 的开始页 cover/perlin 交互复用同一 orbit 输入链路。引入本模式后可直接在开始页阶段 A/B 测：
+- `normal`: 当前行为基线
+- `inverted`: 遮挡背景下“拖动像转动球体本身”的直觉路径
+
+### 验收
+
+- `?orbitDrag=normal`：行为与当前版本一致
+- `?orbitDrag=inverted`：yaw/pitch 方向与 normal 完全相反
+- focus 态拖拽稳定，不引入 pitch 上下限抖动
+- 开始页（P23）同样可读取该模式并生效
+- 未传 query 时默认 `normal`
+
+---
+
 ## 验收清单（出口）
 
 - [ ] P22.1 推近条带极近 idle 星消失，focus 例外保留；picking 同步无鬼影；dial 值写入参数总表
@@ -482,6 +542,7 @@ function updateConstellationHover(hoveredMovieId: number | null) {
 - [ ] P22.6 constellation 拆 3 mesh；hover 一颗星该岗位高亮（多岗位星支持多链同时高亮）
 - [ ] P22.7 README / Tech Spec / Design Spec / index.html title / locales 内品牌统一
 - [ ] P22.8 五份 SSOT 文档与实施报告归档
+- [ ] P22.9 focus 拖拽反向模式可通过 query 切换；默认 normal；开始页可复用
 
 ## 风险与回滚
 
@@ -493,11 +554,12 @@ function updateConstellationHover(hoveredMovieId: number | null) {
 | floating 退出按钮 z-index 与未来 HUD 冲突                              | 低   | z-60 现有 HUD 最高 z 之下；Tech Spec 记录 z-index 表                   |
 | constellation 拆 3 mesh 导致绘制次数 ×3，性能回退                      | 低   | 实测 60K instance 主体下 3 LineSegments 几乎无成本（< 0.1ms/frame）    |
 | 海报 w780 在弱网用户首次 drawer 加载更慢                               | 低   | 本来就是 lazy 加载（drawer 才请求）；可加 `loading="lazy"`（已有）     |
+| 反向拖拽模式与用户长期肌肉记忆冲突                                      | 低   | 默认保持 normal；inverted 仅作实验模式，通过 query 显式开启             |
 | 命名统一不完整（漏 grep 某些字串）                                     | 低   | 完工前 grep "Chronicle v3" / "TMDB 电影宇宙" 双关键字；列表化 review   |
 
 ## 出口准入
 
-- 所有 P22.1–P22.8 todos `completed`
+- 所有 P22.1–P22.9 todos `completed`
 - prod 部署后 7 类用户感知项 smoke 全部通过
 - dial-in 最终参数（NEAR_CULL_WORLD_Z / focus active R cap / constellation opacity 起步值）写入视觉参数总表
 - 五份 SSOT 文档与实施报告归档；旧 Timeline 代码彻底删除（grep 验证）

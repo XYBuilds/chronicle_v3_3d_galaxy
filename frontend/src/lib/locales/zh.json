@@ -52,7 +52,7 @@
     "placeholderGenre": "剧情 / 喜剧 / 惊悚 …",
     "placeholderDisabled": "搜索索引不可用",
     "clear": "清除搜索",
-    "genreMultiHelp": "点击多个流派以筛选（AND 同时满足）。",
+    "genreMultiEmptyHint": "点击流派进行筛选…",
     "genreMultiMatches": "部",
     "genreMultiRemove": "移除"
   },

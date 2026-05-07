@@ -52,7 +52,7 @@
     "placeholderGenre": "دراما / كوميديا / إثارة …",
     "placeholderDisabled": "فهرس البحث غير متاح",
     "clear": "مسح البحث",
-    "genreMultiHelp": "انقر على عدة أنواع للتصفية (AND).",
+    "genreMultiEmptyHint": "انقر نوعًا أو أكثر للتصفية…",
     "genreMultiMatches": "نتائج",
     "genreMultiRemove": "إزالة"
   },

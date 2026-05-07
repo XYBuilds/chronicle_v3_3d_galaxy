@@ -407,25 +407,31 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
               value={searchQuery}
             />
             <div className="flex flex-col gap-2 p-1">
-            {selectedGenres.length > 0 && (
-              <div className="flex flex-wrap items-start gap-1.5 border-b border-border/40 pb-2">
-                <div className="flex min-w-0 flex-1 flex-wrap gap-1.5">
-                  {selectedGenres.map((g) => (
-                    <GenreBadge
-                      key={`sel-${g}`}
-                      name={g}
-                      paletteHex={genrePalette?.[g]}
-                      selected
-                      onRemove={() => toggleGenre(g)}
-                      removeAriaLabel={`${ui.searchBar.genreMultiRemove} ${g}`}
-                    />
-                  ))}
+            <div className="border-b border-border/40 pb-2">
+              {selectedGenres.length > 0 ? (
+                <div className="flex flex-wrap items-start gap-1.5">
+                  <div className="flex min-w-0 flex-1 flex-wrap gap-1.5">
+                    {selectedGenres.map((g) => (
+                      <GenreBadge
+                        key={`sel-${g}`}
+                        name={g}
+                        paletteHex={genrePalette?.[g]}
+                        selected
+                        onRemove={() => toggleGenre(g)}
+                        removeAriaLabel={`${ui.searchBar.genreMultiRemove} ${g}`}
+                      />
+                    ))}
+                  </div>
+                  <span className="shrink-0 pt-0.5 text-xs tabular-nums text-muted-foreground">
+                    {currentIntersection?.size ?? 0} {ui.searchBar.genreMultiMatches}
+                  </span>
                 </div>
-                <span className="shrink-0 pt-0.5 text-xs tabular-nums text-muted-foreground">
-                  {currentIntersection?.size ?? 0} {ui.searchBar.genreMultiMatches}
-                </span>
-              </div>
-            )}
+              ) : (
+                <p className="px-1 text-xs leading-snug text-muted-foreground">
+                  {ui.searchBar.genreMultiEmptyHint}
+                </p>
+              )}
+            </div>
             <div className="flex flex-wrap gap-1.5">
               {candidateGenreNames.map((g) => {
                 const previewN = previewCountIfAdded.get(g) ?? 0
@@ -446,7 +452,6 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
                 )
               })}
             </div>
-            <p className="px-1 text-xs text-muted-foreground">{ui.searchBar.genreMultiHelp}</p>
           </div>
           </>
         ) : (

@@ -52,7 +52,7 @@
     "placeholderGenre": "Drame / Comédie / Thriller …",
     "placeholderDisabled": "Index de recherche indisponible",
     "clear": "Effacer la recherche",
-    "genreMultiHelp": "Cliquez sur plusieurs genres pour filtrer (ET).",
+    "genreMultiEmptyHint": "Cliquez sur un ou plusieurs genres pour filtrer…",
     "genreMultiMatches": "résultats",
     "genreMultiRemove": "Retirer"
   },

@@ -52,7 +52,7 @@
     "placeholderGenre": "Drama / Comedy / Thriller …",
     "placeholderDisabled": "Search index unavailable",
     "clear": "Clear search",
-    "genreMultiHelp": "Click multiple genres to filter (AND).",
+    "genreMultiEmptyHint": "Click genre(s) to filter…",
     "genreMultiMatches": "matches",
     "genreMultiRemove": "Remove"
   },

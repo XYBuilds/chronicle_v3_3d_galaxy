@@ -52,7 +52,7 @@
     "placeholderGenre": "ドラマ / コメディ / スリラー …",
     "placeholderDisabled": "検索インデックスが利用できません",
     "clear": "検索をクリア",
-    "genreMultiHelp": "複数のジャンルをクリックして絞り込み（AND）。",
+    "genreMultiEmptyHint": "ジャンルをクリックして絞り込み…",
     "genreMultiMatches": "件",
     "genreMultiRemove": "削除"
   },

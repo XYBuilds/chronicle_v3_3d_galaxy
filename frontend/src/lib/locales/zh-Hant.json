@@ -52,7 +52,7 @@
     "placeholderGenre": "劇情 / 喜劇 / 驚悚 …",
     "placeholderDisabled": "搜尋索引不可用",
     "clear": "清除搜尋",
-    "genreMultiHelp": "點選多個類型以篩選（AND 同時滿足）。",
+    "genreMultiEmptyHint": "點選類型以篩選…",
     "genreMultiMatches": "部",
     "genreMultiRemove": "移除"
   },

@@ -51,7 +51,10 @@
     "placeholderPerson": "Director / Productor / Reparto …",
     "placeholderGenre": "Drama / Comedia / Thriller …",
     "placeholderDisabled": "Índice de búsqueda no disponible",
-    "clear": "Borrar búsqueda"
+    "clear": "Borrar búsqueda",
+    "genreMultiHelp": "Haz clic en varios géneros para filtrar (Y).",
+    "genreMultiMatches": "coincidencias",
+    "genreMultiRemove": "Quitar"
   },
   "hud": {
     "openInfo": "Abrir panel de información (contenido provisional)",

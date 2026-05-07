@@ -51,7 +51,10 @@
     "placeholderPerson": "監督 / プロデューサー / キャスト …",
     "placeholderGenre": "ドラマ / コメディ / スリラー …",
     "placeholderDisabled": "検索インデックスが利用できません",
-    "clear": "検索をクリア"
+    "clear": "検索をクリア",
+    "genreMultiHelp": "複数のジャンルをクリックして絞り込み（AND）。",
+    "genreMultiMatches": "件",
+    "genreMultiRemove": "削除"
   },
   "hud": {
     "openInfo": "情報パネルを開く（プレースホルダー）",

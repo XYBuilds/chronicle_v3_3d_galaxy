@@ -84,6 +84,8 @@ jobs:
           node-version: "24"
 
       - name: Install and build frontend (embed cron-exported galaxy_data)
+        env:
+          VITE_CF_BEACON_TOKEN: ${{ secrets.CF_WEB_ANALYTICS_BEACON_TOKEN }}
         run: |
           set -euo pipefail
           rm -rf node_modules frontend/node_modules package-lock.json

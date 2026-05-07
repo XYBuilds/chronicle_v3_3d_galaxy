@@ -56,24 +56,34 @@ def _object_urls(*, public_base: str, prefix: str, version_q: str) -> tuple[str,
     return gal, idx
 
 
+# Versioned object keys (same path overwritten only when data_version changes in practice;
+# clients bust via manifest + ?v= on URLs). Long cache at R2/CDN edge + browser.
+R2_VERSIONED_GZIP_CACHE_CONTROL = "public, max-age=31536000, immutable"
+
+
 def _upload_one(
     client: Any,
     bucket: str,
     key: str,
     path: Path,
     content_type: str,
+    *,
+    cache_control: str,
 ) -> None:
     assert path.is_file(), f"missing file to upload: {path}"
     size = path.stat().st_size
-    print(f"[R2] upload key={key!r} bytes={size} content_type={content_type}", flush=True)
+    print(
+        f"[R2] upload key={key!r} bytes={size} content_type={content_type} "
+        f"cache_control={cache_control!r}",
+        flush=True,
+    )
     client.upload_file(
         str(path),
         bucket,
         key,
         ExtraArgs={
             "ContentType": content_type,
-            # Short TTL at edge; manifest URL carries ?v= for cache bust.
-            "CacheControl": "public, max-age=600",
+            "CacheControl": cache_control,
         },
     )
 
@@ -166,8 +176,22 @@ def main(argv: list[str] | None = None) -> int:
         region_name="auto",
     )
 
-    _upload_one(client, bucket, gal_key, gal_gz, "application/gzip")
-    _upload_one(client, bucket, idx_key, idx_gz, "application/gzip")
+    _upload_one(
+        client,
+        bucket,
+        gal_key,
+        gal_gz,
+        "application/gzip",
+        cache_control=R2_VERSIONED_GZIP_CACHE_CONTROL,
+    )
+    _upload_one(
+        client,
+        bucket,
+        idx_key,
+        idx_gz,
+        "application/gzip",
+        cache_control=R2_VERSIONED_GZIP_CACHE_CONTROL,
+    )
 
     gal_url, idx_url = _object_urls(public_base=public_base, prefix=prefix, version_q=version_q)
     exported_at = datetime.now(timezone.utc).isoformat()

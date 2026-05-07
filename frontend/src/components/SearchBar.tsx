@@ -3,10 +3,12 @@ import {
   useCallback,
   useDeferredValue,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
 } from 'react'
+import { GenreBadge } from '@/components/GenreBadge'
 import { buttonVariants } from '@/components/ui/button-variants'
 import { CloseButton } from '@/components/ui/close-button'
 import { useStrings } from '@/lib/strings'
@@ -18,13 +20,13 @@ import {
   useGalaxyInteractionStore,
   type SearchSuggestion,
 } from '@/store/galaxyInteractionStore'
+import { useGalaxyDataStore } from '@/store/galaxyDataStore'
 import { useSearchIndexStore } from '@/store/searchIndexStore'
 import type { Movie } from '@/types/galaxy'
 import type { TextHighlightRange } from '@/utils/searchScore'
 import {
   SEARCH_QUERY_DEBOUNCE_MS,
   formatMovieSuggestionLabel,
-  scoreGenresForQuery,
   scoreMoviesForQuery,
   scorePeopleForQuery,
   searchMinQueryLengthForTrim,
@@ -84,14 +86,19 @@ function sortIdsByRelease(ids: readonly number[], movieById: ReadonlyMap<number,
 export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchBarProps) {
   const ui = useStrings()
   const searchQuery = useGalaxyInteractionStore((s) => s.searchQuery)
+  const searchMode = useGalaxyInteractionStore((s) => s.searchMode)
   const indexStatus = useSearchIndexStore((s) => s.status)
   const searchIndex = useSearchIndexStore((s) => s.data)
   const indexError = useSearchIndexStore((s) => s.errorMessage)
+  const genrePalette = useGalaxyDataStore((s) => s.data?.meta.genre_palette) ?? null
 
   const [hudTab, setHudTab] = useState<SearchHudTab>('movie')
   const [listOpen, setListOpen] = useState(false)
   const [highlightIndex, setHighlightIndex] = useState(-1)
   const panelRootRef = useRef<HTMLDivElement>(null)
+
+  /** P21.3 — Genre tab AND multi-select (badges); orthogonal to movie/person query text. */
+  const [selectedGenres, setSelectedGenres] = useState<string[]>([])
 
   const [debouncedQuery, setDebouncedQuery] = useState(searchQuery)
   useEffect(() => {
@@ -107,9 +114,108 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
     return m
   }, [movies])
 
+  const allGenreNames = useMemo(() => {
+    const fromPalette =
+      genrePalette && Object.keys(genrePalette).length > 0 ? Object.keys(genrePalette).sort() : []
+    if (fromPalette.length > 0) return fromPalette
+    return Object.keys(searchIndex?.genres ?? {}).sort()
+  }, [genrePalette, searchIndex])
+
+  const movieIdsByGenre = useMemo(() => {
+    const m = new Map<string, Set<number>>()
+    for (const [name, g] of Object.entries(searchIndex?.genres ?? {})) {
+      m.set(name, new Set(g.movie_ids))
+    }
+    return m
+  }, [searchIndex])
+
+  const currentIntersection = useMemo(() => {
+    if (selectedGenres.length === 0) return null
+    let acc: Set<number> | null = null
+    for (const g of selectedGenres) {
+      const ids = movieIdsByGenre.get(g) ?? new Set<number>()
+      if (acc === null) {
+        acc = new Set(ids)
+      } else {
+        const next = new Set<number>()
+        for (const id of acc) {
+          if (ids.has(id)) next.add(id)
+        }
+        acc = next
+      }
+    }
+    return acc
+  }, [selectedGenres, movieIdsByGenre])
+
+  const previewCountIfAdded = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const g of allGenreNames) {
+      if (selectedGenres.includes(g)) continue
+      const ids = movieIdsByGenre.get(g) ?? new Set<number>()
+      if (currentIntersection === null) {
+        map.set(g, ids.size)
+      } else {
+        let n = 0
+        for (const x of currentIntersection) {
+          if (ids.has(x)) n++
+        }
+        map.set(g, n)
+      }
+    }
+    return map
+  }, [allGenreNames, selectedGenres, movieIdsByGenre, currentIntersection])
+
+  /** Grid hides badges already shown in the selected strip above. */
+  const candidateGenreNames = useMemo(
+    () => allGenreNames.filter((g) => !selectedGenres.includes(g)),
+    [allGenreNames, selectedGenres],
+  )
+
+  /** Genre ↔ store: layout-only so ESC (`clearSearch`) cannot race a late `useEffect` re-applying `searchMode: 'genre'`. */
+  const prevSearchModeRef = useRef(searchMode)
+  useLayoutEffect(() => {
+    const prev = prevSearchModeRef.current
+    prevSearchModeRef.current = searchMode
+
+    if (prev === 'genre' && searchMode === 'idle') {
+      setSelectedGenres([])
+      return
+    }
+
+    if (hudTab !== 'genre') return
+
+    if (selectedGenres.length === 0) {
+      if (useGalaxyInteractionStore.getState().searchMode === 'genre') {
+        clearSearch()
+      }
+      return
+    }
+
+    const intersectionSet = currentIntersection ?? new Set<number>()
+    const ids = sortIdsByRelease([...intersectionSet], movieById)
+    console.log('[Search] genre AND filter', {
+      genres: selectedGenres.join(' + '),
+      selectionLen: ids.length,
+    })
+    useGalaxyInteractionStore.setState({
+      searchMode: 'genre',
+      selectionIds: ids,
+      selectionPersonKey: null,
+      selectedMovieId: null,
+      searchQuery: selectedGenres.join(' + '),
+    })
+  }, [searchMode, hudTab, selectedGenres, currentIntersection, movieById])
+
+  useEffect(() => {
+    if (hudTab !== 'genre') {
+      setSelectedGenres([])
+    }
+  }, [hudTab])
+
   const resultRows = useMemo((): ResultRow[] => {
     const q = deferredQuery
     const trimmed = q.trim()
+    if (hudTab === 'genre') return []
     if (trimmed.length < searchMinQueryLengthForTrim(trimmed)) return []
     if (!searchIndex) return []
 
@@ -120,39 +226,31 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
         ranges: h.highlightRanges,
       }))
     }
-    if (hudTab === 'person') {
-      const hits = scorePeopleForQuery(searchIndex, q)
-      return hits.map((h) => ({
-        suggestion: {
-          kind: 'person' as const,
-          personKey: h.personKey,
-          label: h.label,
-          movieCount: h.entry.movie_ids.length,
-        },
-        ranges: h.highlightRanges,
-      }))
-    }
-    const hits = scoreGenresForQuery(searchIndex, q)
+    const hits = scorePeopleForQuery(searchIndex, q)
     return hits.map((h) => ({
       suggestion: {
-        kind: 'genre' as const,
-        genreName: h.genreName,
+        kind: 'person' as const,
+        personKey: h.personKey,
         label: h.label,
-        count: h.count,
+        movieCount: h.entry.movie_ids.length,
       },
       ranges: h.highlightRanges,
     }))
   }, [deferredQuery, hudTab, movies, searchIndex])
 
   useEffect(() => {
+    if (hudTab === 'genre') {
+      setSearchResults([])
+      return
+    }
     const suggestions = resultRows.map((r) => r.suggestion)
     setSearchResults(suggestions)
-  }, [resultRows])
+  }, [resultRows, hudTab])
 
   const debouncedTrimmed = debouncedQuery.trim()
   const debouncedMinLen = searchMinQueryLengthForTrim(debouncedTrimmed)
   const canShowList = debouncedTrimmed.length >= debouncedMinLen && resultRows.length > 0
-  const panelVisible = listOpen && canShowList
+  const panelVisible = hudTab !== 'genre' && listOpen && canShowList
 
   const activeRowIndex =
     !panelVisible || resultRows.length === 0
@@ -172,12 +270,23 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
   }, [panelVisible])
 
   const onTabChange = useCallback((next: SearchHudTab) => {
+    if (hudTab === 'genre' && next !== 'genre') {
+      setSelectedGenres([])
+      clearSearch()
+    }
     setHudTab(next)
     setSearchQuery('')
     setSearchResults([])
     setDebouncedQuery('')
     setListOpen(false)
     setHighlightIndex(-1)
+  }, [hudTab])
+
+  const toggleGenre = useCallback((name: string) => {
+    setSelectedGenres((prev) => {
+      if (prev.includes(name)) return prev.filter((g) => g !== name)
+      return [...prev, name]
+    })
   }, [])
 
   const applySuggestion = useCallback(
@@ -215,22 +324,6 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
             animateZCurrentTo?.(zMin, 700)
           }
         }
-      } else if (s.kind === 'genre' && searchIndex) {
-        const g = searchIndex.genres[s.genreName]
-        if (g) {
-          const ids = sortIdsByRelease(g.movie_ids, movieById)
-          const q = `${s.genreName} (${g.count})`
-          // P16.2 — keep zCurrent (viswindow disabled for genre select; Design Spec §4.5).
-          console.log('[Search] genre select', { genre: s.genreName, count: g.count, selectionLen: ids.length })
-          useGalaxyInteractionStore.setState({
-            searchMode: 'genre',
-            selectionIds: ids,
-            selectionPersonKey: null,
-            selectedMovieId: null,
-            searchQuery: q,
-          })
-          setDebouncedQuery(q)
-        }
       }
       setListOpen(false)
       setHighlightIndex(-1)
@@ -242,6 +335,7 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
     clearSearch()
     // P13.6 — align with ESC §4.6: exit focus in one action (no second ESC).
     useGalaxyInteractionStore.setState({ selectedMovieId: null })
+    setSelectedGenres([])
     setListOpen(false)
     setHighlightIndex(-1)
   }, [])
@@ -298,124 +392,186 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
           ))}
         </div>
 
-        <div className="relative flex items-center gap-1">
-          <input
-            type="text"
-            data-galaxy-search-input
-            role="searchbox"
-            enterKeyHint="search"
-            autoComplete="off"
-            spellCheck={false}
-            aria-autocomplete="list"
-            aria-expanded={panelVisible}
-            aria-controls="galaxy-search-suggestions"
-            disabled={isBlocked}
-            placeholder={
-              isBlocked
-                ? ui.searchBar.placeholderDisabled
-                : hudTab === 'movie'
-                  ? ui.searchBar.placeholderMovie
-                  : hudTab === 'person'
-                    ? ui.searchBar.placeholderPerson
-                    : ui.searchBar.placeholderGenre
-            }
-            className={cn(
-              'h-9 w-full min-w-0 rounded-lg border border-input bg-background/80 px-3 pr-9 text-sm text-foreground outline-none',
-              'placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40',
-            )}
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value)
-              const t = e.target.value.trim()
-              setListOpen(t.length >= searchMinQueryLengthForTrim(t))
-            }}
-            onFocus={() => {
-              const t = searchQuery.trim()
-              if (t.length >= searchMinQueryLengthForTrim(t) && resultRows.length > 0) {
-                setListOpen(true)
-              }
-            }}
-            onKeyDown={(e) => {
-              // Escape：Design Spec §4.6 第 1 级 — 全局 capture（App.tsx）仅 blur；此处不拦截以免双处理
-              if (e.key === 'ArrowDown') {
-                if (!canShowList) return
-                e.preventDefault()
-                if (!listOpen) {
-                  setListOpen(true)
-                  setHighlightIndex(0)
-                } else {
-                  setHighlightIndex((i) => {
-                    const base = i < 0 ? 0 : i + 1
-                    return Math.min(resultRows.length - 1, base)
-                  })
-                }
-                return
-              }
-              if (e.key === 'ArrowUp') {
-                if (!listOpen || !canShowList) return
-                e.preventDefault()
-                setHighlightIndex((i) => Math.max(0, i - 1))
-                return
-              }
-              if (e.key === 'Enter') {
-                if (!listOpen || activeRowIndex < 0 || activeRowIndex >= resultRows.length) return
-                e.preventDefault()
-                applySuggestion(resultRows[activeRowIndex]!)
-                return
-              }
-            }}
-          />
-          {searchQuery.length > 0 && !isBlocked && (
-            <CloseButton
-              variant="ghostSm"
-              label={ui.searchBar.clear}
-              className="absolute right-1 top-1/2 -translate-y-1/2"
-              onClick={onClear}
+        {hudTab === 'genre' ? (
+          <>
+            {/*
+              Preserve `data-galaxy-search-input` for App.tsx Cmd/Ctrl+K while the visible field is not shown.
+            */}
+            <input
+              type="text"
+              data-galaxy-search-input
+              className="sr-only"
+              readOnly
+              tabIndex={-1}
+              aria-hidden
+              value={searchQuery}
             />
-          )}
-        </div>
+            <div className="flex flex-col gap-2 p-1">
+            <div className="border-b border-border/40 pb-2">
+              {selectedGenres.length > 0 ? (
+                <div className="flex min-h-8 flex-wrap items-start gap-1.5">
+                  <div className="flex min-w-0 flex-1 flex-wrap gap-1.5">
+                    {selectedGenres.map((g) => (
+                      <GenreBadge
+                        key={`sel-${g}`}
+                        name={g}
+                        paletteHex={genrePalette?.[g]}
+                        selected
+                        onRemove={() => toggleGenre(g)}
+                        removeAriaLabel={`${ui.searchBar.genreMultiRemove} ${g}`}
+                      />
+                    ))}
+                  </div>
+                  <span className="shrink-0 self-start pt-0.5 text-xs tabular-nums text-muted-foreground">
+                    {currentIntersection?.size ?? 0} {ui.searchBar.genreMultiMatches}
+                  </span>
+                </div>
+              ) : (
+                <div className="flex min-h-8 items-center">
+                  <p className="px-1 text-xs leading-snug text-muted-foreground">
+                    {ui.searchBar.genreMultiEmptyHint}
+                  </p>
+                </div>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {candidateGenreNames.map((g) => {
+                const previewN = previewCountIfAdded.get(g) ?? 0
+                const disabled = previewN === 0
+                return (
+                  <GenreBadge
+                    key={g}
+                    name={g}
+                    size="sm"
+                    paletteHex={genrePalette?.[g]}
+                    disabled={disabled}
+                    previewCount={previewN}
+                    onClick={() => {
+                      if (disabled) return
+                      toggleGenre(g)
+                    }}
+                  />
+                )
+              })}
+            </div>
+          </div>
+          </>
+        ) : (
+          <>
+            <div className="relative flex items-center gap-1">
+              <input
+                type="text"
+                data-galaxy-search-input
+                role="searchbox"
+                enterKeyHint="search"
+                autoComplete="off"
+                spellCheck={false}
+                aria-autocomplete="list"
+                aria-expanded={panelVisible}
+                aria-controls="galaxy-search-suggestions"
+                disabled={isBlocked}
+                placeholder={
+                  isBlocked
+                    ? ui.searchBar.placeholderDisabled
+                    : hudTab === 'movie'
+                      ? ui.searchBar.placeholderMovie
+                      : ui.searchBar.placeholderPerson
+                }
+                className={cn(
+                  'h-9 w-full min-w-0 rounded-lg border border-input bg-background/80 px-3 pr-9 text-sm text-foreground outline-none',
+                  'placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40',
+                )}
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value)
+                  const t = e.target.value.trim()
+                  setListOpen(t.length >= searchMinQueryLengthForTrim(t))
+                }}
+                onFocus={() => {
+                  const t = searchQuery.trim()
+                  if (t.length >= searchMinQueryLengthForTrim(t) && resultRows.length > 0) {
+                    setListOpen(true)
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'ArrowDown') {
+                    if (!canShowList) return
+                    e.preventDefault()
+                    if (!listOpen) {
+                      setListOpen(true)
+                      setHighlightIndex(0)
+                    } else {
+                      setHighlightIndex((i) => {
+                        const base = i < 0 ? 0 : i + 1
+                        return Math.min(resultRows.length - 1, base)
+                      })
+                    }
+                    return
+                  }
+                  if (e.key === 'ArrowUp') {
+                    if (!listOpen || !canShowList) return
+                    e.preventDefault()
+                    setHighlightIndex((i) => Math.max(0, i - 1))
+                    return
+                  }
+                  if (e.key === 'Enter') {
+                    if (!listOpen || activeRowIndex < 0 || activeRowIndex >= resultRows.length) return
+                    e.preventDefault()
+                    applySuggestion(resultRows[activeRowIndex]!)
+                    return
+                  }
+                }}
+              />
+              {searchQuery.length > 0 && !isBlocked && (
+                <CloseButton
+                  variant="ghostSm"
+                  label={ui.searchBar.clear}
+                  className="absolute right-1 top-1/2 -translate-y-1/2"
+                  onClick={onClear}
+                />
+              )}
+            </div>
 
-        {panelVisible && (
-          <ul
-            id="galaxy-search-suggestions"
-            role="listbox"
-            className={cn(
-              'mt-1 max-h-72 min-h-0 overflow-y-auto overflow-x-hidden rounded-lg border border-border/60 bg-background/95 py-1 text-sm shadow-md',
-              '[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden',
+            {panelVisible && (
+              <ul
+                id="galaxy-search-suggestions"
+                role="listbox"
+                className={cn(
+                  'mt-1 max-h-72 min-h-0 overflow-y-auto overflow-x-hidden rounded-lg border border-border/60 bg-background/95 py-1 text-sm shadow-md',
+                  '[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden',
+                )}
+              >
+                {resultRows.map((row, idx) => {
+                  const active = idx === activeRowIndex
+                  return (
+                    <li key={suggestionKey(row.suggestion)} role="presentation">
+                      <button
+                        type="button"
+                        role="option"
+                        aria-selected={active}
+                        className={cn(
+                          'flex w-full items-center gap-2 px-3 py-2 text-left transition-colors',
+                          active ? 'bg-muted text-foreground' : 'hover:bg-muted/60',
+                        )}
+                        onMouseEnter={() => setHighlightIndex(idx)}
+                        onMouseDown={(ev) => ev.preventDefault()}
+                        onClick={() => applySuggestion(row)}
+                      >
+                        <span className="min-w-0 flex-1">
+                          <HighlightedLabel label={row.suggestion.label} ranges={row.ranges} />
+                        </span>
+                        {row.suggestion.kind === 'person' && (
+                          <span className="shrink-0 text-xs text-muted-foreground">
+                            {row.suggestion.movieCount}
+                          </span>
+                        )}
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
             )}
-          >
-            {resultRows.map((row, idx) => {
-              const active = idx === activeRowIndex
-              return (
-                <li key={suggestionKey(row.suggestion)} role="presentation">
-                  <button
-                    type="button"
-                    role="option"
-                    aria-selected={active}
-                    className={cn(
-                      'flex w-full items-center gap-2 px-3 py-2 text-left transition-colors',
-                      active ? 'bg-muted text-foreground' : 'hover:bg-muted/60',
-                    )}
-                    onMouseEnter={() => setHighlightIndex(idx)}
-                    onMouseDown={(ev) => ev.preventDefault()}
-                    onClick={() => applySuggestion(row)}
-                  >
-                    <span className="min-w-0 flex-1">
-                      <HighlightedLabel label={row.suggestion.label} ranges={row.ranges} />
-                    </span>
-                    {row.suggestion.kind === 'person' && (
-                      <span className="shrink-0 text-xs text-muted-foreground">
-                        {row.suggestion.movieCount}
-                      </span>
-                    )}
-                    {row.suggestion.kind === 'genre' && (
-                      <span className="shrink-0 text-xs text-muted-foreground">{row.suggestion.count}</span>
-                    )}
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
+          </>
         )}
 
         {isBlocked && (

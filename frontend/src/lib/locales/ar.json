@@ -51,7 +51,10 @@
     "placeholderPerson": "مخرج / منتج / طاقم …",
     "placeholderGenre": "دراما / كوميديا / إثارة …",
     "placeholderDisabled": "فهرس البحث غير متاح",
-    "clear": "مسح البحث"
+    "clear": "مسح البحث",
+    "genreMultiEmptyHint": "انقر نوعًا أو أكثر للتصفية…",
+    "genreMultiMatches": "نتائج",
+    "genreMultiRemove": "إزالة"
   },
   "hud": {
     "openInfo": "فتح لوحة المعلومات (محتوى مؤقت)",

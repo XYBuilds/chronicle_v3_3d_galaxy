@@ -10,7 +10,7 @@ todos:
     status: completed
   - id: p213-genre-badge-multi-select
     content: P21.3 Genre tab 改 AND 多选 badge：19 badge 网格 + 选中 / 死路 disable / 实时交集 count；selectionIds 写回 store；ESC 全清退出
-    status: pending
+    status: completed
   - id: p214-searchbar-idle-active
     content: "P21.4 SearchBar 容器 data-state=idle|active；触发: focus 内 OR hover 容器 OR results panel；idle 态 outline 无背景"
     status: pending

@@ -1,0 +1,3 @@
+# Cloudflare Pages: short TTL so “which R2 URLs today” updates quickly; gzip assets use R2 immutable headers.
+/data/galaxy_assets_manifest.json
+  Cache-Control: public, max-age=60, must-revalidate

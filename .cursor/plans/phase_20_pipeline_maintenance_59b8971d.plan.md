@@ -13,7 +13,7 @@ todos:
     status: completed
   - id: p204-cache-control
     content: "P20.4 upload_galaxy_r2.py 上传时写 Cache-Control: immutable；frontend/public/_headers 给 manifest 设短 TTL"
-    status: pending
+    status: completed
   - id: p205-cf-analytics
     content: P20.5 接入 Cloudflare Web Analytics beacon（cookie-free，token 走 VITE_CF_BEACON_TOKEN）
     status: pending

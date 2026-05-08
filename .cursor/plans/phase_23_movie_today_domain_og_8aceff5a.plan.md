@@ -1,12 +1,12 @@
 ---
 name: phase 23 movie today domain og
-overview: Phase 23 把项目从"打开 = 大量星星 + 进度条"升级为产品化首屏：每日由 nightly 选一部 The Movie Today 写入 today.json，加载完成时 scene 进入 cover mode 仅渲染中心 perlin 球（灰背景遮其它星 + "The Movie Today" 文字），用户点击 perlin 球后进入正常 focus 态。同步上线自定义域名与社交分享 OG 卡片（卡片由 nightly Pillow 合成）。
+overview: Phase 23 把项目从"打开 = 大量星星 + 旧进度条"升级为产品化首屏：每日由 nightly 选一部 The Movie Today 写入 today.json，加载阶段为新版 Loading（左下角 the movie cosmos、无条形进度条、新背景与标题字体；像素级样式以 Figma 为准）；加载完成时 scene 进入 cover mode 仅渲染中心 perlin 球（灰背景遮其它星 + "The Movie Today" 文字），用户点击 perlin 球后进入正常 focus 态。同步上线自定义域名与社交分享 OG 卡片（卡片由 nightly Pillow 合成）。
 todos:
   - id: p231-today-json-pipeline
     content: P23.1 nightly cron pick_movie_today.py（hash by UTC date）写 today.json；R2 + manifest 同步；loadToday.ts 客户端加载 + Top-1000 fallback
     status: completed
   - id: p232-cover-grayscreen-loading
-    content: P23.2 Loading 灰背景 + 'The Movie Cosmos' 大字；进度条保留；i18n key cover.todayTitle/todayHint
+    content: P23.2 Loading 左下角 the movie cosmos；去掉条形进度条，采用 Figma 新设计的加载态；背景色与标题专用字体按 Figma；i18n cover.todayTitle/todayHint（Figma 链接到位后用 MCP 对齐 token）
     status: pending
   - id: p233-cover-perlin-stage
     content: P23.3 加载完成后 scene mount + uCoverMode/uCoverTodayInstanceId uniform；其它 idle 不渲染不拾取；CoverBackdrop.tsx 灰背景 + 中心 mask；coverModeStore
@@ -32,7 +32,7 @@ isProject: false
 
 **做**：
 - nightly cron 服务端预选 today_movie_id，写独立 `today.json` + 兜底 fallback
-- Loading 阶段灰背景 + "The Movie Cosmos"
+- Loading 阶段：左下角 the movie cosmos、新背景、标题字体；加载进度不用旧条形进度条，用 Figma 规定的新样式（Figma 为 SSOT）
 - 加载完成 → scene mount cover mode：灰背景 + "The Movie Today" + 中心 perlin 球
 - Perlin 球 hover MovieTooltip（仅 title + genre 子集）；点击/Enter 退出 cover 进入正常 focus + drawer
 - nightly cron 用 Pillow 合成 `og-today.png`（1200×630），index.html 引用
@@ -68,7 +68,7 @@ isProject: false
 ```mermaid
 flowchart TD
     P231["P23.1 today.json 数据生产 + 客户端加载"]
-    P232["P23.2 Loading 灰背景 + 'The Movie Cosmos'"]
+    P232["P23.2 Loading 左下角品牌 + 新加载态 + Figma 样式"]
     P233["P23.3 Cover scene mount + cover mode + 中心 perlin 球"]
     P234["P23.4 Perlin 球 hover MovieTooltip + 点击退出 cover"]
     P235["P23.5 OG image nightly 合成 + index.html meta"]
@@ -193,29 +193,35 @@ function fallbackTodayMovieId(movies: readonly Movie[]): number {
 
 ---
 
-## P23.2 Loading 灰背景 + "The Movie Cosmos"
+## P23.2 Loading — 左下角 the movie cosmos + 新加载态 + Figma SSOT
+
+### 设计来源（阻塞项可并行）
+
+- **具体颜色、间距、标题字重、加载态组件形态**：以用户提供的 **Figma 文件** 为唯一视觉 SSOT。链接到位后，用 **Figma MCP**（`get_design_context` / `get_screenshot` 等）读取对应 frame，再映射到 Tailwind / CSS 变量与 `@font-face`。
+- 实施前若尚无 Figma：可先用占位布局（左下角 + 无条形进度条 + 单一背景 token），合并 Figma 后再做一次像素对齐 PR。
 
 ### 现状
 
-[`frontend/src/components/Loading.tsx`](frontend/src/components/Loading.tsx) 当前用 `bg-background/80 backdrop-blur-sm`，文案 `STRINGS.loading.title = "Loading galaxy data"`。
+[`frontend/src/components/Loading.tsx`](frontend/src/components/Loading.tsx) 当前用 `bg-background/80 backdrop-blur-sm`，文案 `STRINGS.loading.title = "Loading galaxy data"`；含条形进度与多步指示。
 
 ### 实施
 
-**视觉重做** Loading.tsx：
-- 去掉 `bg-background/80 backdrop-blur-sm`，改为纯 `bg-zinc-900` (dark) / `bg-zinc-200` (light) 灰
-- 顶部 / 中心区显示大字 brand `<h1>The Movie Cosmos</h1>`（class 大字号 letter-spacing widedark:text-zinc-100）
-- 进度条 / 4 步指示器保留在 brand 下方
-- `mode='loading'`：brand 静态显示
-- `mode='await-start'`：在 P23.3 中替换为 Cover stage（不再用按钮）
+**视觉重做** Loading.tsx（与 Figma 对齐后定稿 class / token）：
+- **背景**：按 Figma 更新全屏背景色（不再沿用文档里写死的 `bg-zinc-900` / `bg-zinc-200` 方案；以设计稿为准）。
+- **品牌 `the movie cosmos`**（UI 身份面小写，见 branding 规则）：**固定左下角**（如 `fixed left-… bottom-…` + 安全区内边距），不再顶部 / 居中大字。
+- **条形进度条与旧 4 步进度 UI**：**删除**；改为 Figma 中的**新加载表示**（例如环形、脉冲、文案+轻量动效等——以 Figma 节点为准）。
+- **标题字体**：新增 Figma 指定的 **标题专用 webfont**（`@font-face` + `font-display`；仅用于 Loading 标题/品牌区，避免全站无差别替换）。字体文件路径与授权以 Figma / 设计交付为准。
+- `mode='loading'`：左下角 brand + 新加载态。
+- `mode='await-start'`：在 P23.3 中替换为 Cover stage（不再用按钮）。
 
-**i18n key** — `STRINGS.cover.title` 已经在 P21 改为 "The Movie Cosmos"；P23 新增 `STRINGS.cover.todayTitle = "The Movie Today"` 与 `STRINGS.cover.todayHint = "Click the sphere to begin"`（zh: "今日影片" / "点击球面开始"）。
+**i18n** — `STRINGS.cover.title` 对应 UI 文案保持 **the movie cosmos**（小写品牌面）；`STRINGS.cover.todayTitle` / `STRINGS.cover.todayHint` 仍供 P23.3 Cover 使用。
 
 ### 验收
 
-- 加载阶段灰背景 + 大字 brand 居中显示
-- 进度条 4 步可见（不被新背景压迫）
-- a11y `<h1>` 标签 + `aria-busy` 与现状一致
-- 切 dark/light 主题灰度合理
+- 加载阶段背景色与 Figma 一致（或经设计签字的 token 表）
+- **the movie cosmos** 位于视口左下角，各断点不裁切、不与加载态重叠冲突
+- **无**旧条形进度条；新加载态行为与 Figma 一致（含若有动效的性能与 `prefers-reduced-motion`）
+- 标题使用指定新字体；`aria-busy` 与合理 heading/landmark 与现状一致或优于现状
 - Storybook story 更新
 
 ---
@@ -504,7 +510,7 @@ def render_og_card(movie: dict, *, output: Path, brand: str = "The Movie Cosmos"
 - §产物表加 today.json schema、og-today.png 规格
 
 **Design Spec** ([`docs/project_docs/TMDB 电影宇宙 Design Spec.md`](docs/project_docs/TMDB%20电影宇宙%20Design%20Spec.md))：
-- §首屏：cover 流程 + perlin 球可达性
+- §首屏：Loading（左下角 the movie cosmos、无条形进度条、新加载态、背景与标题字体；附 Figma 链接与 MCP 对齐记录）+ cover 流程 + perlin 球可达性
 - §MovieTooltip compact 模式
 
 **README** ([`README.md`](README.md))：
@@ -518,7 +524,7 @@ def render_og_card(movie: dict, *, output: Path, brand: str = "The Movie Cosmos"
 ## 验收清单（出口）
 
 - [ ] P23.1 nightly 写出 today.json + R2 + manifest；客户端连续刷新一致 / 跨日变；fallback 三类失败兜底有效
-- [ ] P23.2 加载阶段灰背景 + "The Movie Cosmos" 大字 + 进度可见
+- [ ] P23.2 加载阶段：Figma 背景 + 左下角 the movie cosmos + 新加载态（无条形进度条）+ 标题字体
 - [ ] P23.3 加载完成 → cover mode：灰背景 + "The Movie Today" + 中心 perlin 球；其它 idle 星不渲染不可拾
 - [ ] P23.4 hover 弹 compact MovieTooltip（title + genres）；点击 / Enter / Space 退出 cover → drawer 展开 + focus 平滑过渡
 - [ ] P23.5 og-today.png 每日刷新；Twitter / Facebook validator 显示卡片
@@ -541,6 +547,6 @@ def render_og_card(movie: dict, *, output: Path, brand: str = "The Movie Cosmos"
 ## 出口准入
 
 - 所有 P23.1–P23.7 todos `completed`
-- prod 部署后 7 类用户感知项 smoke 全部通过：(1) 灰背景品牌 (2) 加载完成 cover (3) Perlin 球可见 (4) hover compact tooltip (5) 点击退出 + drawer (6) Twitter validator OG (7) 自定义域名 TLS
+- prod 部署后 7 类用户感知项 smoke 全部通过：(1) Loading 左下角品牌 + 新加载态背景 (2) 加载完成 cover (3) Perlin 球可见 (4) hover compact tooltip (5) 点击退出 + drawer (6) Twitter validator OG (7) 自定义域名 TLS
 - 4 份 SSOT 文档与实施报告归档
 - 备线 *.pages.dev 仍可访问（按 P23.6 决策可重定向）

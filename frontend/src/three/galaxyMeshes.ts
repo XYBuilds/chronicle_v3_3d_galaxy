@@ -7,6 +7,7 @@ import galaxyActiveFragmentShader from './shaders/galaxyActive.frag.glsl'
 import galaxyActiveVertexShader from './shaders/galaxyActive.vert.glsl'
 import galaxyIdleFragmentShader from './shaders/galaxyIdle.frag.glsl'
 import galaxyIdleVertexShader from './shaders/galaxyIdle.vert.glsl'
+import { NEAR_CULL_WORLD_Z } from './nearCullWorldZ'
 import { computeSelectionMaskAtlasDimensions } from './selectionMask'
 
 /**
@@ -14,6 +15,8 @@ import { computeSelectionMaskAtlasDimensions } from './selectionMask'
  * Tune live via `window.__galaxyPointScale.scale` or Storybook / Leva.
  */
 export const DEFAULT_GALAXY_U_SIZE_SCALE = 0.3
+
+export { NEAR_CULL_WORLD_Z } from './nearCullWorldZ'
 
 const _dummy = new THREE.Object3D()
 
@@ -134,6 +137,9 @@ function makeSharedUniforms(
       uMovieCount: { value: movieCount },
       uSelectionAtlasWidth: { value: atlasW },
       uSelectionAtlasHeight: { value: atlasH },
+      /** P22.1 — paired with `uCameraWorldPos`; see `nearCullWorldZ.ts`. */
+      uNearCullWorldZ: { value: NEAR_CULL_WORLD_Z },
+      uCameraWorldPos: { value: new THREE.Vector3() },
     },
   }
 }

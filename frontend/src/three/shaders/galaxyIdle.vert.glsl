@@ -23,6 +23,8 @@ uniform sampler2D uSelectionMask;
 uniform int uSelectionMode;
 uniform int uSelectionAtlasWidth;
 uniform int uSelectionAtlasHeight;
+uniform float uNearCullWorldZ;
+uniform vec3 uCameraWorldPos;
 
 attribute float hue;
 attribute float voteNorm;
@@ -32,6 +34,13 @@ varying vec3 vColor;
 
 void main() {
   float aZ = instanceMatrix[3][2];
+  bool exemptNearCull =
+    (uFocusedInstanceId >= 0) && (gl_InstanceID == uFocusedInstanceId);
+  if (!exemptNearCull && abs(uCameraWorldPos.z - aZ) < uNearCullWorldZ) {
+    gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
+    vColor = vec3(0.0);
+    return;
+  }
   float zHi = uZCurrent + uZVisWindow;
   float W = uZVisWindow * 0.2;
 

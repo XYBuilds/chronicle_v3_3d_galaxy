@@ -3,6 +3,8 @@ import * as THREE from 'three'
 import type { SearchMode } from '@/store/galaxyInteractionStore'
 import type { Movie } from '@/types/galaxy'
 
+import { NEAR_CULL_WORLD_Z } from './nearCullWorldZ'
+
 /**
  * P12.6+ / P13.2 — CPU pick/hover must match shader `inFocus`.
  * Focus (`selectedMovieId`) wins over person/genre search mask (D1).
@@ -128,6 +130,8 @@ export type ActiveRayPickResult = { index: number; hitPoint: THREE.Vector3; t: n
  * built-in raycast ignores per-vertex `sActive` scale).
  * @param requireSlabInteraction — if true, require `movieZInFocusFactor > 0.5` (P8.4 click gate); hover passes false.
  * @param selectionMaskPickSet — if set (person/genre search), only these ids use full active radius; others skipped.
+ * @param cameraWorldZ — P22.1 world-Z of the camera (same space as `movie.z`); must match `uCameraWorldPos.z` in galaxy shaders.
+ * @param nearCullExemptMovieId — P22.1 focus film id exempt from near-Z cull on pick (matches shader `uFocusedInstanceId` path).
  */
 export function pickClosestActiveMovieAlongRay(options: {
   ray: THREE.Ray
@@ -137,8 +141,20 @@ export function pickClosestActiveMovieAlongRay(options: {
   zVisWindow: number
   requireSlabInteraction: boolean
   selectionMaskPickSet?: Set<number> | null
+  cameraWorldZ: number
+  nearCullExemptMovieId: number | null
 }): ActiveRayPickResult | null {
-  const { ray, movies, activeMaterial, zCurrent, zVisWindow, requireSlabInteraction, selectionMaskPickSet } = options
+  const {
+    ray,
+    movies,
+    activeMaterial,
+    zCurrent,
+    zVisWindow,
+    requireSlabInteraction,
+    selectionMaskPickSet,
+    cameraWorldZ,
+    nearCullExemptMovieId,
+  } = options
   const u = activeMaterial.uniforms
   const uSizeScale = (u.uSizeScale as THREE.Uniform<number>).value
   const uActiveSizeMul = (u.uActiveSizeMul as THREE.Uniform<number>).value
@@ -148,6 +164,12 @@ export function pickClosestActiveMovieAlongRay(options: {
 
   for (let i = 0; i < movies.length; i++) {
     const m = movies[i]
+    if (
+      Math.abs(cameraWorldZ - m.z) < NEAR_CULL_WORLD_Z &&
+      m.id !== nearCullExemptMovieId
+    ) {
+      continue
+    }
     let inF: number
     if (selectionMaskPickSet && selectionMaskPickSet.size > 0) {
       if (!selectionMaskPickSet.has(m.id)) continue

@@ -1,8 +1,8 @@
-# **TMDB 电影宇宙 \- 技术实现方案 (Tech Spec)**
+# **The Movie Cosmos \- 技术实现方案 (Tech Spec)**
 
 ## **1\. 系统架构与技术栈**
 
-项目采用严格的前后端计算分离架构：
+The Movie Cosmos 采用严格的前后端计算分离架构：
 
 * **后端/数据处理层 (Python)**：负责数据清洗、NLP 向量化及降维计算（UMAP），输出静态 JSON/Parquet 数据。  
 * **前端/渲染层**：  
@@ -29,10 +29,10 @@
 - **路径 A（opaque）**：**`selectionPhase === 'idle'`** 且 **`selectedMovieId === null`** —— 宏观浏览、电影名联想未点片、person/genre select 未 focus、Space dolly 等均在此列。
 - **路径 B（transparent）**：**否则** —— **`selecting` / `selected` / `deselecting`** 任一则需 **P11.1**；或 **`selectedMovieId !== null`**（单片 focus / 嵌套会话）。
 
-| 条件（AND） | 路径 | 备注 |
-| :---- | :---- | :---- |
-| **`selectionPhase === 'idle'`** ∧ **`selectedMovieId === null`** | **A**（opaque + `depthWrite`） | 常态宏观 active |
-| **否则** | **B**（transparent） | focus 管线 **P11.1** |
+| 条件（AND）                                                      | 路径                           | 备注                 |
+| :--------------------------------------------------------------- | :----------------------------- | :------------------- |
+| **`selectionPhase === 'idle'`** ∧ **`selectedMovieId === null`** | **A**（opaque + `depthWrite`） | 常态宏观 active      |
+| **否则**                                                         | **B**（transparent）           | focus 管线 **P11.1** |
 
 * **Focus 态 Perlin 球（按需、单实例）**：`IcosahedronGeometry(1, 8)` + **CPU** 上按顶点 noise **分位数阈值**划分至多 **8** 档 genre 带（`perlin.frag.glsl` 中 **`step`** 分 **`bandIdx`**；顶点 **`perlin.vert.glsl`** 用 **`smoothstep`** 累加 **`level`** 做阶梯挤出，见《星球状态机 spec》§3.5）。**Phase 11.4**：片元用 **`dFdx`/`dFdy`** 重构法线与 Lambert 明暗；**`uPerlinL`** 由 **`vote_average`** 经与宏观一致的 **P10.1** 公式写入；**`uPerlinChroma`** 与星系 **`uChroma`** 快照一致；**hue** 为主 genre **`movie.genre_hue`**（若存在）+ 其余 genre **`genreHueForGenreName`**（palette key 序对齐 Python **`sorted`**）；线性 RGB **clamp** 后编码 **sRGB**；光照定稿见《视觉参数总表》§4。**Phase 11.5**：材质已切换为 **opaque**（`transparent: false`、`depthWrite: true`、`alphaTest: 0.01`），降低台阶边缘透明伪影。`movie.id` 种子化 PRNG；面积比例由 **`uAreaRatio`** 等控制。当 `uFocusedInstanceId` 命中时，**idle + active** 上该 `gl_InstanceID` 的 scale 在 shader 中**置零**，仅由 Perlin 球呈现。  
 * **后处理顺序（生产）**：同帧先画 idle → active → focus 时 Perlin 球 `visible=true`（`renderOrder` 以 `scene.ts` 为准）。**`UnrealBloomPass`** 默认**不**参与输出（§1.2）；调试启用时再走 composer。
@@ -67,12 +67,12 @@ Output
 
 开发阶段**不设硬性性能约束**，优先跑通全链路。以下数值仅作为后期优化时的**参考锚点**：
 
-| 指标 | 参考基线 | 备注 |
-| :---- | :---- | :---- |
-| 帧率 | 60 fps（中端独显） / 30 fps（最低可接受） | 低于 30fps 时 3D 漫游体感明显卡顿 |
-| JS 堆内存 | ≤ 300 MB | 60K 条 JSON ≈ 30–50 MB；余量留给 Three.js 对象与海报纹理缓存 |
-| GPU 显存 | ≤ 500 MB | 双 `InstancedMesh` + instance attribute；主要开销另含 Bloom 多 pass RT 与海报纹理 |
-| 首屏（白屏→可交互） | ≤ 5 秒 | 已有 Loading 页，用户预期在"加载一个世界" |
+| 指标                | 参考基线                                  | 备注                                                                              |
+| :------------------ | :---------------------------------------- | :-------------------------------------------------------------------------------- |
+| 帧率                | 60 fps（中端独显） / 30 fps（最低可接受） | 低于 30fps 时 3D 漫游体感明显卡顿                                                 |
+| JS 堆内存           | ≤ 300 MB                                  | 60K 条 JSON ≈ 30–50 MB；余量留给 Three.js 对象与海报纹理缓存                      |
+| GPU 显存            | ≤ 500 MB                                  | 双 `InstancedMesh` + instance attribute；主要开销另含 Bloom 多 pass RT 与海报纹理 |
+| 首屏（白屏→可交互） | ≤ 5 秒                                    | 已有 Loading 页，用户预期在"加载一个世界"                                         |
 
 ### **1.4 相机初始配置与首屏加载**
 
@@ -80,11 +80,11 @@ Output
 
 引入三个参数刻画宏观漫游下「相机 Z」与「用户时间关注点」的解耦——**均作为 Zustand `useGalaxyInteractionStore` 的一级字段**，`camera.ts` / `scene.ts` / `point.*.glsl` / `interaction.ts` 共享同一份状态：
 
-| 参数 | 含义 | 初值与来源 |
-| :---- | :---- | :---- |
-| **`zCurrent`** | 用户当前关注的发行年（世界 Z，与 `movies[i].z` 同轴，含小数年） | 挂载时写入 **`z_range` 排序后的较早端 `zLo`**（计划 Rev 4；从时间轴起点开始漫游） |
-| **`zVisWindow`** | 可观测 Z 窗口宽度（年），定义 **`[zCurrent, zCurrent + zVisWindow]`** 闭区间 | 默认 **1 年**（非常聚焦），供 §1.1 粒子分层与 §1.5 拾取共用 |
-| **`zCamDistance`** | 相机沿 −Z 相对 `zCurrent` 的后退距离 | **Phase 7.3**：初值 **`30`** 世界单位，Zustand 默认与 `mountGalaxyScene` 挂载写入一致，**不再**按 `zSpan` 公式计算。**Phase 17 起**：**运行时可调**——**宏观 idle** 下 **按住 Space + 滚轮**走 **dolly-to-cursor**，写入 **`zCamDistance`** 并平移相机 XY 使光标 NDC 下世界命中点不变；**`zCurrent` 与 fov 不变**；**局部 dolly 写入时** **`clamp(zCamDistance, 2, 30)`**（**上限 = 默认 standoff**，仅允许相对默认「推近」，见 §1.4.4）。**松开 Space**（本轮曾武装 dolly）将 **`zCamDistance` 复位为 30**。**Ctrl + 滚轮**不处理相机（交给浏览器页面缩放）。**focus 会话**内滚轮（含 Space + wheel）**仍为 noop**（与 Phase 13 一致）。实现见 `galaxyInteractionStore.ts`、`camera.ts`、`scene.ts` |
+| 参数               | 含义                                                                         | 初值与来源                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| :----------------- | :--------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`zCurrent`**     | 用户当前关注的发行年（世界 Z，与 `movies[i].z` 同轴，含小数年）              | 挂载时写入 **`z_range` 排序后的较早端 `zLo`**（计划 Rev 4；从时间轴起点开始漫游）                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| **`zVisWindow`**   | 可观测 Z 窗口宽度（年），定义 **`[zCurrent, zCurrent + zVisWindow]`** 闭区间 | 默认 **1 年**（非常聚焦），供 §1.1 粒子分层与 §1.5 拾取共用                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| **`zCamDistance`** | 相机沿 −Z 相对 `zCurrent` 的后退距离                                         | **Phase 7.3**：初值 **`30`** 世界单位，Zustand 默认与 `mountGalaxyScene` 挂载写入一致，**不再**按 `zSpan` 公式计算。**Phase 17 起**：**运行时可调**——**宏观 idle** 下 **按住 Space + 滚轮**走 **dolly-to-cursor**，写入 **`zCamDistance`** 并平移相机 XY 使光标 NDC 下世界命中点不变；**`zCurrent` 与 fov 不变**；**局部 dolly 写入时** **`clamp(zCamDistance, 2, 30)`**（**上限 = 默认 standoff**，仅允许相对默认「推近」，见 §1.4.4）。**松开 Space**（本轮曾武装 dolly）将 **`zCamDistance` 复位为 30**。**Ctrl + 滚轮**不处理相机（交给浏览器页面缩放）。**focus 会话**内滚轮（含 Space + wheel）**仍为 noop**（与 Phase 13 一致）。实现见 `galaxyInteractionStore.ts`、`camera.ts`、`scene.ts` |
 
 **相机世界 Z 关系（宏观 idle 态）**：
 
@@ -189,12 +189,12 @@ HUD 文案由 **多语言 JSON + Zustand store + React hook** 自管，**不**�
 
 生产路径**不再**对 `THREE.Points` 主拾取；**仅**对 **`galaxyActive`** 使用 `Raycaster` 时，引擎给出的网格命中**不能**直接反映 `instanceMatrix` 的顶点缩放量，故实现采用 **`screenRadius.ts` 中的世界空间球/半径** 与 `pickClosestActiveMovieAlongRay`：**射线与每颗「active 尺度下」世界球求交**，取最近合法命中，并与 shader 的 `sActive` / `inFocus` **同构**。
 
-| 环节 | 规则 |
-| :---- | :---- |
-| **主拾取对象** | `galaxyActive`（`InstancedMesh`）；**idle 不作为**可点目标 |
+| 环节                    | 规则                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| :---------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **主拾取对象**          | `galaxyActive`（`InstancedMesh`）；**idle 不作为**可点目标                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | **Slab / inFocus 门控** | **默认**（`searchMode === 'idle'`，`uSelectionMode === 0`）：与 §1.1 一致；采纳拾取时须 **`inFocus > 0.5`**（与《星球状态机 spec》及《视觉参数总表》一致），等同「只与条带内 active 可交互区」。**Phase 12**（`searchMode` 为 **`person`** 或 **`genre`**）：GPU 上 `uSelectionMode === 1` 时 idle/active 顶点着色器 **`inFocus` 改由 `uSelectionMask` 纹理采样**（与 Z 条带解耦）；CPU 侧 `screenRadius.ts` / `interaction.ts` 用 **`selectionMaskPickSet`**（`selectionIds` 集合）使**仅 mask 内影片**按全 **`inFocus = 1`** 计算 active 世界球半径并参与射线求交，其余实例跳过；采纳命中仍须 **`inFocus > 0.5`**（对 mask 内实例恒成立）。**电影名搜索**（`searchMode === 'movie'` 或未进入多选）不改变上述默认 slab 拾取。**Phase 13**：当 **`selectedMovieId !== null`** 且 **`uSelectionMode === 2`**（focus 邻域球）时，**`getSelectionMaskPickSet`** 返回 **focus 邻域 id 集合**（与 search mask **互斥**：focus 态优先邻域 mask；退出 focus 后若仍处于 select，则恢复 §1.5 上行 `mode=1` 行为），GPU 与 CPU 同构。 |
-| **hover 环** | **HTML overlay**（`HoverRing`），**无 CSS transition**，与 Tooltip 同节奏显隐 |
-| **历史：Points** | 旧版对 `Points.threshold` 的估算与 A/B 层过滤见归档讨论；`interaction.ts` 中 `computePointScreenRadiusCss` 等**仅**供基准/遗留对照 |
+| **hover 环**            | **HTML overlay**（`HoverRing`），**无 CSS transition**，与 Tooltip 同节奏显隐                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| **历史：Points**        | 旧版对 `Points.threshold` 的估算与 A/B 层过滤见归档讨论；`interaction.ts` 中 `computePointScreenRadiusCss` 等**仅**供基准/遗留对照                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 
 **假设与局限**：active 在条带外趋近零尺度时极难点中，属预期；若 T6 类问题再现，可收紧容差或第二近邻（性能基线与准入归档见 [`Phase 8 基线 P8.0 性能与 P8.4 准入.md`](../benchmarks/Phase%208%20基线%20P8.0%20性能与%20P8.4%20准入.md)，含 **`## P12 入口/出口`** 搜索压力片段与 **`## P16 出口`** Phase 16 复跑 / 手测登记）。
 
@@ -310,22 +310,22 @@ Python 管线的最终产物以 **`galaxy_data.json`**（及 gzip）为主；**P
 
 数据版本、生成参数、genre palette 版本与自动化管线语义见 [`TMDB 电影宇宙 Data Pipeline.md`](./TMDB%20电影宇宙%20Data%20Pipeline.md)；本节仅定义前端消费的 JSON 字段契约。
 
-| 字段 | 类型 | 说明 |
-| :---- | :---- | :---- |
-| `version` | string | 宇宙数据版本号，格式 `YYYY.MM.DD` 或语义版本 |
-| `generated_at` | string (ISO 8601) | 本文件的生成时间 |
-| `count` | int | `movies` 数组长度 |
-| `embedding_model` | string | 所用 sentence-transformers 模型 HF ID |
-| `umap_params` | object | `{ n_neighbors, min_dist, metric, random_state, densmap, ... }` 实际使用的 UMAP 超参；**`random_state` 固定为 `42`**（见 §2.1）；**`densmap`** 为 **bool**（`true`/`false`），与 Phase 2.4 `umap_projection.py` 及导出入口是否传入 **`--densmap`** 一致，表示是否启用 DensMAP |
-| `genre_weight_ratio` | float | 流派权重公比（默认 ≈0.618） |
-| `genre_palette` | object | **genre 名 → sRGB hex 色值** 映射表，例如 `{ "Drama": "#E74C3C", ... }`。源色彩空间为 **OKLCH**，Phase 18+ 由 frozen palette 生成；管线中转为 sRGB hex 后写入此处。**HUD swatch** 与兼容用途 |
-| `genre_palette_version` | string \| undefined | **Phase 18+**：frozen genre palette 版本，例如 `"v1"`；若 palette 重排或加入新 genre，必须 bump |
-| `has_genre_hue` | bool \| undefined | **Phase 8.1**：为 **`true`** 时，每条 `movies[i]` **应**含 **`genre_hue`**（弧度 \([0, 2\pi)\)），GPU 宏观/focus 路径优先消费 hue + 均匀 L/C；与 `genre_color` **双字段共存**直至下一大版本移除旧字段（须 bump 版本并回归） |
-| `has_search_index` | bool \| undefined | **Phase 12+**：为 **`true`** 时，静态目录中**应**存在 **`galaxy_search_index.json.gz`**（§4.5），且每条 `movies[i]` **应**含 **`title_normalized`**（§4.3）；前端据此启用 HUD 搜索（人名 / genre 联想）；缺失时搜索 UI disabled（见 Design Spec §4） |
-| `search_normalize_version` | string \| undefined | **Phase 21+**：搜索归一化算法版本。**`"v2"`** 表示 `title_normalized` 与 `galaxy_search_index.people[*]` 的 normalized key 由 **NFKC + 去 `Mn` 组合标记 + casefold** 写入（保留 CJK / 西里尔 / 阿拉伯 / 谚文等非拉丁脚本，详见 §4.3）。**缺失或非 `"v2"`** 视为 P12.1 旧包（NFKD + ASCII fold + casefold），前端 `loadGalaxyData` 在 `parseAndValidate` 中 **`console.warn`**（不阻断），CJK / 非拉丁标题搜索可能不完整。 |
-| `feature_weights` | object | `{ text: 1.0, genre: 1.0, lang: 1.0 }` §2.1.3 多模态融合的权重乘子 |
-| `z_range` | `[float, float]` | 数据集中 Z 轴（小数年份）的 `[min, max]`，供前端相机初始化与 clamp |
-| `xy_range` | `{ x: [min, max], y: [min, max] }` | UMAP 坐标的实际值域，供前端归一化或相机边界设置 |
+| 字段                       | 类型                               | 说明                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| :------------------------- | :--------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `version`                  | string                             | 宇宙数据版本号，格式 `YYYY.MM.DD` 或语义版本                                                                                                                                                                                                                                                                                                                                                                              |
+| `generated_at`             | string (ISO 8601)                  | 本文件的生成时间                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `count`                    | int                                | `movies` 数组长度                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `embedding_model`          | string                             | 所用 sentence-transformers 模型 HF ID                                                                                                                                                                                                                                                                                                                                                                                     |
+| `umap_params`              | object                             | `{ n_neighbors, min_dist, metric, random_state, densmap, ... }` 实际使用的 UMAP 超参；**`random_state` 固定为 `42`**（见 §2.1）；**`densmap`** 为 **bool**（`true`/`false`），与 Phase 2.4 `umap_projection.py` 及导出入口是否传入 **`--densmap`** 一致，表示是否启用 DensMAP                                                                                                                                             |
+| `genre_weight_ratio`       | float                              | 流派权重公比（默认 ≈0.618）                                                                                                                                                                                                                                                                                                                                                                                               |
+| `genre_palette`            | object                             | **genre 名 → sRGB hex 色值** 映射表，例如 `{ "Drama": "#E74C3C", ... }`。源色彩空间为 **OKLCH**，Phase 18+ 由 frozen palette 生成；管线中转为 sRGB hex 后写入此处。**HUD swatch** 与兼容用途                                                                                                                                                                                                                              |
+| `genre_palette_version`    | string \| undefined                | **Phase 18+**：frozen genre palette 版本，例如 `"v1"`；若 palette 重排或加入新 genre，必须 bump                                                                                                                                                                                                                                                                                                                           |
+| `has_genre_hue`            | bool \| undefined                  | **Phase 8.1**：为 **`true`** 时，每条 `movies[i]` **应**含 **`genre_hue`**（弧度 \([0, 2\pi)\)），GPU 宏观/focus 路径优先消费 hue + 均匀 L/C；与 `genre_color` **双字段共存**直至下一大版本移除旧字段（须 bump 版本并回归）                                                                                                                                                                                               |
+| `has_search_index`         | bool \| undefined                  | **Phase 12+**：为 **`true`** 时，静态目录中**应**存在 **`galaxy_search_index.json.gz`**（§4.5），且每条 `movies[i]` **应**含 **`title_normalized`**（§4.3）；前端据此启用 HUD 搜索（人名 / genre 联想）；缺失时搜索 UI disabled（见 Design Spec §4）                                                                                                                                                                      |
+| `search_normalize_version` | string \| undefined                | **Phase 21+**：搜索归一化算法版本。**`"v2"`** 表示 `title_normalized` 与 `galaxy_search_index.people[*]` 的 normalized key 由 **NFKC + 去 `Mn` 组合标记 + casefold** 写入（保留 CJK / 西里尔 / 阿拉伯 / 谚文等非拉丁脚本，详见 §4.3）。**缺失或非 `"v2"`** 视为 P12.1 旧包（NFKD + ASCII fold + casefold），前端 `loadGalaxyData` 在 `parseAndValidate` 中 **`console.warn`**（不阻断），CJK / 非拉丁标题搜索可能不完整。 |
+| `feature_weights`          | object                             | `{ text: 1.0, genre: 1.0, lang: 1.0 }` §2.1.3 多模态融合的权重乘子                                                                                                                                                                                                                                                                                                                                                        |
+| `z_range`                  | `[float, float]`                   | 数据集中 Z 轴（小数年份）的 `[min, max]`，供前端相机初始化与 clamp                                                                                                                                                                                                                                                                                                                                                        |
+| `xy_range`                 | `{ x: [min, max], y: [min, max] }` | UMAP 坐标的实际值域，供前端归一化或相机边界设置                                                                                                                                                                                                                                                                                                                                                                           |
 
 ### **4.3 `movies[i]` 单条电影对象**
 
@@ -333,52 +333,52 @@ Python 管线的最终产物以 **`galaxy_data.json`**（及 gzip）为主；**P
 
 #### **A. GPU 渲染层（加载后写入 BufferAttribute）**
 
-| 字段 | 类型 | 来源 / 计算方式 | 说明 |
-| :---- | :---- | :---- | :---- |
-| `x` | float | UMAP 输出坐标 | 语义平面 X |
-| `y` | float | UMAP 输出坐标 | 语义平面 Y |
-| `z` | float | `release_date` → 小数年份（含 Jitter） | 时间纵深 |
-| `size` | float | `log10(vote_count + 1)`，再线性映射到 `[size_min, size_max]` | **InstancedMesh** 世界尺度链中的 **`aSize`** 来源（与 `uSizeScale`×`u*SizeMul` 相乘）；值域与管线映射同前（**可调**） |
-| `emissive` | float | `vote_average` 线性映射到 `[emissive_min, emissive_max]` | 资产中可保留；**P8.4 宏观 mesh** 片元主路径用 **`voteNorm = vote_average/10`** 与 OKLab **L** 混色（见 `galaxyMeshes.ts`）。Bloom 仍受 §1.2 阈值约束 |
-| `genre_hue` | float | Pipeline 按流派 index 分配等距色相，**弧度** \([0, 2\pi)\)（与导出 `build_genre_palette` 一致） | **P8.1+**：GPU `hue` attribute；缺省时前端 `hueFromGenreColor(genre_color)` |
-| `genre_color` | `[float, float, float]` | `genres[0]` 查 `meta.genre_palette` → 转 RGB 归一化 `[0-1]` | **兼容 / HUD**；无 `genre_hue` 时前端可用 `hueFromGenreColor` 回推 hue（见 Vitest） |
+| 字段          | 类型                    | 来源 / 计算方式                                                                                 | 说明                                                                                                                                                 |
+| :------------ | :---------------------- | :---------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `x`           | float                   | UMAP 输出坐标                                                                                   | 语义平面 X                                                                                                                                           |
+| `y`           | float                   | UMAP 输出坐标                                                                                   | 语义平面 Y                                                                                                                                           |
+| `z`           | float                   | `release_date` → 小数年份（含 Jitter）                                                          | 时间纵深                                                                                                                                             |
+| `size`        | float                   | `log10(vote_count + 1)`，再线性映射到 `[size_min, size_max]`                                    | **InstancedMesh** 世界尺度链中的 **`aSize`** 来源（与 `uSizeScale`×`u*SizeMul` 相乘）；值域与管线映射同前（**可调**）                                |
+| `emissive`    | float                   | `vote_average` 线性映射到 `[emissive_min, emissive_max]`                                        | 资产中可保留；**P8.4 宏观 mesh** 片元主路径用 **`voteNorm = vote_average/10`** 与 OKLab **L** 混色（见 `galaxyMeshes.ts`）。Bloom 仍受 §1.2 阈值约束 |
+| `genre_hue`   | float                   | Pipeline 按流派 index 分配等距色相，**弧度** \([0, 2\pi)\)（与导出 `build_genre_palette` 一致） | **P8.1+**：GPU `hue` attribute；缺省时前端 `hueFromGenreColor(genre_color)`                                                                          |
+| `genre_color` | `[float, float, float]` | `genres[0]` 查 `meta.genre_palette` → 转 RGB 归一化 `[0-1]`                                     | **兼容 / HUD**；无 `genre_hue` 时前端可用 `hueFromGenreColor` 回推 hue（见 Vitest）                                                                  |
 
 #### **B. HUD / DOM 展示层**
 
-| 字段 | 类型 | 说明 |
-| :---- | :---- | :---- |
-| `title` | string | 电影标题（Tooltip + 抽屉） |
-| `title_normalized` | string \| undefined | **Phase 12+ 管线**搜索 haystack。**Phase 21.1 起切换为 v2**：**NFKC + 去 `Mn` 组合标记 + casefold**（保留 CJK / 西里尔 / 阿拉伯 / 谚文；拉丁仍 casefold；`ß`→`ss`），与 `meta.search_normalize_version === "v2"` 联动；具体语义见 [`scripts/export/export_search_index.py`](../../scripts/export/export_search_index.py) `normalize_for_search_v2` 与前端镜像 `normalizeForSearch`（NFKC + `\p{M}` + `toLowerCase`）。旧包（v1：NFKD + ASCII fold）字段仍可被前端消费，但 CJK 在该字段中已被 ASCII 剥离丢失。**与 `has_search_index` 同步出现**；旧包无此字段时前端跳过电影名索引路径 |
-| `original_title` | string | 原始语言标题 |
-| `overview` | string | 剧情简介全文 |
-| `tagline` | string \| null | 宣传标语（可空） |
-| `release_date` | string (`YYYY-MM-DD`) | 精确日期文本展示 |
-| `genres` | string[] | 全部流派名称（按顺位排列） |
-| `original_language` | string | 原始语言代码 |
-| `vote_count` | int | 评价人数 |
-| `vote_average` | float | TMDB 评分 |
-| `popularity` | float | TMDB 热度 |
-| `imdb_rating` | float \| null | IMDb 评分 |
-| `imdb_votes` | int \| null | IMDb 评价人数 |
-| `runtime` | int \| null | 片长（分钟） |
-| `revenue` | int | 票房（0 表示未收录） |
-| `budget` | int | 预算（0 表示未收录） |
-| `production_countries` | string[] | 出品国家 |
-| `production_companies` | string[] | 出品公司 |
-| `spoken_languages` | string[] | 对白语种 |
-| `cast` | string[] | 演员（已按顺位截取，建议 ≤ 20 人精简体积） |
-| `director` | string[] | 导演 |
-| `writers` | string[] | 编剧 |
-| `producers` | string[] | 制片人 |
-| `director_of_photography` | string[] | 摄影指导 |
-| `music_composer` | string[] | 配乐 |
-| `poster_url` | string | 完整海报 URL（Python 侧拼装 `https://image.tmdb.org/t/p/w500` + `poster_path`） |
+| 字段                      | 类型                  | 说明                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| :------------------------ | :-------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `title`                   | string                | 电影标题（Tooltip + 抽屉）                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `title_normalized`        | string \| undefined   | **Phase 12+ 管线**搜索 haystack。**Phase 21.1 起切换为 v2**：**NFKC + 去 `Mn` 组合标记 + casefold**（保留 CJK / 西里尔 / 阿拉伯 / 谚文；拉丁仍 casefold；`ß`→`ss`），与 `meta.search_normalize_version === "v2"` 联动；具体语义见 [`scripts/export/export_search_index.py`](../../scripts/export/export_search_index.py) `normalize_for_search_v2` 与前端镜像 `normalizeForSearch`（NFKC + `\p{M}` + `toLowerCase`）。旧包（v1：NFKD + ASCII fold）字段仍可被前端消费，但 CJK 在该字段中已被 ASCII 剥离丢失。**与 `has_search_index` 同步出现**；旧包无此字段时前端跳过电影名索引路径 |
+| `original_title`          | string                | 原始语言标题                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `overview`                | string                | 剧情简介全文                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `tagline`                 | string \| null        | 宣传标语（可空）                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `release_date`            | string (`YYYY-MM-DD`) | 精确日期文本展示                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `genres`                  | string[]              | 全部流派名称（按顺位排列）                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `original_language`       | string                | 原始语言代码                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `vote_count`              | int                   | 评价人数                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `vote_average`            | float                 | TMDB 评分                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `popularity`              | float                 | TMDB 热度                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `imdb_rating`             | float \| null         | IMDb 评分                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `imdb_votes`              | int \| null           | IMDb 评价人数                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `runtime`                 | int \| null           | 片长（分钟）                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `revenue`                 | int                   | 票房（0 表示未收录）                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `budget`                  | int                   | 预算（0 表示未收录）                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `production_countries`    | string[]              | 出品国家                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `production_companies`    | string[]              | 出品公司                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `spoken_languages`        | string[]              | 对白语种                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `cast`                    | string[]              | 演员（已按顺位截取，建议 ≤ 20 人精简体积）                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `director`                | string[]              | 导演                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `writers`                 | string[]              | 编剧                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `producers`               | string[]              | 制片人                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `director_of_photography` | string[]              | 摄影指导                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `music_composer`          | string[]              | 配乐                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `poster_url`              | string                | 完整海报 URL（Python 侧拼装 `https://image.tmdb.org/t/p/w500` + `poster_path`）                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 
 #### **C. 逻辑 / 关联层**
 
-| 字段 | 类型 | 说明 |
-| :---- | :---- | :---- |
-| `id` | int | TMDB ID，作为 Raycaster 拾取与数据绑定的唯一键 |
+| 字段      | 类型           | 说明                                                         |
+| :-------- | :------------- | :----------------------------------------------------------- |
+| `id`      | int            | TMDB ID，作为 Raycaster 拾取与数据绑定的唯一键               |
 | `imdb_id` | string \| null | 用于拼接 IMDb 外链 (`https://www.imdb.com/title/{imdb_id}/`) |
 
 ### **4.4 体积与加载说明**
@@ -420,14 +420,14 @@ Python 管线的最终产物以 **`galaxy_data.json`**（及 gzip）为主；**P
 - **`key`**（`normalized_key`）：人名经 **`normalize_for_search_v2`**（NFKC + 去 `Mn` 组合标记 + casefold；与 `title_normalized` 共用同一规范化函数，**Phase 21.1 起统一为 v2**，旧 v1 包为 NFKD + ASCII fold + casefold）后的字符串。**多个原始写法可能合并到同一 key**，此时 `full` 取出现频次最高 / 第一条原始字符串。**部署侧契约**：`galaxy_search_index` 的 key 集合随归一化版本变化（v1 与 v2 不二进制兼容），主包 + 索引 + 前端必须**同版本一并发布**，避免混用导致人名命中漏配。
 - **`full`**：展示用原始姓名（保留大小写、变音符号）。
 - **`role_mask`**：**uint8** 位掩码，按位**或**合并**全部参演影片**的多角色：
-  | 位 | 数值 | 来源字段 |
-  | :---- | :---- | :---- |
-  | 0 | `1` | `cast` |
-  | 1 | `2` | `director` |
-  | 2 | `4` | `director_of_photography` |
-  | 3 | `8` | `writers` |
-  | 4 | `16` | `producers` |
-  | 5 | `32` | `music_composer` |
+  | 位   | 数值 | 来源字段                  |
+  | :--- | :--- | :------------------------ |
+  | 0    | `1`  | `cast`                    |
+  | 1    | `2`  | `director`                |
+  | 2    | `4`  | `director_of_photography` |
+  | 3    | `8`  | `writers`                 |
+  | 4    | `16` | `producers`               |
+  | 5    | `32` | `music_composer`          |
   - 取值范围 **`[0, 63]`**；`assert role_mask <= 63` 是管线必检约束。
 - **`movie_ids`**：参演影片 TMDB ID 数组，**去重**；顺序不限（前端按需排序，例如人名星座连线按 `release_date` 升序）。
 - **`movie_roles`**（**Phase 12.7+** 新增，可选）：对象映射 **`"<tmdb_id>" → <该片上的 role 位掩码>`**，描述该人在每部参演影片**单片粒度**的职位组合。位定义与 `role_mask` 一致；同片多职位按位**或**合并。
@@ -573,11 +573,11 @@ chronicle_v3_3d_galaxy/
 
 ## **7\. 浏览器兼容性**
 
-| 要求 | 说明 |
-| :---- | :---- |
-| **最低要求** | **WebGL 2.0**（Three.js r163+ 默认 WebGL2 renderer）。覆盖 Chrome 56+、Firefox 51+、Safari 15+、Edge 79+（即 2022 年后的主流桌面浏览器均支持） |
-| **移动端** | **不作为主要适配目标**。项目核心交互（滚轮穿梭、hover tooltip、拖拽平移）依赖鼠标，移动端体验天然受限。若移动端能打开且基本渲染正常即为 bonus，不投入专门的触控适配 |
-| **降级策略** | 若浏览器不支持 WebGL 2.0，显示一个**静态提示页**（"请使用现代桌面浏览器访问"），不做 WebGL 1.0 降级（维护成本 >> 收益） |
+| 要求         | 说明                                                                                                                                                                |
+| :----------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **最低要求** | **WebGL 2.0**（Three.js r163+ 默认 WebGL2 renderer）。覆盖 Chrome 56+、Firefox 51+、Safari 15+、Edge 79+（即 2022 年后的主流桌面浏览器均支持）                      |
+| **移动端**   | **不作为主要适配目标**。项目核心交互（滚轮穿梭、hover tooltip、拖拽平移）依赖鼠标，移动端体验天然受限。若移动端能打开且基本渲染正常即为 bonus，不投入专门的触控适配 |
+| **降级策略** | 若浏览器不支持 WebGL 2.0，显示一个**静态提示页**（"请使用现代桌面浏览器访问"），不做 WebGL 1.0 降级（维护成本 >> 收益）                                             |
 
 ## **8\. 无障碍 / 可访问性**
 

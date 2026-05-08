@@ -9,7 +9,7 @@
     "phaseIndexFailed": "Search index — failed"
   },
   "cover": {
-    "title": "Ready",
+    "title": "The Movie Cosmos",
     "start": "Start",
     "startAriaLabel": "Start — enter the galaxy and initialize graphics"
   },
@@ -73,7 +73,7 @@
     "modalTitle": "About this experience",
     "modalSubtitle": "Placeholder panel: copy and links will be finalized before launch.",
     "introHeading": "Overview",
-    "introBody": "(Placeholder) TMDB Movie Cosmos: ~60,000 films as a 2.5D particle galaxy; timeline, search (titles / people / genres), and multi-select highlighting. Product copy TBD.",
+    "introBody": "(Placeholder) The Movie Cosmos: ~60,000 films as a 2.5D particle galaxy; timeline, search (titles / people / genres), and multi-select highlighting. Product copy TBD.",
     "dataHeading": "Data sources",
     "dataBody": "(Placeholder) Attribution and references will be added at wrap-up; none listed here yet.",
     "stackHeading": "Stack",

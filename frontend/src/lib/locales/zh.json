@@ -9,7 +9,7 @@
     "phaseIndexFailed": "搜索索引 — 失败"
   },
   "cover": {
-    "title": "就绪",
+    "title": "The Movie Cosmos",
     "start": "开始",
     "startAriaLabel": "开始 — 进入星系并初始化图形"
   },
@@ -73,7 +73,7 @@
     "modalTitle": "关于本体验",
     "modalSubtitle": "占位面板：上线前将完善文案与链接。",
     "introHeading": "概述",
-    "introBody": "（占位）TMDB 电影宇宙：约 60,000 部影片构成的 2.5D 粒子星系；时间轴、搜索（片名 / 影人 / 流派）与多选高亮。正式文案待定。",
+    "introBody": "（占位）The Movie Cosmos：约 60,000 部影片构成的 2.5D 粒子星系；时间轴、搜索（片名 / 影人 / 流派）与多选高亮。正式文案待定。",
     "dataHeading": "数据来源",
     "dataBody": "（占位）致谢与引用将在收尾阶段补充；此处尚未列出。",
     "stackHeading": "技术栈",
@@ -118,6 +118,12 @@
     "ariaLabel": "影片 {{filmTitle}} 在 OKLab L 谱上的 {{rating}} / 10；十个档位对应半档评分"
   },
   "focusVoteReference": {
-    "tierLabels": ["10 票", "100 票", "1,000 票", "10,000 票", "100,000 票"]
+    "tierLabels": [
+      "10 票",
+      "100 票",
+      "1,000 票",
+      "10,000 票",
+      "100,000 票"
+    ]
   }
 }

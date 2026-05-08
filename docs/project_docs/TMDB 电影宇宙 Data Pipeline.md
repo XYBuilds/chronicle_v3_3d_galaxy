@@ -346,20 +346,20 @@ Phase 18.0 起改为：
 
 ### 8.1 进入 UMAP 的字段
 
-| 字段 | 处理 | 作用 |
-| :-- | :-- | :-- |
+| 字段                   | 处理             | 作用     |
+| :--------------------- | :--------------- | :------- |
 | `overview` + `tagline` | 多语言 embedding | 文本语义 |
-| `genres` | 顺位加权向量 | 流派拓扑 |
-| `original_language` | one-hot | 文化锚点 |
+| `genres`               | 顺位加权向量     | 流派拓扑 |
+| `original_language`    | one-hot          | 文化锚点 |
 
 ### 8.2 不进入 UMAP，但进入坐标/视觉的字段
 
-| 字段 | 处理 | 作用 |
-| :-- | :-- | :-- |
-| `release_date` | decimal year + jitter | Z 轴 |
-| `vote_count` | `log10(vote_count + 1)` | size |
-| `vote_average` | raw / normalized | emissive, OKLab L |
-| `genres[0]` | frozen palette lookup | hue / color |
+| 字段           | 处理                    | 作用              |
+| :------------- | :---------------------- | :---------------- |
+| `release_date` | decimal year + jitter   | Z 轴              |
+| `vote_count`   | `log10(vote_count + 1)` | size              |
+| `vote_average` | raw / normalized        | emissive, OKLab L |
+| `genres[0]`    | frozen palette lookup   | hue / color       |
 
 ### 8.3 仅 HUD / 搜索 / 逻辑字段
 
@@ -613,23 +613,23 @@ P18.5b 上线初期采用「软闸 + 强日志 + artifact」策略，原因是 G
 
 ### 12.2 P20 缓存语义（R2 + Pages manifest）
 
-| 资源 | 发布位置 | Cache-Control |
-|------|----------|---------------|
-| `galaxy/{seq}/galaxy_data.json.gz` | Cloudflare R2 | `public, max-age=31536000, immutable` |
-| `galaxy/{seq}/galaxy_search_index.json.gz` | Cloudflare R2 | `public, max-age=31536000, immutable` |
-| `data/galaxy_assets_manifest.json` | Cloudflare Pages | `public, max-age=60, must-revalidate` |
+| 资源                                       | 发布位置         | Cache-Control                         |
+| ------------------------------------------ | ---------------- | ------------------------------------- |
+| `galaxy/{seq}/galaxy_data.json.gz`         | Cloudflare R2    | `public, max-age=31536000, immutable` |
+| `galaxy/{seq}/galaxy_search_index.json.gz` | Cloudflare R2    | `public, max-age=31536000, immutable` |
+| `data/galaxy_assets_manifest.json`         | Cloudflare Pages | `public, max-age=60, must-revalidate` |
 
 说明：前两者使用版本化 key，永不覆写同 key；manifest 维持短 TTL 以快速切换"当前版本"指针。
 
 ### 12.3 Secrets 与运维分工
 
-| 用途 | Secret | 备注 |
-|------|--------|------|
-| Supabase 写库 / 读取 | `SUPABASE_URL`、`SUPABASE_SERVICE_ROLE_KEY` | nightly + monthly 共用；`service_role` 绕过 RLS（参考 P18.3 `REVOKE UPDATE,DELETE ON galaxy_v1_reference FROM service_role`） |
-| Kaggle daily update | `KAGGLE_USERNAME`、`KAGGLE_KEY` | nightly + monthly 共用 |
-| 月度 embedding bundle | `GALAXY_EMBED_BUNDLE_URL` | 单行 http(s) zip 直链；`monthly_refit.yml` trim/CRLF 清洗后再 `curl` |
-| Cloudflare Pages 部署 | `CLOUDFLARE_API_TOKEN`、`CLOUDFLARE_ACCOUNT_ID`、`CLOUDFLARE_PAGES_PROJECT_NAME` | API Token 仅需 **Account → Cloudflare Pages → Edit** |
-| Cloudflare R2 上传 | `R2_ACCOUNT_ID`、`R2_ACCESS_KEY_ID`、`R2_SECRET_ACCESS_KEY`、`R2_BUCKET`、`R2_PUBLIC_BASE_URL` | 5 个变量缺一即 R2 step 安全 skip（不阻塞 nightly/monthly） |
+| 用途                  | Secret                                                                                         | 备注                                                                                                                          |
+| --------------------- | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Supabase 写库 / 读取  | `SUPABASE_URL`、`SUPABASE_SERVICE_ROLE_KEY`                                                    | nightly + monthly 共用；`service_role` 绕过 RLS（参考 P18.3 `REVOKE UPDATE,DELETE ON galaxy_v1_reference FROM service_role`） |
+| Kaggle daily update   | `KAGGLE_USERNAME`、`KAGGLE_KEY`                                                                | nightly + monthly 共用                                                                                                        |
+| 月度 embedding bundle | `GALAXY_EMBED_BUNDLE_URL`                                                                      | 单行 http(s) zip 直链；`monthly_refit.yml` trim/CRLF 清洗后再 `curl`                                                          |
+| Cloudflare Pages 部署 | `CLOUDFLARE_API_TOKEN`、`CLOUDFLARE_ACCOUNT_ID`、`CLOUDFLARE_PAGES_PROJECT_NAME`               | API Token 仅需 **Account → Cloudflare Pages → Edit**                                                                          |
+| Cloudflare R2 上传    | `R2_ACCOUNT_ID`、`R2_ACCESS_KEY_ID`、`R2_SECRET_ACCESS_KEY`、`R2_BUCKET`、`R2_PUBLIC_BASE_URL` | 5 个变量缺一即 R2 step 安全 skip（不阻塞 nightly/monthly）                                                                    |
 
 ### 12.4 P18 范围外
 

@@ -1,4 +1,4 @@
-# **TMDB 电影宇宙 \- 视觉与交互设计规范 (Design Spec)**
+# **The Movie Cosmos \- 视觉与交互设计规范 (Design Spec)**
 
 ## **1\. 视觉映射法则 (Visual Mapping Rules)**
 

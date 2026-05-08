@@ -334,8 +334,8 @@ export function TimelineHud({
             <div
               key={y}
               className={cn(
-                /* Left half of track only: line sits at 50%; justify-end + pr keeps digits left of center with a real gap. */
-                'absolute left-0 right-1/2 flex items-center justify-end pr-3',
+                /* Right half of track: line at 50%; pl keeps digits fully to the right of the rail with a real gap. */
+                'absolute left-1/2 right-0 flex items-center justify-start pl-3',
                 interactive && 'pointer-events-auto cursor-pointer',
               )}
               style={{

@@ -14,6 +14,16 @@ describe('parseGalaxyAssetsManifest (P18.6b)', () => {
     expect(m!.galaxy_search_index_gzip_url).toContain('search_index')
   })
 
+  it('parses optional today_url (P23.1)', () => {
+    const m = parseGalaxyAssetsManifest({
+      galaxy_data_gzip_url: 'https://example.r2.dev/galaxy/galaxy_data.json.gz?v=1',
+      data_version: 'v',
+      today_url: 'https://example.r2.dev/galaxy/today.json?v=2026-05-08',
+    })
+    expect(m).not.toBeNull()
+    expect(m!.today_url).toBe('https://example.r2.dev/galaxy/today.json?v=2026-05-08')
+  })
+
   it('rejects when galaxy URL missing', () => {
     expect(parseGalaxyAssetsManifest({ data_version: 'x' })).toBeNull()
   })

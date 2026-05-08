@@ -20,7 +20,7 @@ The Movie Cosmos 采用严格的前后端计算分离架构：
   * **idle**：`IcosahedronGeometry(1, 0)`；`ShaderMaterial` **`transparent: true`**、**`depthWrite: false`**、`depthTest: true`；`renderOrder = 0`。  
   * **active**：`IcosahedronGeometry(1, 1)`；`ShaderMaterial` **`alphaTest: 0.01`**、`depthTest: true`；`renderOrder = 1`。**构造初值**（`galaxyMeshes.ts`）：**`transparent: true`**、**`depthWrite: false`**。**Phase 16 + Phase 19**：运行时由 **`scene.ts` RAF** 在 **`selectionPhase`（**闭包**，非 Zustand）× `selectedMovieId`（store）** 下切换 **双路径**——详见《星球状态机 spec》**§3.2.1** 与下表；切换时仅在 **`transparent` / `depthWrite`** 变化处设 **`material.needsUpdate = true`**。  
   * **active · Phase 11.1（路径 B 语义）**：非目标 active 片元 **`alpha`** 随 **`uFocusCameraBlend`**（与 **`transitionDriver`** / `focusDriver.progress` 同步）从 **1** 过渡到 **`uFocusNonTargetActiveAlpha`**（默认 **0.08**，**Phase 13.6** 由 **0.10** 下调以适配邻域球变密）；目标实例在飞入/飞出全程由 **`uFocusTargetInstanceId`** 识别并保持 **alpha = 1**（详见《星球状态机 spec》§3.4.3 与《视觉参数总表》§2）。**路径 A（宏观 opaque）** 下片元 **alpha 恒为 1**，与状态机 **§3.2.1** 一致。**Phase 11.2**：**不**在 active 上改 L/chroma；非焦点 **idle** 在 focus 时对 **`L_base` / `C_base` 乘** `uFocusDimL` / `uFocusDimChroma`（定稿 **1** / **0.7**），见《星球状态机 spec》§3.4.1。  
-  * **Z 条带与过渡**：与 [`星球状态机 spec.md`](星球状态机%20spec.md) 一致——`W = uZVisWindow × 0.2`，`inFocus = smoothstep(zLo−W, zLo, aZ) × (1 − smoothstep(zHi, zHi+W, aZ))`；**idle** 侧尺度 `sIdle = (1 − inFocus) × uSizeScale × uBgSizeMul × aSize`，**active** 侧 `sActive = inFocus × uSizeScale × uActiveSizeMul × aSize`；二者互补（初值 `uSizeScale=0.3`，`uActiveSizeMul=0.02`，`uBgSizeMul=0.002`，见《视觉参数总表》）。  
+  * **Z 条带与过渡**：与 [`星球状态机 spec.md`](星球状态机%20spec.md) 一致——`W = uZVisWindow × 0.2`，`inFocus = smoothstep(zLo−W, zLo, aZ) × (1 − smoothstep(zHi, zHi+W, aZ))`；**idle** 侧尺度 `sIdle = (1 − inFocus) × uSizeScale × uBgSizeMul × aSize`，**active** 侧 `sActive = inFocus × uSizeScale × uActiveSizeMul × aSize`；二者互补（初值 `uSizeScale=0.3`，**`uActiveSizeMul=0.01`**（**P22.2**，`DEFAULT_GALAXY_U_ACTIVE_SIZE_MUL`，约为历史 `0.02` 的 **0.5×**），`uBgSizeMul=0.002`，见《视觉参数总表》§2 与 **`galaxyUniformDefaults.ts`**）。  
   * 色彩：§4.3 **`genre_hue`（弧度）** + OKLab **`uLMin` / `uLMax` / `uChroma`**；**Lightness** 由 **`voteNorm`** 经 **Phase 10.1** 分段压缩与 `pow` 映射到 **L**（见《视觉参数总表》§2，非线性等价于「评分驱动明暗」）。  
 
 **Phase 19 · `galaxyActive` 渲染路径规则**（取代 Phase 16 按 **`searchMode`** 细分矩阵；与《星球状态机 spec》**§3.2.1** 同构；由 **`scene.ts` RAF** 驱动 **`transparent` / `depthWrite`**，**`needsUpdate`** 仅在组合变化时置位）：
@@ -94,6 +94,7 @@ Output
 
 * **挂载时**与 **RAF `tick`** 中 `selectionPhase === 'idle'` 的每一帧重置一次，使相机与 store 单向对齐。  
 * **Timeline 等效读数（Phase 13 起）**：HUD / `galaxyCameraZBridge` 使用**单一路径** **`bridgeZ = zCurrent`**（**不再**按 `selectionPhase === 'idle'` 分支为 `camera.position.z + zCamDistance`）。**理由**：进入 focus 时 **`zCurrent`** 与焦点片 **`movie.z`** 对齐（瞬时或经 **`transitionDriver`** 渐变，见 Phase 13 P13.4）；退出 focus 后 **`zCurrent` 保留在 `movie.z`**，不回退到进入前宏观值。
+* **Timeline 形态（P22.4）**：默认 **`vertical`**（左侧纵轨）；**`?timeline=horizontal`** 切换为底部横轨，**`?timeline=vertical`** 显式纵轨。实现：`frontend/src/hooks/useTimelineOrientationFromQuery.ts` + `App.tsx`。
 
 #### **1.4.2 相机初始位置**
 
@@ -112,7 +113,7 @@ Output
   * **Phase 13 · focus 会话**（与单片 `selectedMovieId` 关联的 **`selecting` / `selected` / `deselecting`**）：滚轮 **noop**——**不**修改 **`zCurrent`**、**不** dolly **`camera.position.z`**、**不**改变 **`FOCUS_PERLIN_CAMERA_STANDOFF`**、**不**改 **`zCamDistance`**（**含** Space + wheel；保证 Perlin 球屏幕尺寸严格映射 **`vote_count`**，与 P13.3 一致）。  
   * 控制函数暴露 **`getMacroZWheel?: () => boolean`** 钩子；缺省视为 true；**focus 态 macro 滚轮已 noop 时**，**Space + wheel** dolly 分支同样不得生效。  
 * **滚轮步长初值**：每刻度约 **0.5**（半年），在开发阶段按实际视觉效果调整；**dolly 速度**初值见《视觉参数总表》§1 / §8。  
-* **拖拽**：**宏观 idle** 下仅 **truck / pedestal**（XY 平移），Rotation 恒定。**Phase 13 · focus 轨道段**：指针拖拽用于 **orbit**（更新 store **`focusOrbit.yaw` / `focusOrbit.pitch`**，绕 pivot），**不**沿用 idle 的 truck/pedestal 语义（见状态机 spec §3.4.6）。
+* **拖拽**：**宏观 idle** 下仅 **truck / pedestal**（XY 平移），Rotation 恒定。**Phase 13 · focus 轨道段**：指针拖拽用于 **orbit**（更新 store **`focusOrbit.yaw` / `focusOrbit.pitch`**，绕 pivot），**不**沿用 idle 的 truck/pedestal 语义（见状态机 spec §3.4.6）。**P22.8**：焦点 orbit 的 yaw/pitch 增量可乘 **`orbitDirectionSign(mode)`**（**`normal` → +1**，**`inverted` → −1**）。**`?orbitDrag=normal|inverted`**；未传或非法时 **`getOrbitDragDirectionMode()`** 默认为 **`inverted`**（与历史手感一致的当前代码默认）；**`?orbitDrag=normal`** 关闭反向。**Dev**：**`window.__galaxyOrbitDragMode`**（`'normal'|'inverted'`）优先于 query。实现 **`frontend/src/utils/orbitDragDirection.ts`**、`camera.ts`。
 
 #### **1.4.4 Clamp（相机运动约束）**
 
@@ -126,6 +127,12 @@ Output
 * **far**：**1e6**（大跨度 Z 与相机推拉余量；见 `scene.ts` `PerspectiveCamera` 构造）
 
 旧版文档曾记 **0.1 / 300**；以**源码**为准。
+
+#### **1.4.5a 世界 Z 近裁（P22.1 · 可选）**
+
+当 **`NEAR_CULL_WORLD_Z > 0`** 时，idle / active 顶点着色器对 **非焦点实例** 若满足 **`abs(uCameraWorldPos.z - aZ) < uNearCullWorldZ`**，则将实例移出裁剪体并不再绘制；**`gl_InstanceID === uFocusedInstanceId`** 的实例 **豁免**。CPU 侧 `screenRadius.ts` / `interaction.ts` 对射线命中使用 **同一阈值** 过滤，避免「看不见仍能点到」；**`movie.id === selectedMovieId`** 在拾取路径豁免。
+
+**当前产品状态**：`frontend/src/three/nearCullWorldZ.ts` 将 **`NEAR_CULL_WORLD_Z = 0`**，条件 **`dz < 0`** 对 **`abs(dz)`** 永不成立，** shader 与 CPU 逻辑保留、行为等价关闭**（验收结论见 [`Phase 22.1 P22.1 相机近裁 world-Z 实施报告.md`](../reports/Phase%2022.1%20P22.1%20相机近裁%20world-Z%20实施报告.md)）。恢复实验时将常量改为例如 **`0.5`**（世界年）并回归 hover / focus。
 
 #### **1.4.6 DPR 兼容性约束（Phase 5.1.4.7 · H-G）**
 
@@ -372,7 +379,7 @@ Python 管线的最终产物以 **`galaxy_data.json`**（及 gzip）为主；**P
 | `producers`               | string[]              | 制片人                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | `director_of_photography` | string[]              | 摄影指导                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | `music_composer`          | string[]              | 配乐                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| `poster_url`              | string                | 完整海报 URL（Python 侧拼装 `https://image.tmdb.org/t/p/w500` + `poster_path`）                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `poster_url`              | string                | 完整海报 URL（Python 侧拼装 `https://image.tmdb.org/t/p/w780` + `poster_path`）                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 
 #### **C. 逻辑 / 关联层**
 

@@ -99,6 +99,8 @@
   * 需确保能够有效区分 UI 与 3D 场景层次，防止完全遮挡底层宇宙。  
   * 信息层级分明：海报、标题/原名、日期、Tagline 等主次清晰。  
   * 滑出/收回动画遵循 §2.2 定义的时序与缓动函数。
+* **P22.5 退出入口收口**：Drawer 右上角 `X`（`SheetClose`）已移除；focus 退出由屏幕底部居中的 floating 按钮触发（`FocusExitButton`，文案 `Exit focus`）。不接受“点击空白区域退出 focus”的交互路径。
+* **P22.3 海报档位**：`poster_url` 对应 TMDB `w780` 档位，用于提升 Drawer 海报清晰度（尤其高 DPI 屏幕）。
 
 ### **3.4 Phase 9 — HUD 排版、流派表面与 Dev 主题**
 
@@ -245,7 +247,8 @@
   1. **producers**（位 `16`）—— 该人作为制片人参与的影片串。
   2. **crew**（位 `2 | 4 | 8 | 32`，即 director / director_of_photography / writers / music_composer 合并为一根「主创班底」链）。
   3. **cast**（位 `1`）—— 演员同框链。
-* **视觉**：统一**纯白** `0xffffff`、`opacity ≈ 0.07`、`transparent: true`、`depthWrite: false`、线宽 1px（WebGL Line 限制）；**不**做按职位分色，避免与 genre 色板冲突；多链同时存在时整体仍呈低存在感「星图」。
+* **视觉**：统一**纯白** `0xffffff`、默认 `opacity = 0.025`、hover 命中链 `opacity = 0.2`、`transparent: true`、`depthWrite: false`、线宽 1px（WebGL Line 限制）；**不**做按职位分色，避免与 genre 色板冲突；多链同时存在时整体仍呈低存在感「星图」。
+* **hover 触发语义（P22.6）**：触发对象是“人名 select 会话中 hover 到的某颗星”。根据该片 `movie_roles[movieId]` 的位掩码提升对应链透明度；一颗星可同时点亮多链（如 cast + crew）。鼠标移开后各链在 `500ms` 内线性回落到默认透明度。
 * **几何避让**：每段两端沿弦方向各内缩 `r + CONSTELLATION_SURFACE_GAP_WORLD`（`r` = 该端点 active 球壳半径，常量默认 **0.2** world），缩进后弦长不足则**跳过该段**，确保线段不切入 active 星球 mesh；`mesh.renderOrder = 0.5`（介于 idle 0 与 active 1 之间）。
 * **focus 嵌套**：`selectedMovieId !== null`（单片 focus + Perlin 球会话）时**整层星座隐藏**；ESC 取消 focus 后连线恢复（select 会话仍在则继续显示）。
 * **降级路径**：旧包 `searchIndex` 缺失 `movie_roles` 时**不报错**，退化为 `selectionIds` 一条按时间序的折线（与 Phase 12.6 初版一致）。

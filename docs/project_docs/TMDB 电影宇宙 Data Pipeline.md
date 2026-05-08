@@ -370,7 +370,7 @@ Phase 18.0 起改为：
 - 外部评分：`imdb_rating`、`imdb_votes`
 - 地理与工业属性：`production_countries`、`production_companies`、`spoken_languages`
 - 人员：`cast`、`director`、`writers`、`producers`、`director_of_photography`、`music_composer`
-- 资源：`poster_url`
+- 资源：`poster_url`（导出基址 `https://image.tmdb.org/t/p/w780` + `poster_path`）
 - 逻辑：`id`、`imdb_id`
 
 这些字段不得直接进入 UMAP，避免维度爆炸、共线性放大或数据缺失造成拓扑污染。

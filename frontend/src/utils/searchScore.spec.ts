@@ -173,7 +173,22 @@ describe('scoreMoviesForQuery', () => {
     expect(moviePopularityScore(hits[0]!.movie)).toBeGreaterThan(moviePopularityScore(hits[1]!.movie))
   })
 
-  it('caps at 12 results', () => {
+  it('does not cap movie suggestions at 12', () => {
+    const movies = Array.from({ length: 20 }, (_, i) =>
+      baseMovie({
+        id: i + 1,
+        title: i === 19 ? 'The Batman' : `Batman ${i}`,
+        title_normalized: i === 19 ? 'the batman' : `batman ${i}`,
+        vote_count: 1000 - i,
+        vote_average: 7,
+      }),
+    )
+    const hits = scoreMoviesForQuery(movies, 'batman')
+    expect(hits.length).toBe(20)
+    expect(hits.some((h) => h.movie.title === 'The Batman')).toBe(true)
+  })
+
+  it('returns all prefix/contains hits when many rows match', () => {
     const movies = Array.from({ length: 30 }, (_, i) =>
       baseMovie({
         id: i + 1,
@@ -183,7 +198,7 @@ describe('scoreMoviesForQuery', () => {
         vote_average: 5,
       }),
     )
-    expect(scoreMoviesForQuery(movies, 'thing').length).toBe(12)
+    expect(scoreMoviesForQuery(movies, 'thing').length).toBe(30)
   })
 })
 

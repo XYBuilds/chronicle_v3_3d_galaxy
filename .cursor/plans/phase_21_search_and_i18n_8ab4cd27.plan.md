@@ -19,7 +19,7 @@ todos:
     status: completed
   - id: p216-movie-suggestions-show-all
     content: P21.6 电影搜索联想显示全部命中项（取消 12 条上限）；验证如“batman”可显示 “The Batman”等后缀命中
-    status: pending
+    status: completed
   - id: p217-doc-sync-report
     content: P21.7 同步 Tech Spec / Design Spec / Data Pipeline / README + 撰写 Phase 21 实施报告
     status: pending

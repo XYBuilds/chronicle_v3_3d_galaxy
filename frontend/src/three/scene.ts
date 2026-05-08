@@ -290,8 +290,7 @@ export function mountGalaxyScene(
     movieByIdForConstellation.set(m.id, m)
   }
   const constellation = createConstellation()
-  constellation.mesh.renderOrder = 0.5
-  scene.add(constellation.mesh)
+  scene.add(constellation.group)
 
   const syncConstellationFromStores = () => {
     const st = useGalaxyInteractionStore.getState()
@@ -982,10 +981,27 @@ export function mountGalaxyScene(
       uHoveredInstanceId.value = hid === null ? -1 : movieIdToIndex.get(hid) ?? -1
     }
     {
+      const constellationActive =
+        st.searchMode === 'person' &&
+        st.constellationEnabled &&
+        (st.selectionIds?.length ?? 0) >= 2 &&
+        st.selectedMovieId === null &&
+        constellation.group.visible
+      if (!constellationActive || st.selectionPersonKey === null || st.hoveredMovieId === null) {
+        constellation.resetChainOpacities()
+      } else {
+        const index = useSearchIndexStore.getState().data
+        const roleMask =
+          index?.people[st.selectionPersonKey]?.movie_roles?.[String(st.hoveredMovieId)] ?? 0
+        constellation.updateHoverFromRoleMask(roleMask === 0 ? null : roleMask)
+      }
+    }
+    constellation.tickOpacity(nowMs)
+    {
       const pu = planet.material.uniforms
-      ;(pu.uHuntGamma as THREE.Uniform<number>).value = uHuntGammaU.value
-      ;(pu.uHuntApplyMask as THREE.Uniform<number>).value = uHuntApplyMaskU.value
-      ;(pu.uLMax as THREE.Uniform<number>).value = uLMax.value
+        ; (pu.uHuntGamma as THREE.Uniform<number>).value = uHuntGammaU.value
+        ; (pu.uHuntApplyMask as THREE.Uniform<number>).value = uHuntApplyMaskU.value
+        ; (pu.uLMax as THREE.Uniform<number>).value = uLMax.value
     }
     syncSelectionPlanetWorldScale()
 
@@ -1066,7 +1082,7 @@ export function mountGalaxyScene(
     unsubSelectionMask()
     unsubConstellation()
     unsubConstellationIndex()
-    constellation.mesh.removeFromParent()
+    constellation.group.removeFromParent()
     constellation.dispose()
     detachControls()
     detachInteraction()

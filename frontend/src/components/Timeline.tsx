@@ -263,14 +263,14 @@ export function TimelineHud({
                     : undefined
                 }
               >
-                <span className="mt-1 font-mono text-[0.62rem] tabular-nums tracking-tight text-[color:var(--ui-edge-canvas-color)]">
+                <span className="mt-2 font-mono text-[0.62rem] tabular-nums tracking-tight text-[color:var(--ui-edge-canvas-color)]">
                   {y}
                 </span>
               </div>
             )
           })}
           <div
-            className="pointer-events-none absolute flex flex-col items-center gap-0.5"
+            className="pointer-events-none absolute flex flex-col items-center"
             style={{ left: `${thumbT * 100}%`, top: '0.5rem', transform: 'translate(-50%, -50%)' }}
           >
             <div
@@ -281,9 +281,6 @@ export function TimelineHud({
                 boxShadow: '0 0 6px color-mix(in srgb, var(--ui-edge-canvas-color-strong) 35%, transparent)',
               }}
             />
-            <span className="font-mono text-[0.62rem] font-semibold tabular-nums text-[color:var(--ui-edge-canvas-color-strong)]">
-              {labelYear}
-            </span>
           </div>
         </div>
       </div>
@@ -337,7 +334,7 @@ export function TimelineHud({
             <div
               key={y}
               className={cn(
-                'absolute left-0 right-0 flex items-center justify-end pr-0.5',
+                'absolute left-0 right-0 flex items-center justify-end pr-2',
                 interactive && 'pointer-events-auto cursor-pointer',
               )}
               style={{
@@ -362,16 +359,13 @@ export function TimelineHud({
           )
         })}
         <div
-          className="pointer-events-none absolute flex flex-col items-center gap-0.5"
+          className="pointer-events-none absolute flex flex-col items-center"
           style={{
             left: '50%',
             bottom: `${thumbT * 100}%`,
             transform: 'translate(-50%, 50%)',
           }}
         >
-          <span className="whitespace-nowrap font-mono text-[0.62rem] font-semibold tabular-nums text-[color:var(--ui-edge-canvas-color-strong)]">
-            {labelYear}
-          </span>
           <div
             className="w-5 rounded-full"
             style={{

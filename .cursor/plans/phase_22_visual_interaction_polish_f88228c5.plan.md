@@ -25,7 +25,7 @@ todos:
     status: completed
   - id: p228-focus-drag-invert-mode
     content: P22.8 focus 态轨道拖拽新增反向模式（yaw/pitch 取反）用于实验；支持 query 或开关切换，不改默认模式
-    status: pending
+    status: completed
   - id: p229-doc-sync-report
     content: P22.9 同步 Tech Spec / Design Spec / 视觉参数总表 / Data Pipeline / README + Phase 22 实施报告
     status: completed

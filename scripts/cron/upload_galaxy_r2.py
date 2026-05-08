@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""P18.6b: Upload ``galaxy_data.json.gz`` / ``galaxy_search_index.json.gz`` to Cloudflare R2 (S3 API).
+"""P18.6b + P23.1: Upload ``galaxy_data.json.gz`` / ``galaxy_search_index.json.gz`` / ``today.json`` to Cloudflare R2 (S3 API).
 
 Writes a small ``frontend/public/data/galaxy_assets_manifest.json`` with absolute public URLs so the
 Pages bundle stays under the 25 MiB per-file limit while the app loads data from R2.
@@ -56,9 +56,16 @@ def _object_urls(*, public_base: str, prefix: str, version_q: str) -> tuple[str,
     return gal, idx
 
 
+def _today_url(*, public_base: str, prefix: str, date_q: str) -> str:
+    p = prefix.strip().strip("/")
+    base_path = f"{public_base}/{p}" if p else public_base
+    return f"{base_path}/today.json?v={date_q}"
+
+
 # Versioned object keys (same path overwritten only when data_version changes in practice;
 # clients bust via manifest + ?v= on URLs). Long cache at R2/CDN edge + browser.
 R2_VERSIONED_GZIP_CACHE_CONTROL = "public, max-age=31536000, immutable"
+R2_TODAY_JSON_CACHE_CONTROL = "public, max-age=3600, must-revalidate"
 
 
 def _upload_one(
@@ -116,6 +123,7 @@ def main(argv: list[str] | None = None) -> int:
     gal_json = public_data / "galaxy_data.json"
     gal_gz = public_data / "galaxy_data.json.gz"
     idx_gz = public_data / "galaxy_search_index.json.gz"
+    today_json = public_data / "today.json"
     manifest_path = public_data / "galaxy_assets_manifest.json"
 
     env = _required_env()
@@ -193,15 +201,39 @@ def main(argv: list[str] | None = None) -> int:
         cache_control=R2_VERSIONED_GZIP_CACHE_CONTROL,
     )
 
+    today_key = f"{prefix}/today.json" if prefix else "today.json"
+    today_date_q = quote(datetime.now(timezone.utc).date().isoformat(), safe="")
+    if today_json.is_file():
+        try:
+            td_raw = json.loads(today_json.read_text(encoding="utf-8"))
+            if isinstance(td_raw, dict) and isinstance(td_raw.get("date"), str) and td_raw["date"].strip():
+                today_date_q = quote(td_raw["date"].strip(), safe="")
+        except Exception as err:  # noqa: BLE001
+            print(f"[R2] today.json parse warning, using UTC date for ?v=: {err}", flush=True)
+        _upload_one(
+            client,
+            bucket,
+            today_key,
+            today_json,
+            "application/json",
+            cache_control=R2_TODAY_JSON_CACHE_CONTROL,
+        )
+    else:
+        print(f"[R2] skip today.json: file not found at {today_json}", flush=True)
+
     gal_url, idx_url = _object_urls(public_base=public_base, prefix=prefix, version_q=version_q)
     exported_at = datetime.now(timezone.utc).isoformat()
+    r2_object_keys: dict[str, str] = {"galaxy_data": gal_key, "galaxy_search_index": idx_key}
     manifest: dict[str, Any] = {
         "galaxy_data_gzip_url": gal_url,
         "galaxy_search_index_gzip_url": idx_url,
         "data_version": version,
         "exported_at": exported_at,
-        "r2_object_keys": {"galaxy_data": gal_key, "galaxy_search_index": idx_key},
+        "r2_object_keys": r2_object_keys,
     }
+    if today_json.is_file():
+        manifest["today_url"] = _today_url(public_base=public_base, prefix=prefix, date_q=today_date_q)
+        r2_object_keys["today"] = today_key
     rid = os.environ.get("GITHUB_RUN_ID", "").strip()
     if rid:
         manifest["github_run_id"] = rid

@@ -3,6 +3,7 @@ import * as THREE from 'three'
 import type { XyRange } from '@/types/galaxy'
 import type { Movie } from '@/types/galaxy'
 import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
+import { getOrbitDragDirectionMode, orbitDirectionSign } from '@/utils/orbitDragDirection'
 
 /**
  * Perlin focus: world-space |Δz| from movie center to camera (camera at `movie.z - standoff`, axis-parallel +Z).
@@ -39,6 +40,9 @@ export function applyFocusOrbitLookAt(camera: THREE.PerspectiveCamera, pivot: Pi
 /** Radians per CSS pixel — orbit drag sensitivity (P13.3). */
 export const ORBIT_YAW_SPEED = 0.003
 export const ORBIT_PITCH_SPEED = 0.003
+
+export type { OrbitDragDirectionMode } from '@/utils/orbitDragDirection'
+export { getOrbitDragDirectionMode, orbitDirectionSign } from '@/utils/orbitDragDirection'
 
 /** Fixed orientation: parallel to Z, facing +world Z (no tilt / orbit). */
 export const GALAXY_CAMERA_EULER = new THREE.Euler(0, Math.PI, 0, 'YXZ')
@@ -310,8 +314,9 @@ export function attachGalaxyCameraControls(
     // Focus orbit: no truck/pedestal (keeps planet screen size/position from fixed standoff); only yaw/pitch.
     if (mode === 'orbit') {
       if (options.getOrbitPivot?.()) {
-        const dyaw = -dx * ORBIT_YAW_SPEED
-        const dpitch = -dy * ORBIT_PITCH_SPEED
+        const orbitDragSign = orbitDirectionSign(getOrbitDragDirectionMode())
+        const dyaw = -dx * ORBIT_YAW_SPEED * orbitDragSign
+        const dpitch = -dy * ORBIT_PITCH_SPEED * orbitDragSign
         const { yaw: y0, pitch: p0 } = useGalaxyInteractionStore.getState().focusOrbit
         const pitchNext = THREE.MathUtils.clamp(
           p0 + dpitch,
@@ -392,6 +397,11 @@ export function attachGalaxyCameraControls(
   if (import.meta.env.DEV) {
     console.info(
       '[Camera] P17.3 Space+dolly | debug: __galaxyCameraSpaceDollyDebug | XY jump debug: __galaxyCameraDollyPosDebug',
+    )
+    console.info(
+      '[Camera] P22.8 orbit drag:',
+      getOrbitDragDirectionMode(),
+      '| default inverted; ?orbitDrag=normal|inverted | window.__galaxyOrbitDragMode',
     )
   }
 

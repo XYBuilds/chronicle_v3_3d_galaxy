@@ -1,5 +1,10 @@
 /// <reference types="vite/client" />
 
+interface Window {
+  /** P22.8 — dev override: `'inverted' | 'normal'`; takes precedence over `?orbitDrag=`. */
+  __galaxyOrbitDragMode?: string
+}
+
 interface ImportMetaEnv {
   /** P18.6b: absolute URL to ``galaxy_data.json.gz`` on R2 (optional; manifest is fallback). */
   readonly VITE_GALAXY_DATA_GZIP_URL?: string

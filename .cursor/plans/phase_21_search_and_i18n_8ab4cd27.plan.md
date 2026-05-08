@@ -21,8 +21,8 @@ todos:
     content: P21.6 电影搜索联想显示全部命中项（取消 12 条上限）；验证如“batman”可显示 “The Batman”等后缀命中
     status: completed
   - id: p217-doc-sync-report
-    content: P21.7 同步 Tech Spec / Design Spec / Data Pipeline / README + 撰写 Phase 21 实施报告
-    status: pending
+    content: P21.7 同步 Tech Spec / Design Spec / Data Pipeline / README（每个子项 P21.1–P21.6 已各自归档报告，Phase 总报告不再单写）
+    status: completed
 isProject: false
 ---
 
@@ -592,7 +592,7 @@ it('does not cap movie suggestions at 12', () => {
 
 **README** ([`README.md`](README.md))：§HUD / 多语言一段简介
 
-**实施报告** [`docs/reports/Phase 21 P21 搜索 v2 与 i18n 实施报告.md`](docs/reports/Phase%2021%20P21%20搜索%20v2%20与%20i18n%20实施报告.md)：背景、决策、变更清单、验收记录、风险与回滚。
+**实施报告**：每个子项 P21.1–P21.6 已各自在 `docs/reports/` 下归档（`Phase 21.1 … 实施报告.md` 等 6 份）。**P21.7 不再单独写 Phase 总报告**——子项报告 + 三份 SSOT 文档 + 本计划即为闭环 SSOT。
 
 ---
 
@@ -607,7 +607,7 @@ it('does not cap movie suggestions at 12', () => {
 - [ ] P21.4 SearchBar 不交互时透明 outline；hover/focus/panel 任一即实底
 - [ ] P21.5 light 模式 tab 选中明显可辨；dark 模式无明显回退
 - [ ] P21.6 电影联想不再截断 12 条；`batman` 查询能看到 `The Batman`
-- [ ] P21.7 三份 SSOT 文档与实施报告归档
+- [x] P21.7 三份 SSOT 文档（Tech Spec / Design Spec / Data Pipeline）+ README 已同步；P21.1–P21.6 子项实施报告已各自归档
 
 ## 风险与回滚
 

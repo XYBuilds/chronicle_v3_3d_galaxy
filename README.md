@@ -151,6 +151,17 @@ GitHub Pages（灰度备线）：仍由 deploy-pages.yml 在 push 到 main 时�
 
 ---
 
-## 8. License
+## 8. HUD 多语言与搜索（Phase 21）
+
+- **HUD i18n**：UI 文案支持 **EN / 简体中文 / 繁體中文 / 日本語 / Español / Français / العربية**，仅覆盖 HUD/DOM 文案；TMDB 数据库字段（标题、人名、genre 名等）保持原文。
+  - 切换：HUD 右上 **Info → Lang → Fullscreen** 中间的语言按钮，或 URL **`?lang=zh|zh-Hant|ja|es|fr|ar|en`**；选择会写入 `localStorage['tmc.locale']` 与 `?lang=` 同步。
+  - 实现：`frontend/src/lib/locales/*.json` + `useLocaleStore` + `useStrings()` / `getStrings()`，**不**引入 `react-i18next`。详见 Tech Spec §1.4.8。
+- **CJK / Unicode 搜索（Phase 21.1）**：搜索归一化升级到 **v2**（NFKC + 去 `Mn` 组合标记 + casefold），保留中日韩、西里尔、阿拉伯、谚文等非拉丁脚本；表意文字（汉字 / 假名 / 谚文）**单字即可触发联想**。`meta.search_normalize_version` 写为 `"v2"`，旧 v1 包仍可加载但前端 `console.warn`。
+- **流派 AND 多选（Phase 21.3）**：Genres 分段不再是输入联想，改为 **19 个 badge 网格 + AND 交集**；继续点击的 badge 若交集为 0 则即时灰显（死路预测）。详见 Design Spec §4.5。
+- **电影联想全量（Phase 21.6）**：取消硬编码 12 条上限；在滚动列表中可见全部命中（如 query `batman` 也能滚动到 `The Batman`）。
+
+---
+
+## 9. License
 
 本项目当前未声明开源 License；如需复用请与维护者协商。

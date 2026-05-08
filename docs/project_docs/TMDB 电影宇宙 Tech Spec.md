@@ -166,6 +166,25 @@ Output
 * **可重复性**：整页刷新可重复完整链路；**`started`** 仅在当前文档生命周期内为 **`true`**（重载即重置）。  
 * **历史导航**：本应用为**无路由状态的 SPA**（无 `react-router` 级会话）；浏览器后退/前进若触发整页重载则重新走加载；同页内不产生「离开 Cover 再返回」的路由态。
 
+#### **1.4.8 HUD i18n 架构（Phase 21.2）**
+
+HUD 文案由 **多语言 JSON + Zustand store + React hook** 自管，**不**引入 `react-i18next` 等外部库（与项目长期约束一致）。仅覆盖 **HUD / DOM 文案**；TMDB 字段（标题、overview、人名、genre 名等）**不翻译**。
+
+* **SSOT JSON**：[`frontend/src/lib/locales/*.json`](../../frontend/src/lib/locales/)。`en.json` 为 schema 基准；其它语言（`zh` / `zh-Hant` / `ja` / `es` / `fr` / `ar`）**叶 key paths 必须与 `en.json` 一致**，由 [`frontend/src/lib/locales/locales.schema.spec.ts`](../../frontend/src/lib/locales/locales.schema.spec.ts) 单测断言。**支持模板插值**：`{{key}}` 由 `strings.ts` `interpolate()` 替换。
+* **Locale 注册表** [`frontend/src/lib/locales/index.ts`](../../frontend/src/lib/locales/index.ts)：`LOCALES` / `LOCALE_IDS` / `LOCALE_NATIVE_LABELS`（菜单端母语标签）/ `isLocaleId(value)`（合法 token 校验）/ `localeToHtmlLang(locale)`（`zh` → `zh-Hans`，其余原样回传，用于 `<html lang>`）。`DEFAULT_LOCALE = 'en'`。
+* **Zustand store** [`frontend/src/store/localeStore.ts`](../../frontend/src/store/localeStore.ts)：
+  * **`resolveInitialLocale()`**：`?lang=` query → `localStorage['tmc.locale']` → `navigator.language` 启发式（`zh-TW` / `zh-HK` / `zh-MO` / `zh-Hant` → `'zh-Hant'`；其余 `zh*` → `'zh'`；`ja` / `es` / `fr` / `ar` 前缀匹配）→ `DEFAULT_LOCALE`。
+  * **`setLocale(l)`**：写 `localStorage`，再 `history.replaceState` 同步 `?lang=l`，最后 `syncHtmlLangDir(l)` 设置 `document.documentElement.lang` 与 `dir`（**`'ar'` → `'rtl'`，其余 `'ltr'`**）。
+  * 模块加载时立即 `syncHtmlLangDir(getState().locale)`，保证首帧 `<html>` 属性正确。
+* **`useLocaleFromQuery`** [`frontend/src/hooks/useLocaleFromQuery.ts`](../../frontend/src/hooks/useLocaleFromQuery.ts)：App 顶层挂载一次；若 `?lang=` 合法则再次 `setLocale`（与 `resolveInitialLocale` 重入安全）。
+* **`useStrings()` / `getStrings()`** [`frontend/src/lib/strings.ts`](../../frontend/src/lib/strings.ts)：
+  * `useStrings()` 订阅当前 locale 返回 `LocaleStrings`（含模板函数）。**React 组件仅通过此 hook 读 HUD 文案**。
+  * `getStrings()` 返回当前 store 的快照，供**非 React 路径**使用（`loadGalaxyGzip` 错误页文案、`scene.ts` WebGL2 必须断言、`drawerDetailsLayout`、Three.js Sprite 文案等）。
+  * **`STRINGS`**（静态 EN）保留为 Storybook 与一次性模块级 fallback；新增调用点必须使用 `useStrings` / `getStrings`。
+* **Three.js 文案订阅**：[`frontend/src/three/FocusSizeReferenceRings.ts`](../../frontend/src/three/FocusSizeReferenceRings.ts) 订阅 `useLocaleStore`，locale 变更时重绘 `CanvasTexture` Sprite（`getStrings().focusVoteReference.tierLabels`）；阿拉伯语绘制时 `ctx.direction = 'rtl'`。`dispose` 必须先取消订阅再释放几何 / 纹理。
+* **HUD 右上按钮组顺序**：`App.tsx` 中固定为 **Info → Lang → Fullscreen**（`<div className="pointer-events-none fixed right-3 top-3 ..." flex gap-2>` 容器；子按钮自身 `pointer-events-auto`）。**`LanguageSwitch`** 实现见 [`frontend/src/hud/LanguageSwitch.tsx`](../../frontend/src/hud/LanguageSwitch.tsx)：Lucide `Languages` 图标 + 下拉菜单，`role="menu"` / `menuitemradio`；菜单 `<ul>` 显式 `dir="ltr"`，使 RTL 主界面下勾选 ✓ 仍位于选项右侧。
+* **控制台日志**：项目惯例保留**英文前缀**（如 `'[Search] genre AND filter'`），**不**进 `STRINGS`，避免 hook 在非 React 路径上的误用。
+
 ### **1.5 交互拾取（Phase 8.4：active `InstancedMesh` + 世界球；Phase 12：search 多选与 mask 对齐）**
 
 生产路径**不再**对 `THREE.Points` 主拾取；**仅**对 **`galaxyActive`** 使用 `Raycaster` 时，引擎给出的网格命中**不能**直接反映 `instanceMatrix` 的顶点缩放量，故实现采用 **`screenRadius.ts` 中的世界空间球/半径** 与 `pickClosestActiveMovieAlongRay`：**射线与每颗「active 尺度下」世界球求交**，取最近合法命中，并与 shader 的 `sActive` / `inFocus` **同构**。
@@ -303,6 +322,7 @@ Python 管线的最终产物以 **`galaxy_data.json`**（及 gzip）为主；**P
 | `genre_palette_version` | string \| undefined | **Phase 18+**：frozen genre palette 版本，例如 `"v1"`；若 palette 重排或加入新 genre，必须 bump |
 | `has_genre_hue` | bool \| undefined | **Phase 8.1**：为 **`true`** 时，每条 `movies[i]` **应**含 **`genre_hue`**（弧度 \([0, 2\pi)\)），GPU 宏观/focus 路径优先消费 hue + 均匀 L/C；与 `genre_color` **双字段共存**直至下一大版本移除旧字段（须 bump 版本并回归） |
 | `has_search_index` | bool \| undefined | **Phase 12+**：为 **`true`** 时，静态目录中**应**存在 **`galaxy_search_index.json.gz`**（§4.5），且每条 `movies[i]` **应**含 **`title_normalized`**（§4.3）；前端据此启用 HUD 搜索（人名 / genre 联想）；缺失时搜索 UI disabled（见 Design Spec §4） |
+| `search_normalize_version` | string \| undefined | **Phase 21+**：搜索归一化算法版本。**`"v2"`** 表示 `title_normalized` 与 `galaxy_search_index.people[*]` 的 normalized key 由 **NFKC + 去 `Mn` 组合标记 + casefold** 写入（保留 CJK / 西里尔 / 阿拉伯 / 谚文等非拉丁脚本，详见 §4.3）。**缺失或非 `"v2"`** 视为 P12.1 旧包（NFKD + ASCII fold + casefold），前端 `loadGalaxyData` 在 `parseAndValidate` 中 **`console.warn`**（不阻断），CJK / 非拉丁标题搜索可能不完整。 |
 | `feature_weights` | object | `{ text: 1.0, genre: 1.0, lang: 1.0 }` §2.1.3 多模态融合的权重乘子 |
 | `z_range` | `[float, float]` | 数据集中 Z 轴（小数年份）的 `[min, max]`，供前端相机初始化与 clamp |
 | `xy_range` | `{ x: [min, max], y: [min, max] }` | UMAP 坐标的实际值域，供前端归一化或相机边界设置 |
@@ -328,7 +348,7 @@ Python 管线的最终产物以 **`galaxy_data.json`**（及 gzip）为主；**P
 | 字段 | 类型 | 说明 |
 | :---- | :---- | :---- |
 | `title` | string | 电影标题（Tooltip + 抽屉） |
-| `title_normalized` | string \| undefined | **Phase 12+ 管线**：`NFKD` + ASCII fold + **casefold**，供搜索与子串匹配；与 `has_search_index` 同步出现；旧包无此字段时前端跳过电影名索引路径 |
+| `title_normalized` | string \| undefined | **Phase 12+ 管线**搜索 haystack。**Phase 21.1 起切换为 v2**：**NFKC + 去 `Mn` 组合标记 + casefold**（保留 CJK / 西里尔 / 阿拉伯 / 谚文；拉丁仍 casefold；`ß`→`ss`），与 `meta.search_normalize_version === "v2"` 联动；具体语义见 [`scripts/export/export_search_index.py`](../../scripts/export/export_search_index.py) `normalize_for_search_v2` 与前端镜像 `normalizeForSearch`（NFKC + `\p{M}` + `toLowerCase`）。旧包（v1：NFKD + ASCII fold）字段仍可被前端消费，但 CJK 在该字段中已被 ASCII 剥离丢失。**与 `has_search_index` 同步出现**；旧包无此字段时前端跳过电影名索引路径 |
 | `original_title` | string | 原始语言标题 |
 | `overview` | string | 剧情简介全文 |
 | `tagline` | string \| null | 宣传标语（可空） |
@@ -397,7 +417,7 @@ Python 管线的最终产物以 **`galaxy_data.json`**（及 gzip）为主；**P
 
 #### **4.5.1 `people`**
 
-- **`key`**（`normalized_key`）：人名 NFKD + ASCII fold + casefold 后的字符串（与 `title_normalized` 共用同一规范化函数）；**多个原始写法可能合并到同一 key**，此时 `full` 取出现频次最高 / 第一条原始字符串。
+- **`key`**（`normalized_key`）：人名经 **`normalize_for_search_v2`**（NFKC + 去 `Mn` 组合标记 + casefold；与 `title_normalized` 共用同一规范化函数，**Phase 21.1 起统一为 v2**，旧 v1 包为 NFKD + ASCII fold + casefold）后的字符串。**多个原始写法可能合并到同一 key**，此时 `full` 取出现频次最高 / 第一条原始字符串。**部署侧契约**：`galaxy_search_index` 的 key 集合随归一化版本变化（v1 与 v2 不二进制兼容），主包 + 索引 + 前端必须**同版本一并发布**，避免混用导致人名命中漏配。
 - **`full`**：展示用原始姓名（保留大小写、变音符号）。
 - **`role_mask`**：**uint8** 位掩码，按位**或**合并**全部参演影片**的多角色：
   | 位 | 数值 | 来源字段 |

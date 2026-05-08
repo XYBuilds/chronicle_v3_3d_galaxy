@@ -66,7 +66,10 @@
 
 所有 UI 元素属于前端 DOM 覆盖层，与底层 3D 画布分离。
 
-* **Phase 14 — HUD 文案 SSOT**：所有面向用户的 HUD **英文**字面量以 **`frontend/src/lib/locales/en.json`** 为**键值与模板**的单一事实源；运行时由 **`frontend/src/lib/strings.ts`** 聚合为 **`STRINGS`**（含 `{{key}}` 插值等），组件**仅**通过 `STRINGS` 引用。**不在**各 React 组件内写死可复用文案（**例外**：一次性 **dev-only** **`console.log`** 等开发审计输出可保留字面量）。
+* **Phase 14 — HUD 文案 SSOT**：所有面向用户的 HUD **英文**字面量以 **`frontend/src/lib/locales/en.json`** 为**键值与模板**的单一事实源；运行时由 **`frontend/src/lib/strings.ts`** 聚合，组件**仅**通过 **`useStrings()`** hook 引用。**不在**各 React 组件内写死可复用文案（**例外**：一次性 **dev-only** **`console.log`** 等开发审计输出可保留字面量）。
+* **Phase 21.2 — HUD i18n（多语言）**：HUD 文案扩展为多语言，**仅 HUD / DOM 层**翻译；TMDB 电影标题、人名、genre 名等数据库字段保持原文。当前提供 **EN / 简体中文 / 繁體中文 / 日本語 / Español / Français / العربية**（实现以 [`frontend/src/lib/locales/`](../../frontend/src/lib/locales/) 与 [`LOCALE_IDS`](../../frontend/src/lib/locales/index.ts) 为准）。运行时由 **`useLocaleStore`** 维护当前 locale，**React 组件**用 **`useStrings()`**，**非 React 路径**（loader 错误、`scene.ts`、Three.js Sprite 等）用 **`getStrings()`**；详见 Tech Spec §1.4.8。`zh.json` / `zh-Hant.json` 等所有 locale JSON 的 **leaf key paths** 与 `en.json` 一致，由 `locales.schema.spec.ts` 单测断言。
+* **初始化与持久化**：`?lang=zh|zh-Hant|ja|es|fr|ar|en` query → `localStorage['tmc.locale']` → `navigator.language` 启发式 → 默认 `en`。**`setLocale`** 同步写 localStorage 与 `?lang=`（`history.replaceState`），并更新 `<html lang>` 与 `dir`（**`ar` → `rtl`**）。
+* **LanguageSwitch HUD**：HUD 右上常驻按钮组顺序固定为 **Info → Lang → Fullscreen**。`LanguageSwitch` 为 Lucide `Languages` 图标按钮 + 下拉菜单，菜单使用**母语标签（endonym）**展示（`简体中文` / `繁體中文` / `日本語` / `Español` / `Français` / `العربية` / `English`）。RTL 全局环境下下拉 `<ul>` 显式 `dir="ltr"`，保证勾选 ✓ 始终位于选项右侧。Three.js focus 尺寸参考圆环的 vote-tier Sprite 标签订阅 `useLocaleStore`，locale 变更时重绘。
 
 ### **3.1 全局时间轴 (Timeline Indicator)**
 
@@ -138,10 +141,11 @@
 * **行为**：App 挂载时读取 `theme` query；命中 `light` 或 `dark` 时设置 **`document.documentElement.dataset.theme`**，并与 Tailwind **`dark` class** 联动（见 `useThemeFromQuery`）；无参数时维持默认暗色 HUD。  
 * **画布**：**不要求** Three.js 场景、星空或 Bloom 随浅色主题重算；画布可保持深色底，与浅色 HUD 并存仅作工程验收场景。
 
-#### **3.4.5 Phase 14 — 文案语言与 dev / 验收**
+#### **3.4.5 Phase 14 → Phase 21.2 — 文案语言与多语言切换**
 
-* **产品 HUD**：主体文案为 **英语**（以 **`locales/en.json`** + **`strings.ts`（`STRINGS`）** 为准，见 §3 头部 SSOT）。
-* **中文**：仅出现在**项目文档**（如本 Design Spec、Pipeline、报告）与 **dev 审计用 `console.log`** 中；**不**作为生产 HUD 用户可见字符串来源。
+* **产品 HUD**：默认 **英语**；**Phase 21.2 起**支持多语言切换（EN / 简体中文 / 繁體中文 / 日本語 / Español / Français / العربية），实现细节见 §3 头部 SSOT 段落与 Tech Spec §1.4.8。
+* **DB 字段**：电影标题、原标题、`overview`、`tagline`、人名、genre 名等**沿用 TMDB 原文**，不进入 i18n 翻译范围（避免歪曲数据语义并保持搜索一致性）。
+* **dev 审计 `console.log`**：保留**英文前缀**（如 `[Search] genre AND filter`），**不**进入 `STRINGS` / `locales/*.json`。中文仍可出现在**项目文档**（PRD / Tech Spec / Design Spec / 报告）。
 
 ### **3.5 Cover-with-Start（Phase 15）**
 
@@ -159,9 +163,11 @@
 * **图标**：**`lucide-react`** 的 **`X`**；**`aria-label`** 等可访问性文案走 **`STRINGS`**（与 §3 SSOT 一致）。
 * **视觉**：**`CloseButton`** 的边框线宽与 **hover 环 / Timeline** 同属 **UI edge** 线宽语义（**`--ui-edge-stroke-width`**，见《视觉参数总表》**§7**、**§7a**）。**颜色**：按钮叠在 **DOM 壳层**，使用随主题变化的 **`--ui-edge-color` / `--ui-edge-color-strong`**；**HoverRing** 与 **Timeline** 仅叠在 **黑色 WebGL 画布**上，使用 **`:root` 固定**的 **`--ui-edge-canvas-color` / `--ui-edge-canvas-color-strong`**（与 **§3.4.4**「画布可保持深色底」一致，避免 `?theme=light` 时环与轴变成浅灰细线导致对比度错误）。
 
-### **3.7 全局键盘快捷键与全屏控件（Phase 14 · HUD）**
+### **3.7 全局键盘快捷键与全屏 / 语言控件（Phase 14 · HUD ；Phase 21.2 LanguageSwitch）**
 
-* **全屏按钮**：HUD 右上角 **`FullscreenButton`**（`frontend/src/hud/FullscreenButton.tsx`；**`lucide-react`** Maximize / Minimize），与 **Info** 同列；监听 **`fullscreenchange`** / **`webkitfullscreenchange`** 同步图标；行为与下述 **`F`** 一致（Safari 等需 **webkit** 前缀检测时以源码为准）。
+* **HUD 右上按钮组**（实现位置 `App.tsx`，`<div className="pointer-events-none fixed right-3 top-3 ... flex gap-2">`）：从左到右依次为 **`InfoButton` → `LanguageSwitch` → `FullscreenButton`**。容器 `pointer-events-none`，子按钮自身 `pointer-events-auto`，避免遮挡 3D 画布的鼠标穿透。
+* **全屏按钮**：**`FullscreenButton`**（`frontend/src/hud/FullscreenButton.tsx`；**`lucide-react`** Maximize / Minimize）；监听 **`fullscreenchange`** / **`webkitfullscreenchange`** 同步图标；行为与下述 **`F`** 一致（Safari 等需 **webkit** 前缀检测时以源码为准）。
+* **语言开关**：**`LanguageSwitch`**（`frontend/src/hud/LanguageSwitch.tsx`；Lucide `Languages` 图标 + 下拉）。点击展开 `role="menu"` 菜单，列出**母语标签**；当前 locale 项 `aria-checked` + 行尾 ✓；点击其它项即时切换并持久化（详见 §3 头部 SSOT 段落与 Tech Spec §1.4.8）。下拉 `<ul>` 显式 `dir="ltr"`，使阿拉伯语等 RTL 全局下勾选位置仍稳定在右侧。
 
 以下快捷键在 **App 级** 全局监听（与 §4 搜索 combobox 内 **`↓`/`↑`/`Enter`/`Tab`** 等**不重复登记**同一键位语义；实现以源码为准）：
 
@@ -179,21 +185,27 @@
 
 1. **搜电影名**（含其它语言的 **`original_title`**）：关键词联想 → 点击正确项 → 进入对应影片 **focus** 态（相机飞入 + Perlin + 抽屉）。  
 2. **搜人名**（覆盖 **`cast` / `director` / `director_of_photography` / `writers` / `producers` / `music_composer`** 聚合）：点击人物 → 进入 **`person` select 会话**：**该人物参与的全部影片星球 active，其余 idle**（**active 集合由搜索结果决定**，不再受 timeline `viswindow` 条带控制；timeline 数值仍可在后台被 wheel 写入，但**不影响视觉**）。同时按 **`release_date` 升序** 用纯白细线连接星座图（**默认开**；产品 HUD **无**开关，调试用 **`window.__galaxy.constellationEnabled`**，见《视觉参数总表》§4a）。**Phase 12.7 起**连线按职位拆为**三条独立时间链**，使「演员同框」「主创班底」「制片同盟」三种叙事并行可读；各链端点沿弦内缩到 active 球壳外（避免线段切入星球 mesh），连线视觉细则与降级行为见 §4.4a。  
-3. **搜 genre**：点击某一 genre → 进入 **`genre` select 会话**：**凡 `movie.genres` 包含该 genre（不限于 `genres[0]`）** 的影片 **active**，其余 **idle**；**不**画星座连线；同样不再受 viswindow 控制。
+3. **搜 genre**（**Phase 21.3 起为 AND 多选 badge**，详见 §4.5）：在 **Genres** 分段下显示 **19 个流派** badge 网格（颜色源自 `meta.genre_palette`）；点击 1 个 badge 即进入 **`genre` select 会话**（凡 `movie.genres` 包含该 genre 的影片 **active**，其余 **idle**）；继续点击第 2 / 3 个 badge 进入 **AND 交集**；**死路 badge**（再选交集为 0）即时灰显并不可点。**不**画星座连线；同样不再受 viswindow 控制。**该分段不再是「输入联想」**。
 
 ### **4.1 布局与控件**
 
 * **位置**：`fixed` 贴顶居中，`top-4`、`left-1/2` + `-translate-x-1/2`；`z-index` 高于画布且低于系统级 modal（实现约定 **`z-[90]`**）；容器 **`max-w-lg`**、水平内边距防贴边。
-* **分段**：三档 **`movie` / `person` / `genre`**（segmented control：`Tabs` 或三键 ToggleGroup）。**切换分段时清空** query + 联想，避免跨模式残留。
+* **idle / active 双态（Phase 21.4）**：联想面板根容器（同时承担 document mousedown 关闭判定）通过 **`data-state="idle" | "active"`** 切换两种视觉，外层加 **`group`** 让 input / tab 条用 **`group-data-[state=*]`** 跟随：
+  * **active 触发**（**任一**为真即 active）：**`hoverInside`**（鼠标进入容器任意区域）、**`focusInside`**（任一可聚焦子元素获焦；`onFocusCapture`/`onBlurCapture` 仅在 `relatedTarget` 不在容器内时清除）、**`panelVisible`**（movie / person 分段下 `listOpen && canShowList`）。
+  * **idle 视觉**：`bg-transparent` + `border-border/40` + `shadow-none` + `backdrop-blur-none`，最大限度让出星空。
+  * **active 视觉**：`bg-popover/95` + `border-border/80` + `shadow-lg` + `backdrop-blur-md`；过渡 `transition-[background-color,backdrop-filter,box-shadow,border-color] duration-150`。
+  * **input / tab 条同步**：input 在 idle 下为弱玻璃感（白边 + 极低 alpha 白底，**浅色主题** idle 字色为 `text-white`、active 字色回到 `text-foreground`，避免黑色画布上深色字不可见）；tab 条 idle `bg-muted/20` → active `bg-muted/40`。**深色主题**保持 `border-input` + `bg-background/30 → /80`（与 Phase 21.4 + Phase 21.5 SearchBar 实施报告一致）。
+  * **退出 idle 不清空 query**：失焦 + 鼠标离开 + 联想未展开时面板回 idle，但搜索框文字保留。
+* **分段（Phase 21.5 浅色 tab 对比修复）**：三档 **`movie` / `person` / `genre`**（segmented control：`Tabs` 或三键 ToggleGroup）。**切换分段时清空** query + 联想，避免跨模式残留。**Tab 视觉**：选中 / 未选中均使用 `buttonVariants({ variant: 'ghost', size: 'xs' })` + 条件叠类——浅色（无 `.dark`）选中 `bg-foreground text-background shadow-sm`、未选 `bg-transparent text-muted-foreground`；深色选中 `dark:bg-secondary dark:text-secondary-foreground`、未选 hover 走 `dark:hover:bg-muted/50`。**不修改** [`button-variants.ts`](../../frontend/src/components/ui/button-variants.ts)，避免影响全局 Button 语义。
 * **输入框 placeholder（Phase 16 · HUD 文案 SSOT）**：面向用户的占位符以 **`frontend/src/lib/locales/en.json`** 为键值 SSOT，经 **`strings.ts`** 聚合为 **`STRINGS.searchBar`**；组件按当前分段 / 索引可用性切换，**不**在 JSX 内写死。**三档精确字符串（D1）**：**`movie`** → `Search movie titles…`；**`person`** → `Director / Producer / Cast …`；**`genre`** → `Drama / Comedy / Thriller …`。未点分段、或实现将「空闲」视为 movie 档时，取 **movie** 档文案。**`meta.has_search_index !== true`** 时输入 **disabled**，占位符为 **`Search index unavailable`**。切换分段时 placeholder **立即**随控属性更新（无需过渡动画）。
 * **输入框**：单行文本；右侧 **清除按钮（X）**，一键清空 query 并收起联想；点击 X **同时退出**当前 select 会话（清 `selectionIds`，见 §4.7）。
 * **联想面板**：输入框下方浮动列表（`Popover` 或自建 `<ul>`）。
 
 ### **4.2 联想触发、节流与键盘交互**
 
-* **触发阈值**：query **`trim().length >= 3`** 才触发联想；不足 3 字符时面板不展开（不显示空列表/历史）。
-* **防抖**：**`200 ms` debounce**；可叠加 `useDeferredValue` 抗顿。
-* **条数上限**：电影名 **≤ 12**；人名 **≤ 8**；genre **≤ 5**。
+* **触发阈值**：默认 query **`trim().length >= 3`**（拉丁 / 西里尔 / 阿拉伯等）。**Phase 21.1 起**：若 trimmed 串包含 **`\p{Script=Han}|\p{Script=Hiragana}|\p{Script=Katakana}|\p{Script=Hangul}`** 任一脚本，则最小长度降为 **1**（CJK / 假名 / 谚文单字即可触发）；判定函数 `searchMinQueryLengthForTrim` 由 SearchBar 与 `score*ForQuery` 共用，UI 门槛与召回门槛一致。
+* **防抖**：**`200 ms` debounce**（`SEARCH_QUERY_DEBOUNCE_MS`）；可叠加 `useDeferredValue` 抗顿。
+* **条数上限**：电影名 **不再设上限**（Phase 21.6 取消硬编码 12 条 cap）；联想列表用既有 `max-h-72 overflow-y-auto` 滚动容器承载，DEV 环境 `>300` 条时一次性 `console.warn`，但**不**做虚拟列表（不在本 phase 范围）。人名 **≤ 8**；genre **不再用搜索联想**（Phase 21.3 改为 AND 多选 badge，见 §4.5）。
 * **键盘**（标准 combobox）：
   * **`↓` / `↑`**：在联想列表内高亮上下条；列表未展开但有结果时 `↓` 展开并定位到第一条。
   * **`Enter`**：等价于点击当前高亮项（无高亮则不触发）。
@@ -203,11 +215,12 @@
 
 ### **4.3 联想：电影名（`movie`）**
 
-* **过滤（Filter）**：搜索词与 **`title`** / **`original_title`** 做 **忽略大小写**子串检索（实现可用管线产物 **`title_normalized`** + 原名规范化形）。**仅**支持 **前缀匹配（Starts with）** 与 **包含匹配（Contains）**；**不做** Fuzzy / 拼写纠错。
+* **过滤（Filter）**：搜索词与 **`title`** / **`original_title`** 做 **忽略大小写**子串检索（实现优先消费管线产物 **`title_normalized`**；前端镜像 `normalizeForSearch`：**Phase 21.1 起为 NFKC + `\p{M}` 去 mark + `toLowerCase()`**，与 Python 侧 `normalize_for_search_v2` 同构，保留 CJK / 西里尔 / 阿拉伯 / 谚文等非拉丁脚本）。**仅**支持 **前缀匹配（Starts with）** 与 **包含匹配（Contains）**；**不做** Fuzzy / 拼写纠错。**`meta.search_normalize_version !== "v2"`** 的旧包仍可消费 `title_normalized`，但其值为旧 v1 ASCII fold，CJK 已被剥离丢失（前端 `loadGalaxyData` 在加载时 `console.warn`）。
 * **排序（Sort）**  
   * **第一维度（匹配类型）**：前缀匹配 **优于** 包含匹配。  
   * **第二维度（加权热度）**：同档内 `Score = Math.log10(vote_count + 1) × vote_average`，**降序**。  
   * **`release_date` 不参与排序**（任何维度）。
+* **条数（Phase 21.6）**：返回**全部命中**，不再截断为 12 条；后缀类 contains 命中（如 query `batman` → `The Batman`）可在滚动列表中浏览到。
 * **格式化（Format）**：行内布局语义为 **`Title`** + **`原始标题`** + **`(YYYY)`** + **`Genre0`**（即 **`genres[0]`**；`YYYY` 取 `release_date` 前 4 字符）。  
   * **去重**：若 **`original_title`** 与 **`title`** 相同或为空，**不再重复**展示原始标题段。
 * **高亮（Highlight）**：用忽略大小写正则在最终展示字符串上匹配 query，命中子串用语义 mark（`<mark>` + `bg-primary/30` 等）包裹。
@@ -237,12 +250,23 @@
 * **focus 嵌套**：`selectedMovieId !== null`（单片 focus + Perlin 球会话）时**整层星座隐藏**；ESC 取消 focus 后连线恢复（select 会话仍在则继续显示）。
 * **降级路径**：旧包 `searchIndex` 缺失 `movie_roles` 时**不报错**，退化为 `selectionIds` 一条按时间序的折线（与 Phase 12.6 初版一致）。
 
-### **4.5 联想：流派（`genre`）**
+### **4.5 流派 AND 多选 badge（`genre` · Phase 21.3）**
 
-* **过滤**：对 **全部 genre**（与 `meta.genre_palette` 键集合一致）做忽略大小写**前缀**与**包含**匹配。
-* **排序**：第一维度 prefix **优于** contains；**第二维度按该 genre 在数据集中的 `count`（电影数）降序**（管线侧产出，见 Tech Spec §4.5）。
-* **格式**：展示 genre 字符串；高亮规则同 §4.3。
-* **点击行为**：`searchMode='genre'`、`selectionIds = movies 中含该 genre 的 id 列表`、**`selectionPersonKey=null`**（清掉人名上下文）、`selectedMovieId=null`、连线不开启；输入框 query 替换为 `GenreName (count)`。**`zCurrent`（Timeline）**：**不修改** **`zCurrent`**，保持用户点击联想前的宏观时间关注点；与《星球状态机 spec》**§3.6** 一致——select 会话下 **`viswindow` 条带对 active 集合无视觉反馈**，不要求 Timeline 为流派大集合「滚动到条带中心」。
+> Genre 分段不再使用「输入联想」。原因：用户记不全 19 个 TMDB 官方 genre 的英文名，且无法用单一关键字表达「Action ∩ Drama」类常见交集需求。Phase 21.3 起改为 AND 多选 badge 网格。
+
+* **数据来源**：流派列表优先用 **`meta.genre_palette`** 的 key 集合（按字典序排序，与管线 frozen palette 一致），缺省回退 `searchIndex.genres` 的 key；每流派 `movie_ids` 来自 [`searchIndex.genres[name].movie_ids`](#)。
+* **UI 结构**：
+  * **顶栏（已选条 strip）**：`min-h-8`，无选中时显示 `STRINGS.searchBar.genreMultiEmptyHint`（如英文 *Click genre(s) to filter…*）；有选中时左侧为可移除的已选 badge（`md` 尺寸，带 ✕），右侧实时显示交集计数 `<n> {{matches}}`。
+  * **候选网格**：`flex flex-wrap`，仅展示**未选中**流派的 badge（`sm` 尺寸，带 `(<previewN>)` 计数）；颜色由 `meta.genre_palette[name]` 的 sRGB hex 经 `color-mix(in oklch, ...)` 三段式（背景 18%、边框 60%、字色 foreground）渲染，与 §3.4.2 Badge `variant="genre"` 共享样式（实现：`.genre-chip-tint` 类与 `getGenreChipSurfaceStyle`）。
+* **AND 交集与死路预测**：
+  * `currentIntersection` = `selectedGenres.reduce(intersect movie_ids)`；`null` 等价于「无选中」会话，触发 `clearSearch()` 退出 genre 模式。
+  * `previewCountIfAdded[g]` = 若再添加 `g`，与 `currentIntersection` 求交后的规模（无选中时即 `g` 单独 movie_ids 数）。
+  * **死路 disable**：候选网格中 `previewN === 0` 即 badge 灰显（`opacity-40` + `cursor-not-allowed`）且不响应点击，即时阻止用户走入空集。
+* **写回 store**（在 `useLayoutEffect` 中布局阶段同帧写，避免与 ESC `clearSearch()` 同帧竞态被覆盖）：`searchMode='genre'`、`selectionIds = sortIdsByRelease([...currentIntersection], movieById)`（按 `release_date` 升序）、`selectionPersonKey=null`、`selectedMovieId=null`、`searchQuery = selectedGenres.join(' + ')`；连线不开启（`person` 才画星座线）。
+* **退出**：用户**移除最后一个**已选 badge → 同帧清空 `selectedGenres` 并 `clearSearch()`；ESC 经 §4.6 第 4 级清 `searchMode='idle'` → 组件用前次 `searchMode` 的 transition 检测重置 `selectedGenres`；**离开 Genres 分段**（切到 movie / person）显式 `setSelectedGenres([])` + `clearSearch()`。
+* **快捷键**：Genre 分段下可见 `<input>` 不再渲染，但保留**屏幕外** `sr-only` 的 `data-galaxy-search-input`，使全局 **Cmd/Ctrl+K** 仍能聚焦搜索（§3.7）。
+* **`zCurrent`（Timeline）**：**不修改** **`zCurrent`**，保持用户进入 genre 模式前的宏观时间关注点；与《星球状态机 spec》**§3.6** 一致——select 会话下 **`viswindow` 条带对 active 集合无视觉反馈**，不要求 Timeline 为流派大集合「滚动到条带中心」。
+* **i18n 键**（`STRINGS.searchBar.*`，所有 locale 同构，由 `locales.schema.spec.ts` 断言）：`genreMultiEmptyHint`、`genreMultiMatches`、`genreMultiRemove`。**已移除**：`genreMultiHelp`（旧的网格底部说明文案，已被顶栏空态提示取代）。
 
 ### **4.6 ESC 焦点栈（全局 keydown，自上而下匹配第一级即处理并 `preventDefault`）**
 

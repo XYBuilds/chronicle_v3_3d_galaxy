@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 
 import { SUBSAMPLE_GALAXY_META, SUBSAMPLE_LAB_MOVIES, subsampleMovieMarthasVineyard } from '@/storybook/fixtures/subsampleMovies'
-import { DEFAULT_GALAXY_U_SIZE_SCALE } from '@/three/galaxyMeshes'
+import { DEFAULT_GALAXY_U_ACTIVE_SIZE_MUL, DEFAULT_GALAXY_U_SIZE_SCALE } from '@/three/galaxyUniformDefaults'
 
 import { GalaxyThreeLayerLab } from './GalaxyThreeLayerLab'
 
@@ -67,7 +67,7 @@ const meta = {
     movies: SUBSAMPLE_LAB_MOVIES,
     zCurrent: zCurrentDefault,
     zVisWindow: 1,
-    uActiveSizeMul: 0.02,
+    uActiveSizeMul: DEFAULT_GALAXY_U_ACTIVE_SIZE_MUL,
     uBgSizeMul: 0.001,
     uLMin: 0.2,
     uLMax: 1.0,

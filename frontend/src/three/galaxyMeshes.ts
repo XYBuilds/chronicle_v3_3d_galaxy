@@ -9,16 +9,10 @@ import galaxyIdleFragmentShader from './shaders/galaxyIdle.frag.glsl'
 import galaxyIdleVertexShader from './shaders/galaxyIdle.vert.glsl'
 import { NEAR_CULL_WORLD_Z } from './nearCullWorldZ'
 import { computeSelectionMaskAtlasDimensions } from './selectionMask'
+import { DEFAULT_GALAXY_U_ACTIVE_SIZE_MUL, DEFAULT_GALAXY_U_SIZE_SCALE } from './galaxyUniformDefaults'
 
-/**
- * Default world `uSizeScale` for dual InstancedMesh (matches former Points macro knob `0.3` at current focus/bg mul).
- * Tune live via `window.__galaxyPointScale.scale` or Storybook / Leva.
- */
-export const DEFAULT_GALAXY_U_SIZE_SCALE = 0.3
-
+export { DEFAULT_GALAXY_U_ACTIVE_SIZE_MUL, DEFAULT_GALAXY_U_SIZE_SCALE } from './galaxyUniformDefaults'
 export { NEAR_CULL_WORLD_Z } from './nearCullWorldZ'
-
-const _dummy = new THREE.Object3D()
 
 function buildInstanceAttributes(movies: Movie[]): {
   hues: Float32Array
@@ -96,7 +90,7 @@ function makeSharedUniforms(
       uZCurrent: { value: 0 },
       uZVisWindow: { value: 1 },
       uSizeScale: { value: DEFAULT_GALAXY_U_SIZE_SCALE },
-      uActiveSizeMul: { value: 0.02 },
+      uActiveSizeMul: { value: DEFAULT_GALAXY_U_ACTIVE_SIZE_MUL },
       uBgSizeMul: { value: 0.002 },
       uLMin: { value: 0.2 },
       uLMax: { value: 1.0 },

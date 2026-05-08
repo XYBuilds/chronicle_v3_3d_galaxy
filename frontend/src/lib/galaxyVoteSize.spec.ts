@@ -9,6 +9,7 @@ import {
   linearMapInRange,
   pipelineParticleSizeForVoteCount,
 } from '@/lib/galaxyVoteSize'
+import { DEFAULT_GALAXY_U_ACTIVE_SIZE_MUL, DEFAULT_GALAXY_U_SIZE_SCALE } from '@/three/galaxyUniformDefaults'
 
 function fakeMovie(voteCount: number, id: number): Movie {
   return {
@@ -58,7 +59,12 @@ describe('galaxyVoteSize', () => {
   it('FOCUS_VOTE_REFERENCE_TIERS radii strictly increase for typical uniforms', () => {
     const movies = [fakeMovie(1, 1), fakeMovie(500_000, 2)]
     const { logMin, logMax } = computeLogVoteRangeFromMovies(movies)
-    const radii = focusShellRadiiForVoteTiers(logMin, logMax, 0.3, 0.02)
+    const radii = focusShellRadiiForVoteTiers(
+      logMin,
+      logMax,
+      DEFAULT_GALAXY_U_SIZE_SCALE,
+      DEFAULT_GALAXY_U_ACTIVE_SIZE_MUL,
+    )
     expect(radii.length).toBe(FOCUS_VOTE_REFERENCE_TIERS.length)
     for (let i = 1; i < radii.length; i++) {
       expect(radii[i]).toBeGreaterThan(radii[i - 1]!)

@@ -7,16 +7,16 @@ todos:
     status: cancelled
   - id: p222-focus-active-r
     content: P22.2 focus 态 active sphere 半径下调（降低整体尺度，指定位置后 dial-in）
-    status: pending
+    status: completed
   - id: p223-poster-w780
     content: P22.3 export_galaxy_json.py POSTER_BASE w500 → w780；Storybook fixtures 同步
-    status: pending
+    status: completed
   - id: p224-timeline-vertical-only
     content: P22.4 Timeline vertical 按 horizontal 成熟样式升级并设为默认；保留 horizontal 与切换能力
-    status: pending
+    status: completed
   - id: p225-floating-exit-button
     content: P22.5 删除 Drawer SheetClose X；新增 FocusExitButton.tsx 贴屏底居中 floating；i18n key hud.exitFocus
-    status: pending
+    status: completed
   - id: p226-constellation-chain-hover
     content: P22.6 constellation 拆为 3 个 LineSegments（producers/crew/cast）；默认 0.04 / hover 0.18；hover 某颗星→ 查 movie_roles → 高亮该岗位链
     status: pending

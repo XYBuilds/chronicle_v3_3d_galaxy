@@ -18,6 +18,9 @@ export const CONSTELLATION_CHAIN_DEFAULT_OPACITY = 0.025
 /** P22.6 — chain opacity when hovering a star that includes that chain's role for the selected person */
 export const CONSTELLATION_CHAIN_HOVER_OPACITY = 0.2
 
+/** When a chain’s target drops from hover to default, opacity eases linearly over this duration (ms). */
+export const CONSTELLATION_CHAIN_OPACITY_FADE_MS = 500
+
 const CHAIN_ORDER: readonly { key: ChainKey; mask: number }[] = [
   { key: 'producers', mask: MASK_PRODUCERS },
   { key: 'crew', mask: MASK_CREW },
@@ -117,9 +120,25 @@ function makeChain(maxSegments: number): ChainHandle {
   return { mesh, material, geometry, positions }
 }
 
-function resetAllOpacities(chains: Record<ChainKey, ChainHandle>): void {
+type OpacityTargetMode = 'hover' | 'default'
+
+interface OpacityFade {
+  startMs: number
+  from: number
+}
+
+function snapOpacityState(
+  chains: Record<ChainKey, ChainHandle>,
+  display: Record<ChainKey, number>,
+  targetMode: Record<ChainKey, OpacityTargetMode>,
+  fade: Record<ChainKey, OpacityFade | null>,
+): void {
+  const d = CONSTELLATION_CHAIN_DEFAULT_OPACITY
   for (const { key } of CHAIN_ORDER) {
-    chains[key].material.opacity = CONSTELLATION_CHAIN_DEFAULT_OPACITY
+    display[key] = d
+    targetMode[key] = 'default'
+    fade[key] = null
+    chains[key].material.opacity = d
   }
 }
 
@@ -127,13 +146,15 @@ export interface ConstellationHandle {
   /** Three `LineSegments` children (producers / crew / cast). */
   readonly group: THREE.Group
   setChainOpacity(chain: ChainKey, opacity: number): void
-  /** Reset all chains to `CONSTELLATION_CHAIN_DEFAULT_OPACITY`. */
+  /** All chains target default opacity; easing applied in `tickOpacity` (does not snap unless already at default). */
   resetChainOpacities(): void
   /**
-   * P22.6 — highlight chains that intersect `mask` (per-film role bits for hovered movie).
-   * `null` / `0` → all chains at default opacity.
+   * P22.6 — set per-chain hover targets from role mask. Hover → material snaps up on next `tickOpacity`;
+   * default → linear fade over `CONSTELLATION_CHAIN_OPACITY_FADE_MS`. `null` / `0` → all chains default.
    */
   updateHoverFromRoleMask(mask: number | null): void
+  /** Apply opacity animation toward targets; call once per frame (e.g. from scene RAF). */
+  tickOpacity(nowMs: number): void
   sync(p: ConstellationSyncParams): void
   dispose(): void
 }
@@ -159,22 +180,85 @@ export function createConstellation(maxSegmentsPerChain = 140): ConstellationHan
   /** `-1` = not visible; else last logged segment count sum. */
   let lastVisibleLogSeg = -1
 
+  const opacityDisplay: Record<ChainKey, number> = {
+    producers: CONSTELLATION_CHAIN_DEFAULT_OPACITY,
+    crew: CONSTELLATION_CHAIN_DEFAULT_OPACITY,
+    cast: CONSTELLATION_CHAIN_DEFAULT_OPACITY,
+  }
+  const opacityTargetMode: Record<ChainKey, OpacityTargetMode> = {
+    producers: 'default',
+    crew: 'default',
+    cast: 'default',
+  }
+  const opacityFade: Record<ChainKey, OpacityFade | null> = {
+    producers: null,
+    crew: null,
+    cast: null,
+  }
+
   const setChainOpacity = (chain: ChainKey, opacity: number) => {
+    opacityDisplay[chain] = opacity
+    opacityTargetMode[chain] = opacity >= CONSTELLATION_CHAIN_HOVER_OPACITY - 1e-5 ? 'hover' : 'default'
+    opacityFade[chain] = null
     chains[chain].material.opacity = opacity
   }
 
   const resetChainOpacities = () => {
-    resetAllOpacities(chains)
+    for (const { key } of CHAIN_ORDER) {
+      opacityTargetMode[key] = 'default'
+    }
   }
 
   const updateHoverFromRoleMask = (mask: number | null) => {
-    if (mask === null || mask === 0) {
-      resetChainOpacities()
-      return
-    }
+    const m = mask === null || mask === 0 ? null : mask
+    const hi = CONSTELLATION_CHAIN_HOVER_OPACITY
+    const def = CONSTELLATION_CHAIN_DEFAULT_OPACITY
     for (const { key, mask: chainRole } of CHAIN_ORDER) {
-      chains[key].material.opacity =
-        (mask & chainRole) !== 0 ? CONSTELLATION_CHAIN_HOVER_OPACITY : CONSTELLATION_CHAIN_DEFAULT_OPACITY
+      const wantHover = m !== null && (m & chainRole) !== 0
+      if (wantHover) {
+        opacityTargetMode[key] = 'hover'
+        opacityDisplay[key] = hi
+        opacityFade[key] = null
+        chains[key].material.opacity = hi
+      } else {
+        opacityTargetMode[key] = 'default'
+        if (m !== null) {
+          // Still hovering some star — chains that no longer match snap down immediately.
+          opacityDisplay[key] = def
+          opacityFade[key] = null
+          chains[key].material.opacity = def
+        }
+      }
+    }
+  }
+
+  const tickOpacity = (nowMs: number) => {
+    const def = CONSTELLATION_CHAIN_DEFAULT_OPACITY
+    const hi = CONSTELLATION_CHAIN_HOVER_OPACITY
+    const fadeMs = CONSTELLATION_CHAIN_OPACITY_FADE_MS
+    for (const { key } of CHAIN_ORDER) {
+      if (opacityTargetMode[key] === 'hover') {
+        opacityDisplay[key] = hi
+        opacityFade[key] = null
+        chains[key].material.opacity = hi
+        continue
+      }
+      if (opacityDisplay[key] > def + 1e-6) {
+        if (opacityFade[key] === null) {
+          opacityFade[key] = { startMs: nowMs, from: opacityDisplay[key] }
+        }
+        const f = opacityFade[key]!
+        const t = Math.min(1, (nowMs - f.startMs) / fadeMs)
+        opacityDisplay[key] = f.from + (def - f.from) * t
+        if (t >= 1) {
+          opacityDisplay[key] = def
+          opacityFade[key] = null
+        }
+      } else {
+        opacityDisplay[key] = def
+        opacityFade[key] = null
+      }
+      chains[key].material.opacity = opacityDisplay[key]
     }
   }
 
@@ -214,7 +298,7 @@ export function createConstellation(maxSegmentsPerChain = 140): ConstellationHan
   const sync = (p: ConstellationSyncParams): void => {
     if (!p.visible || p.hasFilmFocus || !p.selectionIds || p.selectionIds.length < 2) {
       group.visible = false
-      resetAllOpacities(chains)
+      snapOpacityState(chains, opacityDisplay, opacityTargetMode, opacityFade)
       for (const { key } of CHAIN_ORDER) {
         const ch = chains[key]
         ch.mesh.visible = false
@@ -228,7 +312,7 @@ export function createConstellation(maxSegmentsPerChain = 140): ConstellationHan
     }
 
     const gap = Math.max(0, p.surfaceGapWorld)
-    resetAllOpacities(chains)
+    snapOpacityState(chains, opacityDisplay, opacityTargetMode, opacityFade)
     const roles = p.movieRoles
     let anyVisible = false
 
@@ -280,7 +364,7 @@ export function createConstellation(maxSegmentsPerChain = 140): ConstellationHan
 
     if (!anyVisible) {
       group.visible = false
-      resetAllOpacities(chains)
+      snapOpacityState(chains, opacityDisplay, opacityTargetMode, opacityFade)
       for (const { key } of CHAIN_ORDER) {
         chains[key].mesh.visible = false
         chains[key].geometry.setDrawRange(0, 0)
@@ -317,5 +401,5 @@ export function createConstellation(maxSegmentsPerChain = 140): ConstellationHan
     }
   }
 
-  return { group, setChainOpacity, resetChainOpacities, updateHoverFromRoleMask, sync, dispose }
+  return { group, setChainOpacity, resetChainOpacities, updateHoverFromRoleMask, tickOpacity, sync, dispose }
 }

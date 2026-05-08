@@ -996,11 +996,12 @@ export function mountGalaxyScene(
         constellation.updateHoverFromRoleMask(roleMask === 0 ? null : roleMask)
       }
     }
+    constellation.tickOpacity(nowMs)
     {
       const pu = planet.material.uniforms
-      ;(pu.uHuntGamma as THREE.Uniform<number>).value = uHuntGammaU.value
-      ;(pu.uHuntApplyMask as THREE.Uniform<number>).value = uHuntApplyMaskU.value
-      ;(pu.uLMax as THREE.Uniform<number>).value = uLMax.value
+        ; (pu.uHuntGamma as THREE.Uniform<number>).value = uHuntGammaU.value
+        ; (pu.uHuntApplyMask as THREE.Uniform<number>).value = uHuntApplyMaskU.value
+        ; (pu.uLMax as THREE.Uniform<number>).value = uLMax.value
     }
     syncSelectionPlanetWorldScale()
 

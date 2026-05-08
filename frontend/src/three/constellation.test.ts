@@ -3,7 +3,7 @@ import * as THREE from 'three'
 
 import type { Movie } from '@/types/galaxy'
 
-import { createConstellation } from './constellation'
+import { createConstellation, CONSTELLATION_CHAIN_OPACITY_FADE_MS } from './constellation'
 
 function stubMovie(p: { id: number; release_date: string; x: number; y?: number; z?: number }): Movie {
   return {
@@ -145,6 +145,7 @@ describe('createConstellation (P12.7 / P22.6)', () => {
       getActiveWorldRadius: () => 0,
     })
     h.updateHoverFromRoleMask(1 | 16)
+    h.tickOpacity(0)
     const prodMat = lineSegmentsAt(h.group, 0).material as THREE.LineBasicMaterial
     const crewMat = lineSegmentsAt(h.group, 1).material as THREE.LineBasicMaterial
     const castMat = lineSegmentsAt(h.group, 2).material as THREE.LineBasicMaterial
@@ -152,9 +153,40 @@ describe('createConstellation (P12.7 / P22.6)', () => {
     expect(crewMat.opacity).toBeLessThan(0.1)
     expect(castMat.opacity).toBeGreaterThan(0.1)
     h.updateHoverFromRoleMask(2)
+    h.tickOpacity(0)
     expect(prodMat.opacity).toBeLessThan(0.1)
     expect(crewMat.opacity).toBeGreaterThan(0.1)
     expect(castMat.opacity).toBeLessThan(0.1)
+    h.dispose()
+  })
+
+  it('fades chain opacity to default over CONSTELLATION_CHAIN_OPACITY_FADE_MS when hover clears', () => {
+    const h = createConstellation(8)
+    const map = new Map<number, Movie>([
+      [1, stubMovie({ id: 1, release_date: '2000-01-01', x: 0 })],
+      [2, stubMovie({ id: 2, release_date: '2001-01-01', x: 1 })],
+    ])
+    h.sync({
+      visible: true,
+      hasFilmFocus: false,
+      movieById: map,
+      selectionIds: [1, 2],
+      movieRoles: { '1': 2, '2': 2 },
+      surfaceGapWorld: 0,
+      getActiveWorldRadius: () => 0,
+    })
+    h.updateHoverFromRoleMask(2)
+    h.tickOpacity(0)
+    const crewMat = lineSegmentsAt(h.group, 1).material as THREE.LineBasicMaterial
+    expect(crewMat.opacity).toBeCloseTo(0.2, 5)
+    h.resetChainOpacities()
+    const t0 = 10_000
+    h.tickOpacity(t0)
+    expect(crewMat.opacity).toBeCloseTo(0.2, 5)
+    h.tickOpacity(t0 + CONSTELLATION_CHAIN_OPACITY_FADE_MS * 0.5)
+    expect(crewMat.opacity).toBeCloseTo(0.2 + (0.025 - 0.2) * 0.5, 5)
+    h.tickOpacity(t0 + CONSTELLATION_CHAIN_OPACITY_FADE_MS)
+    expect(crewMat.opacity).toBeCloseTo(0.025, 5)
     h.dispose()
   })
 })

@@ -400,8 +400,11 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
               key={tab}
               type="button"
               className={cn(
-                buttonVariants({ variant: hudTab === tab ? 'secondary' : 'ghost', size: 'xs' }),
+                buttonVariants({ variant: 'ghost', size: 'xs' }),
                 'flex-1 capitalize',
+                hudTab === tab
+                  ? 'bg-foreground text-background shadow-sm hover:bg-foreground/90 hover:text-background dark:bg-secondary dark:text-secondary-foreground dark:hover:bg-secondary/80 dark:hover:text-secondary-foreground'
+                  : 'bg-transparent text-muted-foreground hover:bg-muted/50 hover:text-muted-foreground dark:hover:bg-muted/50',
               )}
               aria-pressed={hudTab === tab}
               onClick={() => onTabChange(tab)}

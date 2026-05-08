@@ -334,7 +334,8 @@ export function TimelineHud({
             <div
               key={y}
               className={cn(
-                'absolute left-0 right-0 flex items-center justify-end pr-2',
+                /* Left half of track only: line sits at 50%; justify-end + pr keeps digits left of center with a real gap. */
+                'absolute left-0 right-1/2 flex items-center justify-end pr-3',
                 interactive && 'pointer-events-auto cursor-pointer',
               )}
               style={{
@@ -359,21 +360,22 @@ export function TimelineHud({
           )
         })}
         <div
-          className="pointer-events-none absolute flex flex-col items-center"
+          className="pointer-events-none absolute left-1/2 flex translate-y-1/2 flex-row items-center gap-1.5"
           style={{
-            left: '50%',
             bottom: `${thumbT * 100}%`,
-            transform: 'translate(-50%, 50%)',
           }}
         >
           <div
-            className="w-5 rounded-full"
+            className="-ml-2.5 w-5 shrink-0 rounded-full"
             style={{
               height: 'var(--ui-edge-stroke-width)',
               backgroundColor: 'var(--ui-edge-canvas-color-strong)',
               boxShadow: '0 0 6px color-mix(in srgb, var(--ui-edge-canvas-color-strong) 35%, transparent)',
             }}
           />
+          <span className="whitespace-nowrap font-mono text-[0.62rem] font-semibold tabular-nums text-[color:var(--ui-edge-canvas-color-strong)]">
+            {labelYear}
+          </span>
         </div>
       </div>
     </div>

@@ -400,8 +400,11 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
               key={tab}
               type="button"
               className={cn(
-                buttonVariants({ variant: hudTab === tab ? 'secondary' : 'ghost', size: 'xs' }),
+                buttonVariants({ variant: 'ghost', size: 'xs' }),
                 'flex-1 capitalize',
+                hudTab === tab
+                  ? 'bg-foreground text-background shadow-sm hover:bg-foreground/90 hover:text-background dark:bg-secondary dark:text-secondary-foreground dark:hover:bg-secondary/80 dark:hover:text-secondary-foreground'
+                  : 'bg-transparent text-muted-foreground hover:bg-muted/50 hover:text-muted-foreground dark:hover:bg-muted/50',
               )}
               aria-pressed={hudTab === tab}
               onClick={() => onTabChange(tab)}
@@ -501,9 +504,19 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
                       : ui.searchBar.placeholderPerson
                 }
                 className={cn(
-                  'h-9 w-full min-w-0 rounded-lg border border-input px-3 pr-9 text-sm text-foreground outline-none',
-                  'group-data-[state=idle]:bg-background/30 group-data-[state=active]:bg-background/80',
-                  'placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40',
+                  'h-9 w-full min-w-0 rounded-lg border px-3 pr-9 text-sm text-foreground outline-none',
+                  'transition-[background-color,border-color,box-shadow,color] duration-150',
+                  // Light HUD (no .dark): faint glass on black canvas — idle stays quiet
+                  'group-data-[state=idle]:border-white/10 group-data-[state=idle]:bg-white/[0.05] group-data-[state=idle]:shadow-none',
+                  'group-data-[state=idle]:text-white group-data-[state=idle]:placeholder:text-white/50',
+                  'group-data-[state=active]:border-white/22 group-data-[state=active]:bg-white/[0.14] group-data-[state=active]:shadow-sm',
+                  'group-data-[state=active]:text-foreground group-data-[state=active]:placeholder:text-muted-foreground',
+                  // Dark: keep prior input weight on slate chrome
+                  'dark:border-input',
+                  'dark:group-data-[state=idle]:border-input dark:group-data-[state=idle]:bg-background/30',
+                  'dark:group-data-[state=idle]:text-foreground dark:group-data-[state=idle]:placeholder:text-muted-foreground',
+                  'dark:group-data-[state=active]:border-input dark:group-data-[state=active]:bg-background/80',
+                  'focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40',
                 )}
                 value={searchQuery}
                 onChange={(e) => {

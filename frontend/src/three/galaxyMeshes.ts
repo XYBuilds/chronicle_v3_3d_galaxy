@@ -14,6 +14,8 @@ import { DEFAULT_GALAXY_U_ACTIVE_SIZE_MUL, DEFAULT_GALAXY_U_SIZE_SCALE } from '.
 export { DEFAULT_GALAXY_U_ACTIVE_SIZE_MUL, DEFAULT_GALAXY_U_SIZE_SCALE } from './galaxyUniformDefaults'
 export { NEAR_CULL_WORLD_Z } from './nearCullWorldZ'
 
+const _dummy = new THREE.Object3D()
+
 function buildInstanceAttributes(movies: Movie[]): {
   hues: Float32Array
   voteNorms: Float32Array

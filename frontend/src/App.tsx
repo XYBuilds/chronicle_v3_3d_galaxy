@@ -10,6 +10,7 @@ import { Loading } from '@/components/Loading'
 import { MovieTooltip } from '@/components/MovieTooltip'
 import { Timeline } from '@/components/Timeline'
 import { HoverRing } from '@/hud/HoverRing'
+import { FocusExitButton } from '@/hud/FocusExitButton'
 import { FocusLReference } from '@/hud/FocusLReference'
 import { FullscreenButton } from '@/hud/FullscreenButton'
 import { InfoButton } from '@/hud/InfoButton'
@@ -241,6 +242,7 @@ function App() {
       </div>
       <FocusLReference />
       <Timeline orientation={timelineOrientation} />
+      <FocusExitButton />
       <MovieDetailDrawer />
     </main>
   )

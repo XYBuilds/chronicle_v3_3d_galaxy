@@ -61,7 +61,8 @@
     "toggleFullscreen": "تبديل ملء الشاشة (F)",
     "focusSearch": "التركيز على البحث (Cmd/Ctrl+K)",
     "close": "إغلاق",
-    "toggleLanguage": "اختر لغة الواجهة"
+    "toggleLanguage": "اختر لغة الواجهة",
+    "exitFocus": "إنهاء التركيز"
   },
   "timeline": {
     "label": "الجدول الزمني (سنة الإصدار)",

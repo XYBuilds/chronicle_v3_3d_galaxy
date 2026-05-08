@@ -61,7 +61,8 @@
     "toggleFullscreen": "Pantalla completa (F)",
     "focusSearch": "Enfocar búsqueda (Cmd/Ctrl+K)",
     "close": "Cerrar",
-    "toggleLanguage": "Elegir idioma de la interfaz"
+    "toggleLanguage": "Elegir idioma de la interfaz",
+    "exitFocus": "Salir del foco"
   },
   "timeline": {
     "label": "Línea de tiempo (año de estreno)",

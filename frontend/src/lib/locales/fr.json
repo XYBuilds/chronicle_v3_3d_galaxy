@@ -61,7 +61,8 @@
     "toggleFullscreen": "Basculer le plein écran (F)",
     "focusSearch": "Focus recherche (Cmd/Ctrl+K)",
     "close": "Fermer",
-    "toggleLanguage": "Choisir la langue de l’interface"
+    "toggleLanguage": "Choisir la langue de l’interface",
+    "exitFocus": "Quitter le focus"
   },
   "timeline": {
     "label": "Chronologie (année de sortie)",

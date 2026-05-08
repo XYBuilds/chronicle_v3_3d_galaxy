@@ -9,10 +9,8 @@ import {
 } from '@/components/drawerDetailsLayout'
 import { AspectRatio } from '@/components/ui/aspect-ratio'
 import { buttonVariants } from '@/components/ui/button-variants'
-import { CloseButton } from '@/components/ui/close-button'
 import {
   Sheet,
-  SheetClose,
   SheetContent,
   SheetDescription,
   SheetHeader,
@@ -160,11 +158,8 @@ export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailD
         )}
         style={{ ['--sheet-ease' as string]: SHEET_OPEN_EASE }}
       >
-        <SheetClose
-          render={<CloseButton variant="secondary" className="absolute right-5 top-5 z-30" />}
-        />
         <SheetHeader className="relative z-20 shrink-0 gap-0 border-b border-border/70 bg-popover px-6 pb-5 pt-7 text-left shadow-[0_6px_18px_-10px_color-mix(in_oklch,var(--foreground)_10%,transparent)] sm:px-7">
-          <SheetTitle className="pr-10 text-2xl font-bold leading-tight tracking-tight text-foreground">{title}</SheetTitle>
+          <SheetTitle className="text-2xl font-bold leading-tight tracking-tight text-foreground">{title}</SheetTitle>
           <SheetDescription className="sr-only">
             {movie
               ? str.drawer.sheetDescription(movie.title, formatReleaseDate(movie.release_date))

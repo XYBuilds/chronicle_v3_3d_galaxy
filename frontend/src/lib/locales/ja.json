@@ -61,7 +61,8 @@
     "toggleFullscreen": "全画面切替（F）",
     "focusSearch": "検索にフォーカス（Cmd/Ctrl+K）",
     "close": "閉じる",
-    "toggleLanguage": "表示言語を選択"
+    "toggleLanguage": "表示言語を選択",
+    "exitFocus": "フォーカスを終了"
   },
   "timeline": {
     "label": "タイムライン（公開年）",

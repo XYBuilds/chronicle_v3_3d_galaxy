@@ -16,7 +16,7 @@ todos:
     status: completed
   - id: p215-light-mode-tab-fix
     content: P21.5 SearchBar tab 选中态 light 模式对比修复 (条件 light/dark class，不改 buttonVariants)
-    status: pending
+    status: completed
   - id: p216-movie-suggestions-show-all
     content: P21.6 电影搜索联想显示全部命中项（取消 12 条上限）；验证如“batman”可显示 “The Batman”等后缀命中
     status: pending

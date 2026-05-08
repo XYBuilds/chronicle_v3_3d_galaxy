@@ -405,6 +405,7 @@ Phase 18.0 起改为：
 - `genre_palette_version`（Phase 18.0+）
 - `has_genre_hue`
 - `has_search_index`
+- `search_normalize_version`（Phase 21.1+；当前管线写 `"v2"`）
 - `feature_weights`
 - `z_range`
 - `xy_range`
@@ -430,6 +431,34 @@ Phase 18.0 起改为：
 - 电影名搜索辅助：主文件中的 `title_normalized`
 
 版本必须与 `galaxy_data.meta.version` 对齐。若 `meta.has_search_index === true`，前端应能加载该文件。
+
+### 9.3 搜索归一化（Phase 21.1）
+
+`title_normalized` 与 `galaxy_search_index.people[*]` 的 normalized key 由同一函数 **`scripts/export/export_search_index.py::normalize_for_search_v2`** 写入：
+
+```python
+def normalize_for_search_v2(text: str) -> str:
+    s = unicodedata.normalize("NFKC", str(text).strip())
+    s = "".join(c for c in s if unicodedata.category(c) != "Mn")
+    return s.casefold()
+```
+
+特性：
+
+- 保留中日韩、西里尔、阿拉伯、谚文、天城等非拉丁脚本（旧 v1 NFKD + ASCII fold 会丢失这些字符）。
+- 拉丁仍 `casefold`；`ß → ss`；预组合重音字符（如 `é`）保持，组合形式（如 `e + U+0301`）的 Mn 标记被剥离。
+- 前端镜像 `frontend/src/utils/searchScore.ts::normalizeForSearch`：`text.normalize('NFKC').replace(/\p{M}/gu, '').toLowerCase()`，与 Python 端语义近似（JS `\p{M}` 略宽于 Python `Mn`，但实际标题场景差异可忽略）。
+
+调用点（产线 Python 路径全部使用 v2）：
+
+- `scripts/export/export_search_index.py`：`_merge_person` 用 v2 归并人名 key。
+- `scripts/export/export_galaxy_json.py::_title_normalized_field`：写 `movies[i].title_normalized`。
+- `scripts/cron/nightly_vote_refresh.py`：每日刷新 / 新过线片入 `movies_pending` 时计算 `title_normalized`。
+- `scripts/supabase/initial_import.py`：一次性导入 Supabase 的 `title_normalized`。
+
+`meta.search_normalize_version` 必须写为 **`"v2"`**。**旧 v1 函数** `normalize_for_search`（NFKD + `encode("ascii", "ignore") + casefold`）保留在同一文件中作为 legacy 引用，**不再被产线调用点使用**；如需对比或回滚可临时切换，但必须 bump 数据版本号。
+
+前端兼容策略：`loadGalaxyData.parseAndValidate` 在 `meta.search_normalize_version !== "v2"` 时**不阻断加载**，仅 `console.warn` 提示 CJK / 非拉丁标题搜索可能不完整；在 `frontend/src/types/galaxy.ts` 的 `Meta` 接口中字段是 `search_normalize_version?: string`（旧包缺字段时 `undefined` 走相同 warning 分支）。
 
 ## 10. Phase 18 Supabase Schema
 
@@ -632,6 +661,7 @@ P18.5b 上线初期采用「软闸 + 强日志 + artifact」策略，原因是 G
 - 修改 feature weights。
 - 修改 genre palette version。
 - 重置 `galaxy_v1_reference`。
+- 修改 **`search_normalize_version`** 或 `normalize_for_search_v2` 算法（含等价 JS 镜像 `normalizeForSearch`）：会改变 `title_normalized` 与 `galaxy_search_index.people[*]` 的 key 二进制；主包 + 索引 + 前端必须同版本一并发布。
 
 ### 13.3 管线断言
 

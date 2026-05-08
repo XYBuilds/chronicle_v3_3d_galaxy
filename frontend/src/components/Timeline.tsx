@@ -83,7 +83,7 @@ export interface TimelineHudProps {
    * (Phase 5.3.1). Omit in passive / Storybook previews.
    */
   onZCurrentChange?: (z: number) => void
-  /** P14.7: horizontal = bottom-centered bar (default); vertical = left rail. */
+  /** P14.7 / P22.4: vertical = left rail (default); horizontal = bottom-centered bar. */
   orientation?: TimelineOrientation
   className?: string
 }
@@ -96,7 +96,7 @@ export function TimelineHud({
   zRange,
   cameraZ,
   onZCurrentChange,
-  orientation = 'horizontal',
+  orientation = 'vertical',
   className,
 }: TimelineHudProps) {
   const str = useStrings()
@@ -293,7 +293,7 @@ export function TimelineHud({
   return (
     <div
       className={cn(
-        'pointer-events-none fixed left-2 top-[10vh] z-30 flex h-[80vh] w-[4.5rem] select-none flex-col sm:left-4',
+        'pointer-events-none fixed left-3 top-[8vh] z-30 flex h-[80vh] w-12 select-none flex-col overflow-visible sm:left-5',
         className,
       )}
       role={interactive ? 'presentation' : 'img'}
@@ -302,7 +302,7 @@ export function TimelineHud({
       <div
         ref={trackRef}
         className={cn(
-          'relative min-h-0 flex-1',
+          'relative min-h-0 w-full flex-1',
           interactive &&
           'pointer-events-auto cursor-grab touch-none active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ui-edge-canvas-color-strong)]',
         )}
@@ -362,9 +362,16 @@ export function TimelineHud({
           )
         })}
         <div
-          className="pointer-events-none absolute left-0 right-0 flex flex-col items-center gap-0.5"
-          style={{ bottom: `${thumbT * 100}%`, transform: 'translateY(50%)' }}
+          className="pointer-events-none absolute flex flex-col items-center gap-0.5"
+          style={{
+            left: '50%',
+            bottom: `${thumbT * 100}%`,
+            transform: 'translate(-50%, 50%)',
+          }}
         >
+          <span className="whitespace-nowrap font-mono text-[0.62rem] font-semibold tabular-nums text-[color:var(--ui-edge-canvas-color-strong)]">
+            {labelYear}
+          </span>
           <div
             className="w-5 rounded-full"
             style={{
@@ -373,9 +380,6 @@ export function TimelineHud({
               boxShadow: '0 0 6px color-mix(in srgb, var(--ui-edge-canvas-color-strong) 35%, transparent)',
             }}
           />
-          <span className="font-mono text-[0.62rem] font-semibold tabular-nums text-[color:var(--ui-edge-canvas-color-strong)]">
-            {labelYear}
-          </span>
         </div>
       </div>
     </div>
@@ -387,7 +391,7 @@ export interface TimelineProps {
 }
 
 /** Wired HUD: reads `meta.z_range` and live `zCurrent` from the galaxy scene bridge. */
-export function Timeline({ orientation = 'horizontal' }: TimelineProps) {
+export function Timeline({ orientation = 'vertical' }: TimelineProps) {
   const zRange = useGalaxyDataStore((s) => s.data?.meta.z_range)
   const cameraZ = useSyncExternalStore(subscribeGalaxyCameraZ, getGalaxyCameraZ, getGalaxyCameraZ)
 

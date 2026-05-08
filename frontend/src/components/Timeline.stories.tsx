@@ -22,17 +22,8 @@ type Story = StoryObj<typeof TimelineHud>
 
 const [zLo, zHi] = SUBSAMPLE_DECIMAL_Z_RANGE
 
-/** Default app orientation: bottom-centered horizontal axis. */
+/** P22.4 — Default app orientation: left vertical rail (`?timeline=` omitted). */
 export const Default: Story = {
-  args: {
-    zRange: [zLo, zHi],
-    cameraZ: (zLo + zHi) / 2,
-    orientation: 'horizontal',
-  },
-}
-
-/** Left rail variant; `?timeline=vertical` in the app. */
-export const Vertical: Story = {
   args: {
     zRange: [zLo, zHi],
     cameraZ: (zLo + zHi) / 2,
@@ -40,37 +31,56 @@ export const Vertical: Story = {
   },
 }
 
-/** Indicator sits on the oldest edge of the subsample-derived range. */
+/** Bottom-centered bar; `?timeline=horizontal` in the app. */
+export const Horizontal: Story = {
+  args: {
+    zRange: [zLo, zHi],
+    cameraZ: (zLo + zHi) / 2,
+    orientation: 'horizontal',
+  },
+}
+
+/** Indicator sits on the oldest edge of the subsample-derived range (vertical default). */
 export const CameraAtMinZ: Story = {
   args: {
     zRange: [zLo, zHi],
     cameraZ: zLo,
+    orientation: 'vertical',
   },
 }
 
-/** Indicator sits on the newest edge of the subsample-derived range. */
+/** Indicator sits on the newest edge of the subsample-derived range (vertical default). */
 export const CameraAtMaxZ: Story = {
   args: {
     zRange: [zLo, zHi],
     cameraZ: zHi,
+    orientation: 'vertical',
   },
 }
 
-/** Wider span than fixture movies alone — tick density stress. */
+/** Wider span than fixture movies alone — tick density stress (vertical default). */
 export const WideZSpan: Story = {
   args: {
     zRange: [1874, 2026],
     cameraZ: 1950,
+    orientation: 'vertical',
   },
 }
 
 function InteractiveHudHarness() {
   const [z, setZ] = useState((zLo + zHi) / 2)
   const onZCurrentChange = useCallback((next: number) => setZ(next), [])
-  return <TimelineHud zRange={[zLo, zHi]} cameraZ={z} onZCurrentChange={onZCurrentChange} />
+  return (
+    <TimelineHud
+      orientation="horizontal"
+      zRange={[zLo, zHi]}
+      cameraZ={z}
+      onZCurrentChange={onZCurrentChange}
+    />
+  )
 }
 
-/** Drag the track or click ticks (default horizontal axis). */
+/** Drag the track or click ticks (bottom horizontal axis). */
 export const Interactive: Story = {
   render: () => <InteractiveHudHarness />,
 }
@@ -88,7 +98,7 @@ function InteractiveVerticalHarness() {
   )
 }
 
-/** Vertical rail drag/click (matches `?timeline=vertical`). */
+/** Vertical rail drag/click (matches default app / `?timeline=vertical`). */
 export const InteractiveVertical: Story = {
   render: () => <InteractiveVerticalHarness />,
 }

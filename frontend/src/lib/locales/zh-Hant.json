@@ -9,7 +9,7 @@
     "phaseIndexFailed": "搜尋索引 — 失敗"
   },
   "cover": {
-    "title": "就緒",
+    "title": "the movie cosmos",
     "start": "開始",
     "startAriaLabel": "開始 — 進入星系並初始化圖形"
   },
@@ -73,7 +73,7 @@
     "modalTitle": "關於此體驗",
     "modalSubtitle": "暫用面板：上線前將完善文案與連結。",
     "introHeading": "概述",
-    "introBody": "（暫用）TMDB 電影宇宙：約 60,000 部影片構成的 2.5D 粒子星系；時間軸、搜尋（片名 / 影人 / 類型）與多重選取強調。正式文案待定。",
+    "introBody": "（暫用）The Movie Cosmos：約 60,000 部影片構成的 2.5D 粒子星系；時間軸、搜尋（片名 / 影人 / 類型）與多重選取強調。正式文案待定。",
     "dataHeading": "資料來源",
     "dataBody": "（暫用）致謝與參考將於收尾階段補上；此處尚未列出。",
     "stackHeading": "技術堆疊",

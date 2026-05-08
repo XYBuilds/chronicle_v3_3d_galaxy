@@ -9,7 +9,7 @@
     "phaseIndexFailed": "検索インデックス — 失敗"
   },
   "cover": {
-    "title": "準備完了",
+    "title": "the movie cosmos",
     "start": "開始",
     "startAriaLabel": "開始 — ギャラクシーへ進みグラフィックスを初期化"
   },
@@ -73,7 +73,7 @@
     "modalTitle": "この体験について",
     "modalSubtitle": "プレースホルダーパネル：公開前に文言とリンクを確定します。",
     "introHeading": "概要",
-    "introBody": "（プレースホルダー）TMDB Movie Cosmos：約 60,000 本の映画を 2.5D 粒子ギャラクシーとして表示。タイムライン、検索（タイトル / 人物 / ジャンル）、複数選択ハイライト。製品文言は未定。",
+    "introBody": "（プレースホルダー）The Movie Cosmos：約 60,000 本の映画を 2.5D 粒子ギャラクシーとして表示。タイムライン、検索（タイトル / 人物 / ジャンル）、複数選択ハイライト。製品文言は未定。",
     "dataHeading": "データソース",
     "dataBody": "（プレースホルダー）帰属と参考文献は仕上げ時に追加予定。現在未記載。",
     "stackHeading": "スタック",

@@ -275,6 +275,7 @@ export function mountGalaxyScene(
   const uFocusDimMode = galUniforms.uFocusDimMode as THREE.Uniform<number>
   const uZCamDistUniform = galUniforms.uZCamDistance as THREE.Uniform<number>
   const uHoveredInstanceId = galUniforms.uHoveredInstanceId as THREE.Uniform<number>
+  const uCameraWorldPosGal = galUniforms.uCameraWorldPos as THREE.Uniform<THREE.Vector3>
   uZ.value = zCurrent
   uZw.value = zVisWindow
   uZCamDistUniform.value = useGalaxyInteractionStore.getState().zCamDistance
@@ -359,6 +360,7 @@ export function mountGalaxyScene(
   const restCam = new THREE.Vector3()
   const fromCam = new THREE.Vector3()
   const toCam = new THREE.Vector3()
+  const scratchCameraWorldPos = new THREE.Vector3()
   const tmpOrbitPos = new THREE.Vector3()
   const deselectFromQuat = new THREE.Quaternion()
   const deselectToQuat = new THREE.Quaternion().setFromEuler(GALAXY_CAMERA_EULER)
@@ -1038,6 +1040,9 @@ export function mountGalaxyScene(
       camera.position.z = st.zCurrent - st.zCamDistance
       clampGalaxyCameraXY(camera, meta.xy_range, 0.08)
     }
+    camera.updateMatrixWorld()
+    camera.getWorldPosition(scratchCameraWorldPos)
+    uCameraWorldPosGal.value.copy(scratchCameraWorldPos)
     // P13.4 — Timeline reads `bridgeZ` ≡ macro axis focus; during focus `zCurrent` is kept at movie.z (enter anim only).
     setGalaxyCameraZ(st.zCurrent)
     const expectedPr = Math.min(window.devicePixelRatio, 2)

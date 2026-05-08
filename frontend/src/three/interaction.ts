@@ -36,6 +36,7 @@ const CLICK_MAX_MOVE_PX = 6
 const _worldProject = new THREE.Vector3()
 const _raycaster = new THREE.Raycaster()
 const _ndc = new THREE.Vector2()
+const _pickCameraWorldPos = new THREE.Vector3()
 
 /** Project world position to viewport CSS pixels (client coordinates). */
 function worldToScreenCss(
@@ -131,6 +132,11 @@ export function attachGalaxyActiveMeshInteraction(options: {
     return _raycaster.ray
   }
 
+  const pickCameraWorldZ = () => {
+    camera.updateMatrixWorld()
+    return camera.getWorldPosition(_pickCameraWorldPos).z
+  }
+
   /**
    * P11.6 — `selectedMovieId != null` 且 Perlin 包围球沿射线近于 active 命中时，视为焦点星交互（tooltip / 点击保持 focus）。
    */
@@ -158,6 +164,8 @@ export function attachGalaxyActiveMeshInteraction(options: {
       zVisWindow: st.zVisWindow,
       requireSlabInteraction,
       selectionMaskPickSet,
+      cameraWorldZ: pickCameraWorldZ(),
+      nearCullExemptMovieId: st.selectedMovieId,
     })
     if (pickedActive === null) return true
     return tFocus < pickedActive.t
@@ -175,6 +183,8 @@ export function attachGalaxyActiveMeshInteraction(options: {
       zVisWindow: st.zVisWindow,
       requireSlabInteraction,
       selectionMaskPickSet,
+      cameraWorldZ: pickCameraWorldZ(),
+      nearCullExemptMovieId: st.selectedMovieId,
     })
   }
 

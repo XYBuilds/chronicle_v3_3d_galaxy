@@ -4,7 +4,7 @@ overview: Phase 22 收口视觉与交互层债务：相机最近裁剪（idle �
 todos:
   - id: p221-near-cull
     content: P22.1 相机近裁：世界 Z 距离 < NEAR_CULL_WORLD_Z 不渲染（focus 例外）；vertex shader + picking 同步
-    status: pending
+    status: cancelled
   - id: p222-focus-active-r
     content: P22.2 focus 态 active sphere 半径上限下调（指定位置后 dial-in）
     status: pending
@@ -31,7 +31,6 @@ todos:
     status: pending
 isProject: false
 ---
-
 
 # Phase 22 — 视觉 & 交互精修
 
@@ -556,7 +555,7 @@ P23 的开始页 cover/perlin 交互复用同一 orbit 输入链路。引入本�
 | floating 退出按钮 z-index 与未来 HUD 冲突                              | 低   | z-60 现有 HUD 最高 z 之下；Tech Spec 记录 z-index 表                   |
 | constellation 拆 3 mesh 导致绘制次数 ×3，性能回退                      | 低   | 实测 60K instance 主体下 3 LineSegments 几乎无成本（< 0.1ms/frame）    |
 | 海报 w780 在弱网用户首次 drawer 加载更慢                               | 低   | 本来就是 lazy 加载（drawer 才请求）；可加 `loading="lazy"`（已有）     |
-| 反向拖拽模式与用户长期肌肉记忆冲突                                      | 低   | 默认保持 normal；inverted 仅作实验模式，通过 query 显式开启             |
+| 反向拖拽模式与用户长期肌肉记忆冲突                                     | 低   | 默认保持 normal；inverted 仅作实验模式，通过 query 显式开启            |
 | 命名统一不完整（漏 grep 某些字串）                                     | 低   | 完工前 grep "Chronicle v3" / "TMDB 电影宇宙" 双关键字；列表化 review   |
 
 ## 出口准入

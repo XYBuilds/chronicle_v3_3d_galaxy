@@ -4,7 +4,7 @@ overview: Phase 22 收口视觉与交互层债务：相机最近裁剪（idle �
 todos:
   - id: p221-near-cull
     content: P22.1 相机近裁：世界 Z 距离 < NEAR_CULL_WORLD_Z 不渲染（focus 例外）；vertex shader + picking 同步
-    status: pending
+    status: completed
   - id: p222-focus-active-r
     content: P22.2 focus 态 active sphere 半径上限下调（指定位置后 dial-in）
     status: pending

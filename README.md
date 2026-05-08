@@ -1,6 +1,6 @@
-# TMDB 电影宇宙（Chronicle v3 · 3D Galaxy）
+# The Movie Cosmos（TMDB Movie Cosmos / Chronicle v3）
 
-> 把 ~60K TMDB 电影渲染为一个**可漫游的 2.5D 粒子星系**：
+> The Movie Cosmos 把 ~60K TMDB 电影渲染为一个**可漫游的 2.5D 粒子星系**：
 > 文本语义 + 流派 + 原始语言经 UMAP 降维到 X/Y，`release_date` 转小数年份作为 Z；
 > `vote_count` 驱动尺寸、`vote_average` 驱动明暗、主 genre 决定色相。
 
@@ -42,15 +42,15 @@ chronicle_v3_3d_galaxy/
 
 按变更优先级阅读：
 
-| 文档 | 内容 |
-|------|------|
-| [`docs/project_docs/TMDB 电影宇宙 Tech Spec.md`](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md) | 系统架构、前端渲染、相机/拾取、JSON Schema、部署拓扑 |
-| [`docs/project_docs/TMDB 电影宇宙 Data Pipeline.md`](docs/project_docs/TMDB%20电影宇宙%20Data%20Pipeline.md) | 数据流 SSOT：清洗、特征工程、UMAP、自动化 cron、Pages + R2 部署 |
-| [`docs/project_docs/TMDB 电影宇宙 Design Spec.md`](docs/project_docs/TMDB%20电影宇宙%20Design%20Spec.md) | 视觉与交互规则 |
-| [`docs/project_docs/星球状态机 spec.md`](docs/project_docs/星球状态机%20spec.md) | 单星状态机（idle/selecting/selected/...） |
-| [`docs/project_docs/视觉参数总表.md`](docs/project_docs/视觉参数总表.md) | shader uniform 与 OKLab L 等参数表 |
-| [`docs/project_docs/TMDB 数据特征工程与 3D 映射总表.md`](docs/project_docs/TMDB%20数据特征工程与%203D%20映射总表.md) | feature → 渲染映射 |
-| [`docs/project_docs/TMDB 电影宇宙 PRD.md`](docs/project_docs/TMDB%20电影宇宙%20PRD.md) | 产品需求 |
+| 文档                                                                                                                 | 内容                                                            |
+| -------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| [`docs/project_docs/TMDB 电影宇宙 Tech Spec.md`](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md)                 | 系统架构、前端渲染、相机/拾取、JSON Schema、部署拓扑            |
+| [`docs/project_docs/TMDB 电影宇宙 Data Pipeline.md`](docs/project_docs/TMDB%20电影宇宙%20Data%20Pipeline.md)         | 数据流 SSOT：清洗、特征工程、UMAP、自动化 cron、Pages + R2 部署 |
+| [`docs/project_docs/TMDB 电影宇宙 Design Spec.md`](docs/project_docs/TMDB%20电影宇宙%20Design%20Spec.md)             | 视觉与交互规则                                                  |
+| [`docs/project_docs/星球状态机 spec.md`](docs/project_docs/星球状态机%20spec.md)                                     | 单星状态机（idle/selecting/selected/...）                       |
+| [`docs/project_docs/视觉参数总表.md`](docs/project_docs/视觉参数总表.md)                                             | shader uniform 与 OKLab L 等参数表                              |
+| [`docs/project_docs/TMDB 数据特征工程与 3D 映射总表.md`](docs/project_docs/TMDB%20数据特征工程与%203D%20映射总表.md) | feature → 渲染映射                                              |
+| [`docs/project_docs/TMDB 电影宇宙 PRD.md`](docs/project_docs/TMDB%20电影宇宙%20PRD.md)                               | 产品需求                                                        |
 
 ---
 
@@ -94,14 +94,14 @@ npm run storybook -w frontend
 
 ## 4. 自动化任务（Phase 18 出口）
 
-| 任务 | Workflow | 入口脚本 | 频率 | 作用 |
-|------|----------|----------|------|------|
-| **每日票数刷新** | [`.github/workflows/nightly_vote_refresh.yml`](.github/workflows/nightly_vote_refresh.yml) | [`scripts/cron/nightly_vote_refresh.py`](scripts/cron/nightly_vote_refresh.py) | `0 20 * * *` UTC + dispatch | 沿用 frozen `threshold_versions`，UPDATE `vote_count/avg/popularity`，新过线片入 `movies_pending`；**含维度漂移探测（默认 fail CI）**；导出 + R2 + Pages |
-| **月度 refit** | [`.github/workflows/monthly_refit.yml`](.github/workflows/monthly_refit.yml) | [`scripts/cron/monthly_refit.py`](scripts/cron/monthly_refit.py) | `0 20 1 * *` UTC + dispatch | 重算 dynamic threshold + 全量 DensMAP + Procrustes 对齐 v1 reference + 合并 pending；P18.5b 软闸；**含维度漂移探测（默认 fail CI）**；导出 + R2 + Pages |
-| **R2 上传（被 cron 调用）** | — | [`scripts/cron/upload_galaxy_r2.py`](scripts/cron/upload_galaxy_r2.py) | 每次 cron 末端 | 上传 `galaxy_data.json.gz` / `galaxy_search_index.json.gz` 到 R2，写 `galaxy_assets_manifest.json` |
-| **从 Supabase 导出**（被 cron 调用） | — | [`scripts/cron/export_from_supabase.py`](scripts/cron/export_from_supabase.py) | 每次 cron | 分页 + 并行拉 `movies` → `build_galaxy_payload` → 写 `frontend/public/data/*` |
-| **Phase 18.1b 基准** | [`.github/workflows/phase18_refit_benchmark.yml`](.github/workflows/phase18_refit_benchmark.yml) | [`scripts/experiments/phase18_core_refit_benchmark.py`](scripts/experiments/phase18_core_refit_benchmark.py) | 仅 dispatch | 在 `ubuntu-24.04` 上跑 fusion → DensMAP → Procrustes → export，得墙钟与峰值 RSS |
-| **GitHub Pages（灰度备线）** | [`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml) | — | push 到 `main` | 兼作回滚备线，1–2 周双轨期 |
+| 任务                                 | Workflow                                                                                         | 入口脚本                                                                                                     | 频率                        | 作用                                                                                                                                                     |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **每日票数刷新**                     | [`.github/workflows/nightly_vote_refresh.yml`](.github/workflows/nightly_vote_refresh.yml)       | [`scripts/cron/nightly_vote_refresh.py`](scripts/cron/nightly_vote_refresh.py)                               | `0 20 * * *` UTC + dispatch | 沿用 frozen `threshold_versions`，UPDATE `vote_count/avg/popularity`，新过线片入 `movies_pending`；**含维度漂移探测（默认 fail CI）**；导出 + R2 + Pages |
+| **月度 refit**                       | [`.github/workflows/monthly_refit.yml`](.github/workflows/monthly_refit.yml)                     | [`scripts/cron/monthly_refit.py`](scripts/cron/monthly_refit.py)                                             | `0 20 1 * *` UTC + dispatch | 重算 dynamic threshold + 全量 DensMAP + Procrustes 对齐 v1 reference + 合并 pending；P18.5b 软闸；**含维度漂移探测（默认 fail CI）**；导出 + R2 + Pages  |
+| **R2 上传（被 cron 调用）**          | —                                                                                                | [`scripts/cron/upload_galaxy_r2.py`](scripts/cron/upload_galaxy_r2.py)                                       | 每次 cron 末端              | 上传 `galaxy_data.json.gz` / `galaxy_search_index.json.gz` 到 R2，写 `galaxy_assets_manifest.json`                                                       |
+| **从 Supabase 导出**（被 cron 调用） | —                                                                                                | [`scripts/cron/export_from_supabase.py`](scripts/cron/export_from_supabase.py)                               | 每次 cron                   | 分页 + 并行拉 `movies` → `build_galaxy_payload` → 写 `frontend/public/data/*`                                                                            |
+| **Phase 18.1b 基准**                 | [`.github/workflows/phase18_refit_benchmark.yml`](.github/workflows/phase18_refit_benchmark.yml) | [`scripts/experiments/phase18_core_refit_benchmark.py`](scripts/experiments/phase18_core_refit_benchmark.py) | 仅 dispatch                 | 在 `ubuntu-24.04` 上跑 fusion → DensMAP → Procrustes → export，得墙钟与峰值 RSS                                                                          |
+| **GitHub Pages（灰度备线）**         | [`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml)                       | —                                                                                                            | push 到 `main`              | 兼作回滚备线，1–2 周双轨期                                                                                                                               |
 
 操作指南：
 
@@ -117,14 +117,14 @@ npm run storybook -w frontend
 
 复制 [`.env.example`](.env.example) 为 `.env`（已被 gitignore），按需填入。仓库 **Settings → Secrets and variables → Actions** 同样需要这些值用于 GHA：
 
-| 类别 | 变量 | 备注 |
-|------|------|------|
-| Supabase | `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` | nightly + monthly 共用；`service_role` 切勿入仓 |
-| Kaggle | `KAGGLE_USERNAME` / `KAGGLE_KEY` | 用于 daily update 拉取 |
-| 月度 bundle | `GALAXY_EMBED_BUNDLE_URL` | 单行 http(s) zip 直链；workflow 已 trim/CRLF 兼容 |
-| Cloudflare Pages | `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` / `CLOUDFLARE_PAGES_PROJECT_NAME` | API Token 仅需 **Account → Pages → Edit** |
-| Cloudflare R2 | `R2_ACCOUNT_ID` / `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` / `R2_BUCKET` / `R2_PUBLIC_BASE_URL` | 5 个变量缺一即 R2 step 安全 skip |
-| CF Web Analytics | `CF_WEB_ANALYTICS_BEACON_TOKEN`（CI Secret） / `VITE_CF_BEACON_TOKEN`（构建注入名） | 用于注入 Cloudflare beacon；未配置时构建仍成功 |
+| 类别             | 变量                                                                                               | 备注                                              |
+| ---------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| Supabase         | `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY`                                                       | nightly + monthly 共用；`service_role` 切勿入仓   |
+| Kaggle           | `KAGGLE_USERNAME` / `KAGGLE_KEY`                                                                   | 用于 daily update 拉取                            |
+| 月度 bundle      | `GALAXY_EMBED_BUNDLE_URL`                                                                          | 单行 http(s) zip 直链；workflow 已 trim/CRLF 兼容 |
+| Cloudflare Pages | `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` / `CLOUDFLARE_PAGES_PROJECT_NAME`                 | API Token 仅需 **Account → Pages → Edit**         |
+| Cloudflare R2    | `R2_ACCOUNT_ID` / `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` / `R2_BUCKET` / `R2_PUBLIC_BASE_URL` | 5 个变量缺一即 R2 step 安全 skip                  |
+| CF Web Analytics | `CF_WEB_ANALYTICS_BEACON_TOKEN`（CI Secret） / `VITE_CF_BEACON_TOKEN`（构建注入名）                | 用于注入 Cloudflare beacon；未配置时构建仍成功    |
 
 ---
 

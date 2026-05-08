@@ -9,7 +9,7 @@
     "phaseIndexFailed": "Índice de búsqueda — error"
   },
   "cover": {
-    "title": "Listo",
+    "title": "the movie cosmos",
     "start": "Entrar",
     "startAriaLabel": "Entrar — ir a la galaxia e inicializar los gráficos"
   },
@@ -73,7 +73,7 @@
     "modalTitle": "Acerca de esta experiencia",
     "modalSubtitle": "Panel provisional: el texto y los enlaces se finalizarán antes del lanzamiento.",
     "introHeading": "Resumen",
-    "introBody": "(Provisional) TMDB Movie Cosmos: ~60.000 películas como una galaxia de partículas 2,5D; línea de tiempo, búsqueda (títulos / personas / géneros) y resaltado multiselección. Texto de producto pendiente.",
+    "introBody": "(Provisional) The Movie Cosmos: ~60.000 películas como una galaxia de partículas 2,5D; línea de tiempo, búsqueda (títulos / personas / géneros) y resaltado multiselección. Texto de producto pendiente.",
     "dataHeading": "Fuentes de datos",
     "dataBody": "(Provisional) Las atribuciones y referencias se añadirán al cierre; aquí aún no hay ninguna.",
     "stackHeading": "Stack",

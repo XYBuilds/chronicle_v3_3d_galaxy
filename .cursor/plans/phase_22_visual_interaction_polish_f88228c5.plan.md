@@ -28,7 +28,7 @@ todos:
     status: pending
   - id: p229-doc-sync-report
     content: P22.9 同步 Tech Spec / Design Spec / 视觉参数总表 / Data Pipeline / README + Phase 22 实施报告
-    status: pending
+    status: completed
 isProject: false
 ---
 

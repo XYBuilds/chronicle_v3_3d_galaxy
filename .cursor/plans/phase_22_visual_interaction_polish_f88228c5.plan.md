@@ -22,7 +22,7 @@ todos:
     status: completed
   - id: p227-rename-the-movie-cosmos
     content: P22.7 README / index.html title / docs / locales 中 Product name 统一为 'The Movie Cosmos'（不动仓库/目录/git remote）
-    status: pending
+    status: completed
   - id: p228-focus-drag-invert-mode
     content: P22.8 focus 态轨道拖拽新增反向模式（yaw/pitch 取反）用于实验；支持 query 或开关切换，不改默认模式
     status: pending

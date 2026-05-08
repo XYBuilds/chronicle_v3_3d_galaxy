@@ -42,7 +42,6 @@ export interface GenreSearchHit {
   highlightRanges: TextHighlightRange[]
 }
 
-const MOVIE_RESULT_CAP = 12
 const PERSON_RESULT_CAP = 8
 const GENRE_RESULT_CAP = 5
 
@@ -142,7 +141,18 @@ export function scoreMoviesForQuery(movies: readonly Movie[], queryRaw: string):
     if (a.tier !== b.tier) return a.tier === 'prefix' ? -1 : 1
     return b.score - a.score
   })
-  return hits.slice(0, MOVIE_RESULT_CAP)
+
+  if (
+    import.meta.env.DEV &&
+    import.meta.env.MODE !== 'test' &&
+    hits.length > 300
+  ) {
+    console.warn(
+      `[searchScore] scoreMoviesForQuery: ${hits.length} movie hits (>300); list is scrollable.`,
+    )
+  }
+
+  return hits
 }
 
 const ROLE_BITS: { bit: number; short: string }[] = [

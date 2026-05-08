@@ -41,7 +41,7 @@ _DEFAULT_XY = _REPO_ROOT / "data" / "output" / "umap_xy.npy"
 _DEFAULT_JSON = _REPO_ROOT / "frontend" / "public" / "data" / "galaxy_data.json"
 _DEFAULT_GZ = _REPO_ROOT / "frontend" / "public" / "data" / "galaxy_data.json.gz"
 
-POSTER_BASE = "https://image.tmdb.org/t/p/w500"
+POSTER_BASE = "https://image.tmdb.org/t/p/w780"
 EMBEDDING_MODEL_ID = "paraphrase-multilingual-MiniLM-L12-v2"
 
 def _split_list_cell(val: object) -> list[str]:

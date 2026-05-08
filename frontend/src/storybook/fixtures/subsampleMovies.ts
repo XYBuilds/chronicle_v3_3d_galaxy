@@ -101,7 +101,7 @@ export const subsampleMovieMarthasVineyard: Movie = {
   producers: ['Charles Cooper', 'Jesse Metcalfe', 'Michael Prupas', 'Joel S. Rice'],
   director_of_photography: ['William McKnight'],
   music_composer: ['Matthew Rogers'],
-  poster_url: 'https://image.tmdb.org/t/p/w500/3FGGJh5S9G29YGIRYqe3zca40yL.jpg',
+  poster_url: 'https://image.tmdb.org/t/p/w780/3FGGJh5S9G29YGIRYqe3zca40yL.jpg',
   id: 657018,
   imdb_id: 'tt10768536',
 }
@@ -141,7 +141,7 @@ export const subsampleMovieParadiseRoad: Movie = {
   producers: [],
   director_of_photography: ['Peter James'],
   music_composer: ['Ross Edwards'],
-  poster_url: 'https://image.tmdb.org/t/p/w500/mEA7Iv1e6HqpSGMfVUdUfYOusNU.jpg',
+  poster_url: 'https://image.tmdb.org/t/p/w780/mEA7Iv1e6HqpSGMfVUdUfYOusNU.jpg',
   id: 77223,
   imdb_id: 'tt0119859',
 }
@@ -175,7 +175,7 @@ export const subsampleMovieKika: Movie = {
   producers: ['Agustín Almodóvar'],
   director_of_photography: ['Alfredo Mayo'],
   music_composer: [],
-  poster_url: 'https://image.tmdb.org/t/p/w500/jUEBKaMqcvrz0HHF8Cei8asjRWr.jpg',
+  poster_url: 'https://image.tmdb.org/t/p/w780/jUEBKaMqcvrz0HHF8Cei8asjRWr.jpg',
   id: 8223,
   imdb_id: 'tt0107315',
 }
@@ -209,7 +209,7 @@ export const subsampleMovieHappiness: Movie = {
   producers: [],
   director_of_photography: [],
   music_composer: [],
-  poster_url: 'https://image.tmdb.org/t/p/w500/y3Xv1IEZd46sMQSDRnXyBMwPqsB.jpg',
+  poster_url: 'https://image.tmdb.org/t/p/w780/y3Xv1IEZd46sMQSDRnXyBMwPqsB.jpg',
   id: 489533,
   imdb_id: 'tt7704920',
 }

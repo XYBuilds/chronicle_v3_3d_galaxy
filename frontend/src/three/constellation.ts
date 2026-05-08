@@ -14,9 +14,9 @@ const MASK_PRODUCERS = 16
 export type ChainKey = 'producers' | 'crew' | 'cast'
 
 /** P22.6 — per-chain line opacity when not hovered */
-export const CONSTELLATION_CHAIN_DEFAULT_OPACITY = 0.04
+export const CONSTELLATION_CHAIN_DEFAULT_OPACITY = 0.025
 /** P22.6 — chain opacity when hovering a star that includes that chain's role for the selected person */
-export const CONSTELLATION_CHAIN_HOVER_OPACITY = 0.18
+export const CONSTELLATION_CHAIN_HOVER_OPACITY = 0.2
 
 const CHAIN_ORDER: readonly { key: ChainKey; mask: number }[] = [
   { key: 'producers', mask: MASK_PRODUCERS },

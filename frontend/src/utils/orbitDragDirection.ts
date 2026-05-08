@@ -1,4 +1,4 @@
-/** P22.8 — focus orbit pointer-drag direction (A/B); default matches pre-P22 behavior. */
+/** P22.8 — focus orbit pointer-drag direction (A/B); product default is inverted. */
 export type OrbitDragDirectionMode = 'normal' | 'inverted'
 
 export function orbitDirectionSign(mode: OrbitDragDirectionMode): number {
@@ -12,15 +12,15 @@ export function resolveOrbitDragDirectionModeFromInputs(
 ): OrbitDragDirectionMode {
   if (windowOverride === 'inverted' || windowOverride === 'normal') return windowOverride
   if (queryValue === 'inverted' || queryValue === 'normal') return queryValue
-  return 'normal'
+  return 'inverted'
 }
 
 /**
  * P22.8 — `window.__galaxyOrbitDragMode` ('inverted' | 'normal') overrides URL when set.
- * URL: `?orbitDrag=inverted|normal`. Omitted or invalid → `normal` (unchanged default feel).
+ * URL: `?orbitDrag=inverted|normal`. Omitted or invalid → `inverted`; use `?orbitDrag=normal` for legacy drag feel.
  */
 export function getOrbitDragDirectionMode(): OrbitDragDirectionMode {
-  if (typeof window === 'undefined') return 'normal'
+  if (typeof window === 'undefined') return 'inverted'
   const win = window as Window & { __galaxyOrbitDragMode?: string }
   const q = new URLSearchParams(window.location.search).get('orbitDrag')
   return resolveOrbitDragDirectionModeFromInputs(win.__galaxyOrbitDragMode, q)

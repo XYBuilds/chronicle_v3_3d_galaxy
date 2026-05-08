@@ -401,7 +401,7 @@ export function attachGalaxyCameraControls(
     console.info(
       '[Camera] P22.8 orbit drag:',
       getOrbitDragDirectionMode(),
-      '| ?orbitDrag=inverted|normal | window.__galaxyOrbitDragMode',
+      '| default inverted; ?orbitDrag=normal|inverted | window.__galaxyOrbitDragMode',
     )
   }
 

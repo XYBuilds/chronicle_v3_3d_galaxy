@@ -13,9 +13,9 @@ describe('orbitDirectionSign', () => {
 })
 
 describe('resolveOrbitDragDirectionModeFromInputs', () => {
-  it('defaults to normal', () => {
-    expect(resolveOrbitDragDirectionModeFromInputs(undefined, null)).toBe('normal')
-    expect(resolveOrbitDragDirectionModeFromInputs('', 'bogus')).toBe('normal')
+  it('defaults to inverted', () => {
+    expect(resolveOrbitDragDirectionModeFromInputs(undefined, null)).toBe('inverted')
+    expect(resolveOrbitDragDirectionModeFromInputs('', 'bogus')).toBe('inverted')
   })
 
   it('honors query when window unset or invalid', () => {

@@ -4,7 +4,7 @@ overview: Phase 23 把项目从"打开 = 大量星星 + 进度条"升级为产�
 todos:
   - id: p231-today-json-pipeline
     content: P23.1 nightly cron pick_movie_today.py（hash by UTC date）写 today.json；R2 + manifest 同步；loadToday.ts 客户端加载 + Top-1000 fallback
-    status: pending
+    status: completed
   - id: p232-cover-grayscreen-loading
     content: P23.2 Loading 灰背景 + 'The Movie Cosmos' 大字；进度条保留；i18n key cover.todayTitle/todayHint
     status: pending
@@ -25,7 +25,6 @@ todos:
     status: pending
 isProject: false
 ---
-
 
 # Phase 23 — The Movie Today + 域名 + OG image
 

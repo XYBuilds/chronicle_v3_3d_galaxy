@@ -61,7 +61,8 @@
     "toggleFullscreen": "Toggle fullscreen (F)",
     "focusSearch": "Focus search (Cmd/Ctrl+K)",
     "close": "Close",
-    "toggleLanguage": "Choose interface language"
+    "toggleLanguage": "Choose interface language",
+    "exitFocus": "Exit focus"
   },
   "timeline": {
     "label": "Timeline (release year)",

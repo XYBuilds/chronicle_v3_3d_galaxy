@@ -19,7 +19,7 @@ todos:
     status: completed
   - id: p226-constellation-chain-hover
     content: P22.6 constellation 拆为 3 个 LineSegments（producers/crew/cast）；默认 0.04 / hover 0.18；hover 某颗星→ 查 movie_roles → 高亮该岗位链
-    status: pending
+    status: completed
   - id: p227-rename-the-movie-cosmos
     content: P22.7 README / index.html title / docs / locales 中 Product name 统一为 'The Movie Cosmos'（不动仓库/目录/git remote）
     status: pending

@@ -1,18 +1,18 @@
 ---
 name: phase 22 visual interaction polish
-overview: Phase 22 收口视觉与交互层债务：相机最近裁剪（idle 星过近不渲染）、focus active R 上限调小、focus 拖拽方向支持反向测试模式、drawer 关闭按钮删除并改为屏幕底部 floating 退出按钮、Timeline 永久切 vertical 左侧（删除横版与遗留 vertical 实现）、constellation 三链拆分 + hover 该岗位高亮、海报升级 w780、产品命名统一 "The Movie Cosmos"。
+overview: Phase 22 收口视觉与交互层债务：相机最近裁剪（idle 星过近不渲染）、focus active sphere 半径下调、focus 拖拽方向支持反向测试模式、drawer 关闭按钮删除并改为屏幕底部 floating 退出按钮、Timeline vertical 默认启用（horizontal 保留可切换，vertical 按 horizontal 样式升级）、constellation 三链拆分 + hover 该岗位高亮、海报升级 w780、产品命名统一 "The Movie Cosmos"。
 todos:
   - id: p221-near-cull
     content: P22.1 相机近裁：世界 Z 距离 < NEAR_CULL_WORLD_Z 不渲染（focus 例外）；vertex shader + picking 同步
     status: cancelled
   - id: p222-focus-active-r
-    content: P22.2 focus 态 active sphere 半径上限下调（指定位置后 dial-in）
+    content: P22.2 focus 态 active sphere 半径下调（降低整体尺度，指定位置后 dial-in）
     status: pending
   - id: p223-poster-w780
     content: P22.3 export_galaxy_json.py POSTER_BASE w500 → w780；Storybook fixtures 同步
     status: pending
   - id: p224-timeline-vertical-only
-    content: P22.4 Timeline 重写为 vertical 左侧唯一路径；删除旧 vertical / horizontal 两段代码 + useTimelineOrientationFromQuery hook
+    content: P22.4 Timeline vertical 按 horizontal 成熟样式升级并设为默认；保留 horizontal 与切换能力
     status: pending
   - id: p225-floating-exit-button
     content: P22.5 删除 Drawer SheetClose X；新增 FocusExitButton.tsx 贴屏底居中 floating；i18n key hud.exitFocus
@@ -38,9 +38,9 @@ isProject: false
 
 **做**：
 - 相机最近裁剪（按世界 Z 距离）+ picking 同步
-- focus active sphere R 上限调整（dial 留 review 拍板）
+- focus active sphere 半径下调（dial 留 review 拍板）
 - drawer SheetClose 删除 + 屏幕底部 floating 退出按钮（focus 退出）
-- Timeline 永久 vertical 左侧（重写当前 horizontal 路径为 vertical；删除遗留 vertical 路径与 `useTimelineOrientationFromQuery`）
+- Timeline vertical 左侧按 horizontal 样式升级并默认启用（保留 horizontal 与切换能力）
 - constellation 拆 3 mesh（producers / crew / cast）+ 每条独立 opacity uniform；默认 0.04 / hover 0.18 起步；hover 一颗星 → 该星所属 chain 高亮
 - focus 轨道拖拽新增方向反转测试模式（更贴合遮挡背景下的直觉）
 - 海报 `w500 → w780`（export 阶段换 URL，不前端 dpr 自适应）
@@ -55,7 +55,7 @@ isProject: false
 
 - 相机近裁判定量纲：**世界 Z 距离**（`abs(cameraWorldZ - starZ)`）
 - focus 例外：focus 那颗 active 不应被裁
-- focus R 修改对象：**active 半径上限**（不是 `FOCUS_PERLIN_CAMERA_STANDOFF`）
+- focus R 修改对象：**active sphere 半径下调**（不是 `FOCUS_PERLIN_CAMERA_STANDOFF`）
 - drawer 退出按钮：**viewport 屏幕底部 floating**（不是 drawer 内 sticky）
 - Timeline 改 vertical 后，底部空间让给该退出按钮
 - constellation hover 起步值：**默认 0.04 / hover 0.18**，留 dial-in 余地
@@ -69,7 +69,7 @@ isProject: false
 ```mermaid
 flowchart TD
     P221["P22.1 相机近裁 + picking 同步"]
-    P222["P22.2 focus active R 上限调整"]
+    P222["P22.2 focus active sphere 半径下调"]
     P223["P22.3 海报 w780 (export)"]
     P224["P22.4 Timeline 永久 vertical 左侧 + 删旧实现"]
     P225["P22.5 drawer 退出按钮 floating 底部"]
@@ -148,19 +148,19 @@ if (Math.abs(camera.position.z - hitMovie.z) < NEAR_CULL_WORLD_Z && hitMovie.id 
 
 ---
 
-## P22.2 focus active R 上限
+## P22.2 focus active sphere 半径下调
 
 ### 现状
 
 [`frontend/src/three/camera.ts`](frontend/src/three/camera.ts) L11：`FOCUS_PERLIN_CAMERA_STANDOFF = 1`（已确认不动）。
 
-active 自身世界半径来自 `getActiveWorldRadius` callback（`constellation.ts` L84 调用），实际定义在 active mesh 渲染端（`galaxyMeshes.ts` / `planet.ts`）—— 与 `vote_count` 通过 `galaxyVoteSize.ts` 派生，并有上限 cap。
+active 自身世界半径来自 `getActiveWorldRadius` callback（`constellation.ts` L84 调用），实际定义在 active mesh 渲染端（`galaxyMeshes.ts` / `planet.ts`）—— 与 `vote_count` 通过 `galaxyVoteSize.ts` 派生，并带最小/最大保护范围。
 
 ### 实施
 
-**定位 cap 常量** — 通过 `Grep` 锁定 `getActiveWorldRadius` / `activeRadius` / `MAX_ACTIVE_R` 等定义点（执行时确认）。
+**定位半径主控点** — 通过 `Grep` 锁定 `getActiveWorldRadius` / `activeRadius` 等定义点（执行时确认）。
 
-**降低 cap** — 把当前 cap（设当前为 `R_max_now`）改为 `R_max_p22`，约 0.6–0.7 倍起步，留 dial。
+**降低半径** — 不是只改上限 cap，而是下调 active sphere 半径映射本身（包含常规区间）；建议以当前整体半径的 0.6–0.7 倍起步，再 dial-in。
 
 **同步链路**：
 - `constellation.ts` 用同一 `getActiveWorldRadius` → 不需要改
@@ -212,19 +212,19 @@ POSTER_BASE = "https://image.tmdb.org/t/p/w780"
 
 ---
 
-## P22.4 Timeline 永久 vertical 左侧 + 删除遗留实现
+## P22.4 Timeline vertical 默认 + 保留 horizontal 切换
 
 ### 现状
 
 [`frontend/src/components/Timeline.tsx`](frontend/src/components/Timeline.tsx) 当前是双路径：
-- **L198-290 横版**（默认）：底部居中条带；视觉与交互目前认为更成熟
-- **L292-381 旧版 vertical**：左轨；用户判定为质量较差的旧实现，要求**丢弃**
+- **L198-290 横版**：底部居中条带；视觉与交互目前认为更成熟
+- **L292-381 vertical**：左轨；质量需向 horizontal 看齐
 
-[`frontend/src/hooks/useTimelineOrientationFromQuery.ts`](frontend/src/hooks/useTimelineOrientationFromQuery.ts) 控制 `?timeline=` query 选档。
+[`frontend/src/hooks/useTimelineOrientationFromQuery.ts`](frontend/src/hooks/useTimelineOrientationFromQuery.ts) 当前控制 `?timeline=` query 选档。
 
 ### 实施
 
-**重写策略**（用户决策）：把当前**横版**的实现复制下来，改其布局类与 `zToTrack*` 调用方向，作为唯一 vertical 实现；**删除**旧 vertical 块（L292-381）；**删除** `useTimelineOrientationFromQuery` hook 与 `?timeline=` query 解析；删除 `TimelineProps.orientation`、`TimelineHudProps.orientation`。
+**重写策略**（用户决策）：以当前**horizontal** 成熟样式为基线，更新 **vertical** 的布局与交互（`zToTrack*` 调用方向等）以对齐手感与视觉；保留 horizontal 实现与 `?timeline=` 切换能力，但默认使用 vertical。
 
 **新版 vertical 布局**（基于横版骨架）：
 - 容器 `fixed left-3 top-[8vh] z-30 h-[80vh] w-12 sm:left-5`（左侧、纵向 80vh、窄宽）
@@ -234,11 +234,11 @@ POSTER_BASE = "https://image.tmdb.org/t/p/w780"
 - ticks 用 `bottom: ${f * 100}%` 替代 `left: ${f * 100}%`
 - 拖动改用 `clientY → zFromClientY`（`zFromClientY` 已经存在 L55-62）
 
-注：`zToTrackBottomFraction` 与 `zToTrackLeftFraction` 已经实现完整，**保留底层算法不动**，只重构 UI layer 和 pointer handler。
+注：`zToTrackBottomFraction` 与 `zToTrackLeftFraction` 已经实现完整，**保留底层算法不动**，只重构 vertical 的 UI layer 和 pointer handler。
 
-**App.tsx 调整** — 删除 `useTimelineOrientationFromQuery` import；`<Timeline orientation={timelineOrientation} />` 改为 `<Timeline />`。
+**App.tsx 调整** — 保留 orientation 透传能力，但将默认 orientation 设为 `vertical`（无 query 时走 vertical）。
 
-**Storybook** — 任何调用 horizontal 的 story 改为新 vertical（或删除 horizontal-only fixture）。
+**Storybook** — 新增/更新 vertical 默认态 story；horizontal story 保留用于回归对照。
 
 ### 视觉对照
 
@@ -249,18 +249,19 @@ flowchart LR
         V1[Timeline vertical legacy]
     end
     subgraph afterP22 [After P22]
-        V2[Timeline vertical only<br/>rewritten from horizontal]
+        V2[Timeline vertical default<br/>rewritten from horizontal style]
+        H2[Timeline horizontal kept<br/>as switchable fallback]
     end
     H1 -. structure & UX inheritance .-> V2
-    V1 -. discard .-> V2
+    V1 -. style upgrade target .-> V2
 ```
 
 ### 验收
 
-- 新 vertical Timeline 视觉风格与旧 horizontal 一致（tick label fade、thumb 形态、拖动手感）
+- 新 vertical Timeline 视觉风格与 horizontal 一致（tick label fade、thumb 形态、拖动手感）
 - ESC / 键盘方向键仍可调（ArrowUp = 增 z，ArrowDown = 减 z）
-- 不再有 `?timeline=horizontal` 切换路径
-- `useTimelineOrientationFromQuery` / 旧 vertical 代码完全删除（grep 验证）
+- 默认进入 vertical（无 query / 无显式设置时）
+- `?timeline=horizontal` 切换路径仍可用（保留回归与 A/B 可能）
 - 移动端窄屏（<sm）布局可读
 
 ---
@@ -511,8 +512,8 @@ P23 的开始页 cover/perlin 交互复用同一 orbit 输入链路。引入本�
 
 **Tech Spec** ([`docs/project_docs/TMDB 电影宇宙 Tech Spec.md`](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md))：
 - §渲染：加 `NEAR_CULL_WORLD_Z` 章节（P22.1）
-- §Active sphere：注明 P22.2 R 上限调整与 dial 值
-- §Timeline：删除 horizontal 路径描述，改为 vertical only
+- §Active sphere：注明 P22.2 半径下调与 dial 值
+- §Timeline：注明 vertical 默认启用，horizontal 保留可切换
 
 **Design Spec** ([`docs/project_docs/TMDB 电影宇宙 Design Spec.md`](docs/project_docs/TMDB%20电影宇宙%20Design%20Spec.md))：
 - §交互：drawer 右上 X 已删除；focus 退出由屏幕底部 floating 按钮触发；不接受"点击空白退出 focus"
@@ -521,7 +522,7 @@ P23 的开始页 cover/perlin 交互复用同一 orbit 输入链路。引入本�
 **视觉参数总表** ([`docs/project_docs/视觉参数总表.md`](docs/project_docs/视觉参数总表.md))：
 - 加 NEAR_CULL_WORLD_Z 行
 - 加 Constellation chain opacity 行
-- 改 active R 上限值
+- 改 active sphere 半径参数值
 
 **Data Pipeline** ([`docs/project_docs/TMDB 电影宇宙 Data Pipeline.md`](docs/project_docs/TMDB%20电影宇宙%20Data%20Pipeline.md))：
 - §poster_url 字段 base 改 w780
@@ -536,9 +537,9 @@ P23 的开始页 cover/perlin 交互复用同一 orbit 输入链路。引入本�
 ## 验收清单（出口）
 
 - [ ] P22.1 推近条带极近 idle 星消失，focus 例外保留；picking 同步无鬼影；dial 值写入参数总表
-- [ ] P22.2 focus active R 上限调整、`vote_count` 极值两端目视检验通过；dial 值写入参数总表
+- [ ] P22.2 focus active sphere 半径整体下调、`vote_count` 极值两端目视检验通过；dial 值写入参数总表
 - [ ] P22.3 海报 w780 在 prod drawer 视觉锐度提升；TMDB CDN 200；旧 v1 数据兼容
-- [ ] P22.4 Timeline 永久 vertical 左侧；旧 vertical / horizontal 实现 + `useTimelineOrientationFromQuery` 删除
+- [ ] P22.4 Timeline 默认 vertical 且样式对齐 horizontal；horizontal 与切换能力保留
 - [ ] P22.5 drawer 右上 X 删除；屏幕底部 "Exit focus" 按钮 focus 时可见可点；i18n EN/zh 双语
 - [ ] P22.6 constellation 拆 3 mesh；hover 一颗星该岗位高亮（多岗位星支持多链同时高亮）
 - [ ] P22.7 README / Tech Spec / Design Spec / index.html title / locales 内品牌统一
@@ -563,4 +564,4 @@ P23 的开始页 cover/perlin 交互复用同一 orbit 输入链路。引入本�
 - 所有 P22.1–P22.9 todos `completed`（文档同步为最后一项 P22.9）
 - prod 部署后 7 类用户感知项 smoke 全部通过
 - dial-in 最终参数（NEAR_CULL_WORLD_Z / focus active R cap / constellation opacity 起步值）写入视觉参数总表
-- 五份 SSOT 文档与实施报告归档；旧 Timeline 代码彻底删除（grep 验证）
+- 五份 SSOT 文档与实施报告归档；Timeline 默认 vertical 且 horizontal 切换能力保留（grep 验证）

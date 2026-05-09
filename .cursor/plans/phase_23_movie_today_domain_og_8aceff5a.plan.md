@@ -1,6 +1,6 @@
 ---
 name: phase 23 movie today domain og
-overview: Phase 23 把项目从"打开 = 大量星星 + 旧进度条"升级为产品化首屏：每日由 nightly 选一部 The Movie Today 写入 today.json，加载阶段为新版 Loading（the movie cosmos / today 双品牌字 + 百分比阶段词，像素级样式以 Figma 为准）；加载完成后**移除 Start 按钮**，scene 进入 cover mode 仅渲染中心 perlin 球（the movie cosmos / today 文字保留，无 click hint）；该球复用主体交互（hover 白圈 + MovieTooltip：title + genres），cover 空白处拖拽即触发与 focus 一致的相机环绕（角度沿用进入主体），点击球 / Enter / Space 进入该电影 focus 态并自动展开 drawer。同步上线自定义域名与社交分享 OG 卡片（卡片由 nightly Pillow 合成）。
+overview: Phase 23 把项目从"打开 = 大量星星 + 旧进度条"升级为产品化首屏：每日由 nightly 选一部 The Movie Today 写入 today.json，加载阶段为新版 Loading（the movie cosmos / today 双品牌字 + 百分比阶段词，像素级样式以 Figma 为准）；**P23.4b** 细化 cover/Loading 色板 token、去掉旧渐变、加载完成 1000ms 过渡与字色分轨（the/movie vs cosmos vs today）。加载完成后**移除 Start 按钮**，scene 进入 cover mode 仅渲染中心 perlin 球（the movie cosmos / today 文字保留，无 click hint）；该球复用主体交互（hover 白圈 + MovieTooltip：title + genres），cover 空白处拖拽即触发与 focus 一致的相机环绕（角度沿用进入主体），点击球 / Enter / Space 进入该电影 focus 态并自动展开 drawer。同步上线自定义域名与社交分享 OG 卡片（卡片由 nightly Pillow 合成）。
 todos:
   - id: p231-today-json-pipeline
     content: P23.1 nightly cron pick_movie_today.py（hash by UTC date）写 today.json；R2 + manifest 同步；loadToday.ts 客户端加载 + Top-1000 fallback
@@ -13,6 +13,9 @@ todos:
     status: pending
   - id: p234-cover-tooltip-click-enter-focus
     content: P23.4 cover 球复用主体 hover 交互（白圈 + MovieTooltip，沿用主体字段 title+genres）；click 命中 today 直接进入该电影 focus 态 + drawer 自动展开；Enter/Space 键盘 fallback；相机角度从 cover 平滑沿用到 focus
+    status: pending
+  - id: p234b-cover-animation-refine
+    content: P23.4b cover 交互动画细化（无独立文字说明时以执行对话中给出的 Figma 链接为 SSOT）；宇宙背景黑与 #f2f2f2 token 化并复用；移除旧渐变动画；Loading 位置/配色与加载完成 1000ms 过渡见正文
     status: pending
   - id: p235-og-image-pipeline
     content: P23.5 render_og_today.py Pillow 合成 1200×630 og-today.png；nightly 集成；index.html meta og:* ；_headers 短 TTL
@@ -75,6 +78,7 @@ flowchart TD
     P232["P23.2 Loading 左下角品牌 + 新加载态 + Figma 样式"]
     P233["P23.3 Cover scene mount + cover mode + 中心 perlin 球"]
     P234["P23.4 Perlin 球 hover MovieTooltip + 点击进入 focus"]
+    P234B["P23.4b Cover 交互动画细化（token/Loading/完成过渡）"]
     P235["P23.5 OG image nightly 合成 + index.html meta"]
     P236["P23.6 自定义域名上线"]
     P237["P23.7 SSOT 同步 + 实施报告"]
@@ -83,12 +87,13 @@ flowchart TD
     P231 --> P235
     P232 --> P233
     P233 --> P234
-    P234 --> P237
+    P234 --> P234B
+    P234B --> P237
     P235 --> P237
     P236 --> P237
 ```
 
-P23.1 / P23.2 互相独立可并行；P23.3 集合两者；P23.5 / P23.6 独立可任意顺序。
+P23.1 / P23.2 互相独立可并行；P23.3 集合两者；**P23.4b 插在 P23.4 之后**（可与 P23.5/P23.6 并行，但进 P23.7 文档收口前须完成）；P23.5 / P23.6 独立可任意顺序。
 
 ---
 
@@ -392,6 +397,46 @@ cover 阶段点击空白/非球体处：**无事发生**，停留 cover；空白
 
 ---
 
+## P23.4b Cover 交互动画细化
+
+**说明**：若无单独文字规格，像素与动效以**执行该任务时在对话中给出的 Figma 链接**为 SSOT（可用 Figma MCP 拉取）。
+
+### 相关准备工作
+
+- 当前「宇宙」背景色（黑色）提成一个可在 Loading / Cover / 其它 HUD 复用的 **CSS 变量或设计 token**（命名与落点随项目现有 tokens 惯例，如 `index.css` / theme）
+- `#f2f2f2` 同样提成 **token**，供浅灰字与过渡终点色复用
+- **删除**此前 cover/loading 上用于背景的**旧渐变动画**（避免与新规冲突）
+
+### 加载中（Loading）
+
+- 品牌三字分词 **`the` / `movie` / `cosmos`**：均使用**宇宙背景色**（与 token 一致）
+- **Loading 组件布局**：按 Figma 或本段语义**更新位置**（与 P23.2 初版有差异时以本任务 + Figma 为准）
+- **`today`** 字色：使用 **`#f2f2f2`**（或等价 token）
+
+### 加载完成 → Cover 就绪
+
+- **Loading 层立刻卸载/隐藏**（无额外滞留）
+- 自加载完成瞬间起，用 **`1000ms`** 过渡到「已完成」画面（cover 就绪态）
+- **页面/首屏背景**：过渡到**宇宙背景色**
+- 品牌字颜色过渡：
+  - **`the` / `movie`**：过渡到 **`#f2f2f2`**（token）
+  - **`cosmos`**：保持**宇宙背景色**（与加载中一致，不参与变到浅灰）
+- **`today`**：全程保持 **`#f2f2f2`**（加载中与完成后一致）
+
+### 与相邻任务边界
+
+- 不改变 P23.4 的 hover/click/键盘/相机语义；本任务只收紧**色板 token、Loading 布局、加载完成前后动效时序**
+- 若与 P23.2 Design Spec 中「首屏 Loading」条目冲突，以 **P23.4b + Figma** 更新 Design Spec（归入 P23.7）
+
+### 验收
+
+- 开发者工具中可见宇宙黑、`#f2f2f2` 两处 token，且至少被 Loading/Cover 相关样式引用
+- 加载阶段无旧背景渐变动画
+- 加载完成：Loading 立即消失；约 1s 内背景与 `the`/`movie` 字色过渡符合上表；`cosmos` 仍为宇宙背景色；`today` 始终为 `#f2f2f2`
+- 与 Figma（若提供）对照无肉眼明显偏差
+
+---
+
 ## P23.5 OG image nightly 合成
 
 ### 设计
@@ -520,7 +565,7 @@ def render_og_card(movie: dict, *, output: Path, brand: str = "The Movie Cosmos"
 - §产物表加 today.json schema、og-today.png 规格
 
 **Design Spec** ([`docs/project_docs/TMDB 电影宇宙 Design Spec.md`](docs/project_docs/TMDB%20电影宇宙%20Design%20Spec.md))：
-- §首屏：Loading（the movie cosmos / today 双品牌字、百分比阶段词、无条形进度条、新加载态、Butler 字体；附 Figma 链接与 MCP 对齐记录）
+- §首屏：Loading（the movie cosmos / today 双品牌字、百分比阶段词、无条形进度条、新加载态、Butler 字体；附 Figma 链接与 MCP 对齐记录）；**P23.4b** 宇宙黑与浅灰 token、加载完成 1s 过渡、字色分轨与旧渐变移除
 - §Cover：移除 Start 按钮；保留 the movie cosmos / today 文本、无 click hint；中心 perlin 球复用主体 hover 白圈 + MovieTooltip（字段同主体 = title + genres）；空白拖拽=focus orbit；点击/Enter/Space 进入 focus；相机角度沿用
 
 **README** ([`README.md`](README.md))：
@@ -537,6 +582,7 @@ def render_og_card(movie: dict, *, output: Path, brand: str = "The Movie Cosmos"
 - [ ] P23.2 加载阶段：Figma 背景 + 左下角 the movie cosmos + 新加载态（无条形进度条）+ 标题字体
 - [ ] P23.3 加载完成 → cover mode：无 Start 按钮；保留 the movie cosmos / today 文本（无 click hint）+ 中心 perlin 球；其它 idle 星不渲染不可拾；空白拖拽 = focus orbit 环绕
 - [ ] P23.4 hover today 球出现白圈 + MovieTooltip（字段与主体一致 = title + genres）；点击 / Enter / Space 进入 focus → drawer 展开；相机角度沿用 cover 当前 yaw/pitch
+- [ ] P23.4b 宇宙背景色与 #f2f2f2 token 化；移除旧渐变；Loading 位置与字色符合正文；加载完成立刻去掉 Loading + 1000ms 过渡（背景宇宙色；the/movie→#f2f2f2；cosmos 宇宙色；today 恒 #f2f2f2）
 - [ ] P23.5 og-today.png 每日刷新；Twitter / Facebook validator 显示卡片
 - [ ] P23.6 自定义域名 + TLS + R2 CORS + og:image hostname 全部更新；备线 / 重定向策略明确
 - [ ] P23.7 四份 SSOT 文档与实施报告归档
@@ -556,7 +602,7 @@ def render_og_card(movie: dict, *, output: Path, brand: str = "The Movie Cosmos"
 
 ## 出口准入
 
-- 所有 P23.1–P23.7 todos `completed`
-- prod 部署后 7 类用户感知项 smoke 全部通过：(1) Loading 双品牌字 + 百分比阶段词 (2) 加载完成 cover 自动启动且无 Start 按钮 (3) Perlin 球可见 + 空白拖拽 orbit (4) hover 出现白圈 + 主体 MovieTooltip (5) 点击/Enter/Space 进入 focus + drawer 展开 + 相机角度沿用 (6) Twitter validator OG (7) 自定义域名 TLS
+- 所有 P23.1–P23.7 todos `completed`（含 **P23.4b**）
+- prod 部署后用户感知项 smoke 全部通过：(1) Loading 双品牌字 + 百分比阶段词 + **P23.4b 字色/过渡** (2) 加载完成 cover 自动启动且无 Start 按钮 (3) Perlin 球可见 + 空白拖拽 orbit (4) hover 出现白圈 + 主体 MovieTooltip (5) 点击/Enter/Space 进入 focus + drawer 展开 + 相机角度沿用 (6) Twitter validator OG (7) 自定义域名 TLS
 - 4 份 SSOT 文档与实施报告归档
 - 备线 *.pages.dev 仍可访问（按 P23.6 决策可重定向）

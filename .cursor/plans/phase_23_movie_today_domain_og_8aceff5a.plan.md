@@ -1,6 +1,6 @@
 ---
 name: phase 23 movie today domain og
-overview: Phase 23 把项目从"打开 = 大量星星 + 旧进度条"升级为产品化首屏：每日由 nightly 选一部 The Movie Today 写入 today.json，加载阶段为新版 Loading（左下角 the movie cosmos、无条形进度条、新背景与标题字体；像素级样式以 Figma 为准）；加载完成时 scene 进入 cover mode 仅渲染中心 perlin 球（灰背景遮其它星 + "The Movie Today" 文字），用户点击 perlin 球后进入正常 focus 态。同步上线自定义域名与社交分享 OG 卡片（卡片由 nightly Pillow 合成）。
+overview: Phase 23 把项目从"打开 = 大量星星 + 旧进度条"升级为产品化首屏：每日由 nightly 选一部 The Movie Today 写入 today.json，加载阶段为新版 Loading（the movie cosmos / today 双品牌字 + 百分比阶段词，像素级样式以 Figma 为准）；加载完成后**移除 Start 按钮**，scene 进入 cover mode 仅渲染中心 perlin 球（the movie cosmos / today 文字保留，无 click hint）；该球复用主体交互（hover 白圈 + MovieTooltip：title + genres），cover 空白处拖拽即触发与 focus 一致的相机环绕（角度沿用进入主体），点击球 / Enter / Space 进入该电影 focus 态并自动展开 drawer。同步上线自定义域名与社交分享 OG 卡片（卡片由 nightly Pillow 合成）。
 todos:
   - id: p231-today-json-pipeline
     content: P23.1 nightly cron pick_movie_today.py（hash by UTC date）写 today.json；R2 + manifest 同步；loadToday.ts 客户端加载 + Top-1000 fallback
@@ -9,10 +9,10 @@ todos:
     content: P23.2 Loading 品牌 the movie cosmos 迁移到新位置；删除旧进度条并采用 Figma 新加载表示样式；背景色更新、标题新增专用字体、补充动画交互效果；Figma 链接到位后用 MCP 读取并对齐 token
     status: completed
   - id: p233-cover-perlin-stage
-    content: P23.3 加载完成后 scene mount + uCoverMode/uCoverTodayInstanceId uniform；其它 idle 不渲染不拾取；CoverBackdrop.tsx 灰背景 + 中心 mask；coverModeStore
+    content: P23.3 移除 Start 按钮；加载完成后 scene mount + uCoverMode/uCoverTodayInstanceId uniform；其它 idle 不渲染不拾取；CoverBackdrop（保留 the movie cosmos / today 文本，无 click hint）；coverModeStore；cover 空白拖拽复用 focus orbit 相机，角度沿用进入主体
     status: pending
-  - id: p234-cover-tooltip-click-exit
-    content: P23.4 MovieTooltip compact 模式（title + genres）；canvas click 命中 today 退出 cover；Enter/Space 键盘 fallback；退出 = drawer 自动展开 + focus
+  - id: p234-cover-tooltip-click-enter-focus
+    content: P23.4 cover 球复用主体 hover 交互（白圈 + MovieTooltip，沿用主体字段 title+genres）；click 命中 today 直接进入该电影 focus 态 + drawer 自动展开；Enter/Space 键盘 fallback；相机角度从 cover 平滑沿用到 focus
     status: pending
   - id: p235-og-image-pipeline
     content: P23.5 render_og_today.py Pillow 合成 1200×630 og-today.png；nightly 集成；index.html meta og:* ；_headers 短 TTL
@@ -32,9 +32,10 @@ isProject: false
 
 **做**：
 - nightly cron 服务端预选 today_movie_id，写独立 `today.json` + 兜底 fallback
-- Loading 阶段：左侧垂直居中 the movie cosmos、新背景、标题字体；加载进度不用旧条形进度条，用 Figma 规定的新样式（Figma 为 SSOT）
-- 加载完成 → scene mount cover mode：灰背景 + "The Movie Today" + 中心 perlin 球
-- Perlin 球 hover MovieTooltip（仅 title + genre 子集）；点击/Enter 退出 cover 进入正常 focus + drawer
+- Loading 阶段：the movie cosmos / today 双品牌字 + 百分比阶段词；加载进度不用旧条形进度条，用 Figma 规定的新样式（Figma 为 SSOT）
+- 加载完成 → **移除 Start 按钮** → scene mount cover mode：保留 the movie cosmos / today 文本（无 click hint）+ 中心 perlin 球
+- Perlin 球**复用主体交互**：hover 白圈 + MovieTooltip（沿用主体字段 = title + genres）；click / Enter / Space 进入该电影 focus + drawer 自动展开
+- cover 空白/非球体处拖拽复用 focus 的 orbit 相机环绕；相机角度沿用到进入主体后
 - nightly cron 用 Pillow 合成 `og-today.png`（1200×630），index.html 引用
 - 自定义域名上线（DNS + CF Pages binding + TLS + R2 CORS + docs URL 替换）
 
@@ -57,9 +58,12 @@ isProject: false
 - 选取规则：**全 60K 中确定性 by UTC date**（hash("YYYY-MM-DD") mod N）；预留 `min_vote_count` 默认 0
 - today.json 加载失败 fallback：**降级为 vote_count Top-1000 内随机一部**，用户感知不到出错
 - cover 阶段：**scene 必须已 mount**，cover mode 通过 uniform 屏蔽非 today instance 渲染
-- Perlin 球 hover：**保留正常 MovieTooltip**，但内容剪裁为 title + genres（不显示评分 / 年份等）
+- **移除 Start 按钮**：加载完成后不再显示按钮，球本体即入口
+- Perlin 球 hover：**完全复用主体 MovieTooltip 交互**（白圈 + tooltip），字段沿用主体（当前为 title + genres，不再做单独 compact 分支）
 - 其它 idle 星：**屏蔽 hover/click**（pickable mask）
-- cover/perlin 拖拽：复用 P22.9 的 orbit 方向模式（支持 `normal` / `inverted` A/B）
+- cover 空白/非球体拖拽：复用主体 focus 的 orbit 相机环绕（含 P22.9 的 `normal` / `inverted` A/B）；**相机角度沿用进入主体 focus 后**（不重置）
+- cover 文案：保留 `the movie cosmos / today`，**移除 click hint**，不新增其它提示
+- cover 入口动作：click 球 / Enter / Space 等价 → 进入该电影 focus + drawer 自动展开
 - OG image：**nightly Pillow 合成** 一张 1200×630 png
 - 域名：**用户自购**，我负责接入；保留 *.pages.dev 作备线
 
@@ -70,7 +74,7 @@ flowchart TD
     P231["P23.1 today.json 数据生产 + 客户端加载"]
     P232["P23.2 Loading 左下角品牌 + 新加载态 + Figma 样式"]
     P233["P23.3 Cover scene mount + cover mode + 中心 perlin 球"]
-    P234["P23.4 Perlin 球 hover MovieTooltip + 点击退出 cover"]
+    P234["P23.4 Perlin 球 hover MovieTooltip + 点击进入 focus"]
     P235["P23.5 OG image nightly 合成 + index.html meta"]
     P236["P23.6 自定义域名上线"]
     P237["P23.7 SSOT 同步 + 实施报告"]
@@ -215,7 +219,7 @@ function fallbackTodayMovieId(movies: readonly Movie[]): number {
 - `mode='loading'`：新位置 brand + 新加载态。
 - `mode='await-start'`：在 P23.3 中替换为 Cover stage（不再用按钮）。
 
-**i18n** — `STRINGS.cover.title` 对应 UI 文案保持 **the movie cosmos**（小写品牌面）；`STRINGS.cover.todayTitle` / `STRINGS.cover.todayHint` 仍供 P23.3 Cover 使用。
+**i18n** — `STRINGS.cover.title` 对应 UI 文案保持 **the movie cosmos**（小写品牌面）；`STRINGS.cover.todayTitle` 仍供 P23.3 Cover 使用；`STRINGS.cover.todayHint` 词条保留但 P23.3 起 **cover 阶段不再渲染**（移除 click hint）。
 
 ### 验收
 
@@ -227,28 +231,23 @@ function fallbackTodayMovieId(movies: readonly Movie[]): number {
 
 ---
 
-## P23.3 Cover scene mount + cover mode + 中心 perlin 球
+## P23.3 Cover scene mount + cover mode + 中心 perlin 球（无 Start，球即入口）
 
 ### 关键状态机变化
 
-当前 [`App.tsx`](frontend/src/App.tsx) phase 流程：
+P23.2 当前 `Loading` 实现保留 `mode='await-start'` 与居中 `Start` 按钮（占位），P23.3 删除该按钮分支，由 cover mode 直接接管：
 
 ```
 galaxy-loading → galaxy-error
-              → index-loading → await-start [显示 Loading mode=await-start, scene 未 mount]
-                              → started [setStarted(true) 后 mount scene]
+              → index-loading → cover-loading-today [拉 today.json, scene mount, coverMode=true]
+                              → cover-ready [Loading 退出 + Cover 文案 + 中心 perlin 球可交互]
+                              → focused [coverMode=false, drawer 自动展开, 相机角度沿用]
 ```
 
-P23 修改为：
+要点：
 
-```
-galaxy-loading → galaxy-error
-              → index-loading → cover-loading-today [拉 today.json, scene mount, cover mode true]
-                              → cover-ready [灰背景 + Perlin 球可点]
-                              → focused [coverMode false, drawer 自动展开]
-```
-
-`started` 概念被 `coverMode` 取代；scene 在 today.json 拉到（或 fallback 决定）后立即 mount。
+- `Loading` 中的 `Start` 按钮渲染分支删除（`mode='await-start'` 残留代码同步清理或仅作内部过渡占位）
+- scene 在 today.json 拉到（或 fallback 决定）后立即 mount，不再等待用户点击
 
 ### Cover mode uniform
 
@@ -274,28 +273,15 @@ if (uCoverMode > 0.5 && float(gl_InstanceID) != uCoverTodayInstanceId) {
 
 **Pickable mask** 同步：cover mode + 非 today 直接跳过 raycaster 命中。
 
-### 灰背景层
+### Cover 视觉层（CoverBackdrop）
 
-新增 [`frontend/src/hud/CoverBackdrop.tsx`](frontend/src/hud/CoverBackdrop.tsx)：
+P23.2 已经把 `the movie cosmos / today` 双品牌字落位到 Loading 的过渡画面；P23.3 把 `cover-ready` 阶段的同款文字抽到独立 [`frontend/src/hud/CoverBackdrop.tsx`](frontend/src/hud/CoverBackdrop.tsx)，与 Loading 解耦，便于 cover 独立持续显示：
 
-```tsx
-export function CoverBackdrop() {
-  const coverMode = useCoverModeStore((s) => s.coverMode)
-  const t = useStrings()
-  if (!coverMode) return null
-  return (
-    <div className="pointer-events-auto fixed inset-0 z-40 flex flex-col items-center justify-start bg-zinc-900/95 dark:bg-zinc-900/95 light:bg-zinc-200/95 transition-opacity duration-500">
-      <h1 className="mt-[12vh] text-3xl font-bold tracking-wide text-zinc-100">{t.cover.todayTitle}</h1>
-      <p className="mt-3 text-sm text-zinc-400">{t.cover.todayHint}</p>
-      {/* 中心圆形 mask 露出 perlin 球 */}
-      <div className="absolute left-1/2 top-1/2 h-[40vh] w-[40vh] -translate-x-1/2 -translate-y-1/2 rounded-full"
-           style={{ pointerEvents: 'none', mask: 'radial-gradient(circle at center, transparent 30%, black 60%)', WebkitMask: 'radial-gradient(circle at center, transparent 30%, black 60%)' }} />
-    </div>
-  )
-}
-```
-
-注：因 cover shader 已经只渲染 today，灰背景实际可以做成"全屏 div + 中心透出 mask"或"全屏 div 带 z-index 低于 canvas"。**推荐用 CSS mask** 让中心圆形区域透出 webgl canvas 的 perlin 球；mask 边缘 soft fade 避免硬边。
+- 文案：仅保留 `the movie cosmos`（左）+ `today`（右），位置和字号沿用 P23.2 定稿
+- **不显示** click hint（移除 `STRINGS.cover.todayHint` 在 cover 阶段的渲染；i18n 词条本身可保留以兼容）
+- 不新增其它提示文字
+- 中心区域**不挡 canvas**：让 perlin 球完整显示并可被指针/键盘命中
+- 文案层 `pointer-events: none`（不挡住 cover orbit 拖拽）；右上角 HUD（Info/Lang/Fullscreen）继续显示
 
 ### 状态 store
 
@@ -306,80 +292,103 @@ interface CoverModeState {
   coverMode: boolean
   todayMovieId: number | null
   setCover: (movieId: number) => void
-  exitCover: () => void
+  exitCoverIntoFocus: () => void   // 进入主体 focus（替代旧 exitCover 命名）
 }
 ```
 
-`setCover(id)` → `coverMode = true`, `todayMovieId = id`，scene 把 uniform 置位 + 相机自动定位到该星 focus。
+- `setCover(id)` → `coverMode = true, todayMovieId = id`；scene 设 uniform 并把相机定位到 today
+- `exitCoverIntoFocus()` → 不重置相机角度；`coverMode = false` + `useGalaxyInteractionStore.setState({ selectedMovieId: todayMovieId })`（drawer 自动展开 + 进入 P11.1 perlin focus）
 
-`exitCover()` → `coverMode = false`，并 `useGalaxyInteractionStore.setState({ selectedMovieId: todayMovieId })`（触发 drawer 展开）。
+### 相机：cover 自带 orbit + 角度沿用
 
-### 相机定位
+cover 阶段相机行为**完全复用主体 focus 的 orbit drag 路径**，不再使用静态居中：
 
-cover 进入时相机要把 today 那颗放在屏幕中心。复用现有 focus 路径 + `setFocusOrbitCameraPosition`（[`camera.ts`](frontend/src/three/camera.ts) L19）。但 selectedMovieId 不能设（drawer 会展开），需要 scene 内部独立 `coverFocusId` 路径：
-- scene 检测 `coverModeStore.coverMode === true && todayMovieId`
-- 直接调 focus camera 路径（active mesh 渲染 + perlin shader），但 `selectedMovieId` 仍为 null
-- drawer 不开
+- 进入 cover 时：用现有 `setFocusOrbitCameraPosition`（[`camera.ts`](frontend/src/three/camera.ts) L19）把 today 摆到屏幕中心，初始 yaw/pitch 与主体 focus 默认一致
+- cover 拖拽空白/非球体处：触发与 focus 一致的 orbit 环绕（绕 today 旋转），含 P22.9 `?orbitDrag=normal|inverted` A/B
+- cover 内部维护 `coverFocusId = todayMovieId` 用于驱动相机/active 渲染，但 `selectedMovieId` 在 cover 阶段保持 `null`，避免 drawer 提前展开
+- `exitCoverIntoFocus()` 时**不调用任何相机重置**：直接把当前 cover 的 yaw/pitch/distance 透传给主体 focus 路径，实现“角度沿用”
+- 拾取规则：cover 阶段只有 today 可被 hover/click，空白拖拽走 orbit；这也意味着不能误命中其它星
+
+### 文案/i18n
+
+- `STRINGS.cover.todayTitle`（"the movie today" 或等价文案）：在 P23.2 的双品牌字方案下，该词条由 cover 视觉中的 `today` 字承载，是否继续作为单独 sr-only / aria-label 由 P23.4 的 a11y 段决定
+- `STRINGS.cover.todayHint`：保留词条以保兼容，但 **cover 阶段不再渲染**
 
 ### 验收
 
-- 加载完成（galaxy + index ready）→ 自动拉 today → cover 启动
-- 灰背景遮全屏；中心透出 perlin 球
-- "The Movie Today" 文字 + "Click the sphere to begin" 提示
-- 其它 idle 星不可见、不可 hover、不可 click
-- 切 dark/light 主题灰背景对应
+- 加载完成（galaxy + index ready）→ 自动拉 today → cover 启动；**全程没有 Start 按钮**
+- cover 阶段画面：`the movie cosmos`（左）+ `today`（右）+ 中心 perlin 球；**无 click hint**
+- 中心 perlin 球可见、可 hover、可 click；其它 idle 星不可见、不可 hover、不可 click
+- cover 阶段拖拽空白/非球体：相机绕 today 环绕，方向与 P22.9 `?orbitDrag` 设定一致
+- 进入主体 focus 后：相机 yaw/pitch/distance 与 cover 退出瞬间一致（不重置）
+- 切 dark/light 主题：cover 文案与背景对应
 
 ---
 
-## P23.4 Perlin 球 hover MovieTooltip + 点击退出 cover
+## P23.4 Perlin 球 hover/Tooltip 复用主体 + 点击进入 focus
 
-### Hover MovieTooltip 内容裁剪
+### Hover 交互：完全复用主体路径
 
-[`frontend/src/components/MovieTooltip.tsx`](frontend/src/components/MovieTooltip.tsx) 当前显示什么需 grep 确认（执行时）；目标：cover 模式下 hover today 那颗，tooltip 仅显示 **title + genres**，**不显示** vote_average / vote_count / release_date。
+cover 阶段 hover today 那颗的视觉与逻辑与主体 idle hover 一致，**不引入 compact 分支**：
 
-实现方式（推荐）：MovieTooltip 加 prop `compact?: boolean`；`coverMode === true && hoveredId === todayId` 时 `compact = true`。compact 模式只渲染 title 行 + genre badge 行。
+- 白色 hover 描边圈：复用主体 idle hover 的现有实现（不另外做样式）
+- [`frontend/src/components/MovieTooltip.tsx`](frontend/src/components/MovieTooltip.tsx)：cover 阶段直接渲染原 tooltip，字段沿用主体当前实现（即 `title + genres`），不再加 `compact` prop / 不裁剪字段
 
-### 点击 / Enter 触发退出
+含义：今后主体 MovieTooltip 字段如有调整（例如未来加上年份），cover 同步生效，避免双源维护。
 
-scene 的 click handler 在 cover mode 下：
+### 点击 / Enter / Space 触发进入 focus
+
+scene 的 click handler 在 cover mode 下命中 today 即进入 focus（不再叫"退出 cover"，统一动作语义）：
 
 ```ts
 function onCanvasClick(e: PointerEvent) {
   if (coverModeStore.getState().coverMode) {
     const hit = raycastFromPointer(e)
     if (hit && hit.movieId === coverModeStore.getState().todayMovieId) {
-      coverModeStore.getState().exitCover()
+      coverModeStore.getState().exitCoverIntoFocus()
     }
-    return   // cover mode 下点其它（也不可能命中）也吞掉
+    return   // cover 阶段非 today 命中已在 P23.3 mask 屏蔽，这里再兜一层
   }
   // ...原 click 流程
 }
 ```
 
-**键盘 Enter fallback** — App.tsx 全局 keydown handler 增加：
+**键盘 Enter / Space fallback** — App.tsx 全局 keydown handler 增加（无障碍 fallback，等价于 click today）：
 
 ```ts
 if ((e.key === 'Enter' || e.key === ' ') && coverModeStore.getState().coverMode) {
   e.preventDefault()
-  coverModeStore.getState().exitCover()
+  coverModeStore.getState().exitCoverIntoFocus()
 }
 ```
 
-### 退出动效
+`exitCoverIntoFocus()` 行为见 P23.3：把 `selectedMovieId` 设为 today，并保留当前相机 yaw/pitch/distance。
 
-- coverMode false → CoverBackdrop opacity 500ms 淡出（已在 P23.3 transition 类）
-- 同时 setSelectedMovieId(todayId) → drawer 自动展开（P19 ESC 流程已支持）
-- 相机平滑过渡：cover focus → normal focus 复用现有 `transitionDriver`
+### 进入 focus 的视觉/相机过渡
+
+- `coverMode = false` → CoverBackdrop（`the movie cosmos / today` 文案）按 P23.2 时序淡出
+- 同时 `setSelectedMovieId(todayId)` → drawer 自动展开（P19 ESC 流程已支持）
+- 相机：**沿用 cover 当前角度**，不再重置；如需平滑过渡仅在 distance 上对齐 P11.1 focus 默认半径，yaw/pitch 不动
+- 拖拽方向：`?orbitDrag=normal|inverted` 在 cover 与 focus 阶段语义保持一致，用户无感切换
+
+### 非目标点击行为
+
+cover 阶段点击空白/非球体处：**无事发生**，停留 cover；空白拖拽则触发相机环绕（见 P23.3）。click 与 drag 的判定阈值复用主体已有判定，避免拖拽尾点误触进入 focus。
+
+### a11y / 键盘可达性
+
+- 在 cover 阶段为 perlin 球提供一个不可见的可 focus 元素（如绝对定位的透明 `<button aria-label="The Movie Today: <title>">` 覆盖中心区域），保证 Tab 可达 + Enter/Space 等价 click
+- ESC 在 cover 阶段**不响应**（用户没有"取消 today"的语义；ESC 行为留给 focus 阶段退出，沿用 P22）
 
 ### 验收
 
-- Hover today perlin 球：tooltip 显示 title + 1-3 个 genre badge；不显示评分 / 年份
-- 鼠标移开 today：tooltip 消失
-- Click today 球：背景淡出 + drawer 滑入 + 进入 P11.1 perlin focus
-- Enter / Space 等同点击
-- `?orbitDrag=inverted` 在 cover/perlin 阶段同样生效（用于直觉测试）
-- ESC 在 cover 阶段不退出（用户没有"取消 today"语义；ESC 留给 focus 退出 P22）—— 或一致退出至"无 cover 无 focus"，**待验收时拍**
-- a11y：cover 阶段 `<button role="button">` 包裹 perlin 球？或仅依赖 canvas + Enter — 推荐前者（可 Tab focus）
+- Hover today perlin 球：白圈出现 + tooltip 弹出，**字段与主体 hover 完全一致**（当前为 title + genres，跟随主体改动）
+- 鼠标移开 today：白圈与 tooltip 消失
+- Click today 球：cover 文案淡出 + drawer 滑入 + 进入 P11.1 perlin focus；**相机 yaw/pitch 不重置**
+- Enter / Space：等同 click（含 Tab 聚焦后键盘触发）
+- 点击/拖拽空白处：不进入 focus；拖拽产生 orbit 环绕
+- `?orbitDrag=inverted` 在 cover 与 focus 阶段方向一致
+- ESC 在 cover 阶段不退出（不存在"取消 today"语义）
 
 ---
 
@@ -511,8 +520,8 @@ def render_og_card(movie: dict, *, output: Path, brand: str = "The Movie Cosmos"
 - §产物表加 today.json schema、og-today.png 规格
 
 **Design Spec** ([`docs/project_docs/TMDB 电影宇宙 Design Spec.md`](docs/project_docs/TMDB%20电影宇宙%20Design%20Spec.md))：
-- §首屏：Loading（左下角 the movie cosmos、无条形进度条、新加载态、背景与标题字体；附 Figma 链接与 MCP 对齐记录）+ cover 流程 + perlin 球可达性
-- §MovieTooltip compact 模式
+- §首屏：Loading（the movie cosmos / today 双品牌字、百分比阶段词、无条形进度条、新加载态、Butler 字体；附 Figma 链接与 MCP 对齐记录）
+- §Cover：移除 Start 按钮；保留 the movie cosmos / today 文本、无 click hint；中心 perlin 球复用主体 hover 白圈 + MovieTooltip（字段同主体 = title + genres）；空白拖拽=focus orbit；点击/Enter/Space 进入 focus；相机角度沿用
 
 **README** ([`README.md`](README.md))：
 - §标题 / §6 反映新域名 + The Movie Today 概念
@@ -526,8 +535,8 @@ def render_og_card(movie: dict, *, output: Path, brand: str = "The Movie Cosmos"
 
 - [ ] P23.1 nightly 写出 today.json + R2 + manifest；客户端连续刷新一致 / 跨日变；fallback 三类失败兜底有效
 - [ ] P23.2 加载阶段：Figma 背景 + 左下角 the movie cosmos + 新加载态（无条形进度条）+ 标题字体
-- [ ] P23.3 加载完成 → cover mode：灰背景 + "The Movie Today" + 中心 perlin 球；其它 idle 星不渲染不可拾
-- [ ] P23.4 hover 弹 compact MovieTooltip（title + genres）；点击 / Enter / Space 退出 cover → drawer 展开 + focus 平滑过渡
+- [ ] P23.3 加载完成 → cover mode：无 Start 按钮；保留 the movie cosmos / today 文本（无 click hint）+ 中心 perlin 球；其它 idle 星不渲染不可拾；空白拖拽 = focus orbit 环绕
+- [ ] P23.4 hover today 球出现白圈 + MovieTooltip（字段与主体一致 = title + genres）；点击 / Enter / Space 进入 focus → drawer 展开；相机角度沿用 cover 当前 yaw/pitch
 - [ ] P23.5 og-today.png 每日刷新；Twitter / Facebook validator 显示卡片
 - [ ] P23.6 自定义域名 + TLS + R2 CORS + og:image hostname 全部更新；备线 / 重定向策略明确
 - [ ] P23.7 四份 SSOT 文档与实施报告归档
@@ -548,6 +557,6 @@ def render_og_card(movie: dict, *, output: Path, brand: str = "The Movie Cosmos"
 ## 出口准入
 
 - 所有 P23.1–P23.7 todos `completed`
-- prod 部署后 7 类用户感知项 smoke 全部通过：(1) Loading 左下角品牌 + 新加载态背景 (2) 加载完成 cover (3) Perlin 球可见 (4) hover compact tooltip (5) 点击退出 + drawer (6) Twitter validator OG (7) 自定义域名 TLS
+- prod 部署后 7 类用户感知项 smoke 全部通过：(1) Loading 双品牌字 + 百分比阶段词 (2) 加载完成 cover 自动启动且无 Start 按钮 (3) Perlin 球可见 + 空白拖拽 orbit (4) hover 出现白圈 + 主体 MovieTooltip (5) 点击/Enter/Space 进入 focus + drawer 展开 + 相机角度沿用 (6) Twitter validator OG (7) 自定义域名 TLS
 - 4 份 SSOT 文档与实施报告归档
 - 备线 *.pages.dev 仍可访问（按 P23.6 决策可重定向）

@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react'
+
 import { useCoverModeStore } from '@/store/coverModeStore'
 import { cn } from '@/lib/utils'
 
@@ -7,10 +9,16 @@ export interface CoverBackdropProps {
   showTodayFocusTrap: boolean
 }
 
+function prefersReducedMotion(): boolean {
+  if (typeof window === 'undefined') return false
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+}
+
 /**
  * P23.3 — Cover stage brand overlay (`the movie cosmos` / `today`), pointer-events none so canvas orbit works.
  * No click hint (see STRINGS.cover.todayHint — not rendered).
  * P23.4 — Invisible focusable control for Enter/Space (see global key handler in App).
+ * P23.4b — 1000ms entry: the/movie color universe → brand-muted; cosmos `--cosmos-universe-bg` + opacity 100%→0; today opacity 0→100%.
  */
 export function CoverBackdrop({ todayFocusAriaLabel, showTodayFocusTrap }: CoverBackdropProps) {
   const onActivateToday = () => {
@@ -19,22 +27,70 @@ export function CoverBackdrop({ todayFocusAriaLabel, showTodayFocusTrap }: Cover
   const brandTypeSizeClass = 'font-butler text-[120px] tracking-[-0.02em] sm:text-[180px] lg:text-[240px]'
   const brandLineHeightClass = 'leading-[0.6]'
 
+  const [entrySettled, setEntrySettled] = useState(() => prefersReducedMotion())
+
+  useEffect(() => {
+    if (prefersReducedMotion()) {
+      setEntrySettled(true)
+      return
+    }
+    setEntrySettled(false)
+    const t = window.setTimeout(() => setEntrySettled(true), 1000)
+    return () => window.clearTimeout(t)
+  }, [])
+
+  useEffect(() => {
+    if (entrySettled) {
+      console.log('[CoverBackdrop] P23.4b cover entry animation settled')
+    }
+  }, [entrySettled])
+
   return (
     <>
       <div
         aria-hidden
-        className="pointer-events-none absolute left-8 top-1/2 -translate-y-1/2 lowercase text-white sm:left-12"
+        className="pointer-events-none absolute left-8 top-1/2 -translate-y-1/2 lowercase sm:left-12"
       >
-        <p className={cn(brandTypeSizeClass, brandLineHeightClass)}>the</p>
-        <p className={cn(brandTypeSizeClass, brandLineHeightClass)}>movie</p>
-        <p className={cn(brandTypeSizeClass, brandLineHeightClass, 'opacity-[0.04]')}>cosmos</p>
+        <p
+          className={cn(
+            brandTypeSizeClass,
+            brandLineHeightClass,
+            !entrySettled && 'cosmos-cover-entry-the-movie',
+            entrySettled && 'text-[color:var(--cosmos-brand-muted)]',
+          )}
+        >
+          the
+        </p>
+        <p
+          className={cn(
+            brandTypeSizeClass,
+            brandLineHeightClass,
+            !entrySettled && 'cosmos-cover-entry-the-movie',
+            entrySettled && 'text-[color:var(--cosmos-brand-muted)]',
+          )}
+        >
+          movie
+        </p>
+        <p
+          className={cn(
+            brandTypeSizeClass,
+            brandLineHeightClass,
+            !entrySettled && 'cosmos-cover-entry-cosmos-opacity',
+            entrySettled && 'text-[color:var(--cosmos-universe-bg)] opacity-0',
+          )}
+        >
+          cosmos
+        </p>
       </div>
 
       <p
         aria-hidden
         className={cn(
-          'pointer-events-none absolute right-8 top-1/2 -translate-y-1/2 lowercase text-white opacity-100 sm:right-12',
+          'pointer-events-none absolute right-8 top-1/2 -translate-y-1/2 lowercase sm:right-12',
           brandTypeSizeClass,
+          brandLineHeightClass,
+          !entrySettled && 'cosmos-cover-entry-today-opacity',
+          entrySettled && 'text-[color:var(--cosmos-brand-muted)] opacity-100',
         )}
       >
         today

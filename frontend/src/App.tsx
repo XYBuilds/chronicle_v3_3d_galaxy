@@ -282,32 +282,47 @@ function App() {
   const hasSearchIndex = data.meta.has_search_index === true
 
   return (
-    <main className="relative min-h-screen w-full overflow-hidden bg-black text-foreground">
+    <main className="relative min-h-screen w-full overflow-hidden bg-[color:var(--cosmos-universe-bg)] text-foreground">
       <div
         ref={canvasHostRef}
-        className="fixed inset-0 h-dvh w-full bg-black"
+        className="fixed inset-0 h-dvh w-full bg-[color:var(--cosmos-universe-bg)]"
         aria-label="Galaxy WebGL canvas host"
       />
       {coverBrandMounted ? (
-        <div
-          className={cn(
-            'pointer-events-none fixed inset-0 z-30 transition-opacity duration-300 ease-out',
-            coverMode ? 'opacity-100' : 'opacity-0',
-          )}
-          aria-hidden
-          onTransitionEnd={(ev) => {
-            if (ev.propertyName !== 'opacity') return
-            if (ev.target !== ev.currentTarget) return
-            if (!useCoverModeStore.getState().coverMode) {
-              setCoverBrandMounted(false)
-            }
-          }}
-        >
-          <CoverBackdrop
-            todayFocusAriaLabel={strings.cover.todayFocusAriaLabel(todayMovie?.title ?? '')}
-            showTodayFocusTrap={coverMode && todayMovieId !== null}
+        <>
+          {/*
+            Stable mount: do NOT key this on `todayMovieId`. `exitCoverIntoFocus` clears `todayMovieId`
+            before the opacity fade ends — a key change would remount the veil and replay the 1000ms
+            `#f2f2f2` → transparent animation (full-screen pale flash).
+          */}
+          <div
+            aria-hidden
+            className="pointer-events-none fixed inset-0 z-[25] cosmos-cover-entry-page-shade"
           />
-        </div>
+          <div
+            className={cn(
+              'pointer-events-none fixed inset-0 z-30 transition-opacity duration-300 ease-out',
+              coverMode ? 'opacity-100' : 'opacity-0',
+            )}
+            aria-hidden
+            onTransitionEnd={(ev) => {
+              if (ev.propertyName !== 'opacity') return
+              if (ev.target !== ev.currentTarget) return
+              if (!useCoverModeStore.getState().coverMode) {
+                setCoverBrandMounted(false)
+              }
+            }}
+          >
+            {/*
+              Same as veil: keying on `todayMovieId` remounts on exit when id becomes null and can
+              restart entry motion mid-fade.
+            */}
+            <CoverBackdrop
+              todayFocusAriaLabel={strings.cover.todayFocusAriaLabel(todayMovie?.title ?? '')}
+              showTodayFocusTrap={coverMode && todayMovieId !== null}
+            />
+          </div>
+        </>
       ) : null}
       <HoverRing />
       <MovieTooltip />

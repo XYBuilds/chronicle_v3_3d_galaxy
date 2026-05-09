@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import type { GalaxyGzipProgress } from '@/data/loadGalaxyGzip'
 import { FullscreenButton } from '@/hud/FullscreenButton'
@@ -9,8 +9,7 @@ import { cn } from '@/lib/utils'
 
 export type LoadingIndexStatus = 'pending' | 'loading' | 'ready' | 'skipped' | 'error'
 
-export type LoadingMode = 'loading' | 'await-start'
-type TransitionStage = 'loading' | 'cosmos-fade' | 'start-shown' | 'ready'
+type TransitionStage = 'loading' | 'cosmos-fade' | 'brand-ready'
 
 export interface LoadingProps {
   className?: string
@@ -25,10 +24,6 @@ export interface LoadingProps {
   gzipDone?: boolean
   /** Search index hydrate status (fourth step indicator). */
   indexStatus?: LoadingIndexStatus
-  /** P15.2 — when `await-start`, Start CTA pinned to bottom of viewport. */
-  mode?: LoadingMode
-  /** P15.2 — Start button click handler. */
-  onStart?: () => void
 }
 
 function computeLoadingDisplay(
@@ -47,8 +42,13 @@ function computeLoadingDisplay(
     const ratio =
       progress.totalBytes !== null && progress.totalBytes > 0
         ? Math.min(1, progress.downloadedBytes / Math.max(1, progress.totalBytes))
-        : 0
-    return { percent: Math.round(ratio * 70), stageKey: 'download' }
+        : progress.downloadedBytes > 0
+          ? 0.02
+          : 0
+    const pct = Math.round(ratio * 70)
+    /** Manifest / TCP stall before first byte: avoid an indefinite 0% bar. */
+    const downloadPct = progress.downloadedBytes === 0 ? Math.max(pct, 3) : pct
+    return { percent: downloadPct, stageKey: 'download' }
   }
 
   if (progress.phase === 'decompress') return { percent: 75, stageKey: 'decompress' }
@@ -57,7 +57,8 @@ function computeLoadingDisplay(
 }
 
 /**
- * Full-screen loading overlay: gzip + search-index progress (four steps) and optional Cover Start.
+ * Full-screen loading overlay: gzip + search-index progress (four steps).
+ * P23.3 — Cover brand + Start CTA removed; see {@link CoverBackdrop}.
  */
 export function Loading({
   className,
@@ -65,13 +66,10 @@ export function Loading({
   progress = null,
   gzipDone = false,
   indexStatus = 'pending',
-  mode = 'loading',
-  onStart,
 }: LoadingProps) {
   const s = useStrings()
   const label = labelProp ?? s.loading.title
-  const effectiveGzipDone = gzipDone || mode === 'await-start'
-  const { percent, stageKey } = computeLoadingDisplay(progress, indexStatus, effectiveGzipDone)
+  const { percent, stageKey } = computeLoadingDisplay(progress, indexStatus, gzipDone)
   const stageLabel =
     stageKey === 'download'
       ? s.loading.phaseDownload
@@ -80,63 +78,46 @@ export function Loading({
         : stageKey === 'parse'
           ? s.loading.phaseParse
           : s.loading.phaseIndex
-  const busy = mode === 'loading'
-  const [transitionStage, setTransitionStage] = useState<TransitionStage>(
-    mode === 'loading' ? 'loading' : 'ready',
-  )
-  const prevModeRef = useRef<LoadingMode>(mode)
+  const busy = true
+  const [transitionStage, setTransitionStage] = useState<TransitionStage>('loading')
 
   useEffect(() => {
-    const prevMode = prevModeRef.current
-    prevModeRef.current = mode
-
-    if (mode === 'loading') {
+    if (!gzipDone) {
       setTransitionStage('loading')
       return
     }
-
-    if (prevMode === 'loading') {
-      setTransitionStage('cosmos-fade')
-      const timer1 = window.setTimeout(() => {
-        setTransitionStage('start-shown')
-      }, 500)
-      const timer2 = window.setTimeout(() => {
-        // Start appears first (no animation), then today fades in.
-        setTransitionStage('ready')
-      }, 516)
-      return () => {
-        window.clearTimeout(timer1)
-        window.clearTimeout(timer2)
-      }
+    const indexTerminal =
+      indexStatus === 'ready' || indexStatus === 'skipped' || indexStatus === 'error'
+    if (!indexTerminal) {
+      setTransitionStage('loading')
+      return
     }
-
-    setTransitionStage('ready')
-  }, [mode])
+    setTransitionStage('cosmos-fade')
+    const t = window.setTimeout(() => setTransitionStage('brand-ready'), 500)
+    return () => window.clearTimeout(t)
+  }, [gzipDone, indexStatus])
 
   const loadingVisible = transitionStage === 'loading'
   const cosmosReady = transitionStage !== 'loading' && transitionStage !== 'cosmos-fade'
-  const todayVisible = transitionStage === 'ready'
-  const showStart = transitionStage === 'start-shown' || transitionStage === 'ready'
   const brandTypeSizeClass = 'font-butler text-[120px] tracking-[-0.02em] sm:text-[180px] lg:text-[240px]'
   const brandLineHeightClass = 'leading-[0.6]'
 
+  useEffect(() => {
+    if (transitionStage !== 'brand-ready') return
+    console.log('[Loading] brand-ready (hud chrome visible)')
+  }, [transitionStage])
+
   return (
     <div
-      role={mode === 'await-start' ? 'dialog' : 'status'}
+      role="status"
       aria-busy={busy}
       aria-label={label}
-      aria-labelledby={mode === 'await-start' ? 'cover-title' : undefined}
       className={cn(
         'fixed inset-0 z-50 flex min-h-0 flex-col overflow-hidden bg-[#f2f2f2] text-black',
         className,
       )}
     >
-      {mode === 'await-start' ? (
-        <h1 id="cover-title" className="sr-only">
-          {s.cover.title}
-        </h1>
-      ) : null}
-      {mode === 'await-start' ? (
+      {transitionStage === 'brand-ready' ? (
         <div className="pointer-events-none fixed right-3 top-3 z-40 flex items-center gap-2 sm:right-4 sm:top-4">
           <InfoButton styleMode="outline" />
           <LanguageSwitch styleMode="outline" />
@@ -149,9 +130,7 @@ export function Loading({
         className="pointer-events-none absolute left-8 top-1/2 -translate-y-1/2 lowercase sm:left-12"
       >
         <p className={cn(brandTypeSizeClass, brandLineHeightClass)}>the</p>
-        <p className={cn(brandTypeSizeClass, brandLineHeightClass)}>
-          movie
-        </p>
+        <p className={cn(brandTypeSizeClass, brandLineHeightClass)}>movie</p>
         <p
           className={cn(
             brandTypeSizeClass,
@@ -169,7 +148,7 @@ export function Loading({
         className={cn(
           'pointer-events-none absolute right-8 top-1/2 -translate-y-1/2 lowercase transition-opacity duration-500 sm:right-12',
           brandTypeSizeClass,
-          todayVisible ? 'opacity-100' : 'opacity-0',
+          cosmosReady ? 'opacity-100' : 'opacity-0',
         )}
       >
         today
@@ -182,20 +161,6 @@ export function Loading({
         >
           {percent}% {stageLabel}
         </p>
-      ) : null}
-
-      {mode === 'await-start' && showStart && onStart ? (
-        <div className="flex min-h-0 flex-1 items-center justify-center px-6">
-          <button
-            type="button"
-            autoFocus
-            aria-label={s.cover.startAriaLabel}
-            onClick={onStart}
-            className="rounded-md border border-black/50 bg-black px-8 py-3 text-base font-normal text-white hover:opacity-90 focus-visible:ring-2 focus-visible:ring-black/60"
-          >
-            {s.cover.start}
-          </button>
-        </div>
       ) : null}
     </div>
   )

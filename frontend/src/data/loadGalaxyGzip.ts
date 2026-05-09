@@ -75,6 +75,13 @@ export async function fetchGunzippedJson(
   url: string,
   onProgress?: (p: GalaxyGzipProgress) => void,
 ): Promise<unknown> {
+  emit(onProgress, {
+    phase: 'download',
+    downloadedBytes: 0,
+    totalBytes: null,
+    message: getStrings().galaxyData.preparingDownload,
+  })
+
   let res: Response
   try {
     res = await fetch(url)

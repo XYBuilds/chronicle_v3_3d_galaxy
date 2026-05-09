@@ -32,7 +32,6 @@ export const CustomLabel: Story = {
 /** Galaxy gzip finished; fourth step = search index hydrate (matches App index-loading overlay). */
 export const PhaseSearchIndexLoading: Story = {
   args: {
-    mode: 'loading',
     label: 'Loading search index…',
     progress: null,
     gzipDone: true,
@@ -42,7 +41,6 @@ export const PhaseSearchIndexLoading: Story = {
 
 export const PhaseSearchIndexSkipped: Story = {
   args: {
-    mode: 'loading',
     label: 'Loading search index…',
     progress: null,
     gzipDone: true,
@@ -52,7 +50,6 @@ export const PhaseSearchIndexSkipped: Story = {
 
 export const PhaseSearchIndexFailed: Story = {
   args: {
-    mode: 'loading',
     label: 'Loading search index…',
     progress: null,
     gzipDone: true,
@@ -60,38 +57,32 @@ export const PhaseSearchIndexFailed: Story = {
   },
 }
 
-/** Cover — fourth step complete (ready); spinner hidden, Start CTA (matches App await-start). */
-export const CoverAwaitStart: Story = {
+/** P23.3 — index terminal + resolving today.json (matches App cover-loading-today gate). */
+export const CoverLoadingToday: Story = {
   args: {
-    mode: 'await-start',
-    label: STRINGS.cover.title,
+    label: STRINGS.loading.title,
     progress: null,
     gzipDone: true,
     indexStatus: 'ready',
-    onStart: () => {},
   },
 }
 
-/** Cover — bundle without search index (fourth step skipped). */
+/** Bundle without search index (fourth step skipped). */
 export const CoverIndexSkipped: Story = {
   args: {
-    mode: 'await-start',
-    label: STRINGS.cover.title,
+    label: STRINGS.loading.title,
     progress: null,
     gzipDone: true,
     indexStatus: 'skipped',
-    onStart: () => {},
   },
 }
 
-/** Cover — search index hydrate failed; user can still enter (search disabled at runtime). */
+/** Search index hydrate failed; bundle still proceeds (search disabled at runtime). */
 export const CoverIndexFailed: Story = {
   args: {
-    mode: 'await-start',
-    label: STRINGS.cover.title,
+    label: STRINGS.loading.title,
     progress: null,
     gzipDone: true,
     indexStatus: 'error',
-    onStart: () => {},
   },
 }

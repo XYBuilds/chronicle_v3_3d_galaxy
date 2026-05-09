@@ -26,6 +26,9 @@ uniform int uSelectionAtlasWidth;
 uniform int uSelectionAtlasHeight;
 uniform float uNearCullWorldZ;
 uniform vec3 uCameraWorldPos;
+uniform float uCoverMode;
+uniform float uCoverTodayInstanceId;
+uniform float uCoverActiveSizeBoost;
 
 attribute float hue;
 attribute float voteNorm;
@@ -37,8 +40,15 @@ varying float vFocusAlphaMult;
 void main() {
   float aZ = instanceMatrix[3][2];
   bool exemptNearCull =
-    (uFocusedInstanceId >= 0) && (gl_InstanceID == uFocusedInstanceId);
+    ((uFocusedInstanceId >= 0) && (gl_InstanceID == uFocusedInstanceId))
+    || (uCoverMode > 0.5 && float(gl_InstanceID) == uCoverTodayInstanceId);
   if (!exemptNearCull && abs(uCameraWorldPos.z - aZ) < uNearCullWorldZ) {
+    gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
+    vColor = vec3(0.0);
+    vFocusAlphaMult = 1.0;
+    return;
+  }
+  if (uCoverMode > 0.5 && float(gl_InstanceID) != uCoverTodayInstanceId) {
     gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
     vColor = vec3(0.0);
     vFocusAlphaMult = 1.0;
@@ -64,6 +74,9 @@ void main() {
 
   bool isFocused = (uFocusedInstanceId >= 0) && (gl_InstanceID == uFocusedInstanceId);
   float sActive = inFocus * uSizeScale * uActiveSizeMul * aSize;
+  if (uCoverMode > 0.5 && float(gl_InstanceID) == uCoverTodayInstanceId) {
+    sActive *= uCoverActiveSizeBoost;
+  }
   if (isFocused) {
     sActive = 0.0;
   }

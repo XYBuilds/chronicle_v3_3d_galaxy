@@ -136,6 +136,11 @@ function makeSharedUniforms(
       /** P22.1 — paired with `uCameraWorldPos`; see `nearCullWorldZ.ts`. */
       uNearCullWorldZ: { value: NEAR_CULL_WORLD_Z },
       uCameraWorldPos: { value: new THREE.Vector3() },
+      /** P23.3 — cover mode: draw only today instance; matched with `uCoverTodayInstanceId`. */
+      uCoverMode: { value: 0 },
+      uCoverTodayInstanceId: { value: -1 },
+      /** P23.3 — scales idle + active shell for low vote_count visibility on cover (matches CPU pick). */
+      uCoverActiveSizeBoost: { value: 1 },
     },
   }
 }

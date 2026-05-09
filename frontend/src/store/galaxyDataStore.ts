@@ -4,6 +4,7 @@ import type { GalaxyGzipProgress } from '@/data/loadGalaxyGzip'
 import type { TodayPayload } from '@/data/loadToday'
 import { resolveTodayMovieId } from '@/data/loadToday'
 import { resolveGalaxyDataGzipUrl } from '@/lib/galaxyAssetUrls'
+import { getStrings } from '@/lib/strings'
 import type { GalaxyData } from '@/types/galaxy'
 import { galaxyDataDefaultUrl, loadGalaxyData } from '@/utils/loadGalaxyData'
 
@@ -35,7 +36,12 @@ export const useGalaxyDataStore = create<GalaxyDataStoreState>((set) => ({
     set({
       status: 'loading',
       errorMessage: null,
-      loadProgress: null,
+      loadProgress: {
+        phase: 'download',
+        downloadedBytes: 0,
+        totalBytes: null,
+        message: getStrings().galaxyData.preparingDownload,
+      },
       todayMovieId: null,
       todayPayload: null,
       todayUsedFallback: false,

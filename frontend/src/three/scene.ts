@@ -5,6 +5,7 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 
 import { setGalaxyCameraZ } from '@/lib/galaxyCameraZBridge'
 import { getStrings } from '@/lib/strings'
+import { useCoverModeStore } from '@/store/coverModeStore'
 import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
 import { useSearchIndexStore } from '@/store/searchIndexStore'
 import type { Meta, Movie } from '@/types/galaxy'
@@ -276,6 +277,9 @@ export function mountGalaxyScene(
   const uZCamDistUniform = galUniforms.uZCamDistance as THREE.Uniform<number>
   const uHoveredInstanceId = galUniforms.uHoveredInstanceId as THREE.Uniform<number>
   const uCameraWorldPosGal = galUniforms.uCameraWorldPos as THREE.Uniform<THREE.Vector3>
+  const uCoverModeGal = galUniforms.uCoverMode as THREE.Uniform<number>
+  const uCoverTodayInstanceIdGal = galUniforms.uCoverTodayInstanceId as THREE.Uniform<number>
+  const uCoverActiveSizeBoostGal = galUniforms.uCoverActiveSizeBoost as THREE.Uniform<number>
   uZ.value = zCurrent
   uZw.value = zVisWindow
   uZCamDistUniform.value = useGalaxyInteractionStore.getState().zCamDistance
@@ -294,6 +298,7 @@ export function mountGalaxyScene(
 
   const syncConstellationFromStores = () => {
     const st = useGalaxyInteractionStore.getState()
+    const cover = useCoverModeStore.getState().coverMode
     const index = useSearchIndexStore.getState().data
     const entry =
       st.searchMode === 'person' && st.selectionPersonKey && index
@@ -308,6 +313,7 @@ export function mountGalaxyScene(
     const mat = galaxy.activeMaterial
     constellation.sync({
       visible:
+        !cover &&
         st.searchMode === 'person' &&
         st.constellationEnabled &&
         (st.selectionIds?.length ?? 0) >= 2,
@@ -320,6 +326,7 @@ export function mountGalaxyScene(
     })
   }
   syncConstellationFromStores()
+  const unsubCoverConstellation = useCoverModeStore.subscribe(syncConstellationFromStores)
   const unsubConstellation = useGalaxyInteractionStore.subscribe((state, prev) => {
     if (
       state.searchMode === prev.searchMode &&
@@ -351,7 +358,7 @@ export function mountGalaxyScene(
 
   type SelectionPhase = 'idle' | 'selecting' | 'selected' | 'deselecting'
   let selectionPhase: SelectionPhase = 'idle'
-  const macroZWheel = () => selectionPhase === 'idle'
+  const macroZWheel = () => selectionPhase === 'idle' && !useCoverModeStore.getState().coverMode
   const focusDriver = createTransitionDriver()
   const zCurrentDriver = createTransitionDriver()
   let zTimelineAnimFrom = zCurrent
@@ -505,9 +512,13 @@ export function mountGalaxyScene(
       { x: movie.x, y: movie.y, z: movie.z },
       stPick.focusNeighborRadius,
     )
-    // 仅首次从宏观进入 focus 时对准默认朝向；在 focus 内换星保留 orbit，避免视角被拧回。
+    const preserveOrbitFromCover = useCoverModeStore.getState().exitCoverPreserveOrbit
+    if (preserveOrbitFromCover) {
+      useCoverModeStore.setState({ exitCoverPreserveOrbit: false })
+    }
+    // 仅首次从宏观进入 focus 时对准默认朝向；在 focus 内换星保留 orbit；P23.3 cover→focus 保留 orbit。
     useGalaxyInteractionStore.setState(
-      selectionPhase === 'idle'
+      selectionPhase === 'idle' && !preserveOrbitFromCover
         ? { focusNeighborIds: neighborIds, focusOrbit: { yaw: 0, pitch: 0 } }
         : { focusNeighborIds: neighborIds },
     )
@@ -520,7 +531,7 @@ export function mountGalaxyScene(
     const { r, rActive } = resolveSelectionWorldRadius(movie, uZ.value, uZw.value, galaxy.activeMaterial, maskPick)
     const { yaw, pitch } = useGalaxyInteractionStore.getState().focusOrbit
     setFocusOrbitCameraPosition(toCam, movie, yaw, pitch)
-    selectingEnteredFromMacro = selectionPhase === 'idle'
+    selectingEnteredFromMacro = selectionPhase === 'idle' && !preserveOrbitFromCover
     if (!selectingEnteredFromMacro) {
       selectingStartQuat.copy(camera.quaternion)
       // 飞入结束帧对齐到新 pivot（与保留 yaw/pitch 一致）；飞行过程中不用此四元数插值
@@ -904,8 +915,16 @@ export function mountGalaxyScene(
 
   const canvas = renderer.domElement
 
-  const getCameraMode = () => (selectionPhase === 'selected' ? 'orbit' : 'macro')
+  const getCameraMode = () =>
+    useCoverModeStore.getState().coverMode ? 'orbit' : selectionPhase === 'selected' ? 'orbit' : 'macro'
   const getOrbitPivot = () => {
+    const cov = useCoverModeStore.getState()
+    if (cov.coverMode && cov.todayMovieId !== null) {
+      const m = movies.find((x) => x.id === cov.todayMovieId)
+      if (!m) return null
+      orbitPivotVec.set(m.x, m.y, m.z)
+      return orbitPivotVec
+    }
     if (selectionPhase !== 'selected') return null
     const m = movies[pendingSelectInstanceIndex]
     if (!m) return null
@@ -930,6 +949,22 @@ export function mountGalaxyScene(
     activeMaterial: galaxy.activeMaterial,
     selectionPlanet: planet,
   })
+
+  /** P23.3 — align timeline + orbit pivot with “The Movie Today” before first frame. */
+  {
+    const cov = useCoverModeStore.getState()
+    if (cov.coverMode && cov.todayMovieId !== null) {
+      const tm = movies.find((m) => m.id === cov.todayMovieId)
+      if (tm) {
+        console.log('[Scene] bootstrap cover orbit', { movieId: tm.id })
+        animateZCurrentTo(tm.z)
+        useGalaxyInteractionStore.setState({ focusOrbit: { yaw: 0, pitch: 0 } })
+        setFocusOrbitCameraPosition(camera.position, tm, 0, 0)
+        applyFocusOrbitLookAt(camera, tm)
+        restCam.copy(camera.position)
+      }
+    }
+  }
 
   const w = renderer.domElement.width
   const h = renderer.domElement.height
@@ -976,6 +1011,19 @@ export function mountGalaxyScene(
     uZ.value = st.zCurrent
     uZw.value = st.zVisWindow
     uZCamDistUniform.value = st.zCamDistance
+    {
+      const cv = useCoverModeStore.getState()
+      if (cv.coverMode && cv.todayMovieId !== null) {
+        const idxCov = movieIdToIndex.get(cv.todayMovieId) ?? -1
+        uCoverModeGal.value = 1
+        uCoverTodayInstanceIdGal.value = idxCov
+        uCoverActiveSizeBoostGal.value = 4
+      } else {
+        uCoverModeGal.value = 0
+        uCoverTodayInstanceIdGal.value = -1
+        uCoverActiveSizeBoostGal.value = 1
+      }
+    }
     {
       const hid = st.hoveredMovieId
       uHoveredInstanceId.value = hid === null ? -1 : movieIdToIndex.get(hid) ?? -1
@@ -1053,8 +1101,19 @@ export function mountGalaxyScene(
     }
 
     if (selectionPhase === 'idle') {
-      camera.position.z = st.zCurrent - st.zCamDistance
-      clampGalaxyCameraXY(camera, meta.xy_range, 0.08)
+      const covLive = useCoverModeStore.getState()
+      if (covLive.coverMode && covLive.todayMovieId !== null) {
+        const mCov = movies.find((x) => x.id === covLive.todayMovieId)
+        if (mCov) {
+          const { yaw, pitch } = st.focusOrbit
+          setFocusOrbitCameraPosition(tmpOrbitPos, mCov, yaw, pitch)
+          camera.position.copy(tmpOrbitPos)
+          applyFocusOrbitLookAt(camera, mCov)
+        }
+      } else {
+        camera.position.z = st.zCurrent - st.zCamDistance
+        clampGalaxyCameraXY(camera, meta.xy_range, 0.08)
+      }
     }
     camera.updateMatrixWorld()
     camera.getWorldPosition(scratchCameraWorldPos)
@@ -1082,6 +1141,7 @@ export function mountGalaxyScene(
     unsubSelectionMask()
     unsubConstellation()
     unsubConstellationIndex()
+    unsubCoverConstellation()
     constellation.group.removeFromParent()
     constellation.dispose()
     detachControls()

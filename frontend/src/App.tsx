@@ -9,6 +9,7 @@ import { LoadFailurePage } from '@/components/LoadFailurePage'
 import { Loading } from '@/components/Loading'
 import { MovieTooltip } from '@/components/MovieTooltip'
 import { Timeline } from '@/components/Timeline'
+import { CoverBackdrop } from '@/hud/CoverBackdrop'
 import { HoverRing } from '@/hud/HoverRing'
 import { FocusExitButton } from '@/hud/FocusExitButton'
 import { FocusLReference } from '@/hud/FocusLReference'
@@ -16,7 +17,9 @@ import { FullscreenButton } from '@/hud/FullscreenButton'
 import { InfoButton } from '@/hud/InfoButton'
 import { LanguageSwitch } from '@/hud/LanguageSwitch'
 import { isGalaxyFullscreenAvailable, toggleGalaxyFullscreen } from '@/hud/fullscreenApi'
+import { resolveTodayMovieId } from '@/data/loadToday'
 import { clearSearch, useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
+import { useCoverModeStore } from '@/store/coverModeStore'
 import { useGalaxyDataStore } from '@/store/galaxyDataStore'
 import { useSearchIndexStore } from '@/store/searchIndexStore'
 import { useStrings } from '@/lib/strings'
@@ -44,18 +47,28 @@ function App() {
   const indexHydrationTerminal =
     indexStatus === 'ready' || indexStatus === 'skipped' || indexStatus === 'error'
 
-  const [started, setStarted] = useState(false)
+  /** P23.3 — today.json resolved + cover store seeded; scene may mount. */
+  const [coverBootReady, setCoverBootReady] = useState(false)
 
-  type AppLoadPhase = 'galaxy-loading' | 'galaxy-error' | 'index-loading' | 'await-start' | 'started'
+  const coverMode = useCoverModeStore((s) => s.coverMode)
+
+  type AppLoadPhase =
+    | 'galaxy-loading'
+    | 'galaxy-error'
+    | 'index-loading'
+    | 'cover-loading-today'
+    | 'started'
 
   const phase: AppLoadPhase = useMemo(() => {
     if (status === 'loading' || status === 'idle') return 'galaxy-loading'
     if (status === 'error') return 'galaxy-error'
     if (status === 'ready' && data !== null && !indexHydrationTerminal) return 'index-loading'
-    if (status === 'ready' && data !== null && indexHydrationTerminal && !started) return 'await-start'
-    if (status === 'ready' && data !== null && indexHydrationTerminal && started) return 'started'
+    if (status === 'ready' && data !== null && indexHydrationTerminal && !coverBootReady) {
+      return 'cover-loading-today'
+    }
+    if (status === 'ready' && data !== null && indexHydrationTerminal && coverBootReady) return 'started'
     return 'galaxy-loading'
-  }, [status, data, indexHydrationTerminal, started])
+  }, [status, data, indexHydrationTerminal, coverBootReady])
 
   useEffect(() => {
     if (phase !== 'index-loading' || !data) return
@@ -65,12 +78,24 @@ function App() {
     })
   }, [phase, data, indexStatus])
 
+  /** P23.3 — resolve The Movie Today before mounting WebGL (deterministic id + fallback). */
   useEffect(() => {
-    void fetchGalaxyData()
-  }, [fetchGalaxyData])
+    if (status !== 'ready' || !data || !indexHydrationTerminal || coverBootReady) return
+    let cancelled = false
+    void (async () => {
+      const { movieId } = await resolveTodayMovieId(data.movies)
+      if (cancelled) return
+      console.log('[App] today resolved → cover + scene gate', { movieId })
+      useCoverModeStore.getState().setCover(movieId)
+      setCoverBootReady(true)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [status, data, indexHydrationTerminal, coverBootReady])
 
   useEffect(() => {
-    if (!started || status !== 'ready' || !data || !indexHydrationTerminal) return
+    if (phase !== 'started' || !data || !indexHydrationTerminal) return
     const el = canvasHostRef.current
     if (!el) return
     const mount = mountGalaxyScene(el, data.meta, data.movies)
@@ -79,7 +104,7 @@ function App() {
       animateZCurrentRef.current = null
       mount.dispose()
     }
-  }, [started, status, data, indexHydrationTerminal])
+  }, [phase, data, indexHydrationTerminal])
 
   useEffect(() => {
     if (status !== 'ready' || !data) return
@@ -165,7 +190,6 @@ function App() {
   if (phase === 'galaxy-loading') {
     return (
       <Loading
-        mode="loading"
         label={strings.loading.title}
         progress={loadProgress}
         gzipDone={false}
@@ -183,7 +207,6 @@ function App() {
   if (phase === 'index-loading' && data !== null) {
     return (
       <Loading
-        mode="loading"
         label={strings.searchBar.indexLoading}
         progress={null}
         gzipDone
@@ -192,20 +215,15 @@ function App() {
     )
   }
 
-  if (phase === 'await-start' && data !== null) {
+  if (phase === 'cover-loading-today' && data !== null) {
     const coverIndexStatus =
       indexStatus === 'skipped' ? 'skipped' : indexStatus === 'error' ? 'error' : 'ready'
     return (
       <Loading
-        mode="await-start"
-        label={strings.cover.title}
+        label={strings.loading.title}
         progress={null}
         gzipDone
         indexStatus={coverIndexStatus}
-        onStart={() => {
-          setStarted(true)
-          console.log('[App] Cover Start — mounting WebGL scene')
-        }}
       />
     )
   }
@@ -214,7 +232,6 @@ function App() {
     console.warn('[App] unexpected branch before main scene', { phase, status, hasData: data !== null })
     return (
       <Loading
-        mode="loading"
         label={strings.loading.title}
         progress={loadProgress}
         gzipDone={false}
@@ -232,6 +249,14 @@ function App() {
         className="fixed inset-0 h-dvh w-full bg-black"
         aria-label="Galaxy WebGL canvas host"
       />
+      {coverMode ? (
+        <div
+          className="pointer-events-none fixed inset-0 z-30"
+          aria-hidden
+        >
+          <CoverBackdrop />
+        </div>
+      ) : null}
       <SearchBar hasSearchIndex={hasSearchIndex} movies={data.movies} animateZCurrentTo={animateZCurrentTo} />
       <HoverRing />
       <MovieTooltip />

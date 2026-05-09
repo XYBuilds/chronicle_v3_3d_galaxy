@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 
+import { useCoverModeStore } from '@/store/coverModeStore'
 import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
 import type { Movie } from '@/types/galaxy'
 
@@ -156,6 +157,10 @@ export function attachGalaxyActiveMeshInteraction(options: {
     const tFocus = rayPositiveSphereFirstT(ray, mf.x, mf.y, mf.z, R)
     if (tFocus === null) return false
     const selectionMaskPickSet = maskPickFromState()
+    const cov = useCoverModeStore.getState()
+    const covIdx =
+      cov.coverMode && cov.todayMovieId !== null ? movies.findIndex((m) => m.id === cov.todayMovieId) : null
+    const covBoost = (activeMaterial.uniforms.uCoverActiveSizeBoost as THREE.Uniform<number>).value
     const pickedActive = pickClosestActiveMovieAlongRay({
       ray,
       movies,
@@ -165,7 +170,10 @@ export function attachGalaxyActiveMeshInteraction(options: {
       requireSlabInteraction,
       selectionMaskPickSet,
       cameraWorldZ: pickCameraWorldZ(),
-      nearCullExemptMovieId: st.selectedMovieId,
+      nearCullExemptMovieId:
+        cov.coverMode && cov.todayMovieId !== null ? cov.todayMovieId : st.selectedMovieId,
+      coverTodayInstanceIndex: cov.coverMode && covIdx !== null && covIdx >= 0 ? covIdx : null,
+      coverActiveSizeBoost: cov.coverMode ? covBoost : 1,
     })
     if (pickedActive === null) return true
     return tFocus < pickedActive.t
@@ -173,6 +181,10 @@ export function attachGalaxyActiveMeshInteraction(options: {
 
   const pickAlongRay = (clientX: number, clientY: number, requireSlabInteraction: boolean) => {
     const st = useGalaxyInteractionStore.getState()
+    const cov = useCoverModeStore.getState()
+    const covIdx =
+      cov.coverMode && cov.todayMovieId !== null ? movies.findIndex((m) => m.id === cov.todayMovieId) : null
+    const covBoost = (activeMaterial.uniforms.uCoverActiveSizeBoost as THREE.Uniform<number>).value
     const ray = rayFromClient(clientX, clientY)
     const selectionMaskPickSet = maskPickFromState()
     return pickClosestActiveMovieAlongRay({
@@ -184,7 +196,10 @@ export function attachGalaxyActiveMeshInteraction(options: {
       requireSlabInteraction,
       selectionMaskPickSet,
       cameraWorldZ: pickCameraWorldZ(),
-      nearCullExemptMovieId: st.selectedMovieId,
+      nearCullExemptMovieId:
+        cov.coverMode && cov.todayMovieId !== null ? cov.todayMovieId : st.selectedMovieId,
+      coverTodayInstanceIndex: cov.coverMode && covIdx !== null && covIdx >= 0 ? covIdx : null,
+      coverActiveSizeBoost: cov.coverMode ? covBoost : 1,
     })
   }
 
@@ -239,6 +254,10 @@ export function attachGalaxyActiveMeshInteraction(options: {
     _worldProject.set(m.x, m.y, m.z)
     const anchor = worldToScreenCss(_worldProject, camera, domElement)
     const selectionMaskPickSet = maskPickFromState()
+    const cov = useCoverModeStore.getState()
+    const covBoost = (activeMaterial.uniforms.uCoverActiveSizeBoost as THREE.Uniform<number>).value
+    const extraWorldScale =
+      cov.coverMode && cov.todayMovieId === m.id ? covBoost : 1
     const rCss = computeActiveMeshScreenRadiusCss({
       movie: m,
       camera,
@@ -247,6 +266,7 @@ export function attachGalaxyActiveMeshInteraction(options: {
       zCurrent: st.zCurrent,
       zVisWindow: st.zVisWindow,
       selectionMaskPickSet,
+      extraWorldScale,
     })
     const planetRadiusCss = rCss > 0 ? rCss : null
     emitHover(m.id, anchor, planetRadiusCss)
@@ -270,6 +290,14 @@ export function attachGalaxyActiveMeshInteraction(options: {
       return
     }
     const picked = pickAlongRay(e.clientX, e.clientY, true)
+    const cov = useCoverModeStore.getState()
+    if (cov.coverMode && cov.todayMovieId !== null) {
+      if (picked !== null && movies[picked.index]?.id === cov.todayMovieId) {
+        console.log('[Interaction] cover click → focus today')
+        cov.exitCoverIntoFocus()
+      }
+      return
+    }
     // P13.3 — blank click in focus: do not clear selectedMovieId (only ESC / drawer / search X).
     if (picked === null && useGalaxyInteractionStore.getState().selectedMovieId !== null) {
       return

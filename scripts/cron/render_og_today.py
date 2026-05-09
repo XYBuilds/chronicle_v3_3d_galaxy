@@ -57,7 +57,10 @@ TITLE_LINE_GAP = 8
 OVERLINE_FONT_SIZE = 22
 META_FONT_SIZE = 28
 PILL_FONT_SIZE = 22
-BRAND_FONT_SIZE = 24
+# Brand line uses Butler Medium (display serif). Butler reads thinner than Inter at the
+# same pixel size, so we render the brand a notch larger than the URL footer to keep the
+# wordmark visually dominant.
+BRAND_FONT_SIZE = 30
 URL_FONT_SIZE = 20
 
 # --- Color tokens (P23.4b 宇宙黑 + #f2f2f2 SSOT 与品牌一致) -------------------------------
@@ -69,13 +72,16 @@ ACCENT_BAR_W = 6                   # left edge accent stripe (tinted by genre[0]
 # --- Fonts --------------------------------------------------------------------------------
 _INTER_VAR = _REPO_ROOT / "assets" / "fonts" / "Inter.ttf"
 _INTER_AXES = {"opsz": "Optical size", "wght": "Weight"}
+_BUTLER_MEDIUM = _REPO_ROOT / "assets" / "fonts" / "Butler-Medium.ttf"
 
 # --- Network ------------------------------------------------------------------------------
 POSTER_FETCH_TIMEOUT_S = 10
 POSTER_USER_AGENT = "the-movie-cosmos/og-renderer (+https://github.com/XYBuilds)"
 
 # --- Brand text ---------------------------------------------------------------------------
-DEFAULT_BRAND = "The Movie Cosmos"
+# UI-identity surface: lowercase per ``branding-name-convention`` rule (matches Loading /
+# Cover wordmark). Narrative copy elsewhere still uses title-case "The Movie Cosmos".
+DEFAULT_BRAND = "the movie cosmos"
 DEFAULT_FOOTER_URL = "the-movie-cosmos.pages.dev"  # P23.6 will replace with custom domain
 
 
@@ -114,6 +120,23 @@ def _load_inter(size: float, weight: int = 400) -> Any:
         return ImageFont.load_default(size=size)
     except TypeError:  # Pillow < 10.1 — should not happen given requirements.cpu.txt pin
         return ImageFont.load_default()
+
+
+def _load_butler_medium(size: float) -> Any:
+    """Return Butler Medium TTF for the brand wordmark.
+
+    Falls back to ``_load_inter(size, weight=500)`` if Butler is missing so the renderer
+    still produces a valid card on environments without the bundled serif.
+    """
+    from PIL import ImageFont  # noqa: WPS433
+
+    if _BUTLER_MEDIUM.is_file():
+        return ImageFont.truetype(str(_BUTLER_MEDIUM), size=size)
+    print(
+        f"[render_og_today] WARN Butler not found at {_BUTLER_MEDIUM}; brand falls back to Inter Medium",
+        flush=True,
+    )
+    return _load_inter(size, weight=500)
 
 
 def _release_year(release_date: str) -> str | None:
@@ -263,7 +286,9 @@ def render_og_card(
     title_font = _load_inter(TITLE_FONT_SIZE, weight=700)
     meta_font = _load_inter(META_FONT_SIZE, weight=500)
     pill_font = _load_inter(PILL_FONT_SIZE, weight=600)
-    brand_font = _load_inter(BRAND_FONT_SIZE, weight=700)
+    # Brand wordmark in Butler Medium (display serif) — pairs with Inter body to mirror the
+    # Loading/Cover typographic hierarchy in the frontend. URL line stays Inter for legibility.
+    brand_font = _load_butler_medium(BRAND_FONT_SIZE)
     url_font = _load_inter(URL_FONT_SIZE, weight=400)
 
     cur_y = POSTER_Y

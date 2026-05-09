@@ -290,8 +290,12 @@ function App() {
       />
       {coverBrandMounted ? (
         <>
+          {/*
+            Stable mount: do NOT key this on `todayMovieId`. `exitCoverIntoFocus` clears `todayMovieId`
+            before the opacity fade ends — a key change would remount the veil and replay the 1000ms
+            `#f2f2f2` → transparent animation (full-screen pale flash).
+          */}
           <div
-            key={`cover-shade-${todayMovieId ?? 0}`}
             aria-hidden
             className="pointer-events-none fixed inset-0 z-[25] cosmos-cover-entry-page-shade"
           />
@@ -309,8 +313,11 @@ function App() {
               }
             }}
           >
+            {/*
+              Same as veil: keying on `todayMovieId` remounts on exit when id becomes null and can
+              restart entry motion mid-fade.
+            */}
             <CoverBackdrop
-              key={todayMovieId ?? 0}
               todayFocusAriaLabel={strings.cover.todayFocusAriaLabel(todayMovie?.title ?? '')}
               showTodayFocusTrap={coverMode && todayMovieId !== null}
             />

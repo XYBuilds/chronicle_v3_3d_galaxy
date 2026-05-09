@@ -1,3 +1,5 @@
+import { useEffect, useRef, useState } from 'react'
+
 import type { GalaxyGzipProgress } from '@/data/loadGalaxyGzip'
 import { useStrings } from '@/lib/strings'
 import { cn } from '@/lib/utils'
@@ -5,6 +7,7 @@ import { cn } from '@/lib/utils'
 export type LoadingIndexStatus = 'pending' | 'loading' | 'ready' | 'skipped' | 'error'
 
 export type LoadingMode = 'loading' | 'await-start'
+type TransitionStage = 'loading' | 'cosmos-fade' | 'start-shown' | 'ready'
 
 export interface LoadingProps {
   className?: string
@@ -67,7 +70,44 @@ export function Loading({
   const effectiveGzipDone = gzipDone || mode === 'await-start'
   const { percent, stageLabel } = computeLoadingDisplay(progress, indexStatus, effectiveGzipDone)
   const busy = mode === 'loading'
-  const loadingVisible = mode === 'loading'
+  const [transitionStage, setTransitionStage] = useState<TransitionStage>(
+    mode === 'loading' ? 'loading' : 'ready',
+  )
+  const prevModeRef = useRef<LoadingMode>(mode)
+
+  useEffect(() => {
+    const prevMode = prevModeRef.current
+    prevModeRef.current = mode
+
+    if (mode === 'loading') {
+      setTransitionStage('loading')
+      return
+    }
+
+    if (prevMode === 'loading') {
+      setTransitionStage('cosmos-fade')
+      const timer1 = window.setTimeout(() => {
+        setTransitionStage('start-shown')
+      }, 500)
+      const timer2 = window.setTimeout(() => {
+        // Start appears first (no animation), then today fades in.
+        setTransitionStage('ready')
+      }, 516)
+      return () => {
+        window.clearTimeout(timer1)
+        window.clearTimeout(timer2)
+      }
+    }
+
+    setTransitionStage('ready')
+  }, [mode])
+
+  const loadingVisible = transitionStage === 'loading'
+  const cosmosReady = transitionStage !== 'loading' && transitionStage !== 'cosmos-fade'
+  const todayVisible = transitionStage === 'ready'
+  const showStart = transitionStage === 'start-shown' || transitionStage === 'ready'
+  const brandTypeSizeClass = 'font-butler text-[120px] tracking-[-0.02em] sm:text-[180px] lg:text-[240px]'
+  const brandLineHeightClass = 'leading-[0.6]'
 
   return (
     <div
@@ -88,16 +128,18 @@ export function Loading({
 
       <div
         aria-hidden
-        className="pointer-events-none absolute left-8 top-1/2 -translate-y-1/2 lowercase leading-none sm:left-12"
+        className="pointer-events-none absolute left-8 top-1/2 -translate-y-1/2 lowercase sm:left-12"
       >
-        <p className="font-butler text-[80px] tracking-[-0.02em] sm:text-[120px] lg:text-[160px]">the</p>
-        <p className="-mt-3 font-butler text-[80px] tracking-[-0.02em] sm:-mt-5 sm:text-[120px] lg:text-[160px]">
+        <p className={cn(brandTypeSizeClass, brandLineHeightClass)}>the</p>
+        <p className={cn(brandTypeSizeClass, brandLineHeightClass)}>
           movie
         </p>
         <p
           className={cn(
-            '-mt-3 font-butler text-[80px] tracking-[-0.02em] transition-opacity duration-400 sm:-mt-5 sm:text-[120px] lg:text-[160px]',
-            loadingVisible ? 'opacity-100 text-black' : 'opacity-[0.04] text-black',
+            brandTypeSizeClass,
+            brandLineHeightClass,
+            'transition-opacity duration-500',
+            cosmosReady ? 'opacity-[0.04] text-black' : 'opacity-100 text-black',
           )}
         >
           cosmos
@@ -107,8 +149,9 @@ export function Loading({
       <p
         aria-hidden
         className={cn(
-          'pointer-events-none absolute right-8 top-1/2 -translate-y-1/2 font-butler text-[80px] tracking-[-0.02em] lowercase transition-opacity duration-400 sm:right-12 sm:text-[120px] lg:text-[160px]',
-          loadingVisible ? 'opacity-0' : 'opacity-100',
+          'pointer-events-none absolute right-8 top-1/2 -translate-y-1/2 lowercase transition-opacity duration-500 sm:right-12',
+          brandTypeSizeClass,
+          todayVisible ? 'opacity-100' : 'opacity-0',
         )}
       >
         today
@@ -116,14 +159,14 @@ export function Loading({
 
       {loadingVisible ? (
         <p
-          className="absolute bottom-10 right-8 text-[18px] font-normal text-black/50 sm:bottom-12 sm:right-12 sm:text-[20px]"
+          className="absolute right-8 top-1/2 -translate-y-1/2 text-[18px] font-normal text-black/50 sm:right-12 sm:text-[20px]"
           aria-live="polite"
         >
           {percent}% {stageLabel}
         </p>
       ) : null}
 
-      {mode === 'await-start' && onStart ? (
+      {mode === 'await-start' && showStart && onStart ? (
         <div className="flex min-h-0 flex-1 items-center justify-center px-6">
           <button
             type="button"

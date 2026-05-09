@@ -15,19 +15,16 @@ todos:
     content: P23.4 cover 球复用主体 hover 交互（白圈 + MovieTooltip，沿用主体字段 title+genres）；click 命中 today 直接进入该电影 focus 态 + drawer 自动展开；Enter/Space 键盘 fallback；相机角度从 cover 平滑沿用到 focus
     status: completed
   - id: p234b-cover-animation-refine
-    content: P23.4b cover 交互动画细化（无独立文字说明时以执行对话中给出的 Figma 链接为 SSOT）；宇宙背景黑与
+    content: P23.4b cover 交互动画细化（无独立文字说明时以执行对话中给出的 Figma 链接为 SSOT）；宇宙背景黑与 #f2f2f2 token 化、去掉旧渐变、加载完成 1000ms 过渡与字色分轨（the/movie vs cosmos vs today）
     status: completed
   - id: p235-og-image-pipeline
     content: P23.5 render_og_today.py Pillow 合成 1200×630 og-today.png；nightly 集成；index.html meta og:* ；_headers 短 TTL
     status: pending
-  - id: p236-og-image-pipeline
-    content: P23.6 render_og_today.py Pillow 合成 1200×630 og-today.png；nightly 集成；index.html meta og:* ；_headers 短 TTL
+  - id: p236-custom-domain
+    content: P23.6 自定义域名 DNS + CF Pages binding + TLS；R2 CORS allowlist 加新域名；docs/HUD/og:* hostname 替换；*.pages.dev 避线/重定向策略
     status: pending
-  - id: p237-custom-domain
-    content: P23.7 自定义域名 DNS + CF Pages binding + TLS；R2 CORS allowlist 加新域名；docs/HUD/og:* hostname 替换；*.pages.dev 避线/重定向策略
-    status: pending
-  - id: p238-doc-sync-report
-    content: P23.8 同步 Tech Spec / Data Pipeline / Design Spec / README + Phase 23 实施报告
+  - id: p237-doc-sync-report
+    content: P23.7 同步 Tech Spec / Data Pipeline / Design Spec / README + Phase 23 实施报告
     status: pending
 isProject: false
 ---
@@ -494,7 +491,7 @@ def render_og_card(movie: dict, *, output: Path, brand: str = "The Movie Cosmos"
 <meta name="twitter:image" content="https://the-movie-cosmos.com/data/og-today.png">
 ```
 
-注：og:image **必须绝对 URL**；hostname 在 P23.7 域名上线后填实际域名（在那之前用 `the-movie-cosmos.pages.dev`）。
+注：og:image **必须绝对 URL**；hostname 在 P23.6 域名上线后填实际域名（在那之前用 `the-movie-cosmos.pages.dev`）。
 
 ### Cache-Control
 
@@ -516,7 +513,7 @@ def render_og_card(movie: dict, *, output: Path, brand: str = "The Movie Cosmos"
 
 ---
 
-## P23.7 自定义域名上线
+## P23.6 自定义域名上线
 
 ### 用户预先操作（非自动化）
 
@@ -535,7 +532,7 @@ def render_og_card(movie: dict, *, output: Path, brand: str = "The Movie Cosmos"
    - [`frontend/public/_headers`](frontend/public/_headers) 不需改
    - 相关 docs / guides / 实施报告**不动**（历史归档）
 5. **重定向**（可选）：CF Pages dashboard 加 redirect rule 把 `*.pages.dev` 301 → 自定义域名（**推荐**，避免 SEO 重复）；或在 [`frontend/public/_redirects`](frontend/public/_redirects) 配置
-6. **OG image hostname** 同步替换（P23.6）
+6. **OG image hostname** 同步替换（P23.5）
 7. **CF Web Analytics** site 记录里加新域名（P20.5 接入过 beacon，token 同一个无需换）
 
 ### 不做
@@ -554,7 +551,7 @@ def render_og_card(movie: dict, *, output: Path, brand: str = "The Movie Cosmos"
 
 ---
 
-## P23.8 SSOT 同步 + 实施报告
+## P23.7 SSOT 同步 + 实施报告
 
 ### 改动
 
@@ -598,7 +595,7 @@ def render_og_card(movie: dict, *, output: Path, brand: str = "The Movie Cosmos"
 | today.json 加载快于 galaxy_data 导致 fallback 误触发           | 低   | 客户端等 galaxy_data ready 之后再读 today；fallback 仅在 today 真正 fail 时触发        |
 | Cover mode 下 today 那颗 vote_count 极小 → perlin 球太小看不到 | 中   | cover 模式强制 active sphere 用一个固定较大半径 (覆盖 P22.2 的 cap)，仅作 cover 视觉用 |
 | OG 卡片因 social media 缓存隔日不更新                          | 低   | 短 TTL + ?v=YYYYMMDD query 字符串；social validator 手动 re-scrape                     |
-| R2 CORS 没加新域名 → galaxy_data fetch 报 CORS 错              | 高   | P23.7 验收清单内强制；CF dashboard 截图存档                                            |
+| R2 CORS 没加新域名 → galaxy_data fetch 报 CORS 错              | 高   | P23.6 验收清单内强制；CF dashboard 截图存档                                            |
 | Pillow 依赖在 GHA 运行体积变化                                 | 低   | `Pillow` 加入 [`requirements.cpu.txt`](requirements.cpu.txt)；CI 装包 < 30s            |
 | TMDB poster 拉取失败导致 og 卡片空白                           | 低   | render_og_today 失败时复用上一日 og-today.png（不覆盖）                                |
 | Cover stage 在弱网下 today.json 拉取慢 → 用户长时间看灰屏      | 低   | 拉取超时 5s 后启用 fallback                                                            |
@@ -608,4 +605,4 @@ def render_og_card(movie: dict, *, output: Path, brand: str = "The Movie Cosmos"
 - 所有 P23.1–P23.7 todos `completed`（含 **P23.4b**）
 - prod 部署后用户感知项 smoke 全部通过：(1) Loading 双品牌字 + 百分比阶段词 + **P23.4b 字色/过渡** (2) 加载完成 cover 自动启动且无 Start 按钮 (3) Perlin 球可见 + 空白拖拽 orbit (4) hover 出现白圈 + 主体 MovieTooltip (5) 点击/Enter/Space 进入 focus + drawer 展开 + 相机角度沿用 (6) Twitter validator OG (7) 自定义域名 TLS
 - 4 份 SSOT 文档与实施报告归档
-- 备线 *.pages.dev 仍可访问（按 P23.7 决策可重定向）
+- 备线 *.pages.dev 仍可访问（按 P23.6 决策可重定向）

@@ -136,11 +136,12 @@ export type ActiveRayPickResult = { index: number; hitPoint: THREE.Vector3; t: n
  * @param nearCullExemptMovieId — P22.1 focus film id exempt from near-Z cull on pick (matches shader `uFocusedInstanceId` path).
  * @param coverTodayInstanceIndex — P23.3 when set (≥0), only this instance can be picked (matches cover shader cull).
  * @param coverActiveSizeBoost — P23.3 must match `uCoverActiveSizeBoost` when picking the cover instance.
- * @param coverTodayWorldPickRadius — when set, ray uses this world radius for the cover instance (Perlin `lastRadius`; replaces boosted active shell).
+ * @param coverTodayWorldPickRadius — when cover picks only today: use Perlin `lastRadius` for ray–sphere (same as focus vs planet UI).
  */
 export function pickClosestActiveMovieAlongRay(options: {
   ray: THREE.Ray
-  movies: THREE.ShaderMaterial
+  movies: Movie[]
+  activeMaterial: THREE.ShaderMaterial
   zCurrent: number
   zVisWindow: number
   requireSlabInteraction: boolean
@@ -195,8 +196,18 @@ export function pickClosestActiveMovieAlongRay(options: {
     if (inF < 1e-6) continue
     if (requireSlabInteraction && inF <= slabGate) continue
 
-    const boost = covIdx !== null && i === covIdx ? coverActiveSizeBoost : 1
-    const R = inF * uSizeScale * uActiveSizeMul * m.size * boost
+    let R: number
+    if (
+      covIdx !== null &&
+      i === covIdx &&
+      coverTodayWorldPickRadius !== null &&
+      coverTodayWorldPickRadius > 0
+    ) {
+      R = coverTodayWorldPickRadius
+    } else {
+      const boost = covIdx !== null && i === covIdx ? coverActiveSizeBoost : 1
+      R = inF * uSizeScale * uActiveSizeMul * m.size * boost
+    }
     if (R < 1e-6) continue
 
     const t = rayFirstPositiveSphereT(ray, m.x, m.y, m.z, R)

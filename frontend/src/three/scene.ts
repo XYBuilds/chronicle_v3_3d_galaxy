@@ -367,6 +367,8 @@ export function mountGalaxyScene(
   const fromCam = new THREE.Vector3()
   const toCam = new THREE.Vector3()
   const scratchCameraWorldPos = new THREE.Vector3()
+  /** Saved camera.position while computing macro browse rest target (cover→focus must not snapshot orbit XYZ). */
+  const macroRestCamSavedPos = new THREE.Vector3()
   const tmpOrbitPos = new THREE.Vector3()
   const deselectFromQuat = new THREE.Quaternion()
   const deselectToQuat = new THREE.Quaternion().setFromEuler(GALAXY_CAMERA_EULER)
@@ -383,6 +385,16 @@ export function mountGalaxyScene(
   /** P13.4 — Timeline `zCurrent` animates with focus enter (same eased progress as camera). */
   let focusZAnimStart = 0
   let focusZAnimTarget = 0
+
+  /** Same XY/Z as idle macro tick (`zCurrent − zCamDistance` + clamp); used for `restCam` when leaving cover orbit. */
+  const snapshotMacroBrowseRestCam = (out: THREE.Vector3) => {
+    const st = useGalaxyInteractionStore.getState()
+    macroRestCamSavedPos.copy(camera.position)
+    camera.position.z = st.zCurrent - st.zCamDistance
+    clampGalaxyCameraXY(camera, meta.xy_range, 0.08)
+    out.copy(camera.position)
+    camera.position.copy(macroRestCamSavedPos)
+  }
 
   const animateZCurrentTo = (targetZ: number, durationMs: number = Z_CURRENT_ANIM_MS) => {
     zCurrentDriver.cancel()
@@ -626,7 +638,17 @@ export function mountGalaxyScene(
     }
 
     if (selectionPhase === 'idle') {
-      restCam.copy(camera.position)
+      const coverToFocus = useCoverModeStore.getState().exitCoverPreserveOrbit
+      if (coverToFocus) {
+        snapshotMacroBrowseRestCam(restCam)
+        console.log('[Selection] restCam = macro browse (cover orbit → focus exit target)', {
+          x: restCam.x,
+          y: restCam.y,
+          z: restCam.z,
+        })
+      } else {
+        restCam.copy(camera.position)
+      }
     }
     beginSelect(movie)
   }

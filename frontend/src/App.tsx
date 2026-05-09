@@ -326,14 +326,14 @@ function App() {
       ) : null}
       <HoverRing />
       <MovieTooltip />
+      <div className="pointer-events-none fixed right-3 top-3 z-40 flex items-center gap-2 sm:right-4 sm:top-4">
+        <InfoButton />
+        <LanguageSwitch />
+        <FullscreenButton />
+      </div>
       {!coverMode ? (
         <>
           <SearchBar hasSearchIndex={hasSearchIndex} movies={data.movies} animateZCurrentTo={animateZCurrentTo} />
-          <div className="pointer-events-none fixed right-3 top-3 z-40 flex items-center gap-2 sm:right-4 sm:top-4">
-            <InfoButton />
-            <LanguageSwitch />
-            <FullscreenButton />
-          </div>
           <FocusLReference />
           <Timeline orientation={timelineOrientation} />
           <FocusExitButton />

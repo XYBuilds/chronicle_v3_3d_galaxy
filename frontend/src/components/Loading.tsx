@@ -1,9 +1,4 @@
-import { useEffect } from 'react'
-
 import type { GalaxyGzipProgress } from '@/data/loadGalaxyGzip'
-import { FullscreenButton } from '@/hud/FullscreenButton'
-import { InfoButton } from '@/hud/InfoButton'
-import { LanguageSwitch } from '@/hud/LanguageSwitch'
 import { useStrings } from '@/lib/strings'
 import { cn } from '@/lib/utils'
 
@@ -79,15 +74,6 @@ export function Loading({
           : s.loading.phaseIndex
   const busy = true
 
-  const indexTerminal =
-    indexStatus === 'ready' || indexStatus === 'skipped' || indexStatus === 'error'
-  const showHudChrome = gzipDone && indexTerminal
-
-  useEffect(() => {
-    if (!showHudChrome) return
-    console.log('[Loading] index terminal — HUD chrome visible (P23.4b)')
-  }, [showHudChrome])
-
   const brandTypeSizeClass = 'font-butler text-[120px] tracking-[-0.02em] sm:text-[180px] lg:text-[240px]'
   const brandLineHeightClass = 'leading-[0.6]'
   /** P23.4b — the/movie/cosmos share universe ink on the light field; today uses brand-muted (SSOT). */
@@ -104,16 +90,6 @@ export function Loading({
         className,
       )}
     >
-      {showHudChrome ? (
-        <div className="pointer-events-none fixed right-3 top-3 z-40 flex items-center gap-2 sm:right-4 sm:top-4">
-          <div className="pointer-events-auto flex items-center gap-2">
-            <InfoButton styleMode="outline" />
-            <LanguageSwitch styleMode="outline" />
-            <FullscreenButton styleMode="outline" />
-          </div>
-        </div>
-      ) : null}
-
       <div
         aria-hidden
         className="pointer-events-none absolute left-8 top-1/2 -translate-y-1/2 lowercase sm:left-12"
@@ -136,7 +112,7 @@ export function Loading({
       </p>
 
       <p
-        className="absolute bottom-8 right-8 max-w-[min(100vw-4rem,28rem)] text-left text-[18px] font-normal text-[color:var(--cosmos-universe-bg)]/55 sm:bottom-10 sm:right-12 sm:text-[20px]"
+        className="absolute bottom-8 left-8 max-w-[min(100vw-4rem,28rem)] text-left text-[18px] font-normal text-[color:var(--cosmos-universe-bg)]/55 sm:bottom-10 sm:left-12 sm:text-[20px]"
         aria-live="polite"
       >
         {percent}% {stageLabel}

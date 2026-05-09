@@ -28,3 +28,6 @@ kaggle>=1.6,<2
 
 # P18.6b Cloudflare R2 upload (S3-compatible API)
 boto3>=1.34,<2
+
+# P23.5 OG card rendering (Pillow with FreeType variable-font support)
+Pillow>=11.0,<13

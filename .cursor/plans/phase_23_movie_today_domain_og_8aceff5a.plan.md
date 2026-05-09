@@ -19,7 +19,7 @@ todos:
     status: completed
   - id: p235-og-image-pipeline
     content: P23.5 render_og_today.py Pillow 合成 1200×630 og-today.png；nightly 集成；index.html meta og:* ；_headers 短 TTL
-    status: pending
+    status: completed
   - id: p236-custom-domain
     content: P23.6 自定义域名 DNS + CF Pages binding + TLS；R2 CORS allowlist 加新域名；docs/HUD/og:* hostname 替换；*.pages.dev 避线/重定向策略
     status: pending

@@ -40,6 +40,9 @@ frontend/public/data/*.json
 frontend/public/data/*.json.gz
 !frontend/public/data/galaxy_data.json.gz
 !frontend/public/data/galaxy_search_index.json.gz
+# P23.5: og-today.png is regenerated each nightly run; don't track locally cached copies.
+frontend/public/data/og-today.png
+frontend/public/data/og-today.png.tmp
 
 # ============================================================
 # IDE / OS

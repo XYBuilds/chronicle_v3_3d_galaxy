@@ -3,3 +3,6 @@
   Cache-Control: public, max-age=60, must-revalidate
 /data/today.json
   Cache-Control: public, max-age=300, must-revalidate
+# P23.5 OG card refreshes daily; keep TTL short so social-media validators re-scrape promptly.
+/data/og-today.png
+  Cache-Control: public, max-age=300, must-revalidate

@@ -11,7 +11,8 @@
   "cover": {
     "title": "the movie cosmos",
     "start": "ابدأ",
-    "startAriaLabel": "ابدأ — ادخل إلى المجرة وابدأ الرسوميات"
+    "startAriaLabel": "ابدأ — ادخل إلى المجرة وابدأ الرسوميات",
+    "todayFocusAriaLabel": "The Movie Today: {{title}}"
   },
   "galaxyData": {
     "downloadProgress": "تم التنزيل {{downloadedMb}} / {{totalMb}}",

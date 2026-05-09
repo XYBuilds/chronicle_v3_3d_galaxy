@@ -299,11 +299,15 @@ export function attachGalaxyActiveMeshInteraction(options: {
     window.removeEventListener('pointercancel', onWindowPointerCancel, true)
     primaryPressActive = false
     if (dragExceededDuringPress) return
+    const cov = useCoverModeStore.getState()
     if (focusPlanetBeatsActiveAlongRay(e.clientX, e.clientY, true)) {
+      if (cov.coverMode && cov.todayMovieId !== null) {
+        console.log('[Interaction] cover click on perlin sphere → focus today')
+        cov.exitCoverIntoFocus()
+      }
       return
     }
     const picked = pickAlongRay(e.clientX, e.clientY, true)
-    const cov = useCoverModeStore.getState()
     if (cov.coverMode && cov.todayMovieId !== null) {
       if (picked !== null && movies[picked.index]?.id === cov.todayMovieId) {
         console.log('[Interaction] cover click → focus today')

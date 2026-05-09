@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 import { MovieDetailDrawer } from '@/components/Drawer'
 import { SearchBar } from '@/components/SearchBar'
@@ -23,6 +23,7 @@ import { useCoverModeStore } from '@/store/coverModeStore'
 import { useGalaxyDataStore } from '@/store/galaxyDataStore'
 import { useSearchIndexStore } from '@/store/searchIndexStore'
 import { useStrings } from '@/lib/strings'
+import { cn } from '@/lib/utils'
 import { mountGalaxyScene } from '@/three/scene'
 
 import './App.css'
@@ -55,6 +56,17 @@ function App() {
   const [coverBootReady, setCoverBootReady] = useState(false)
 
   const coverMode = useCoverModeStore((s) => s.coverMode)
+  const todayMovieId = useCoverModeStore((s) => s.todayMovieId)
+  const todayMovie = useMemo(() => {
+    if (!data || todayMovieId == null) return null
+    return data.movies.find((m) => m.id === todayMovieId) ?? null
+  }, [data, todayMovieId])
+
+  /** P23.4 — keep cover shell mounted through opacity fade after exitCoverIntoFocus. */
+  const [coverBrandMounted, setCoverBrandMounted] = useState(false)
+  useLayoutEffect(() => {
+    if (coverMode) setCoverBrandMounted(true)
+  }, [coverMode])
 
   type AppLoadPhase =
     | 'galaxy-loading'
@@ -118,6 +130,29 @@ function App() {
   /** Design Spec §4.6 — ESC 焦点栈；§P14.4 — F 全屏；§P14.5 — Cmd/Ctrl+K 聚焦搜索。 */
   useEffect(() => {
     const onKeyDownCapture = (e: KeyboardEvent) => {
+      const cov = useCoverModeStore.getState()
+      if (cov.coverMode && cov.todayMovieId !== null) {
+        if (e.key === 'Escape') {
+          e.preventDefault()
+          e.stopPropagation()
+          return
+        }
+        if (e.key === 'Enter' || e.key === ' ') {
+          const ae = document.activeElement
+          if (
+            ae instanceof HTMLInputElement ||
+            ae instanceof HTMLTextAreaElement ||
+            (ae instanceof HTMLElement && ae.isContentEditable)
+          ) {
+            return
+          }
+          e.preventDefault()
+          e.stopPropagation()
+          cov.exitCoverIntoFocus()
+          return
+        }
+      }
+
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         const searchInput = document.querySelector<HTMLInputElement>('input[data-galaxy-search-input]')
         if (!searchInput || searchInput.disabled) return
@@ -253,9 +288,25 @@ function App() {
         className="fixed inset-0 h-dvh w-full bg-black"
         aria-label="Galaxy WebGL canvas host"
       />
-      {coverMode ? (
-        <div className="pointer-events-none fixed inset-0 z-30" aria-hidden>
-          <CoverBackdrop />
+      {coverBrandMounted ? (
+        <div
+          className={cn(
+            'pointer-events-none fixed inset-0 z-30 transition-opacity duration-300 ease-out',
+            coverMode ? 'opacity-100' : 'opacity-0',
+          )}
+          aria-hidden
+          onTransitionEnd={(ev) => {
+            if (ev.propertyName !== 'opacity') return
+            if (ev.target !== ev.currentTarget) return
+            if (!useCoverModeStore.getState().coverMode) {
+              setCoverBrandMounted(false)
+            }
+          }}
+        >
+          <CoverBackdrop
+            todayFocusAriaLabel={strings.cover.todayFocusAriaLabel(todayMovie?.title ?? '')}
+            showTodayFocusTrap={coverMode && todayMovieId !== null}
+          />
         </div>
       ) : null}
       <HoverRing />

@@ -16,7 +16,10 @@ export function buildStrings(localeId: LocaleId) {
   const raw = LOCALES[localeId]
   return {
     loading: raw.loading,
-    cover: raw.cover,
+    cover: {
+      ...raw.cover,
+      todayFocusAriaLabel: (title: string) => interpolate(raw.cover.todayFocusAriaLabel, { title }),
+    },
     galaxyData: {
       downloadProgress: (downloadedMb: string, totalMb: string) =>
         interpolate(raw.galaxyData.downloadProgress, { downloadedMb, totalMb }),

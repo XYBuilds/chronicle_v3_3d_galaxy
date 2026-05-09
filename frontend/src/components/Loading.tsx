@@ -42,8 +42,13 @@ function computeLoadingDisplay(
     const ratio =
       progress.totalBytes !== null && progress.totalBytes > 0
         ? Math.min(1, progress.downloadedBytes / Math.max(1, progress.totalBytes))
-        : 0
-    return { percent: Math.round(ratio * 70), stageKey: 'download' }
+        : progress.downloadedBytes > 0
+          ? 0.02
+          : 0
+    const pct = Math.round(ratio * 70)
+    /** Manifest / TCP stall before first byte: avoid an indefinite 0% bar. */
+    const downloadPct = progress.downloadedBytes === 0 ? Math.max(pct, 3) : pct
+    return { percent: downloadPct, stageKey: 'download' }
   }
 
   if (progress.phase === 'decompress') return { percent: 75, stageKey: 'decompress' }

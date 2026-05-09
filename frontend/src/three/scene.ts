@@ -399,6 +399,29 @@ export function mountGalaxyScene(
 
   const applySelectionFrame = (nowMs: number) => {
     if (selectionPhase === 'idle') {
+      const cov = useCoverModeStore.getState()
+      if (cov.coverMode && cov.todayMovieId !== null) {
+        const idxToday = movies.findIndex((m) => m.id === cov.todayMovieId)
+        if (idxToday >= 0) {
+          pendingSelectInstanceIndex = idxToday
+          /**
+           * Cover + Perlin: hide today's dual-mesh shells (`isFocused` path), same as `selected` focus —
+           * otherwise boosted idle/active quads depth-occlude the Perlin sphere.
+           */
+          uFocused.value = idxToday
+          uFocusTargetInstanceId.value = idxToday
+          uFocusCameraBlend.value = 1
+          planet.mesh.visible = true
+          planet.material.uniforms.uAlpha.value = 1
+          inputLocked = false
+          const mCov = movies[idxToday]!
+          const stOrbit = useGalaxyInteractionStore.getState().focusOrbit
+          setFocusOrbitCameraPosition(tmpOrbitPos, mCov, stOrbit.yaw, stOrbit.pitch)
+          camera.position.copy(tmpOrbitPos)
+          applyFocusOrbitLookAt(camera, mCov)
+          return
+        }
+      }
       uFocused.value = -1
       uFocusTargetInstanceId.value = -1
       uFocusCameraBlend.value = 0
@@ -480,7 +503,15 @@ export function mountGalaxyScene(
   }
 
   const syncSelectionPlanetWorldScale = () => {
-    if (selectionPhase !== 'selecting' && selectionPhase !== 'selected') return
+    const cov = useCoverModeStore.getState()
+    const coverIdlePlanet =
+      selectionPhase === 'idle' && cov.coverMode && cov.todayMovieId !== null
+    if (
+      !coverIdlePlanet &&
+      selectionPhase !== 'selecting' &&
+      selectionPhase !== 'selected'
+    )
+      return
     if (!planet.mesh.visible) return
     const idx = pendingSelectInstanceIndex
     if (idx < 0 || idx >= movies.length) return
@@ -950,15 +981,39 @@ export function mountGalaxyScene(
     selectionPlanet: planet,
   })
 
-  /** P23.3 — align timeline + orbit pivot with “The Movie Today” before first frame. */
+  /** P23.3 — align timeline + orbit pivot with “The Movie Today”; Perlin sphere + same standoff as focus orbit. */
   {
     const cov = useCoverModeStore.getState()
     if (cov.coverMode && cov.todayMovieId !== null) {
       const tm = movies.find((m) => m.id === cov.todayMovieId)
       if (tm) {
-        console.log('[Scene] bootstrap cover orbit', { movieId: tm.id })
+        pendingSelectInstanceIndex = movies.findIndex((m) => m.id === cov.todayMovieId)
+        console.assert(pendingSelectInstanceIndex >= 0, '[Scene] cover today movie must exist')
+        console.log('[Scene] bootstrap cover orbit + Perlin', { movieId: tm.id })
         animateZCurrentTo(tm.z)
         useGalaxyInteractionStore.setState({ focusOrbit: { yaw: 0, pitch: 0 } })
+        const stPick = useGalaxyInteractionStore.getState()
+        const neighborIds = computeFocusNeighborIds(
+          movies,
+          { x: tm.x, y: tm.y, z: tm.z },
+          stPick.focusNeighborRadius,
+        )
+        const maskPick = getSelectionMaskPickSet(
+          tm.id,
+          neighborIds,
+          stPick.searchMode,
+          stPick.selectionIds,
+        )
+        const { r } = resolveSelectionWorldRadius(tm, uZ.value, uZw.value, galaxy.activeMaterial, maskPick)
+        const gu = galaxy.idleMaterial.uniforms
+        planet.setFromMovie(tm, meta.genre_palette, r, {
+          uLMin: (gu.uLMin as THREE.Uniform<number>).value,
+          uLMax: (gu.uLMax as THREE.Uniform<number>).value,
+          uHighRatingT: (gu.uHighRatingT as THREE.Uniform<number>).value,
+          uHighTierTRangeScale: (gu.uHighTierTRangeScale as THREE.Uniform<number>).value,
+          uLightnessRatingExponent: (gu.uLightnessRatingExponent as THREE.Uniform<number>).value,
+          uChroma: (gu.uChroma as THREE.Uniform<number>).value,
+        })
         setFocusOrbitCameraPosition(camera.position, tm, 0, 0)
         applyFocusOrbitLookAt(camera, tm)
         restCam.copy(camera.position)
@@ -989,7 +1044,11 @@ export function mountGalaxyScene(
     // (`selectionPhase === 'idle'` && no selectedMovieId) uses opaque + depthWrite so strip
     // actives depth-sort correctly (movie search, Space dolly, person/genre select pre-focus).
     // `selectionPhase` is this closure (not Zustand). Focus phases need path B for P11.1.
-    const wantOpaque = selectionPhase === 'idle' && st.selectedMovieId === null
+    const covWantOpaque = useCoverModeStore.getState()
+    const wantOpaque =
+      selectionPhase === 'idle' &&
+      st.selectedMovieId === null &&
+      !(covWantOpaque.coverMode && covWantOpaque.todayMovieId !== null)
     const activeMat = galaxy.activeMaterial
     if (activeMat.transparent !== !wantOpaque || activeMat.depthWrite !== wantOpaque) {
       activeMat.transparent = !wantOpaque
@@ -1102,15 +1161,7 @@ export function mountGalaxyScene(
 
     if (selectionPhase === 'idle') {
       const covLive = useCoverModeStore.getState()
-      if (covLive.coverMode && covLive.todayMovieId !== null) {
-        const mCov = movies.find((x) => x.id === covLive.todayMovieId)
-        if (mCov) {
-          const { yaw, pitch } = st.focusOrbit
-          setFocusOrbitCameraPosition(tmpOrbitPos, mCov, yaw, pitch)
-          camera.position.copy(tmpOrbitPos)
-          applyFocusOrbitLookAt(camera, mCov)
-        }
-      } else {
+      if (!(covLive.coverMode && covLive.todayMovieId !== null)) {
         camera.position.z = st.zCurrent - st.zCamDistance
         clampGalaxyCameraXY(camera, meta.xy_range, 0.08)
       }

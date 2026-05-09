@@ -136,11 +136,11 @@ export type ActiveRayPickResult = { index: number; hitPoint: THREE.Vector3; t: n
  * @param nearCullExemptMovieId — P22.1 focus film id exempt from near-Z cull on pick (matches shader `uFocusedInstanceId` path).
  * @param coverTodayInstanceIndex — P23.3 when set (≥0), only this instance can be picked (matches cover shader cull).
  * @param coverActiveSizeBoost — P23.3 must match `uCoverActiveSizeBoost` when picking the cover instance.
+ * @param coverTodayWorldPickRadius — when set, ray uses this world radius for the cover instance (Perlin `lastRadius`; replaces boosted active shell).
  */
 export function pickClosestActiveMovieAlongRay(options: {
   ray: THREE.Ray
-  movies: Movie[]
-  activeMaterial: THREE.ShaderMaterial
+  movies: THREE.ShaderMaterial
   zCurrent: number
   zVisWindow: number
   requireSlabInteraction: boolean
@@ -149,6 +149,7 @@ export function pickClosestActiveMovieAlongRay(options: {
   nearCullExemptMovieId: number | null
   coverTodayInstanceIndex?: number | null
   coverActiveSizeBoost?: number
+  coverTodayWorldPickRadius?: number | null
 }): ActiveRayPickResult | null {
   const {
     ray,
@@ -162,6 +163,7 @@ export function pickClosestActiveMovieAlongRay(options: {
     nearCullExemptMovieId,
     coverTodayInstanceIndex,
     coverActiveSizeBoost = 1,
+    coverTodayWorldPickRadius = null,
   } = options
   const u = activeMaterial.uniforms
   const uSizeScale = (u.uSizeScale as THREE.Uniform<number>).value

@@ -18,6 +18,7 @@
     "downloadProgressPartial": "ダウンロード済み {{downloadedMb}}",
     "decompressingGzip": "gzip を解凍中…",
     "parsingJson": "JSON を解析中…",
+    "preparingDownload": "ダウンロードを準備しています…",
     "gzipUnsupported": "[GalaxyData] このブラウザは gzip を解凍できません（DecompressionStream）。Safari 16.4+、Chrome 80+、または Firefox 113+ をご利用ください。",
     "networkErrorHint": " （ネットワークエラー：接続または到達可能性を確認してください）",
     "requestFailed": "[GalaxyData] リクエスト失敗 {{url}}{{hint}}：{{detail}}",

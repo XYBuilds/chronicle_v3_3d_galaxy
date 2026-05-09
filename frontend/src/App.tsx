@@ -47,6 +47,10 @@ function App() {
   const indexHydrationTerminal =
     indexStatus === 'ready' || indexStatus === 'skipped' || indexStatus === 'error'
 
+  useEffect(() => {
+    void fetchGalaxyData()
+  }, [fetchGalaxyData])
+
   /** P23.3 — today.json resolved + cover store seeded; scene may mount. */
   const [coverBootReady, setCoverBootReady] = useState(false)
 
@@ -250,25 +254,26 @@ function App() {
         aria-label="Galaxy WebGL canvas host"
       />
       {coverMode ? (
-        <div
-          className="pointer-events-none fixed inset-0 z-30"
-          aria-hidden
-        >
+        <div className="pointer-events-none fixed inset-0 z-30" aria-hidden>
           <CoverBackdrop />
         </div>
       ) : null}
-      <SearchBar hasSearchIndex={hasSearchIndex} movies={data.movies} animateZCurrentTo={animateZCurrentTo} />
       <HoverRing />
       <MovieTooltip />
-      <div className="pointer-events-none fixed right-3 top-3 z-40 flex items-center gap-2 sm:right-4 sm:top-4">
-        <InfoButton />
-        <LanguageSwitch />
-        <FullscreenButton />
-      </div>
-      <FocusLReference />
-      <Timeline orientation={timelineOrientation} />
-      <FocusExitButton />
-      <MovieDetailDrawer />
+      {!coverMode ? (
+        <>
+          <SearchBar hasSearchIndex={hasSearchIndex} movies={data.movies} animateZCurrentTo={animateZCurrentTo} />
+          <div className="pointer-events-none fixed right-3 top-3 z-40 flex items-center gap-2 sm:right-4 sm:top-4">
+            <InfoButton />
+            <LanguageSwitch />
+            <FullscreenButton />
+          </div>
+          <FocusLReference />
+          <Timeline orientation={timelineOrientation} />
+          <FocusExitButton />
+          <MovieDetailDrawer />
+        </>
+      ) : null}
     </main>
   )
 }

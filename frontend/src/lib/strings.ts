@@ -24,6 +24,7 @@ export function buildStrings(localeId: LocaleId) {
         interpolate(raw.galaxyData.downloadProgressPartial, { downloadedMb }),
       decompressingGzip: raw.galaxyData.decompressingGzip,
       parsingJson: raw.galaxyData.parsingJson,
+      preparingDownload: raw.galaxyData.preparingDownload,
       gzipUnsupported: raw.galaxyData.gzipUnsupported,
       networkErrorHint: raw.galaxyData.networkErrorHint,
       requestFailed: (url: string, hint: string, detail: string) =>

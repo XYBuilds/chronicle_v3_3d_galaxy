@@ -18,6 +18,7 @@
     "downloadProgressPartial": "Téléchargé {{downloadedMb}}",
     "decompressingGzip": "Décompression gzip…",
     "parsingJson": "Analyse du JSON…",
+    "preparingDownload": "Préparation du téléchargement…",
     "gzipUnsupported": "[GalaxyData] Ce navigateur ne peut pas décompresser gzip (DecompressionStream). Utilisez Safari 16.4+, Chrome 80+ ou Firefox 113+.",
     "networkErrorHint": " (erreur réseau : vérifiez la connectivité ou l’accessibilité)",
     "requestFailed": "[GalaxyData] Échec de la requête pour {{url}}{{hint}} : {{detail}}",

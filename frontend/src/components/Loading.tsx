@@ -25,46 +25,29 @@ export interface LoadingProps {
   onStart?: () => void
 }
 
-function gzipPhaseDone(
-  progress: GalaxyGzipProgress | null | undefined,
-  phase: GalaxyGzipProgress['phase'],
-  gzipDone: boolean,
-): boolean {
-  if (gzipDone) return true
-  if (!progress) return false
-  const order: GalaxyGzipProgress['phase'][] = ['download', 'decompress', 'parse']
-  return order.indexOf(progress.phase) > order.indexOf(phase)
-}
-
-function gzipPhaseActive(
-  progress: GalaxyGzipProgress | null | undefined,
-  phase: GalaxyGzipProgress['phase'],
-  gzipDone: boolean,
-): boolean {
-  if (gzipDone) return false
-  return progress?.phase === phase
-}
-
-function computeBarWidth(
+function computeLoadingDisplay(
   progress: GalaxyGzipProgress | null,
   indexStatus: LoadingIndexStatus,
   gzipDone: boolean,
-): { widthPct: number; indeterminate: boolean } {
+): { percent: number; stageLabel: string } {
   if (gzipDone) {
-    const terminal = indexStatus === 'ready' || indexStatus === 'skipped' || indexStatus === 'error'
-    if (terminal) return { widthPct: 100, indeterminate: false }
-    return { widthPct: 75, indeterminate: true }
+    const done = indexStatus === 'ready' || indexStatus === 'skipped' || indexStatus === 'error'
+    return { percent: done ? 100 : 90, stageLabel: 'Search Index' }
   }
-  if (!progress) return { widthPct: 0, indeterminate: false }
-  const { phase, downloadedBytes, totalBytes } = progress
-  if (phase === 'download') {
-    const r =
-      totalBytes !== null && totalBytes > 0 ? Math.min(1, downloadedBytes / Math.max(1, totalBytes)) : 0
-    return { widthPct: 25 * r, indeterminate: false }
+
+  if (!progress) return { percent: 0, stageLabel: 'Download' }
+
+  if (progress.phase === 'download') {
+    const ratio =
+      progress.totalBytes !== null && progress.totalBytes > 0
+        ? Math.min(1, progress.downloadedBytes / Math.max(1, progress.totalBytes))
+        : 0
+    return { percent: Math.round(ratio * 70), stageLabel: 'Download' }
   }
-  if (phase === 'decompress') return { widthPct: 50, indeterminate: false }
-  if (phase === 'parse') return { widthPct: 75, indeterminate: false }
-  return { widthPct: 75, indeterminate: false }
+
+  if (progress.phase === 'decompress') return { percent: 75, stageLabel: 'Decompress' }
+  if (progress.phase === 'parse') return { percent: 85, stageLabel: 'Parse' }
+  return { percent: 0, stageLabel: 'Download' }
 }
 
 /**
@@ -82,28 +65,9 @@ export function Loading({
   const s = useStrings()
   const label = labelProp ?? s.loading.title
   const effectiveGzipDone = gzipDone || mode === 'await-start'
-  const { widthPct, indeterminate } = computeBarWidth(progress, indexStatus, effectiveGzipDone)
-
-  const showSteps =
-    mode === 'await-start' || (mode === 'loading' && (progress !== null || gzipDone))
+  const { percent, stageLabel } = computeLoadingDisplay(progress, indexStatus, effectiveGzipDone)
   const busy = mode === 'loading'
-
-  const indexRowLabel = (() => {
-    if (indexStatus === 'skipped') return s.loading.phaseIndexSkipped
-    if (indexStatus === 'error') return s.loading.phaseIndexFailed
-    return s.loading.phaseIndex
-  })()
-
-  const footerMessage = (() => {
-    if (progress?.message) return progress.message
-    if (effectiveGzipDone && indexStatus === 'loading') return s.searchBar.indexLoading
-    return null
-  })()
-
-  const indexActive = indexStatus === 'loading'
-  const indexDoneStyle = indexStatus === 'ready'
-  const indexSkippedStyle = indexStatus === 'skipped'
-  const indexErrorStyle = indexStatus === 'error'
+  const loadingVisible = mode === 'loading'
 
   return (
     <div
@@ -112,83 +76,61 @@ export function Loading({
       aria-label={label}
       aria-labelledby={mode === 'await-start' ? 'cover-title' : undefined}
       className={cn(
-        'fixed inset-0 z-50 flex min-h-0 flex-col bg-background/80 text-foreground backdrop-blur-sm',
+        'fixed inset-0 z-50 flex min-h-0 flex-col overflow-hidden bg-[#f2f2f2] text-black',
         className,
       )}
     >
-      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 px-6">
-        {mode === 'await-start' ? (
-          <h1 id="cover-title" className="sr-only">
-            {s.cover.title}
-          </h1>
-        ) : null}
+      {mode === 'await-start' ? (
+        <h1 id="cover-title" className="sr-only">
+          {s.cover.title}
+        </h1>
+      ) : null}
 
-        {showSteps ? (
-          <div className="flex w-full max-w-md flex-col gap-3">
-            <ol className="flex justify-between gap-1 text-[11px] text-muted-foreground sm:gap-2 sm:text-xs">
-              <li
-                className={cn(
-                  'flex-1 text-center',
-                  gzipPhaseActive(progress, 'download', effectiveGzipDone) && 'font-medium text-foreground',
-                  gzipPhaseDone(progress, 'download', effectiveGzipDone) && 'text-primary',
-                )}
-              >
-                {s.loading.phaseDownload}
-              </li>
-              <li
-                className={cn(
-                  'flex-1 text-center',
-                  gzipPhaseActive(progress, 'decompress', effectiveGzipDone) && 'font-medium text-foreground',
-                  gzipPhaseDone(progress, 'decompress', effectiveGzipDone) && 'text-primary',
-                )}
-              >
-                {s.loading.phaseDecompress}
-              </li>
-              <li
-                className={cn(
-                  'flex-1 text-center',
-                  gzipPhaseActive(progress, 'parse', effectiveGzipDone) && 'font-medium text-foreground',
-                  gzipPhaseDone(progress, 'parse', effectiveGzipDone) && 'text-primary',
-                )}
-              >
-                {s.loading.phaseParse}
-              </li>
-              <li
-                className={cn(
-                  'flex-1 text-center',
-                  indexActive && 'font-medium text-foreground',
-                  indexDoneStyle && 'text-primary',
-                  indexSkippedStyle && 'text-muted-foreground opacity-70',
-                  indexErrorStyle && 'font-medium text-destructive',
-                )}
-              >
-                {indexRowLabel}
-              </li>
-            </ol>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-              <div
-                className={cn(
-                  'h-full rounded-full bg-primary transition-[width] duration-150 ease-out',
-                  indeterminate && 'animate-pulse',
-                )}
-                style={{ width: `${Math.round(widthPct)}%` }}
-              />
-            </div>
-            {footerMessage ? (
-              <p className="text-center text-xs text-muted-foreground">{footerMessage}</p>
-            ) : null}
-          </div>
-        ) : null}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-8 top-1/2 -translate-y-1/2 lowercase leading-none sm:left-12"
+      >
+        <p className="font-butler text-[80px] tracking-[-0.02em] sm:text-[120px] lg:text-[160px]">the</p>
+        <p className="-mt-3 font-butler text-[80px] tracking-[-0.02em] sm:-mt-5 sm:text-[120px] lg:text-[160px]">
+          movie
+        </p>
+        <p
+          className={cn(
+            '-mt-3 font-butler text-[80px] tracking-[-0.02em] transition-opacity duration-400 sm:-mt-5 sm:text-[120px] lg:text-[160px]',
+            loadingVisible ? 'opacity-100 text-black' : 'opacity-[0.04] text-black',
+          )}
+        >
+          cosmos
+        </p>
       </div>
 
+      <p
+        aria-hidden
+        className={cn(
+          'pointer-events-none absolute right-8 top-1/2 -translate-y-1/2 font-butler text-[80px] tracking-[-0.02em] lowercase transition-opacity duration-400 sm:right-12 sm:text-[120px] lg:text-[160px]',
+          loadingVisible ? 'opacity-0' : 'opacity-100',
+        )}
+      >
+        today
+      </p>
+
+      {loadingVisible ? (
+        <p
+          className="absolute bottom-10 right-8 text-[18px] font-normal text-black/50 sm:bottom-12 sm:right-12 sm:text-[20px]"
+          aria-live="polite"
+        >
+          {percent}% {stageLabel}
+        </p>
+      ) : null}
+
       {mode === 'await-start' && onStart ? (
-        <div className="flex shrink-0 justify-center px-6 pb-10 pt-4">
+        <div className="flex min-h-0 flex-1 items-center justify-center px-6">
           <button
             type="button"
             autoFocus
             aria-label={s.cover.startAriaLabel}
             onClick={onStart}
-            className="rounded-md bg-primary px-6 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 focus-visible:ring-2 focus-visible:ring-[--ui-edge-color-strong]"
+            className="rounded-md border border-black/50 bg-black px-8 py-3 text-base font-normal text-white hover:opacity-90 focus-visible:ring-2 focus-visible:ring-black/60"
           >
             {s.cover.start}
           </button>

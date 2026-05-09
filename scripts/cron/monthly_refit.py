@@ -29,6 +29,7 @@ if str(_SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS_DIR))
 
 from cron.pick_movie_today import write_today_json_after_galaxy_export  # noqa: E402
+from cron.render_og_today import render_og_today_after_galaxy_export  # noqa: E402
 from export.export_galaxy_json import decimal_year_with_jitter  # noqa: E402
 from feature_engineering.dim_drift_detector import DimDriftError, assert_no_dim_drift  # noqa: E402
 from feature_engineering.genre_encoding import (  # noqa: E402
@@ -831,6 +832,9 @@ def main(argv: list[str] | None = None) -> int:
                 raise SystemExit(val.returncode)
 
             write_today_json_after_galaxy_export(_REPO_ROOT)
+            og_path = render_og_today_after_galaxy_export(_REPO_ROOT)
+            if og_path is None:
+                print("[P18.5 monthly] WARN og-today.png not refreshed; previous PNG (if any) preserved", flush=True)
 
         meta_ok = {
             **kv_obs,

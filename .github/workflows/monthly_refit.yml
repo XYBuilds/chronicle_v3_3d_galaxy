@@ -159,6 +159,7 @@ jobs:
             frontend/public/data/galaxy_data.json.gz
             frontend/public/data/galaxy_search_index.json.gz
             frontend/public/data/today.json
+            frontend/public/data/og-today.png
 
       # P18.6: Direct Upload to Cloudflare Pages (independent of P18.5b anchor soft gate once this job reaches here).
       - uses: actions/setup-node@v4

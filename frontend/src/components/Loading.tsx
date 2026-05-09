@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 
 import type { GalaxyGzipProgress } from '@/data/loadGalaxyGzip'
+import { FullscreenButton } from '@/hud/FullscreenButton'
+import { InfoButton } from '@/hud/InfoButton'
+import { LanguageSwitch } from '@/hud/LanguageSwitch'
 import { useStrings } from '@/lib/strings'
 import { cn } from '@/lib/utils'
 
@@ -32,25 +35,25 @@ function computeLoadingDisplay(
   progress: GalaxyGzipProgress | null,
   indexStatus: LoadingIndexStatus,
   gzipDone: boolean,
-): { percent: number; stageLabel: string } {
+): { percent: number; stageKey: 'download' | 'decompress' | 'parse' | 'index' } {
   if (gzipDone) {
     const done = indexStatus === 'ready' || indexStatus === 'skipped' || indexStatus === 'error'
-    return { percent: done ? 100 : 90, stageLabel: 'Search Index' }
+    return { percent: done ? 100 : 90, stageKey: 'index' }
   }
 
-  if (!progress) return { percent: 0, stageLabel: 'Download' }
+  if (!progress) return { percent: 0, stageKey: 'download' }
 
   if (progress.phase === 'download') {
     const ratio =
       progress.totalBytes !== null && progress.totalBytes > 0
         ? Math.min(1, progress.downloadedBytes / Math.max(1, progress.totalBytes))
         : 0
-    return { percent: Math.round(ratio * 70), stageLabel: 'Download' }
+    return { percent: Math.round(ratio * 70), stageKey: 'download' }
   }
 
-  if (progress.phase === 'decompress') return { percent: 75, stageLabel: 'Decompress' }
-  if (progress.phase === 'parse') return { percent: 85, stageLabel: 'Parse' }
-  return { percent: 0, stageLabel: 'Download' }
+  if (progress.phase === 'decompress') return { percent: 75, stageKey: 'decompress' }
+  if (progress.phase === 'parse') return { percent: 85, stageKey: 'parse' }
+  return { percent: 0, stageKey: 'download' }
 }
 
 /**
@@ -68,7 +71,15 @@ export function Loading({
   const s = useStrings()
   const label = labelProp ?? s.loading.title
   const effectiveGzipDone = gzipDone || mode === 'await-start'
-  const { percent, stageLabel } = computeLoadingDisplay(progress, indexStatus, effectiveGzipDone)
+  const { percent, stageKey } = computeLoadingDisplay(progress, indexStatus, effectiveGzipDone)
+  const stageLabel =
+    stageKey === 'download'
+      ? s.loading.phaseDownload
+      : stageKey === 'decompress'
+        ? s.loading.phaseDecompress
+        : stageKey === 'parse'
+          ? s.loading.phaseParse
+          : s.loading.phaseIndex
   const busy = mode === 'loading'
   const [transitionStage, setTransitionStage] = useState<TransitionStage>(
     mode === 'loading' ? 'loading' : 'ready',
@@ -124,6 +135,13 @@ export function Loading({
         <h1 id="cover-title" className="sr-only">
           {s.cover.title}
         </h1>
+      ) : null}
+      {mode === 'await-start' ? (
+        <div className="pointer-events-none fixed right-3 top-3 z-40 flex items-center gap-2 sm:right-4 sm:top-4">
+          <InfoButton styleMode="outline" />
+          <LanguageSwitch styleMode="outline" />
+          <FullscreenButton styleMode="outline" />
+        </div>
       ) : null}
 
       <div

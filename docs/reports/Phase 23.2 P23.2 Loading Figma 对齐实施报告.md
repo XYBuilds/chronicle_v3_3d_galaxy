@@ -6,7 +6,7 @@ P23.2 目标是将加载阶段从旧版「条形进度 + 多段说明」重构�
 
 - 执行分支：`feat/p23-2-loading-figma`
 - 设计参考：`https://www.figma.com/design/GH91lmI9odwWLWeH2dSwCI/Chronicle-V3-3D-Galaxy?node-id=187-44&m=dev`
-- 本次范围：仅先做英文 UI（不做 i18n 扩展）
+- 本次范围：先完成英文定稿与交互动效，再补齐 loading 阶段词的 i18n 支持
 
 ## 2. 最终决策（定稿）
 
@@ -54,17 +54,27 @@ P23.2 目标是将加载阶段从旧版「条形进度 + 多段说明」重构�
 - `the/movie/cosmos/today` 共用同一字号 token
 - 行距改为固定 `leading` 控制（移除负 margin 压行距方案）
 
+### 2.6 Cover 顶部操作区
+
+- 在 `await-start`（cover）阶段补充右上角 HUD 按钮：`Info / Language / Fullscreen`
+- 位置与主应用保持一致（同一组右上角锚点）
+- 按钮视觉采用 `outline` 风格，适配浅灰 cover 背景
+- 主应用原有深色 HUD 样式保持不变（通过组件可选样式模式隔离）
+
 ## 3. 最终操作清单（已落地）
 
 ## 3.1 文件变更
 
 1. `frontend/src/components/Loading.tsx`
 2. `frontend/src/index.css`
+3. `frontend/src/hud/InfoButton.tsx`
+4. `frontend/src/hud/LanguageSwitch.tsx`
+5. `frontend/src/hud/FullscreenButton.tsx`
 
 ### 3.2 `Loading.tsx` 关键实现
 
 - 删除旧条形进度条和四列步骤行
-- 引入 `computeLoadingDisplay()` 输出 `{ percent, stageLabel }`
+- 引入 `computeLoadingDisplay()` 输出 `{ percent, stageKey }`，再由 `useStrings()` 映射为当前语言文案
 - 新增阶段机 `TransitionStage`：
   - `loading`
   - `cosmos-fade`
@@ -73,6 +83,8 @@ P23.2 目标是将加载阶段从旧版「条形进度 + 多段说明」重构�
 - 用 `setTimeout` 串行驱动阶段切换，确保「前一步结束再开始下一步」
 - 统一品牌字号类与固定行距类，减少重复并便于后续调参
 - `today` 与 `the/movie/cosmos` 使用同一套字号参数
+- 在 `await-start` 阶段挂载右上角 `Info / Language / Fullscreen` 按钮组，位置与主应用一致
+- loading 行文案改为 i18n 映射：`phaseDownload / phaseDecompress / phaseParse / phaseIndex`
 
 ### 3.3 `index.css` 关键实现
 
@@ -80,6 +92,13 @@ P23.2 目标是将加载阶段从旧版「条形进度 + 多段说明」重构�
   - 200 / 300 / 400 / 500 / 700 / 800 / 900
 - 新增主题 token：`--font-butler`
 - 根字体栈去除 `Roboto`，符合本次要求
+
+### 3.4 HUD 组件扩展
+
+- `InfoButton` / `LanguageSwitch` / `FullscreenButton` 增加 `styleMode` 可选参数：
+  - `default`（原主应用样式，默认值）
+  - `outline`（cover 使用）
+- 通过样式模式实现 cover 与主应用视觉解耦，避免回归风险
 
 ## 4. 与原计划差异说明
 
@@ -101,7 +120,8 @@ P23.2 目标是将加载阶段从旧版「条形进度 + 多段说明」重构�
 P23.2 本轮范围内的「最终决策 + 最终操作」已全部落地：
 
 - Figma 对齐的 Loading 视觉结构已替换
-- 进度表达改为「百分比 + 简短阶段词」
+- 进度表达改为「百分比 + 简短阶段词」，并已接入 i18n
 - Start 入口居中并预留 perlin 替换位
 - 动画时序已按定稿实现（串行）
 - Butler 字体体系已接入并可继续调权重
+- cover 右上角已补齐 `Info / Language / Fullscreen`，位置对齐主应用且为 outline 风格

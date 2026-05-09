@@ -7,8 +7,14 @@ import { useStrings } from '@/lib/strings'
 import { useLocaleStore } from '@/store/localeStore'
 import { cn } from '@/lib/utils'
 
+type HudButtonStyleMode = 'default' | 'outline'
+
+interface LanguageSwitchProps {
+  styleMode?: HudButtonStyleMode
+}
+
 /** HUD 右上：语言下拉（Lucide `Languages`）；顺序在 Info 与 Fullscreen 之间。 */
-export function LanguageSwitch() {
+export function LanguageSwitch({ styleMode = 'default' }: LanguageSwitchProps) {
   const s = useStrings()
   const locale = useLocaleStore((x) => x.locale)
   const setLocale = useLocaleStore((x) => x.setLocale)
@@ -50,10 +56,15 @@ export function LanguageSwitch() {
         aria-expanded={open}
         aria-haspopup="menu"
         className={cn(
-          'size-10 border border-white/10 bg-black/45 text-white/85 shadow-md backdrop-blur-sm',
+          'size-10',
+          styleMode === 'outline'
+            ? 'border border-black/35 bg-transparent text-black/85 shadow-none'
+            : 'border border-white/10 bg-black/45 text-white/85 shadow-md backdrop-blur-sm',
           'motion-safe:transition-[background-color,border-color,transform] motion-safe:duration-200',
-          'hover:bg-black/55 hover:text-white focus-visible:ring-2 focus-visible:ring-white/30',
-          open && 'bg-black/55 ring-2 ring-white/25',
+          styleMode === 'outline'
+            ? 'hover:bg-black/5 hover:text-black focus-visible:ring-2 focus-visible:ring-black/30'
+            : 'hover:bg-black/55 hover:text-white focus-visible:ring-2 focus-visible:ring-white/30',
+          open && (styleMode === 'outline' ? 'bg-black/10 ring-2 ring-black/20' : 'bg-black/55 ring-2 ring-white/25'),
         )}
         onClick={() => setOpen((o) => !o)}
       >

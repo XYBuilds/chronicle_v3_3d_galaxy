@@ -7,7 +7,7 @@ todos:
     status: completed
   - id: p232-cover-grayscreen-loading
     content: P23.2 Loading 品牌 the movie cosmos 迁移到新位置；删除旧进度条并采用 Figma 新加载表示样式；背景色更新、标题新增专用字体、补充动画交互效果；Figma 链接到位后用 MCP 读取并对齐 token
-    status: pending
+    status: completed
   - id: p233-cover-perlin-stage
     content: P23.3 加载完成后 scene mount + uCoverMode/uCoverTodayInstanceId uniform；其它 idle 不渲染不拾取；CoverBackdrop.tsx 灰背景 + 中心 mask；coverModeStore
     status: pending
@@ -284,7 +284,7 @@ export function CoverBackdrop() {
   const t = useStrings()
   if (!coverMode) return null
   return (
-    <div className="pointer-events-auto fixed inset-0 z-40 flex flex-col items-center justify-start bg-zinc-900/95 transition-opacity duration-500">
+    <div className="pointer-events-auto fixed inset-0 z-40 flex flex-col items-center justify-start bg-zinc-900/95 dark:bg-zinc-900/95 light:bg-zinc-200/95 transition-opacity duration-500">
       <h1 className="mt-[12vh] text-3xl font-bold tracking-wide text-zinc-100">{t.cover.todayTitle}</h1>
       <p className="mt-3 text-sm text-zinc-400">{t.cover.todayHint}</p>
       {/* 中心圆形 mask 露出 perlin 球 */}
@@ -296,14 +296,6 @@ export function CoverBackdrop() {
 ```
 
 注：因 cover shader 已经只渲染 today，灰背景实际可以做成"全屏 div + 中心透出 mask"或"全屏 div 带 z-index 低于 canvas"。**推荐用 CSS mask** 让中心圆形区域透出 webgl canvas 的 perlin 球；mask 边缘 soft fade 避免硬边。
-
-### 右上角控制按钮（沿用主应用）
-
-cover 阶段保留主应用右上角控制区，显示 3 个按钮：**info / 语言 / 全屏**。
-
-- 位置：沿用主应用当前右上角锚点与安全区边距，不另设 cover 专用坐标。
-- 样式：沿用主应用现有按钮样式（尺寸、圆角、透明度、hover/focus 态）与图标，不做分叉皮肤。
-- 行为：沿用既有逻辑（打开信息面板、切换语言、切换全屏）；cover 仅新增背景与中心球，不屏蔽这 3 个交互。
 
 ### 状态 store
 
@@ -335,8 +327,7 @@ cover 进入时相机要把 today 那颗放在屏幕中心。复用现有 focus 
 - 灰背景遮全屏；中心透出 perlin 球
 - "The Movie Today" 文字 + "Click the sphere to begin" 提示
 - 其它 idle 星不可见、不可 hover、不可 click
-- cover 背景使用单一设计色（不做 dark/light 切换）
-- 右上角可见并可用 `info / 语言 / 全屏` 三按钮，位置与样式与主应用一致
+- 切 dark/light 主题灰背景对应
 
 ---
 

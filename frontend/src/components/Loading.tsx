@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 
 import type { GalaxyGzipProgress } from '@/data/loadGalaxyGzip'
 import { FullscreenButton } from '@/hud/FullscreenButton'
@@ -8,8 +8,6 @@ import { useStrings } from '@/lib/strings'
 import { cn } from '@/lib/utils'
 
 export type LoadingIndexStatus = 'pending' | 'loading' | 'ready' | 'skipped' | 'error'
-
-type TransitionStage = 'loading' | 'cosmos-fade' | 'brand-ready'
 
 export interface LoadingProps {
   className?: string
@@ -58,7 +56,8 @@ function computeLoadingDisplay(
 
 /**
  * Full-screen loading overlay: gzip + search-index progress (four steps).
- * P23.3 — Cover brand + Start CTA removed; see {@link CoverBackdrop}.
+ * P23.4b — Cosmos tokens: light field, universe ink for the/movie/cosmos, brand-muted for today;
+ * no staged fade before unload; cover entry animation lives on {@link CoverBackdrop}.
  */
 export function Loading({
   className,
@@ -79,33 +78,21 @@ export function Loading({
           ? s.loading.phaseParse
           : s.loading.phaseIndex
   const busy = true
-  const [transitionStage, setTransitionStage] = useState<TransitionStage>('loading')
+
+  const indexTerminal =
+    indexStatus === 'ready' || indexStatus === 'skipped' || indexStatus === 'error'
+  const showHudChrome = gzipDone && indexTerminal
 
   useEffect(() => {
-    if (!gzipDone) {
-      setTransitionStage('loading')
-      return
-    }
-    const indexTerminal =
-      indexStatus === 'ready' || indexStatus === 'skipped' || indexStatus === 'error'
-    if (!indexTerminal) {
-      setTransitionStage('loading')
-      return
-    }
-    setTransitionStage('cosmos-fade')
-    const t = window.setTimeout(() => setTransitionStage('brand-ready'), 500)
-    return () => window.clearTimeout(t)
-  }, [gzipDone, indexStatus])
+    if (!showHudChrome) return
+    console.log('[Loading] index terminal — HUD chrome visible (P23.4b)')
+  }, [showHudChrome])
 
-  const loadingVisible = transitionStage === 'loading'
-  const cosmosReady = transitionStage !== 'loading' && transitionStage !== 'cosmos-fade'
   const brandTypeSizeClass = 'font-butler text-[120px] tracking-[-0.02em] sm:text-[180px] lg:text-[240px]'
   const brandLineHeightClass = 'leading-[0.6]'
-
-  useEffect(() => {
-    if (transitionStage !== 'brand-ready') return
-    console.log('[Loading] brand-ready (hud chrome visible)')
-  }, [transitionStage])
+  /** P23.4b — the/movie/cosmos share universe ink on the light field; today uses brand-muted (SSOT). */
+  const brandInkClass = 'text-[color:var(--cosmos-universe-bg)]'
+  const todayClass = 'text-[color:var(--cosmos-brand-muted)]'
 
   return (
     <div
@@ -113,15 +100,17 @@ export function Loading({
       aria-busy={busy}
       aria-label={label}
       className={cn(
-        'fixed inset-0 z-50 flex min-h-0 flex-col overflow-hidden bg-[#f2f2f2] text-black',
+        'fixed inset-0 z-50 flex min-h-0 flex-col overflow-hidden bg-[color:var(--cosmos-brand-muted)]',
         className,
       )}
     >
-      {transitionStage === 'brand-ready' ? (
+      {showHudChrome ? (
         <div className="pointer-events-none fixed right-3 top-3 z-40 flex items-center gap-2 sm:right-4 sm:top-4">
-          <InfoButton styleMode="outline" />
-          <LanguageSwitch styleMode="outline" />
-          <FullscreenButton styleMode="outline" />
+          <div className="pointer-events-auto flex items-center gap-2">
+            <InfoButton styleMode="outline" />
+            <LanguageSwitch styleMode="outline" />
+            <FullscreenButton styleMode="outline" />
+          </div>
         </div>
       ) : null}
 
@@ -129,39 +118,29 @@ export function Loading({
         aria-hidden
         className="pointer-events-none absolute left-8 top-1/2 -translate-y-1/2 lowercase sm:left-12"
       >
-        <p className={cn(brandTypeSizeClass, brandLineHeightClass)}>the</p>
-        <p className={cn(brandTypeSizeClass, brandLineHeightClass)}>movie</p>
-        <p
-          className={cn(
-            brandTypeSizeClass,
-            brandLineHeightClass,
-            'transition-opacity duration-500',
-            cosmosReady ? 'opacity-[0.04] text-black' : 'opacity-100 text-black',
-          )}
-        >
-          cosmos
-        </p>
+        <p className={cn(brandTypeSizeClass, brandLineHeightClass, brandInkClass)}>the</p>
+        <p className={cn(brandTypeSizeClass, brandLineHeightClass, brandInkClass)}>movie</p>
+        <p className={cn(brandTypeSizeClass, brandLineHeightClass, brandInkClass)}>cosmos</p>
       </div>
 
       <p
         aria-hidden
         className={cn(
-          'pointer-events-none absolute right-8 top-1/2 -translate-y-1/2 lowercase transition-opacity duration-500 sm:right-12',
+          'pointer-events-none absolute right-8 top-1/2 -translate-y-1/2 lowercase sm:right-12',
           brandTypeSizeClass,
-          cosmosReady ? 'opacity-100' : 'opacity-0',
+          brandLineHeightClass,
+          todayClass,
         )}
       >
         today
       </p>
 
-      {loadingVisible ? (
-        <p
-          className="absolute right-8 top-1/2 -translate-y-1/2 text-[18px] font-normal text-black/50 sm:right-12 sm:text-[20px]"
-          aria-live="polite"
-        >
-          {percent}% {stageLabel}
-        </p>
-      ) : null}
+      <p
+        className="absolute bottom-8 right-8 max-w-[min(100vw-4rem,28rem)] text-left text-[18px] font-normal text-[color:var(--cosmos-universe-bg)]/55 sm:bottom-10 sm:right-12 sm:text-[20px]"
+        aria-live="polite"
+      >
+        {percent}% {stageLabel}
+      </p>
     </div>
   )
 }

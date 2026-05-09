@@ -10,13 +10,13 @@ todos:
     status: completed
   - id: p233-cover-perlin-stage
     content: P23.3 移除 Start 按钮；加载完成后 scene mount + uCoverMode/uCoverTodayInstanceId uniform；其它 idle 不渲染不拾取；CoverBackdrop（保留 the movie cosmos / today 文本，无 click hint）；coverModeStore；cover 空白拖拽复用 focus orbit 相机，角度沿用进入主体
-    status: pending
+    status: completed
   - id: p234-cover-tooltip-click-enter-focus
     content: P23.4 cover 球复用主体 hover 交互（白圈 + MovieTooltip，沿用主体字段 title+genres）；click 命中 today 直接进入该电影 focus 态 + drawer 自动展开；Enter/Space 键盘 fallback；相机角度从 cover 平滑沿用到 focus
-    status: pending
+    status: completed
   - id: p234b-cover-animation-refine
-    content: P23.4b cover 交互动画细化（无独立文字说明时以执行对话中给出的 Figma 链接为 SSOT）；宇宙背景黑与 #f2f2f2 token 化并复用；移除旧渐变动画；Loading 位置/配色与加载完成 1000ms 过渡见正文
-    status: pending
+    content: P23.4b cover 交互动画细化（无独立文字说明时以执行对话中给出的 Figma 链接为 SSOT）；宇宙背景黑与
+    status: completed
   - id: p235-og-image-pipeline
     content: P23.5 render_og_today.py Pillow 合成 1200×630 og-today.png；nightly 集成；index.html meta og:* ；_headers 短 TTL
     status: pending

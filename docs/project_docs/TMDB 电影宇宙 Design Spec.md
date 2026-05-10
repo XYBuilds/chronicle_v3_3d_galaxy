@@ -149,14 +149,27 @@
 * **DB 字段**：电影标题、原标题、`overview`、`tagline`、人名、genre 名等**沿用 TMDB 原文**，不进入 i18n 翻译范围（避免歪曲数据语义并保持搜索一致性）。
 * **dev 审计 `console.log`**：保留**英文前缀**（如 `[Search] genre AND filter`），**不**进入 `STRINGS` / `locales/*.json`。中文仍可出现在**项目文档**（PRD / Tech Spec / Design Spec / 报告）。
 
-### **3.5 Cover-with-Start（Phase 15）**
+### **3.5 首屏 Loading + Cover（Phase 23 · The Movie Today）**
 
-* **与加载态分工**：**`mode='loading'`** 时根容器为 **`role="status"`**（忙状态）；**`mode='await-start'`** 时为 **`role="dialog"`**（Cover）。详见 **`frontend/src/components/Loading.tsx`**。  
-* **范围**：**极简**。首屏**全程**（含 gzip 三阶段与索引阶段）**不**展示独立 **Spinner** 与进度区上方的**标题行**文案——加载叙事完全由 **四阶段 `ol` + 分段进度条**（以及可选的 gzip / 索引 **`footerMessage`**）承担。四阶段完成后进入 **Cover**，仍用**同一全屏覆盖层**；**进度条保持满格/终态**（第四阶段在 **`skipped`** / **`error`** 时按 token 灰显或 destructive，与 Tech Spec §1.4.7 一致）。**不**加品牌大标题、副提示长句、教程或额外视觉编码说明。  
-* **文案（SSOT）**：**`STRINGS.cover`** 仅含 **`title`**、**`start`**、**`startAriaLabel`**（**`locales/en.json` → `strings.ts`**，与 §3.4.5 一致）。**`cover.title`** 在 Cover 态以 **`sr-only` 标题**供读屏；根容器同时设 **`aria-label`**（与 `Loading` 的 `label` prop 对齐，实现中 Cover 为「Ready」）。**无**独立副文案键。  
-* **Start 按钮**：原生 **`<button type="button">`**，**吸底**（视口**下方** `shrink-0` 区域，与上方 **`flex-1` 进度区**分离）；样式走 **primary**；**`autoFocus`**，**Enter** / **Space** 默认可触发。  
-* **键盘**：**Enter** / **Space** 等同点击；**Esc** **不**关闭 Cover（无可关闭语义）。  
-* **可访问性**：Cover 时根容器 **`role="dialog"`**、**`aria-labelledby="cover-title"`**（对应该 **visually hidden** 的 `h1`）；**不**再设 **`aria-describedby`**（无可见/独立副文段）。按钮 **`aria-label`** 走 **`STRINGS.cover.startAriaLabel`**。
+本节取代原 **Phase 15 Cover-with-Start**：**已移除 Start 按钮**；加载完成后 **自动**进入 Cover，**Perlin 球**为唯一主入口。
+
+#### **3.5.1 Loading（gzip + 索引）**
+
+* **组件**：**`frontend/src/components/Loading.tsx`**；根容器 **`role="status"`**（忙状态）。  
+* **叙事**：**四阶段**（download → decompress → parse → index），以**百分比数字 + 阶段词**为主；**无**旧版条形进度条。  
+* **品牌（UI 身份面小写）**：**`the movie cosmos`** 与 **`today`** 双品牌字；标题级字形使用 **`font-butler`**（Butler webfont，仅用于首屏品牌区）。  
+* **设计 token（P23.4b）**：**`--cosmos-universe-bg`**（宇宙背景色）与 **`--cosmos-brand-muted`**（浅灰场 / 完成态字色，当前 **`#f2f2f2`**）定义于 **`frontend/src/index.css`**；Loading 与 Cover 共用。**加载中**：**`the` / `movie` / `cosmos`** 在浅场上使用宇宙背景色字；**`today`** 使用 **`--cosmos-brand-muted`**。**旧版全屏背景 CSS 渐变动画已删除**。  
+* **完成态过渡**：Loading 卸载后，Cover 入场 **1000ms** 过渡由 **`CoverBackdrop`** 与页面遮罩（如 **`cosmos-cover-entry-page-shade`**）承担：**页面底色 → 宇宙背景**；**`the` / `movie` → brand-muted**；**`cosmos`** 保持宇宙色（分轨）；**`today`** 全程 brand-muted。实现须尊重 **`prefers-reduced-motion`**（见 `index.css` 媒体查询）。  
+* **像素级 SSOT**：间距、断点、曲线以 **Figma** 为准；对齐记录见 [`Phase 23.2 P23.2 Loading Figma 对齐实施报告.md`](../reports/Phase%2023.2%20P23.2%20Loading%20Figma%20对齐实施报告.md)、[`Phase 23.4b P23.4b Cover 首屏品牌与入场动效 实施报告.md`](../reports/Phase%2023.4b%20P23.4b%20Cover%20首屏品牌与入场动效%20实施报告.md)。
+
+#### **3.5.2 Cover（场景已挂载 · 无 click hint）**
+
+* **文案层**：**`frontend/src/hud/CoverBackdrop.tsx`** — 仅保留 **`the movie cosmos`**（左）与 **`today`**（右）；**不渲染** **`STRINGS.cover.todayHint`**（词条可保留兼容）。**不新增**其它提示文案。文案层 **`pointer-events: none`**，避免阻挡空白处 **orbit** 拖拽。  
+* **中心 Perlin**：**The Movie Today** 对应影片的 focus 球体；**复用主体 hover**（**`HoverRing`** 白圈）+ **`MovieTooltip`**（字段与主体一致：**title + genres**）。  
+* **点击 / 键盘**：点击球体，或 **`Enter` / `Space`**（**`CoverBackdrop`** 内在 **`showTodayFocusTrap`** 时渲染的透明 **`button`**，**`aria-label`** 来自 **`STRINGS.cover.todayFocusAriaLabel`**）→ **`exitCoverIntoFocus`**：展开 **Drawer**、**`coverMode=false`**；**相机 yaw/pitch/distance 沿用** Cover orbit。  
+* **空白拖拽**：与 **focus** 态一致绕 pivot **orbit**；**`?orbitDrag=normal|inverted`**（**`orbitDragDirection.ts`**）在 Cover / focus **一致**。  
+* **ESC**：Cover 阶段 **不**作为「取消 today」；退出 focus 仍按 **P22** **`FocusExitButton`**。  
+* **交叉引用**：**`coverModeStore.ts`**、**`scene.ts`** **`uCoverMode` / `uCoverTodayInstanceId`**、Tech Spec §1.1 / §1.4.7。
 
 ### **3.6 Close 控件 primitive（Phase 14）**
 

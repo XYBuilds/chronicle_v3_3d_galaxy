@@ -528,8 +528,31 @@ Phase 18 目标 Supabase 表：
 6. 调子进程 `export_from_supabase.py` 重导 `galaxy_data.json` / `.gz` / `galaxy_search_index.json.gz`（meta.version 形如 `YYYY.MM.DD.daily.<seq>`）。
 7. **P18.6b + P20.4**：将 `galaxy_data.json.gz` / `galaxy_search_index.json.gz` 上传到 **Cloudflare R2**，写出 `galaxy_assets_manifest.json`，并在 `R2_GALAXY_PRUNE_AFTER_UPLOAD=1` 时从 `frontend/public/data/` 删除大 gzip（避免 Pages 25MiB 限制）。版本化 gzip 对象头写入 `Cache-Control: public, max-age=31536000, immutable`。
 8. **P18.6 + P20.1**：构建 `frontend/dist` 并通过 `cloudflare/wrangler-action@v3` 执行 `pages deploy` 发布到 **Cloudflare Pages**；GitHub Pages workflow（[`.github/workflows/deploy-pages.yml`](../../.github/workflows/deploy-pages.yml)）保留为灰度备线。
+9. **P23.1**：导出完成后调用 [`scripts/cron/pick_movie_today.py`](../../scripts/cron/pick_movie_today.py)（**UTC 日期** + `hash` 确定性在全部 `movie_id` 中选片，`min_vote_count` 默认 **0**）写入 **`frontend/public/data/today.json`**，并由 [`scripts/cron/upload_galaxy_r2.py`](../../scripts/cron/upload_galaxy_r2.py) 同步上传 R2；manifest 增加可选字段 **`today_url`**（绝对 URL + `?v=` 与 `data_version` 对齐）。
+10. **P23.5**：调用 [`scripts/cron/render_og_today.py`](../../scripts/cron/render_og_today.py)（**Pillow**）合成 **`frontend/public/data/og-today.png`**（**1200×630** PNG，英文排版）；上传 R2 固定 key；海报拉取失败时可保留上一日文件（脚本内策略见实施报告）。
+11. **依赖**：OG 渲染需 **`Pillow`**（已列入 [`requirements.cpu.txt`](../../requirements.cpu.txt)）；标题字体使用仓库内 **`assets/fonts/`**（如 Inter，随脚本打包）。
 
 每日任务不重算 UMAP 坐标，不更新 `threshold_versions`。
+
+#### 11.1a `today.json` 字段契约（P23.1）
+
+与 `galaxy_data.json` **同版本发布**；`movie_id` 必须存在于当次导出的 `movies[]`。
+
+```json
+{
+  "date": "2026-05-08",
+  "movie_id": 12345,
+  "selected_at": "2026-05-08T20:00:00Z",
+  "selection_strategy": "deterministic_by_utc_date",
+  "min_vote_count": 0
+}
+```
+
+#### 11.1b `og-today.png`（P23.5）
+
+- **尺寸**：**1200×630**（Open Graph / Twitter `summary_large_image`）。  
+- **发布**：`frontend/public/data/og-today.png` + R2；**`frontend/index.html`** 内 **`og:image` / `twitter:image`** 使用**生产站点绝对 URL**（当前主域 **themoviecosmos.com**）。  
+- **缓存**：`frontend/public/_headers` 对 **`/data/og-today.png`** 与 **`/data/today.json`** 使用 **`max-age=300, must-revalidate`**（短 TTL 便于隔日换片后爬虫更新）。
 
 ### 11.2 Monthly Full Refit（P18.5 + P18.5b）
 
@@ -591,9 +614,9 @@ P18.5b 上线初期采用「软闸 + 强日志 + artifact」策略，原因是 G
 
 ```text
 [Browser]
-   ├── 前端 bundle  ←  Cloudflare Pages（the-movie-cosmos.pages.dev）
-   └── galaxy_data.json.gz / galaxy_search_index.json.gz
-                    ←  Cloudflare R2（公开读 + CORS）
+   ├── 前端 bundle  ←  Cloudflare Pages（生产主域 themoviecosmos.com；*.pages.dev 可 301 到主域）
+   └── galaxy_data.json.gz / galaxy_search_index.json.gz / today.json / og-today.png
+                    ←  Cloudflare R2（公开读 + CORS；大 gzip 为主）
                        ↑
                        └─ GitHub Actions（nightly / monthly）写入
 
@@ -601,11 +624,11 @@ P18.5b 上线初期采用「软闸 + 强日志 + artifact」策略，原因是 G
 ```
 
 - **Pages 职责**：托管 `frontend/dist`（前端 React+Three.js 应用壳）。**Direct Upload via `cloudflare/wrangler-action@v3`** 作为生产发布主链路；Pages 侧 Git 自动构建已 **Disconnect**，避免与 CI 行为冲突。
-- **R2 职责**：托管所有 **超过 Cloudflare Pages 单文件 25MiB 上限** 的静态对象（当前主要是 `galaxy_data.json.gz`，约 31MB）。Bucket 配置公开读（`r2.dev` 子域或自定义域），CORS 允许 Pages 站点源 `GET` / `HEAD`。
+- **R2 职责**：托管所有 **超过 Cloudflare Pages 单文件 25MiB 上限** 的静态对象（当前主要是 `galaxy_data.json.gz`，约 31MB）。Bucket 配置公开读（`r2.dev` 子域或自定义域），CORS 允许 Pages 站点源 `GET` / `HEAD`。**P23.6**：CORS **AllowedOrigins** 须同时包含自定义域与 **`https://the-movie-cosmos.pages.dev`** 备线（详见 README §6 与 P23.6 运维清单）。
 - **前端 URL 解析**（[`frontend/src/lib/galaxyAssetUrls.ts`](../../frontend/src/lib/galaxyAssetUrls.ts) 优先级）：
   1. 构建期 `VITE_GALAXY_DATA_GZIP_URL` / `VITE_GALAXY_SEARCH_INDEX_GZIP_URL`
   2. 运行时 `?dataset=` 实验参数
-  3. `data/galaxy_assets_manifest.json`（由 [`scripts/cron/upload_galaxy_r2.py`](../../scripts/cron/upload_galaxy_r2.py) 在每次 cron 写入，包含 `galaxy_data_gzip_url` / `galaxy_search_index_gzip_url` / `data_version`）
+  3. `data/galaxy_assets_manifest.json`（由 [`scripts/cron/upload_galaxy_r2.py`](../../scripts/cron/upload_galaxy_r2.py) 在每次 cron 写入，包含 `galaxy_data_gzip_url` / `galaxy_search_index_gzip_url` / **`today_url`（可选）** / `data_version`）
   4. 默认同源 `BASE_URL + data/*.json.gz`（仅当 R2 secrets 全部缺失时才会到达此回退路径）
 - **GitHub Pages**：[`.github/workflows/deploy-pages.yml`](../../.github/workflows/deploy-pages.yml) 仍在 push 到 `main` 时部署到 GitHub Pages，作为灰度备线 1–2 周内可用；不依赖 R2，浏览器在该路径上仍走同源 gzip。
 - **数据加载技术**（不变）：HTTP 层透明 gzip 或原始 gzip bytes + `DecompressionStream`，由 `frontend/src/data/loadGalaxyGzip.ts` 处理。
@@ -618,8 +641,10 @@ P18.5b 上线初期采用「软闸 + 强日志 + artifact」策略，原因是 G
 | `galaxy/{seq}/galaxy_data.json.gz`         | Cloudflare R2    | `public, max-age=31536000, immutable` |
 | `galaxy/{seq}/galaxy_search_index.json.gz` | Cloudflare R2    | `public, max-age=31536000, immutable` |
 | `data/galaxy_assets_manifest.json`         | Cloudflare Pages | `public, max-age=60, must-revalidate` |
+| `data/today.json`（P23.1）                 | Pages + R2       | `public, max-age=300, must-revalidate`（`_headers`） |
+| `data/og-today.png`（P23.5）               | Pages + R2       | `public, max-age=300, must-revalidate`（`_headers`） |
 
-说明：前两者使用版本化 key，永不覆写同 key；manifest 维持短 TTL 以快速切换"当前版本"指针。
+说明：gzip 主包使用版本化 key + **immutable**；manifest / today / OG 维持短 TTL 以便日更切换与社交预览刷新。
 
 ### 12.3 Secrets 与运维分工
 

@@ -25,7 +25,7 @@ todos:
     status: completed
   - id: p237-doc-sync-report
     content: P23.7 同步 Tech Spec / Data Pipeline / Design Spec / README + Phase 23 实施报告
-    status: pending
+    status: completed
 isProject: false
 ---
 
@@ -572,7 +572,7 @@ def render_og_card(movie: dict, *, output: Path, brand: str = "The Movie Cosmos"
 - §标题 / §6 反映新域名 + The Movie Today 概念
 - §5 Secrets 表加（如有）OG 字体路径或新 env
 
-**实施报告** [`docs/reports/Phase 23 P23 The Movie Today 域名 OG 实施报告.md`](docs/reports/Phase%2023%20P23%20The%20Movie%20Today%20域名%20OG%20实施报告.md)：背景、决策、变更清单、验收记录、风险与回滚。
+**实施报告**：P23.1–P23.6 各子阶段见 `docs/reports/` 下对应 `*实施报告.md`；P23.7 为 SSOT 正文修订（Tech Spec / Data Pipeline / Design Spec / README），无单独总报告文件。
 
 ---
 

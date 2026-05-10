@@ -25,7 +25,7 @@ todos:
     status: completed
   - id: p237-doc-sync-report
     content: P23.7 同步 Tech Spec / Data Pipeline / Design Spec / README + Phase 23 实施报告
-    status: pending
+    status: completed
 isProject: false
 ---
 

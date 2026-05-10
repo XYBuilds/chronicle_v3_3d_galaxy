@@ -9,7 +9,7 @@ The Movie Cosmos 采用严格的前后端计算分离架构：
   * **3D 画布**：原生 **Three.js**（非 R3F / TresJS 等声明式封装），直接控制渲染循环、`InstancedMesh` + 自定义 ShaderMaterial、后处理与**非标准**轴平行相机。理由：~60K 实例双 mesh + focus 高模球体、性能敏感，原生 Three.js 可避免中间层抽象泄漏。  
   * **HUD / UI 层**：**React**（DOM 覆盖层），负责 Tooltip、档案详情抽屉、Loading 页面等。  
   * **状态桥接**：React ↔ Three.js 通过**轻量状态管理**（如 Zustand）通信——Three.js 写入选中/悬停状态，React 读取并渲染 UI；React 写入搜索/导航指令，Three.js 执行相机动画。  
-* **数据加载策略**：前端启动时**一次性加载**全量坐标与属性数据（静态 JSON 或等价格式），经 **四阶段 Loading**（含搜索索引 hydrate，见 **§1.4.7**）后进入 **Cover**；用户点击 **Start** 后再初始化 3D 场景（**WebGL** 与双 `InstancedMesh` 挂载）。
+* **数据加载策略（Phase 23）**：前端启动时**一次性加载**全量坐标与属性数据（静态 JSON 或等价格式），经 **四阶段 gzip + 索引 Loading**（见 **§1.4.7**）后进入 **`cover-loading-today`**（解析 **`today.json`** / manifest **`today_url`**，失败则客户端 **Top-1000 fallback**，见 `loadToday.ts`）；随后 **`mountGalaxyScene`** 在无 **Start** 手势门闩的情况下挂载 **WebGL** 与双 `InstancedMesh`，并以 **`uCoverMode` / `uCoverTodayInstanceId`** 进入 **Cover**（仅渲染今日实例 + 中心 Perlin 入口）；用户从 Cover 进入 **focus** 后 `coverMode` 解除（见 **§1.4.7** 与 `coverModeStore.ts`）。
 
 ### **1.1 前端渲染架构（Phase 8：双 `InstancedMesh` + focus Perlin 球）**
 
@@ -35,6 +35,7 @@ The Movie Cosmos 采用严格的前后端计算分离架构：
 | **否则**                                                         | **B**（transparent）           | focus 管线 **P11.1** |
 
 * **Focus 态 Perlin 球（按需、单实例）**：`IcosahedronGeometry(1, 8)` + **CPU** 上按顶点 noise **分位数阈值**划分至多 **8** 档 genre 带（`perlin.frag.glsl` 中 **`step`** 分 **`bandIdx`**；顶点 **`perlin.vert.glsl`** 用 **`smoothstep`** 累加 **`level`** 做阶梯挤出，见《星球状态机 spec》§3.5）。**Phase 11.4**：片元用 **`dFdx`/`dFdy`** 重构法线与 Lambert 明暗；**`uPerlinL`** 由 **`vote_average`** 经与宏观一致的 **P10.1** 公式写入；**`uPerlinChroma`** 与星系 **`uChroma`** 快照一致；**hue** 为主 genre **`movie.genre_hue`**（若存在）+ 其余 genre **`genreHueForGenreName`**（palette key 序对齐 Python **`sorted`**）；线性 RGB **clamp** 后编码 **sRGB**；光照定稿见《视觉参数总表》§4。**Phase 11.5**：材质已切换为 **opaque**（`transparent: false`、`depthWrite: true`、`alphaTest: 0.01`），降低台阶边缘透明伪影。`movie.id` 种子化 PRNG；面积比例由 **`uAreaRatio`** 等控制。当 `uFocusedInstanceId` 命中时，**idle + active** 上该 `gl_InstanceID` 的 scale 在 shader 中**置零**，仅由 Perlin 球呈现。  
+* **Phase 23 · Cover mode（idle/active 顶点着色器）**：`galaxyIdle.vert.glsl` / `galaxyActive.vert.glsl` 增加 **`uCoverMode`**（`0` = 全量宏观，`1` = 仅今日）与 **`uCoverTodayInstanceId`**（`gl_InstanceID`，未设置时为 **`-1`**）。**`uCoverMode > 0.5`** 时，凡 **`gl_InstanceID != uCoverTodayInstanceId`** 的实例在 VS 早期 **cull**（移出裁剪体、`vSize = 0`），与 raycast 侧 **pickable mask**（`interaction.ts`）一致，保证 Cover 阶段仅今日星可 hover/click。uniform 初值与 RAF 写入见 **`galaxyMeshes.ts`** / **`scene.ts`**。
 * **后处理顺序（生产）**：同帧先画 idle → active → focus 时 Perlin 球 `visible=true`（`renderOrder` 以 `scene.ts` 为准）。**`UnrealBloomPass`** 默认**不**参与输出（§1.2）；调试启用时再走 composer。
 
 **历史注记（Phase 5.1.6 · 已退役）**：旧版在**单 `THREE.Points`** 上用 `uBgSizeMul` / `uFocusSizeMul` 与 `gl_PointSize` 做 A/B 层；P8.4 起由双 mesh 的 `inFocus` 与双尺度取代。
@@ -149,29 +150,40 @@ Output
 
 **非目标 / 禁止**：任何将目测 `-15° / -7.5° / 0.26180 / 0.13090` 等旋转值写入 `GALAXY_CAMERA_EULER` 或相机常量的"症状掩盖"式修复。
 
-#### **1.4.7 首屏加载体验（Phase 15）**
+#### **1.4.7 首屏加载体验（Phase 15 → Phase 23 修订）**
 
-首屏加载分为**四阶段**（与 `Loading.tsx` 进度 `ol` 一一对应）：
+**gzip + 索引四阶段**（与 `Loading.tsx` 阶段文案一一对应；**无条形进度条**，百分比与阶段词见 Design Spec §3.5）：
 
-1. **download** — `fetch` **`galaxy_data.json.gz`**（HTTP 字节流；进度由 `Content-Length` / 已下载字节驱动）。  
+1. **download** — `fetch` **`galaxy_data.json.gz`**（经 `galaxyAssetUrls` 解析 manifest / 覆盖 URL；进度由 `Content-Length` / 已下载字节驱动）。  
 2. **decompress** — `DecompressionStream` 解压（进度仅阶段切换，无字节级）。  
 3. **parse** — `JSON.parse` + 类型校验。  
-4. **index** — **`galaxy_search_index.json.gz`** hydrate（`meta.has_search_index === true` 时执行；为 **`false`** 时本阶段直接 **`status='skipped'`**，不阻塞）。
+4. **index** — **`galaxy_search_index.json.gz`** hydrate（`meta.has_search_index === true` 时执行；为 **`false`** 时本阶段 **`status='skipped'`**，不阻塞）。
 
-**Hydrate 与 3D mount 时序（实现契约）**：**`App.tsx`** 在 **`galaxyDataStore.status === 'ready'`** 且 **`data`** 已解析可用时，于 **`useEffect`** 中**立即**调用 **`useSearchIndexStore.getState().hydrateFromGalaxyMeta(data.meta)`**——与 UI 的 **`index-loading`** / 第四阶段进度展示**并行**，**不**等待用户点击 **Start**；**`mountGalaxyScene`**（创建 **`WebGLRenderer`**、GPU buffer）**仅**在本地 **`started === true`**（用户手势触发 **`setStarted(true)`**）**且**索引 hydrate 已达终态（**`ready` / `skipped` / `error`**）后执行。Cover 阶段 **`WebGLRenderingContext` 数量为 0**；点击 **Start** 后增至 **1**（DevTools 验收）。
+**App 级相位（`App.tsx` · Phase 23）**（与 UI 分支一致）：
 
-四阶段**全部完成**（含 **`skipped`**）后进入 **Cover-await-start** 状态：保留 Loading **同一覆盖层**；**不**再使用独立 **Spinner** 与进度区**标题行**（加载阶段与 Cover 均**以四阶段 `ol` + 进度条**为主叙事；索引 loading 时可在条下显示 **`footerMessage`**）。**Start** 按钮置于视口**下方**；用户**点击 Start**（或聚焦按钮后 **Enter** / **Space**）后再 **mount Three.js 场景**（首次创建 `WebGLRenderer` 与 GPU buffer）。**`App.tsx`** 以本地 **`started`** 状态门闩：仅 **`started === true`** 时挂载主场景。失败处理：
+| 相位 | 条件摘要 | WebGL / HUD |
+| :--- | :--- | :--- |
+| **`galaxy-loading`** | `galaxyDataStore` 尚未 `ready` | 全屏 `Loading` |
+| **`galaxy-error`** | `galaxyDataStore === 'error'` | `LoadFailurePage` + Retry |
+| **`index-loading`** | `ready` 且索引 hydrate 未达终态 | `Loading`（第四行 index 动画） |
+| **`cover-loading-today`** | 索引已达 **`ready` / `skipped` / `error`**，且 **`today.json`**（或 manifest **`today_url`**）解析尚未完成 | `Loading`（四阶段已视觉上完成，仍占全屏直至 today 决议） |
+| **`started`** | **`resolveTodayMovieId`** 完成并已 **`setCover(movieId)`** | **`mountGalaxyScene`** 执行；主画布 + Cover 文案层（`CoverBackdrop`）+ 可选 **The Movie Today** 焦点陷阱；**`coverMode === true`** 时隐藏 SearchBar / Timeline / Drawer 等直至进入 focus |
 
-* **`galaxy_data`** 的 download / decompress / parse **任一失败** → **错误页 + Retry**（与现状一致）；**不**进入 Cover。  
-* **`galaxy_search_index`** 失败 → 第四阶段标 **`Failed`**，用户仍**可点 Start** 进入应用；搜索框 **disabled**（与 Phase 12 §4.8「无索引退化」一致）。
+**Hydrate 与 3D mount 时序（实现契约）**：**`galaxyDataStore.status === 'ready'`** 后 **`useSearchIndexStore.hydrateFromGalaxyMeta`** 与第四阶段 UI **并行**。**`mountGalaxyScene`** 在 **`started`** 相位触发（**无** Phase 15 的 **`started` 本地门闩 / Start 按钮）：**必须先**有 **`movies[]`** 与 **today `movie_id`**（或 fallback id），以便写入 **`uCoverTodayInstanceId`** 与 **`coverModeStore`**。Cover 阶段 **WebGL 已挂载**；非今日实例由 shader + pick mask 屏蔽。
 
-#### **1.4.7a P15.3 回归验收**
+**today.json**：字段与 nightly 写入见 Data Pipeline §11.1；前端 **`frontend/src/data/loadToday.ts`**；manifest 扩展 **`today_url`**（`galaxyAssetUrls.ts`）。失败 / 陈旧 / id 不在 **`movies[]`** 时 **silent fallback**（控制台 `warn`），不进入 `LoadFailurePage`。
 
-* **主路径**：刷新 → 四阶段 Loading → Cover（**Start**）→ 进入宏观漫游；**Phase 13 focus**、**Phase 14** 全屏 / HUD 等已落地行为在 **Start 之后**无回归。  
-* **`galaxy_data` 失败**：仅错误页 + **Retry**，**不**出现 Cover。  
-* **搜索索引**：**`skipped`**（无索引包）与 **`error`**（fetch/解析失败）时第四阶段分别显示 **Skipped** / **Failed**，仍可 **Start**；入场后搜索 **disabled**（与 Phase 12 §4.8 一致）。  
-* **可重复性**：整页刷新可重复完整链路；**`started`** 仅在当前文档生命周期内为 **`true`**（重载即重置）。  
-* **历史导航**：本应用为**无路由状态的 SPA**（无 `react-router` 级会话）；浏览器后退/前进若触发整页重载则重新走加载；同页内不产生「离开 Cover 再返回」的路由态。
+**失败处理**：
+
+* **`galaxy_data`** 的 download / decompress / parse **任一失败** → **错误页 + Retry**；**不**进入 Cover / today。  
+* **`galaxy_search_index`** 失败 → 第四阶段 **`Failed`**，仍进入 **today** 与场景挂载；入场后搜索 **disabled**（Phase 12 §4.8）。
+
+#### **1.4.7a 回归验收（Phase 23）**
+
+* **主路径**：刷新 → 四阶段 Loading → **`cover-loading-today`**（通常极短）→ 场景自动挂载 + Cover（**无 Start**）→ Perlin 入口 → **focus**（drawer 展开，相机 orbit **沿用** Cover）。  
+* **`galaxy_data` 失败**：仅错误页 + **Retry**。  
+* **搜索索引**：**`skipped`** / **`error`** 下仍可完成 today + 入场；搜索 **disabled** 行为不变。  
+* **历史导航**：无路由 SPA；整页重载重新走加载链。
 
 #### **1.4.8 HUD i18n 架构（Phase 21.2）**
 
@@ -504,16 +516,18 @@ galaxy_data.json.gz  +  galaxy_search_index.json.gz
             └── (灰度备线) GitHub Pages by .github/workflows/deploy-pages.yml
     ↓
 Browser
-    ├── fetch app           →  Cloudflare Pages
-    └── fetch galaxy_*.gz   →  Cloudflare R2（manifest 解析；可被 VITE_* 与 ?dataset= 覆盖）
+    ├── fetch app                    →  Cloudflare Pages（生产主域 **themoviecosmos.com**；默认 **`*.pages.dev`** 可 **301** 到主域，见 `frontend/functions/_middleware.js`）
+    ├── fetch galaxy_*.json.gz     →  Cloudflare R2（manifest 解析；可被 VITE_* 与 ?dataset= 覆盖）
+    └── fetch today.json / og-today.png  →  R2 或同源 `public/data/`（manifest **`today_url`**；**OG** 见 `frontend/index.html` 与 `public/_headers` 短 TTL）
 ```
 
+* **P23.6 自定义域 + R2 CORS**：Bucket **AllowedOrigins** 须包含 **`https://themoviecosmos.com`**、**`https://www.themoviecosmos.com`**（若绑定）及备线 **`https://the-movie-cosmos.pages.dev`**；运维清单见 **`docs/guides/P23.6 自定义域名上线后运维清单.md`**。
 * **Supabase** 仅作 source of truth；前端不直连数据库。
 * **每日任务（P18.4）** 沿用 frozen `threshold_versions`，只刷新 `vote_count` / `vote_average` / `popularity`，新过线片入 `movies_pending`；不重算 UMAP 坐标。
 * **月度任务（P18.5 + P18.5b）** 重算 dynamic threshold + 全量 `fit_transform` + Procrustes 对齐 `galaxy_v1_reference`；锚点采用 **软闸**（`MONTHLY_ANCHOR_MODE` 默认 `soft`），仅极端残差或结构性错误 fail；产出 `monthly_refit_meta.json` artifact 供 P95 收紧观测。
 * **维度漂移守卫（P20.2）**：nightly / monthly 在 cleaning 后、写库/UMAP 前统一调用 `assert_no_dim_drift`，同时校验 `genre_palette_version` 与 `lang_palette_version`；默认 fail-loud，紧急场景可经 `force_skip_dim_check` 单次放行并留痕。
 * **Cloudflare Pages** 仅托管前端 bundle；Pages 侧 Git 自动构建已 Disconnect，发布主链路为 GitHub Actions Direct Upload。
-* **Cloudflare R2** 托管 `galaxy_*.json.gz`，前端通过 `frontend/src/lib/galaxyAssetUrls.ts` 按「`VITE_*` → `?dataset=` → manifest → 同源默认」优先级解析 URL。
+* **Cloudflare R2** 托管 `galaxy_*.json.gz` 及 **`today.json` / `og-today.png`**（与 gzip 同 nightly 发布节奏）；galaxy 包 URL 通过 `frontend/src/lib/galaxyAssetUrls.ts` 按「`VITE_*` → `?dataset=` → manifest → 同源默认」解析；**`today_url`** 见 manifest 与 `loadToday.ts`。
 * **GitHub Pages** 通过 `.github/workflows/deploy-pages.yml` 在 push 到 `main` 时部署，作为 1–2 周灰度备线；该路径仍走同源 gzip，不依赖 R2。
 * **Vite `base`** 在仓库内默认为 `process.env.VITE_BASE_PATH ?? '/'`；GitHub Pages 子路径部署由 `deploy-pages.yml` 注入对应 `VITE_BASE_PATH`，CF Pages 根路径部署直接使用默认值。
 * **国内访问优化** 不属于 Phase 18 出口；规划为 Phase 19+。

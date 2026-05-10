@@ -1,0 +1,15 @@
+{
+  "galaxy_data_gzip_url": "https://pub-f949433b3a004a35b0a5e38f8f508c57.r2.dev/galaxy/galaxy_data.json.gz?v=2026.05.10.daily.30",
+  "galaxy_search_index_gzip_url": "https://pub-f949433b3a004a35b0a5e38f8f508c57.r2.dev/galaxy/galaxy_search_index.json.gz?v=2026.05.10.daily.30",
+  "data_version": "2026.05.10.daily.30",
+  "exported_at": "2026-05-10T08:10:53.191794+00:00",
+  "r2_object_keys": {
+    "galaxy_data": "galaxy/galaxy_data.json.gz",
+    "galaxy_search_index": "galaxy/galaxy_search_index.json.gz",
+    "today": "galaxy/today.json",
+    "og_today": "galaxy/og-today.png"
+  },
+  "today_url": "https://pub-f949433b3a004a35b0a5e38f8f508c57.r2.dev/galaxy/today.json?v=2026-05-10",
+  "og_today_url": "https://pub-f949433b3a004a35b0a5e38f8f508c57.r2.dev/galaxy/og-today.png?v=2026-05-10",
+  "github_run_id": "25623633711"
+}

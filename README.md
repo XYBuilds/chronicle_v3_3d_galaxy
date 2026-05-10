@@ -7,7 +7,7 @@
 线上站点（Phase 23 主域 + 备线）：
 
 - **生产主域（Cloudflare Pages 自定义域）**：<https://themoviecosmos.com/>（`www.themoviecosmos.com` 同项目绑定）
-- **Cloudflare Pages 默认域（备线）**：<https://the-movie-cosmos.pages.dev/>
+- **Cloudflare Pages 默认域**：<https://the-movie-cosmos.pages.dev/>（**301 → 主域**，`frontend/functions/_middleware.js`）
 - **GitHub Pages**（灰度备线）：见 `.github/workflows/deploy-pages.yml` 输出域名
 
 ---
@@ -140,7 +140,7 @@ Browser
 GitHub Pages（灰度备线）：仍由 deploy-pages.yml 在 push 到 main 时部署
 ```
 
-**P23.6（自定义域名）**：R2 bucket **CORS policy** 的 `AllowedOrigins` 须包含 `https://themoviecosmos.com`、`https://www.themoviecosmos.com`（若已绑定 www）以及备线 `https://the-movie-cosmos.pages.dev`；配置入口见 `docs/guides/P18.6b Cloudflare R2 上线操作手册.md`。可选：在 Cloudflare **Bulk Redirects** 或 Pages **Redirect rules** 将 `the-movie-cosmos.pages.dev` **301** 到 `https://themoviecosmos.com`，避免与主域重复收录；备线仍可保留不重定向。**上线后控制台验收与 OG 自检** 见 [`docs/guides/P23.6 自定义域名上线后运维清单.md`](docs/guides/P23.6%20自定义域名上线后运维清单.md)。
+**P23.6（自定义域名）**：R2 bucket **CORS policy** 的 `AllowedOrigins` 须包含 `https://themoviecosmos.com`、`https://www.themoviecosmos.com`（若已绑定 www）以及备线 `https://the-movie-cosmos.pages.dev`；配置入口见 `docs/guides/P18.6b Cloudflare R2 上线操作手册.md`。生产默认域 **`the-movie-cosmos.pages.dev`** 已通过 Pages Functions **`frontend/functions/_middleware.js`** **301** 到 **`https://themoviecosmos.com`**；亦可改用 Cloudflare **Bulk Redirects** / **Redirect rules** 等效实现。**上线后控制台验收与 OG 自检** 见 [`docs/guides/P23.6 自定义域名上线后运维清单.md`](docs/guides/P23.6%20自定义域名上线后运维清单.md)。
 
 更多见 `docs/project_docs/TMDB 电影宇宙 Data Pipeline.md` §3.2 / §11 / §12。
 

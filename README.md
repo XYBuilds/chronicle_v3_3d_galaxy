@@ -4,9 +4,10 @@
 > 文本语义 + 流派 + 原始语言经 UMAP 降维到 X/Y，`release_date` 转小数年份作为 Z；
 > `vote_count` 驱动尺寸、`vote_average` 驱动明暗、主 genre 决定色相。
 
-线上站点（Phase 18 出口）：
+线上站点（Phase 23 主域 + 备线）：
 
-- **Cloudflare Pages**：<https://the-movie-cosmos.pages.dev/>
+- **生产主域（Cloudflare Pages 自定义域）**：<https://themoviecosmos.com/>（`www.themoviecosmos.com` 同项目绑定）
+- **Cloudflare Pages 默认域（备线）**：<https://the-movie-cosmos.pages.dev/>
 - **GitHub Pages**（灰度备线）：见 `.github/workflows/deploy-pages.yml` 输出域名
 
 ---
@@ -138,6 +139,8 @@ Browser
 
 GitHub Pages（灰度备线）：仍由 deploy-pages.yml 在 push 到 main 时部署
 ```
+
+**P23.6（自定义域名）**：R2 bucket **CORS policy** 的 `AllowedOrigins` 须包含 `https://themoviecosmos.com`、`https://www.themoviecosmos.com`（若已绑定 www）以及备线 `https://the-movie-cosmos.pages.dev`；配置入口见 `docs/guides/P18.6b Cloudflare R2 上线操作手册.md`。可选：在 Cloudflare **Bulk Redirects** 或 Pages **Redirect rules** 将 `the-movie-cosmos.pages.dev` **301** 到 `https://themoviecosmos.com`，避免与主域重复收录；备线仍可保留不重定向。**上线后控制台验收与 OG 自检** 见 [`docs/guides/P23.6 自定义域名上线后运维清单.md`](docs/guides/P23.6%20自定义域名上线后运维清单.md)。
 
 更多见 `docs/project_docs/TMDB 电影宇宙 Data Pipeline.md` §3.2 / §11 / §12。
 

@@ -82,7 +82,7 @@ POSTER_USER_AGENT = "the-movie-cosmos/og-renderer (+https://github.com/XYBuilds)
 # UI-identity surface: lowercase per ``branding-name-convention`` rule (matches Loading /
 # Cover wordmark). Narrative copy elsewhere still uses title-case "The Movie Cosmos".
 DEFAULT_BRAND = "the movie cosmos"
-DEFAULT_FOOTER_URL = "the-movie-cosmos.pages.dev"  # P23.6 will replace with custom domain
+DEFAULT_FOOTER_URL = "themoviecosmos.com"  # P23.6 production custom domain (apex)
 
 
 def _hex_to_rgb(hx: str) -> tuple[int, int, int]:

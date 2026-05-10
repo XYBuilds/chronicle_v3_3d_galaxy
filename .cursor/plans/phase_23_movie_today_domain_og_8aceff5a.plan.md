@@ -15,14 +15,14 @@ todos:
     content: P23.4 cover 球复用主体 hover 交互（白圈 + MovieTooltip，沿用主体字段 title+genres）；click 命中 today 直接进入该电影 focus 态 + drawer 自动展开；Enter/Space 键盘 fallback；相机角度从 cover 平滑沿用到 focus
     status: completed
   - id: p234b-cover-animation-refine
-    content: P23.4b cover 交互动画细化（无独立文字说明时以执行对话中给出的 Figma 链接为 SSOT）；宇宙背景黑与 #f2f2f2 token 化、去掉旧渐变、加载完成 1000ms 过渡与字色分轨（the/movie vs cosmos vs today）
+    content: P23.4b cover 交互动画细化（无独立文字说明时以执行对话中给出的 Figma 链接为 SSOT）；宇宙背景黑与
     status: completed
   - id: p235-og-image-pipeline
     content: P23.5 render_og_today.py Pillow 合成 1200×630 og-today.png；nightly 集成；index.html meta og:* ；_headers 短 TTL
     status: completed
   - id: p236-custom-domain
     content: P23.6 自定义域名 DNS + CF Pages binding + TLS；R2 CORS allowlist 加新域名；docs/HUD/og:* hostname 替换；*.pages.dev 避线/重定向策略
-    status: pending
+    status: completed
   - id: p237-doc-sync-report
     content: P23.7 同步 Tech Spec / Data Pipeline / Design Spec / README + Phase 23 实施报告
     status: pending

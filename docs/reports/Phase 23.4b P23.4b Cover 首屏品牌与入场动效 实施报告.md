@@ -1,4 +1,4 @@
-# Phase 23 — P23.4b Cover 首屏品牌与入场动效 — 实施报告
+# Phase 23.4b P23.4b Cover 首屏品牌与入场动效 实施报告
 
 本文档记录 **P23.4b**（计划见 `.cursor/plans/phase_23_movie_today_domain_og_8aceff5a.plan.md` 中「P23.4b Cover 交互动画细化」）在本次迭代中的 **最终决策** 与 **最终代码操作**，作为交付与回溯依据。视觉像素级 SSOT 仍以计划中的 Figma 为准；本报告描述的是当前仓库已落地的实现。
 
@@ -20,7 +20,7 @@
 **不做（本报告对应代码未扩展）**
 
 - 不改变 P23.4 的 hover / click / Enter·Space / 相机语义（仅叠在既有行为之上的视觉层）。
-- 未在本次中更新 Design Spec / Tech Spec 正文（计划归 **P23.7** 文档收口）。
+- Design Spec / Tech Spec / Data Pipeline 正文已在 **P23.7** 与实现对齐（见各 SSOT 文档 §首屏 / §1.4.7 / nightly 章节）。
 
 ---
 
@@ -103,7 +103,7 @@ Tailwind `@theme inline` 中映射为 `--color-cosmos-universe-bg`、`--color-co
 ## 5. 已知与后续
 
 - **cosmos** 在 Cover 黑底阶段字色为宇宙黑且 opacity 动画至 0，视觉上主要依赖「淡出」而非读字；与「cosmos 不变色」决策一致。
-- Design Spec 中 P23.4b 条目、Figma 链接与 MCP 对齐记录建议在 **P23.7** 一并更新。
+- Design Spec **§3.5** 已纳入 P23.4b token 与入场语义；Figma 像素级 SSOT 仍以设计稿为准。
 - 若在极窄视口下左侧大标题与左下进度行重叠，可再调 `max-w` 或垂直偏移（当前与 transcript 一致）。
 
 ---

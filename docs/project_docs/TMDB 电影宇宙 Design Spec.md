@@ -160,7 +160,7 @@
 * **品牌（UI 身份面小写）**：**`the movie cosmos`** 与 **`today`** 双品牌字；标题级字形使用 **`font-butler`**（Butler webfont，仅用于首屏品牌区）。  
 * **设计 token（P23.4b）**：**`--cosmos-universe-bg`**（宇宙背景色）与 **`--cosmos-brand-muted`**（浅灰场 / 完成态字色，当前 **`#f2f2f2`**）定义于 **`frontend/src/index.css`**；Loading 与 Cover 共用。**加载中**：**`the` / `movie` / `cosmos`** 在浅场上使用宇宙背景色字；**`today`** 使用 **`--cosmos-brand-muted`**。**旧版全屏背景 CSS 渐变动画已删除**。  
 * **完成态过渡**：Loading 卸载后，Cover 入场 **1000ms** 过渡由 **`CoverBackdrop`** 与页面遮罩（如 **`cosmos-cover-entry-page-shade`**）承担：**页面底色 → 宇宙背景**；**`the` / `movie` → brand-muted**；**`cosmos`** 保持宇宙色（分轨）；**`today`** 全程 brand-muted。实现须尊重 **`prefers-reduced-motion`**（见 `index.css` 媒体查询）。  
-* **像素级 SSOT**：间距、断点、曲线以 **Figma** 为准；对齐记录见 [`Phase 23.2 P23.2 Loading Figma 对齐实施报告.md`](../reports/Phase%2023.2%20P23.2%20Loading%20Figma%20对齐实施报告.md)、[`Phase 23 P23.4b Cover 首屏品牌与入场动效 实施报告.md`](../reports/Phase%2023%20P23.4b%20Cover%20首屏品牌与入场动效%20实施报告.md)。
+* **像素级 SSOT**：间距、断点、曲线以 **Figma** 为准；对齐记录见 [`Phase 23.2 P23.2 Loading Figma 对齐实施报告.md`](../reports/Phase%2023.2%20P23.2%20Loading%20Figma%20对齐实施报告.md)、[`Phase 23.4b P23.4b Cover 首屏品牌与入场动效 实施报告.md`](../reports/Phase%2023.4b%20P23.4b%20Cover%20首屏品牌与入场动效%20实施报告.md)。
 
 #### **3.5.2 Cover（场景已挂载 · 无 click hint）**
 

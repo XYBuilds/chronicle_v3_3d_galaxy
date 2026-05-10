@@ -4,7 +4,7 @@ overview: Phase 24 收口公开上线链路与用户可见内容。核心是清�
 todos:
   - id: p241-cloudflare-r2-deploy-cleanup
     content: P24.1 清理 Cloudflare Pages / R2 发布链路：禁用或断开 Pages Git 自动构建路径；从 Git 跟踪中移除大 gzip；确认 Pages 仅托管 app shell + 小 manifest，R2 托管 galaxy_data/search_index；加 dist 单文件 >25 MiB guard
-    status: pending
+    status: completed
   - id: p242-public-english-copy
     content: P24.2 README / Info 英文定稿：补齐 The Movie Cosmos 用户向介绍、数据来源、TMDB/Kaggle attribution、字体 attribution、非官方关系、技术栈、更新机制、隐私/analytics 简述
     status: pending

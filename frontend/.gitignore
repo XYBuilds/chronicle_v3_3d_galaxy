@@ -26,8 +26,7 @@ dist-ssr
 *storybook.log
 storybook-static
 
-# Local pipeline output (tracked gzip bundles — see root .gitignore)
+# Local pipeline output (see root .gitignore). Do not commit large gzip; manifest stays tracked.
 public/data/*.json
+!public/data/galaxy_assets_manifest.json
 public/data/*.json.gz
-!public/data/galaxy_data.json.gz
-!public/data/galaxy_search_index.json.gz

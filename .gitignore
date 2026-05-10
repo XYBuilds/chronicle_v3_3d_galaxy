@@ -35,11 +35,11 @@ frontend/dist/
 frontend/storybook-static/
 frontend/.vite/
 frontend/.cache/
-# P7.2: ship gzip bundles; pipeline writes .json locally (ignored).
+# P7.2 / P24.1: pipeline writes large JSON + gzip locally (ignored). Do not commit galaxy *.gz (Pages 25 MiB).
+# Small manifest is tracked so Pages/GH builds resolve R2 URLs without giant static assets.
 frontend/public/data/*.json
+!frontend/public/data/galaxy_assets_manifest.json
 frontend/public/data/*.json.gz
-!frontend/public/data/galaxy_data.json.gz
-!frontend/public/data/galaxy_search_index.json.gz
 # P23.5: og-today.png is regenerated each nightly run; don't track locally cached copies.
 frontend/public/data/og-today.png
 frontend/public/data/og-today.png.tmp

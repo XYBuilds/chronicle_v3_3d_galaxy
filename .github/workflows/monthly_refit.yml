@@ -176,6 +176,9 @@ jobs:
           npm run build -w frontend
 
       - name: Deploy to Cloudflare Pages
+        env:
+          # Repo root CWD: wrangler defaults to ./functions; ours lives under frontend/
+          CF_PAGES_FUNCTIONS_DIR: frontend/functions
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}

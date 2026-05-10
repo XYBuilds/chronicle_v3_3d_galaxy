@@ -176,12 +176,11 @@ jobs:
           npm run build -w frontend
 
       - name: Deploy to Cloudflare Pages
-        env:
-          # Repo root CWD: wrangler defaults to ./functions; ours lives under frontend/
-          CF_PAGES_FUNCTIONS_DIR: frontend/functions
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy frontend/dist --project-name=${{ secrets.CLOUDFLARE_PAGES_PROJECT_NAME }} --branch=${{ github.ref_name }}
+          # CWD=frontend so ./functions → frontend/functions (Pages middleware) and dist → frontend/dist
+          workingDirectory: frontend
+          command: pages deploy dist --project-name=${{ secrets.CLOUDFLARE_PAGES_PROJECT_NAME }} --branch=${{ github.ref_name }}
           gitHubToken: ${{ github.token }}

@@ -72,16 +72,26 @@
     "sliderAriaLabel": "Enfoque del año de estreno"
   },
   "info": {
-    "modalTitle": "Acerca de esta experiencia",
-    "modalSubtitle": "Panel provisional: el texto y los enlaces se finalizarán antes del lanzamiento.",
-    "introHeading": "Resumen",
-    "introBody": "(Provisional) The Movie Cosmos: ~60.000 películas como una galaxia de partículas 2,5D; línea de tiempo, búsqueda (títulos / personas / géneros) y resaltado multiselección. Texto de producto pendiente.",
-    "dataHeading": "Fuentes de datos",
-    "dataBody": "(Provisional) Las atribuciones y referencias se añadirán al cierre; aquí aún no hay ninguna.",
-    "stackHeading": "Stack",
-    "stackBody": "(Provisional) Vite + React + Three.js (galaxia instanciada / postprocesado), Zustand, pipeline de exportación gzip. Resumen pendiente.",
-    "linksHeading": "Enlaces",
-    "linksBody": "(Provisional) Los enlaces se proporcionarán al cierre."
+    "modalTitle": "The Movie Cosmos",
+    "modalSubtitle": "Generada a partir de la base de datos de películas TMDB: una galaxia cinematográfica por la que puedes moverte.",
+    "sections": [
+      {
+        "heading": "Resumen",
+        "body": "Más cerca en el plano ≈ más parecidas en trama, género e idioma; la profundidad ≈ fecha de estreno. Más grande ≈ más votos (log); más brillo ≈ media TMDB más alta; el color ≈ género principal. Grande no siempre es más brillante."
+      },
+      {
+        "heading": "Uso",
+        "body": "Tras la carga: portada → toca el globo central para The Movie Today (un título al día, UTC).\n\nArrastra para orbitar. Sin Espacio: rueda o línea de tiempo te mueven en profundidad por año. En recorrido macro, mantén Espacio y rueda para acercarte; suelta Espacio para restablecer la distancia. Pasa el cursor para una vista previa de una línea.\n\nBusca títulos, personas o géneros arriba; ESC retrocede búsqueda, panel y foco. Clic en una película para el foco y la hoja lateral; clic en vecinas para cambiar."
+      },
+      {
+        "heading": "Datos, entorno y pila",
+        "body": "Datos de TMDB; los volcados completos suelen empezar en Kaggle «TMDB Movies Daily Updates». Puede haber campos de IMDb: lee las licencias antes de un uso comercial. Atribución TMDB; avisos legales y de terceros en NOTICE del repositorio.\n\nNavegador reciente y aceleración por hardware. Requiere WebGL 2 y gzip (DecompressionStream). Referencia: Safari 16.4+, Chrome 80+, Firefox 113+.\n\nTubería: Python limpia → incrustaciones multilingües → fusiona género/idioma → UMAP (random_state=42) → galaxia gzip + índice de búsqueda; el eje Z (año) no entra en UMAP. UI: Vite + React 19 + Three.js puro + Zustand."
+      },
+      {
+        "heading": "Enlaces",
+        "body": "[Repositorio en GitHub](https://github.com/XYBuilds/chronicle_v3_3d_galaxy)\n\n[Kaggle: TMDB Movies Daily Updates](https://www.kaggle.com/datasets/alanvourch/tmdb-movies-daily-updates)"
+      }
+    ]
   },
   "scene": {
     "webgl2Required": "[Scene] Se requiere WebGL2 (`gl_InstanceID`, doble pipeline InstancedMesh). Actualice el navegador o active la aceleración por hardware (línea base de la fase 7.2)."

@@ -59,7 +59,7 @@
     "genreMultiRemove": "移除"
   },
   "hud": {
-    "openInfo": "打开信息面板（占位内容）",
+    "openInfo": "打开信息面板",
     "toggleFullscreen": "切换全屏（F）",
     "focusSearch": "聚焦搜索（Cmd/Ctrl+K）",
     "close": "关闭",
@@ -72,16 +72,26 @@
     "sliderAriaLabel": "上映年份焦点"
   },
   "info": {
-    "modalTitle": "关于本体验",
-    "modalSubtitle": "占位面板：上线前将完善文案与链接。",
-    "introHeading": "概述",
-    "introBody": "（占位）The Movie Cosmos：约 60,000 部影片构成的 2.5D 粒子星系；时间轴、搜索（片名 / 影人 / 流派）与多选高亮。正式文案待定。",
-    "dataHeading": "数据来源",
-    "dataBody": "（占位）致谢与引用将在收尾阶段补充；此处尚未列出。",
-    "stackHeading": "技术栈",
-    "stackBody": "（占位）Vite + React + Three.js（实例化星系 / 后期）、Zustand、gzip 导出流水线。摘要待定。",
-    "linksHeading": "链接",
-    "linksBody": "（占位）链接将在收尾阶段提供。"
+    "modalTitle": "The Movie Cosmos",
+    "modalSubtitle": "基于 TMDB 电影数据库生成的，一片可穿梭的电影星系",
+    "sections": [
+      {
+        "heading": "概览",
+        "body": "平面上离得近 ≈ 剧情、类型、语言更像；纵深 ≈ 上映日。越大 ≈ 越多人评过分（对数），越亮 ≈ TMDB 均分越高，颜色大致跟主类型；体量大未必更亮。"
+      },
+      {
+        "heading": "使用",
+        "body": "加载完 → 封面 → 点正中星球 → The Movie Today（UTC 每日一部）。\n\n拖拽转视角；不按空格时用滚轮或时间轴沿上映年纵深；宏观漫游时按住空格再滚轮可临时推近，松空格观察距离复位；悬停可看一行摘要。\n\n顶栏搜片名、影人、流派；ESC 逐级退出搜索、侧栏、聚焦。浏览态单击进聚焦并开侧栏，可点邻星切换。"
+      },
+      {
+        "heading": "数据、环境与实现",
+        "body": "来自 TMDB；全量快照常见入口 Kaggle「TMDB Movies Daily Updates」，或含 IMDb 字段，商用/再分发前请自读条款；展示遵守 TMDB 署名，法律与第三方说明见仓库 NOTICE。\n\n需较新浏览器、硬件加速、WebGL 2 与 gzip（DecompressionStream）。\n\n管线：Python 清洗 → 多语言句向量 → 融合类型/语言 → UMAP（random_state=42）→ gzip 星系与搜索索引，上映年 Z 不进 UMAP；前端 Vite + React 19 + 原生 Three.js + Zustand。"
+      },
+      {
+        "heading": "链接",
+        "body": "[GitHub 仓库](https://github.com/XYBuilds/chronicle_v3_3d_galaxy)\n\n[Kaggle 数据集](https://www.kaggle.com/datasets/alanvourch/tmdb-movies-daily-updates)"
+      }
+    ]
   },
   "scene": {
     "webgl2Required": "[Scene] 需要 WebGL2（`gl_InstanceID`、双 InstancedMesh 管线）。请升级浏览器或启用硬件加速（Phase 7.2 基线）。"

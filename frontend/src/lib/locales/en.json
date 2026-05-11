@@ -59,7 +59,7 @@
     "genreMultiRemove": "Remove"
   },
   "hud": {
-    "openInfo": "Open info panel (placeholder content)",
+    "openInfo": "Open info panel",
     "toggleFullscreen": "Toggle fullscreen (F)",
     "focusSearch": "Focus search (Cmd/Ctrl+K)",
     "close": "Close",
@@ -72,16 +72,26 @@
     "sliderAriaLabel": "Release-year focus"
   },
   "info": {
-    "modalTitle": "About this experience",
-    "modalSubtitle": "Placeholder panel: copy and links will be finalized before launch.",
-    "introHeading": "Overview",
-    "introBody": "(Placeholder) The Movie Cosmos: ~60,000 films as a 2.5D particle galaxy; timeline, search (titles / people / genres), and multi-select highlighting. Product copy TBD.",
-    "dataHeading": "Data sources",
-    "dataBody": "(Placeholder) Attribution and references will be added at wrap-up; none listed here yet.",
-    "stackHeading": "Stack",
-    "stackBody": "(Placeholder) Vite + React + Three.js (instanced galaxy / post-processing), Zustand, gzip export pipeline. Summary TBD.",
-    "linksHeading": "Links",
-    "linksBody": "(Placeholder) Links will be provided at wrap-up."
+    "modalTitle": "The Movie Cosmos",
+    "modalSubtitle": "Built from the TMDB movie database — a starfield of films you can move through.",
+    "sections": [
+      {
+        "heading": "Overview",
+        "body": "Closer on the plane ≈ more alike in plot, genres, and languages; depth ≈ release date. Larger ≈ more votes (log scale); brighter ≈ higher TMDB average; color ≈ primary genre. Big is not always bright."
+      },
+      {
+        "heading": "Usage",
+        "body": "After loading: cover → tap the center globe for The Movie Today (one pick per UTC day).\n\nDrag to orbit. Without Space: scroll wheel or timeline moves you along release-year depth. In macro roam, hold Space and scroll to dolly in; release Space to reset distance. Hover shows a one-line preview.\n\nSearch titles, people, or genres in the bar; ESC unwinds search, side sheet, then focus. Click a film for focus and the side sheet; click neighbors to switch."
+      },
+      {
+        "heading": "Data, runtime & stack",
+        "body": "Film data from TMDB; full snapshots often start from the Kaggle dataset “TMDB Movies Daily Updates.” Rows may include IMDb-sourced fields — read TMDB and IMDb terms before commercial reuse. Display follows TMDB attribution; legal and third-party notes: repo NOTICE.\n\nUse a recent browser with hardware acceleration. WebGL 2 and gzip (DecompressionStream) required. Baseline: Safari 16.4+, Chrome 80+, Firefox 113+.\n\nPipeline: Python clean → multilingual sentence embeddings → fuse genres/languages → UMAP (random_state=42) → gzipped galaxy + search index; release-year Z is not in UMAP. UI: Vite + React 19 + vanilla Three.js + Zustand."
+      },
+      {
+        "heading": "Links",
+        "body": "[GitHub repository](https://github.com/XYBuilds/chronicle_v3_3d_galaxy)\n\n[Kaggle: TMDB Movies Daily Updates](https://www.kaggle.com/datasets/alanvourch/tmdb-movies-daily-updates)"
+      }
+    ]
   },
   "scene": {
     "webgl2Required": "[Scene] WebGL2 is required (`gl_InstanceID`, dual InstancedMesh pipeline). Upgrade the browser or enable hardware acceleration (Phase 7.2 baseline)."

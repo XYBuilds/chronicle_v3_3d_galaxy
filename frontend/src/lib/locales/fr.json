@@ -72,16 +72,26 @@
     "sliderAriaLabel": "Focus sur l’année de sortie"
   },
   "info": {
-    "modalTitle": "À propos de cette expérience",
-    "modalSubtitle": "Panneau provisoire : texte et liens seront finalisés avant le lancement.",
-    "introHeading": "Présentation",
-    "introBody": "(Provisoire) The Movie Cosmos : ~60 000 films en galaxie de particules 2,5D ; chronologie, recherche (titres / personnes / genres) et surbrillance multi-sélection. Texte produit à définir.",
-    "dataHeading": "Sources de données",
-    "dataBody": "(Provisoire) Les attributions et références seront ajoutées en fin de projet ; rien n’est listé ici pour l’instant.",
-    "stackHeading": "Stack",
-    "stackBody": "(Provisoire) Vite + React + Three.js (galaxie instanciée / post-traitement), Zustand, pipeline d’export gzip. Résumé à définir.",
-    "linksHeading": "Liens",
-    "linksBody": "(Provisoire) Les liens seront fournis en fin de projet."
+    "modalTitle": "The Movie Cosmos",
+    "modalSubtitle": "Généré à partir de la base de données cinématographique TMDB — une galaxie de films que vous pouvez parcourir.",
+    "sections": [
+      {
+        "heading": "Aperçu",
+        "body": "Plus proche sur le plan ≈ plus proche sur l’intrigue, les genres et les langues ; la profondeur ≈ la date de sortie. Plus grand ≈ davantage de votes (échelle logarithmique) ; plus lumineux ≈ moyenne TMDB plus élevée ; la couleur ≈ genre principal. Grand ne signifie pas toujours plus lumineux."
+      },
+      {
+        "heading": "Utilisation",
+        "body": "Après le chargement : couverture → touchez le globe central pour The Movie Today (un titre par jour, UTC).\n\nFaites glisser pour faire tourner la vue. Sans Espace : la molette ou la frise vous déplace sur la profondeur des années de sortie. En macro, maintenez Espace et la molette pour vous rapprocher temporairement ; relâchez Espace pour réinitialiser la distance. Survolez pour un aperçu d’une ligne.\n\nRecherchez titres, personnes ou genres dans la barre ; Échap remonte la recherche, le panneau latéral puis le focus. Cliquez sur un film pour le focus et la fiche ; cliquez sur les voisins pour changer."
+      },
+      {
+        "heading": "Données, environnement et implémentation",
+        "body": "Données TMDB ; les instantanés complets passent souvent par le jeu Kaggle « TMDB Movies Daily Updates », des champs IMDb peuvent être présents — lisez les licences avant toute réutilisation commerciale. L’affichage respecte l’attribution TMDB ; mentions légales et tiers : fichier NOTICE du dépôt.\n\nNavigateur récent et accélération matérielle. WebGL 2 et gzip (DecompressionStream) requis. Référence : Safari 16.4+, Chrome 80+, Firefox 113+.\n\nPipeline : Python nettoie → incrustations multilingues → fusion genres/langues → UMAP (random_state=42) → galaxie gzip + index de recherche ; l’année Z de sortie n’entre pas dans UMAP. UI : Vite + React 19 + Three.js natif + Zustand."
+      },
+      {
+        "heading": "Liens",
+        "body": "[Dépôt GitHub](https://github.com/XYBuilds/chronicle_v3_3d_galaxy)\n\n[Données Kaggle](https://www.kaggle.com/datasets/alanvourch/tmdb-movies-daily-updates)"
+      }
+    ]
   },
   "scene": {
     "webgl2Required": "[Scene] WebGL2 est requis (`gl_InstanceID`, pipeline InstancedMesh double). Mettez à jour le navigateur ou activez l’accélération matérielle (référence phase 7.2)."

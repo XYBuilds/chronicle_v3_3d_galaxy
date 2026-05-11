@@ -140,7 +140,7 @@ npm install
 
 2. **CI / 部署**  
    **本地与常规 PR**：仍在 **仓库根** 使用根目录 **`package-lock.json`**，执行 **`npm ci`** / **`npm install`**，构建用 **`npm run build`** 或 **`npm run build -w frontend`**（勿在 **`frontend/`** 单独 `npm ci`，避免双锁漂移）。  
-   **GitHub Pages（`.github/workflows/deploy-pages.yml`）**：在 **Linux runner** 上为规避 [npm/cli#4828](https://github.com/npm/cli/issues/4828) 对 **optional 原生绑定** 的影响，采用 **删除根 `package-lock.json` + 两处 `node_modules` 后 `npm install --include=optional`** 再构建；**不**将 CI 生成的 lockfile 回写仓库。详见 **`docs/reports/Phase 7.2 P7.2 I6 GitHub Pages 与 gzip 数据 实施报告.md`** §3 与 **`docs/workflows/GitHub Pages 上线教程（Phase 7 I6）.md`** §2。  
+   **GitHub Pages（`.github/workflows/deploy-pages.yml`）**：在 **Linux runner** 上为规避 [npm/cli#4828](https://github.com/npm/cli/issues/4828) 对 **optional 原生绑定** 的影响，采用 **删除根 `package-lock.json` + 两处 `node_modules` 后 `npm install --include=optional`** 再构建；**不**将 CI 生成的 lockfile 回写仓库。详见 **`docs/reports/Phase 7.2 P7.2 I6 GitHub Pages 与 gzip 数据 实施报告.md`** §3 与 **`docs/guides/GitHub Pages 上线教程（Phase 7 I6）.md`** §2。  
    其他托管（如 Vercel）若无同类问题，**Install Command** 仍可优先根目录 **`npm ci`**。
 
 3. **历史报告中的 `--prefix` 描述**  

@@ -72,16 +72,30 @@
     "sliderAriaLabel": "Enfoque del año de estreno"
   },
   "info": {
-    "modalTitle": "Acerca de esta experiencia",
-    "modalSubtitle": "Panel provisional: el texto y los enlaces se finalizarán antes del lanzamiento.",
-    "introHeading": "Resumen",
-    "introBody": "(Provisional) The Movie Cosmos: ~60.000 películas como una galaxia de partículas 2,5D; línea de tiempo, búsqueda (títulos / personas / géneros) y resaltado multiselección. Texto de producto pendiente.",
-    "dataHeading": "Fuentes de datos",
-    "dataBody": "(Provisional) Las atribuciones y referencias se añadirán al cierre; aquí aún no hay ninguna.",
-    "stackHeading": "Stack",
-    "stackBody": "(Provisional) Vite + React + Three.js (galaxia instanciada / postprocesado), Zustand, pipeline de exportación gzip. Resumen pendiente.",
-    "linksHeading": "Enlaces",
-    "linksBody": "(Provisional) Los enlaces se proporcionarán al cierre."
+    "modalTitle": "The Movie Cosmos",
+    "modalSubtitle": "Generada a partir de la base de datos de películas TMDB: una galaxia cinematográfica por la que puedes moverte.",
+    "sections": [
+      {
+        "heading": "Resumen",
+        "body": "Más cerca en el plano ≈ más parecidas en trama, género e idioma; la profundidad ≈ fecha de estreno. Más grande ≈ más votos (log); más brillo ≈ media TMDB más alta; el color ≈ género principal. Grande no siempre es más brillante."
+      },
+      {
+        "heading": "Uso",
+        "body": "Tras la carga: portada → toca el globo central para The Movie Today (un título al día, UTC).\n\nArrastra para orbitar. Sin Espacio: rueda o línea de tiempo te mueven en profundidad por año. En recorrido macro, mantén Espacio y rueda para acercarte; suelta Espacio para restablecer la distancia. Pasa el cursor para una vista previa de una línea.\n\nBusca títulos, personas o géneros arriba; ESC retrocede búsqueda, panel y foco. Clic en una película para el foco y la hoja lateral; clic en vecinas para cambiar."
+      },
+      {
+        "heading": "Datos y tu equipo",
+        "body": "Los datos de películas vienen de TMDB (The Movie Database). The Movie Cosmos no es un producto oficial de TMDB. Armamos la galaxia offline a partir de listados públicos (a menudo un snapshot gratuito en Kaggle). Si reutilizas tablas en negocio, lee las condiciones de TMDB, IMDb y Kaggle. Los créditos en pantalla siguen las reglas de atribución de TMDB; avisos legales y de terceros en el NOTICE del repositorio en GitHub.\n\nUsa un navegador reciente con aceleración por hardware. La primera visita descarga un paquete grande comprimido; navegadores muy viejos o redes bloqueadas pueden impedir que abra."
+      },
+      {
+        "heading": "Privacidad",
+        "body": "Sin registro. A veces usamos estadísticas ligeras de Cloudflare (casi sin cookies) para tráfico global y rapidez, no para saber quién eres ni qué película eliges. Los bloqueadores pueden ocultarlas; la experiencia sigue igual."
+      },
+      {
+        "heading": "Enlaces",
+        "body": "[Repositorio en GitHub](https://github.com/XYBuilds/chronicle_v3_3d_galaxy)\n\n[Kaggle: TMDB Movies Daily Updates](https://www.kaggle.com/datasets/alanvourch/tmdb-movies-daily-updates)"
+      }
+    ]
   },
   "scene": {
     "webgl2Required": "[Scene] Se requiere WebGL2 (`gl_InstanceID`, doble pipeline InstancedMesh). Actualice el navegador o active la aceleración por hardware (línea base de la fase 7.2)."

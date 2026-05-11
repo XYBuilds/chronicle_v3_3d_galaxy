@@ -72,16 +72,30 @@
     "sliderAriaLabel": "上映年份焦點"
   },
   "info": {
-    "modalTitle": "關於此體驗",
-    "modalSubtitle": "暫用面板：上線前將完善文案與連結。",
-    "introHeading": "概述",
-    "introBody": "（暫用）The Movie Cosmos：約 60,000 部影片構成的 2.5D 粒子星系；時間軸、搜尋（片名 / 影人 / 類型）與多重選取強調。正式文案待定。",
-    "dataHeading": "資料來源",
-    "dataBody": "（暫用）致謝與參考將於收尾階段補上；此處尚未列出。",
-    "stackHeading": "技術堆疊",
-    "stackBody": "（暫用）Vite + React + Three.js（實例化星系 / 後製）、Zustand、gzip 匯出管線。摘要待定。",
-    "linksHeading": "連結",
-    "linksBody": "（暫用）連結將於收尾階段提供。"
+    "modalTitle": "The Movie Cosmos",
+    "modalSubtitle": "基於 TMDB 電影資料庫生成的，一片可穿梭的電影星系",
+    "sections": [
+      {
+        "heading": "概覽",
+        "body": "平面上愈近 ≈ 劇情、類型、語言愈像；縱深 ≈ 上映日。愈大 ≈ 愈多人評分（對數），愈亮 ≈ TMDB 均分愈高，顏色大致跟主類型；體積大未必更亮。"
+      },
+      {
+        "heading": "使用",
+        "body": "載入完成 → 封面 → 點正中星球 → The Movie Today（UTC 每日一部）。\n\n拖曳轉視角；未按空格時用滾輪或時間軸沿上映年縱深；宏觀漫遊時按住空格再滾輪可臨時推近，鬆空格觀察距離復位；懸停可看一行摘要。\n\n頂欄搜片名、影人、類型；ESC 逐級退出搜尋、側欄、聚焦。瀏覽態按一下進聚焦並開側欄，可點鄰星切換。"
+      },
+      {
+        "heading": "資料與裝置",
+        "body": "影片資訊來自 TMDB（The Movie Database）。The Movie Cosmos 不是 TMDB 官方出品。星系資料由公開的影片清單離線整理（常見起點是 Kaggle 上的 TMDB 日更快照）。若要商用或再分發原始資料，請自行閱讀 TMDB、IMDb、Kaggle 條款。畫面展示遵守 TMDB 署名；更多法律與第三方說明見 GitHub 倉庫的 NOTICE。\n\n請使用較新瀏覽器並開啟硬體加速。首次造訪會下載較大的壓縮檔；過舊瀏覽器或受限網路可能無法開啟。"
+      },
+      {
+        "heading": "隱私",
+        "body": "無需登入。可能啟用 Cloudflare 的輕量統計，只看整體流量與大致速度（通常不用 cookie），不用來辨識你或你點了哪部片。廣告封鎖可能擋掉統計，不影響使用。"
+      },
+      {
+        "heading": "連結",
+        "body": "[GitHub 倉庫](https://github.com/XYBuilds/chronicle_v3_3d_galaxy)\n\n[Kaggle 資料集](https://www.kaggle.com/datasets/alanvourch/tmdb-movies-daily-updates)"
+      }
+    ]
   },
   "scene": {
     "webgl2Required": "[Scene] 需要 WebGL2（`gl_InstanceID`、雙 InstancedMesh 管線）。請升級瀏覽器或啟用硬體加速（Phase 7.2 基線）。"

@@ -1,172 +1,253 @@
-# The Movie Cosmos（TMDB Movie Cosmos / Chronicle v3）
+# The Movie Cosmos
 
-> The Movie Cosmos 把 ~60K TMDB 电影渲染为一个**可漫游的 2.5D 粒子星系**：
-> 文本语义 + 流派 + 原始语言经 UMAP 降维到 X/Y，`release_date` 转小数年份作为 Z；
-> `vote_count` 驱动尺寸、`vote_average` 驱动明暗、主 genre 决定色相。
->
-> **The Movie Today**：每日 UTC 夜间任务（nightly）确定性写入 **`today.json`** 并刷新 **`og-today.png`**（社交分享卡片）；首屏加载后进入 Cover，仅今日 Perlin 球为入口（见 Tech Spec §1.4.7、Data Pipeline §11.1）。
+**The Movie Cosmos** 把大量 TMDB 影片做成一片可以走进去的星空：**内容上相像的电影更容易聚在一块**，**时间**像一条可以前后走的深轴；星星**越大**通常表示越多人评过分，**越亮**往往表示评分越高，**颜色**大致跟类型有关。界面上的品牌字是 **the movie cosmos**（全小写）。算法、字段名与数据管线说明见下文 **[面向开发者](#面向开发者)** 与 [TMDB 数据特征工程与 3D 映射总表](docs/project_docs/TMDB%20数据特征工程与%203D%20映射总表.md)。
 
-线上站点（Phase 23 主域 + 备线）：
+**在线体验：** [themoviecosmos.com](https://themoviecosmos.com/)
 
-- **生产主域（Cloudflare Pages 自定义域）**：<https://themoviecosmos.com/>（`www.themoviecosmos.com` 同项目绑定）
-- **Cloudflare Pages 默认域**：<https://the-movie-cosmos.pages.dev/>（**301 → 主域**，`frontend/functions/_middleware.js`）
-- **GitHub Pages**（灰度备线）：见 `.github/workflows/deploy-pages.yml` 输出域名
+**English readme:** [README.en.md](README.en.md)
 
 ---
 
-## 1. 项目结构（速览）
+## 使用指南
 
+需要加载阶段、搜索与键盘等**产品级细则**时，可查 [Tech Spec](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md)、[Design Spec](docs/project_docs/TMDB%20电影宇宙%20Design%20Spec.md)；字段与渲染的一一对应见 [映射总表](docs/project_docs/TMDB%20数据特征工程与%203D%20映射总表.md)。
+
+### 初次上手：封面 → 完整宇宙
+
+1. **加载**：等待加载进度条走完，完成后进入封面。
+2. **封面**：点击屏幕中心星球进入今日电影（The Movie Today）。
+
+**The Movie Today**：封面正中间高亮的那一部电影，是站点为「**今天**」准备的一部**每日推荐**（按世界协调时换日，每天一换）。规则与故障兜底见 [P23.1 The Movie Today 验收指南](docs/guides/P23.1%20The%20Movie%20Today%20验收指南.md)。
+
+---
+
+### 浏览态：在星系里漫游
+
+**交互**
+
+- **平移观察方向**：在画布上按住并拖拽，以平移或旋转观察方向（具体映射以当前实现为准）。
+- **调整当前年代（时间轴）**：**未按住空格**时，使用滚轮或拖动时间轴，使视点沿 **上映时间纵深** 移动，即调节 `zCurrent` 所代表的年代区间。
+- **局部推近（Space + 滚轮）**：在**宏观漫游**（时间轴滚轮生效、且未处于聚焦会话）时，**按住空格**并旋转滚轮，在保持光标下世界点落在当前 `zCurrent` 平面的前提下临时放大当前年代附近的局部星野；**松开空格** 后观察距离复位为默认值。产品定义见 [Design Spec](docs/project_docs/TMDB%20电影宇宙%20Design%20Spec.md)（滚轮双模式，Phase 17）及 [Tech Spec §1.4.3](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md)。
+- **快速预览电影**：指针悬停于某一影片实例时，显示 Tooltip（标题、主类型等），不中断相机运动。
+- **搜索影片/人物/流派**：使用顶部搜索栏，支持按影片、人物、流派等模式检索；按 **ESC** 按焦点栈逐级退出搜索、抽屉与聚焦等状态，详见 [Design Spec](docs/project_docs/TMDB%20电影宇宙%20Design%20Spec.md) §4。
+
+**星球视觉**
+
+
+| 视觉       | 含义                                                            |
+| -------- | ------------------------------------------------------------- |
+| **平面位置** | 由剧情与宣传、流派及语言、文化等经降维得到的坐标：**语义与文化上相近的影片，在平面上更接近**。             |
+| **纵深位置** | 对应 **上映日期**；                                                  |
+| **大小**   | 主要随 **评价人数**（对数缩放）增大：**参与评分的人数越多，天体越大**，且缩放抑制极端头部对可视性的占用。     |
+| **明度**   | 主要随 **TMDB 均分**（0–10）升高：**评分越高，观感越亮**；尺度与人数解耦，故 **尺度大未必明度高**。 |
+| **色相**   | 由 **主类型（`genres[0]`）** 决定主色；多类型差异在 **聚焦态** 的高模球体上更可分辨。        |
+
+
+字段级与渲染实现对照见 [TMDB 数据特征工程与 3D 映射总表](docs/project_docs/TMDB%20数据特征工程与%203D%20映射总表.md)；管线与算法见下文 **[面向开发者](#面向开发者)**。
+
+---
+
+### 聚焦态：选定影片后的星球检视
+
+**交互**
+
+- **选取**：在浏览态 **单击** 目标影片实例，相机动画进入 **focus**，并打开侧栏 **档案详情**（海报、剧情简介、对白语言、演职员等）。
+- **视点与切换**：在 focus 下可 **拖拽** 以环绕焦点天体及其 **邻域** 内的其他电影；**单击** 邻域内其他电影星球，将焦点切换至该片（状态转换见 [星球状态机 spec](docs/project_docs/星球状态机%20spec.md)）。
+- **读数辅助**：界面提供与 `**vote_count` 分档**、**评分—明度（L）映射** 相关的参照控件，定义见 [视觉参数总表](docs/project_docs/视觉参数总表.md)。
+- **退出**：使用 **退出聚焦** 或 **ESC** 等操作，按产品约定顺序退回浏览态，详见 [Design Spec](docs/project_docs/TMDB%20电影宇宙%20Design%20Spec.md)。
+
+**星球视觉**
+
+
+| 视觉          | 含义                                                                          |
+| ----------- | --------------------------------------------------------------------------- |
+| **色带形状分界**  | 球面 **Perlin Noise** 划成多圈，再上色；至多对应 **8** 个已声明流派。                             |
+| **色带顺序与宽窄** | **流派顺序**由 TMDB **流派投票数**决定；**越靠前的流派，条带越宽**，向后按固定比例递减（与宏观流派权重同一 **1/φ** 节奏）。 |
+| **色相**      | 每一圈颜色对应该流派在调色盘里的 **主色**；**主类型** 优先用导出里的 `**genre_hue`**。                    |
+| **明度**      | 仍主要随 **TMDB 均分** 升高：**分高更亮**，规则与宏观星系一致。                                     |
+| **球面起伏**    | 各圈条带略有 **台阶式隆起**，便于用立体轮廓区分圈层。                                               |
+| **同心星环**    | 若干环对应 **评价人数** 的档位刻度，用来对照「这颗球在当前宇宙里算大还是小」。                                  |
+| **侧栏亮条**    | 竖条 + 指针标示 **评分** 在亮暗标尺上的位置，与球体明暗 **同一套读数**。                                 |
+
+
+实现与可调参数见 [视觉参数总表](docs/project_docs/视觉参数总表.md)、[Tech Spec §1.1](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md)（焦点 Perlin 球）。
+
+---
+
+### 浏览器与环境
+
+请使用**较新**的桌面或移动浏览器，并开启硬件加速。本站需要 **WebGL 2**，数据包会压缩传输；若浏览器太旧、不支持解压，可能打不开。出错时页面上会有说明，也可对照 [MDN：DecompressionStream](https://developer.mozilla.org/en-US/docs/Web/API/DecompressionStream) 里的环境要求（常见为 Safari 16.4+、Chrome 80+、Firefox 113+ 一类）。
+
+### 隐私与统计（简述）
+
+- 本站**不**实现登录账号，也不维护面向终端用户的「个人档案」式画像数据库。
+- **可选**：生产构建可启用 **Cloudflare Web Analytics**。若在 GitHub Actions 中配置了 Secret **`CF_WEB_ANALYTICS_BEACON_TOKEN`**（构建步骤映射为 **`VITE_CF_BEACON_TOKEN`**），[`frontend/vite.config.ts`](frontend/vite.config.ts) 会在产物 `index.html` 注入 Cloudflare 官方轻量 beacon（`static.cloudflareinsights.com/beacon.min.js`），用于**聚合**访问量、大致地理分布、Core Web Vitals 等 **RUM**；按 Cloudflare 文档该方案**通常不使用 cookie**（是否需额外同意横幅以你的法域与 Cloudflare 条款为准）。
+- **未配置**上述 Secret 时**不会**注入统计脚本，与「无第三方分析」行为一致。
+- 配置与验收见 [P20.5 Cloudflare Web Analytics 接入操作指南](docs/guides/P20.5%20Cloudflare%20Web%20Analytics%20%E6%8E%A5%E5%85%A5%E6%93%8D%E4%BD%9C%E6%8C%87%E5%8D%97.md)。**广告拦截 / 隐私类扩展**可能拦截上报请求，**不影响**星系与 HUD 的正常使用。
+
+### 数据来源
+
+影片信息来自 [TMDB](https://www.themoviedb.org/) 生态；全量快照常见入口是 Kaggle 上的 **[TMDB Movies Daily Updates](https://www.kaggle.com/datasets/alanvourch/tmdb-movies-daily-updates)**。TMDB 背后还可能合并 [IMDb 公开数据集](https://developer.imdb.com/non-commercial-datasets/) 里的部分字段——若你要**商用或再分发**原始表，请自己读完 TMDB / IMDb 的条款。本站展示 TMDB 数据需遵守 [TMDB 署名说明](https://www.themoviedb.org/about/logos-attribution)；仓库里的法律与第三方清单见 `[NOTICE](NOTICE)`。**数据从哪来、怎么离线打成星系文件**，见下文 **[面向开发者](#面向开发者)** 里的「技术栈与数据流」与 [Data Pipeline](docs/project_docs/TMDB%20电影宇宙%20Data%20Pipeline.md)。
+
+> **视觉素材（可选）：** 若你为仓库添加演示图或录屏，可在此处插入一张静态图或 GIF，便于 README 在社交平台预览。
+
+---
+
+## 面向开发者
+
+### 技术栈与数据流
+
+- **数据处理（Python）**：清洗 TMDB 导出 → 多语言句向量 → 与流派 / 语言特征融合 → **UMAP（`random_state=42` 固定）** → 导出静态 `galaxy_data` 与搜索索引（gzip）。**Z 轴（小数年份）不参与 UMAP**，仅作纵深坐标。
+- **前端**：**Vite** + **React 19**（HUD / DOM）+ **原生 Three.js**（非 R3F）双 `InstancedMesh` 场景 + **Zustand** 状态桥接；英文 HUD 文案以 `[frontend/src/lib/locales/en.json](frontend/src/lib/locales/en.json)` 为 SSOT，经 `[frontend/src/lib/strings.ts](frontend/src/lib/strings.ts)` 暴露为 `STRINGS`。
+- **运行时数据（生产拓扑）**：**Cloudflare Pages** 托管构建产物 `**frontend/dist` 应用壳**（HTML / JS / CSS、小体积的 `galaxy_assets_manifest.json` 等）。超过 Pages 单文件上限的 `**galaxy_data.json.gz`、`galaxy_search_index.json.gz`** 等大对象放在 **Cloudflare R2** 的公开访问前缀下，由 manifest 中的**绝对 URL** 在浏览器端拉取并解压。也可用 Vite 环境变量覆盖 URL（见下文）。步骤级说明见 [P18.6 Cloudflare Pages 切换操作指南](docs/guides/P18.6%20Cloudflare%20Pages%20%E5%88%87%E6%8D%A2%E6%93%8D%E4%BD%9C%E6%8C%87%E5%8D%97.md)、[P18.6b Cloudflare R2 上线操作手册](docs/guides/P18.6b%20Cloudflare%20R2%20%E4%B8%8A%E7%BA%BF%E6%93%8D%E4%BD%9C%E6%89%8B%E5%86%8C.md)。
+
+```mermaid
+flowchart LR
+  subgraph pipeline [Python_pipeline]
+    Raw[TMDB_CSV]
+    Clean[Clean_and_features]
+    Embed[Multilingual_embeddings]
+    UMAP[UMAP_DensMAP_XY]
+    Export[galaxy_data_and_index_gzip]
+    Raw --> Clean --> Embed --> UMAP --> Export
+  end
+  subgraph cf [Cloudflare_hosting]
+    Pages[Pages_app_shell_dist]
+    R2[R2_large_gzip]
+  end
+  subgraph web [Browser_runtime]
+    Fetch[Fetch_and_decompress]
+    HUD[React_HUD]
+    GL[Three_js_scene]
+    Fetch --> HUD
+    Fetch --> GL
+  end
+  Export --> R2
+  Export --> Pages
+  Pages -->|HTML_JS_CSS_manifest| Fetch
+  R2 -->|gzip_by_manifest_URL| Fetch
 ```
-chronicle_v3_3d_galaxy/
-├── data/                   # raw / output / runs / subsample（多数 gitignored；见 data/README.md）
+
+
+
+> **说明**：图中从 `Export` 连到 `Pages` / `R2` 表示产物的**归宿**；实际顺序由 GitHub Actions 执行：**先**把大 gzip 推到 R2，**再** Vite 构建（manifest 内写 R2 公网 URL），**最后** `wrangler pages deploy` 上传 `dist`。未单独画出 CI 节点。
+
+### 仓库结构与布局
+
+以下为**概念布局**（与 `tree` 命令风格一致）。未画出 `node_modules/`、`.venv/`、`data/raw/`、`data/output/`、`logs/` 等常见 **gitignore / 本地生成** 目录；需要数据目录约定时见 `[data/README.md](data/README.md)`。
+
+```text
+.
+├── .cursor/
+│   └── rules/                 # Cursor：项目概览、数据保护、品牌命名等
+├── .github/
+│   └── workflows/             # deploy-pages、monthly_refit、nightly_vote_refresh …
+├── assets/
+│   └── fonts/                 # Inter、Butler（见 assets/fonts/README.md）
+├── data/                      # subsample/；raw|output|runs 见 data/README.md
 ├── docs/
-│   ├── project_docs/       # PRD / Tech Spec / Data Pipeline / 状态机 / 视觉参数等 SSOT
-│   ├── reports/            # 每个 Phase 的实施报告
-│   ├── guides/             # 运维操作指南（Supabase / P18.4 nightly / P18.5 monthly / P18.6 Pages / P18.6b R2）
-│   └── benchmarks/         # 性能基线
+│   ├── LICENSE                # docs 下 Markdown：CC BY 4.0
+│   ├── project_docs/          # 规格 SSOT：PRD、Tech Spec、Data Pipeline…
+│   ├── reports/               # Phase 实施与决策报告
+│   ├── guides/                # 运维、R2、域名、验收等
+│   └── workflows/             # CI / Pages 相关流程说明
+├── frontend/
+│   ├── public/                # 入口静态资源、data/manifest、可选本地 gzip
+│   ├── src/                   # hud/、three/、components/、lib/ …
+│   ├── README.md              # 占位，指向根 README
+│   └── dist/                  # Vite 构建输出（通常不提交）
 ├── scripts/
-│   ├── pipeline/           # 数据清洗
-│   ├── feature_engineering/# embedding / genre / language / UMAP / Procrustes
-│   ├── export/             # galaxy_data.json + 搜索索引导出
-│   ├── supabase/           # 一次性导入与守卫
-│   ├── cron/               # P18.4 nightly / P18.5 monthly / R2 上传
-│   ├── tools/              # 月度 zip 打包等
-│   └── experiments/        # P18.1 canonical full rebuild + GHA core benchmark
-├── supabase/migrations/    # P18.2 schema + P18.3 reference 锁定
-├── frontend/               # Vite + React (HUD) + 原生 Three.js (3D canvas) + Zustand
-└── .github/workflows/      # nightly / monthly / phase18 benchmark / GH Pages deploy
+│   ├── run_pipeline.py        # 管线主入口
+│   ├── feature_engineering/   # 嵌入、UMAP 等
+│   ├── export/                # galaxy_data 导出
+│   ├── cron/                  # 夜间刷新、月度 refit、R2 上传等
+│   ├── tools/                 # 打包、校验脚本
+│   ├── pipeline/
+│   ├── tests/
+│   ├── experiments/
+│   ├── env/
+│   └── _archive/
+├── supabase/                  # 数据库迁移（Phase 18+ 方向）
+├── LICENSE                    # Apache-2.0
+├── NOTICE                     # 署名与 TMDB / IMDb / 字体等第三方说明
+├── package.json               # npm workspaces；脚本代理到 frontend
+├── package-lock.json
+├── requirements.txt
+├── requirements.cpu.txt
+├── requirements.gpu.txt
+├── .env.example               # 环境变量示例；可选 VITE_* 覆盖数据 URL
+├── README.en.md               # 英文说明（与 README.md 同步）
+└── README.md                  # 中文说明（主入口）
 ```
 
-更详细的目录说明见 `docs/project_docs/TMDB 电影宇宙 Tech Spec.md` §6。
+**主应用**：`[frontend/](frontend/)` 内为 Vite + React + 原生 Three.js；**管线**：`[scripts/run_pipeline.py](scripts/run_pipeline.py)` 为 Python 全量入口。
 
----
+### 本地运行（前端）
 
-## 2. 关键 SSOT 文档
-
-按变更优先级阅读：
-
-| 文档                                                                                                                 | 内容                                                            |
-| -------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| [`docs/project_docs/TMDB 电影宇宙 Tech Spec.md`](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md)                 | 系统架构、前端渲染、相机/拾取、JSON Schema、部署拓扑            |
-| [`docs/project_docs/TMDB 电影宇宙 Data Pipeline.md`](docs/project_docs/TMDB%20电影宇宙%20Data%20Pipeline.md)         | 数据流 SSOT：清洗、特征工程、UMAP、自动化 cron、Pages + R2 部署 |
-| [`docs/project_docs/TMDB 电影宇宙 Design Spec.md`](docs/project_docs/TMDB%20电影宇宙%20Design%20Spec.md)             | 视觉与交互规则                                                  |
-| [`docs/project_docs/星球状态机 spec.md`](docs/project_docs/星球状态机%20spec.md)                                     | 单星状态机（idle/selecting/selected/...）                       |
-| [`docs/project_docs/视觉参数总表.md`](docs/project_docs/视觉参数总表.md)                                             | shader uniform 与 OKLab L 等参数表                              |
-| [`docs/project_docs/TMDB 数据特征工程与 3D 映射总表.md`](docs/project_docs/TMDB%20数据特征工程与%203D%20映射总表.md) | feature → 渲染映射                                              |
-| [`docs/project_docs/TMDB 电影宇宙 PRD.md`](docs/project_docs/TMDB%20电影宇宙%20PRD.md)                               | 产品需求                                                        |
-
----
-
-## 3. 本地开发
-
-### 3.1 前端（npm workspaces）
-
-仓库根：
+在**仓库根目录**（npm workspaces）：
 
 ```bash
-npm install                  # 安装 frontend workspace（lockfile 在仓库根）
-npm run dev                  # = npm run dev -w frontend (Vite dev server)
-npm run build -w frontend    # 产出 frontend/dist
-npm run test -w frontend
-npm run storybook -w frontend
+npm install
+npm run dev
 ```
 
-前端默认 `vite.config.ts` 中 `base = process.env.VITE_BASE_PATH ?? '/'`：CF Pages 根路径直接生效；GitHub Pages 由 workflow 注入子路径。
+等价于 `npm run dev -w frontend`。更多脚本见根目录 `[package.json](package.json)`。
 
-### 3.2 Python 数据管线
+### 本地数据（管线）
 
-依赖见仓库根 `requirements.txt`（GPU 路径）与 `requirements.cpu.txt`（CI / CPU 路径）。Windows 本地建议使用 `.venv`。
+离线或调试完整体验时，需要自备 Kaggle 等来源的 TMDB 全量 CSV，并由 Python 管线生成 `frontend/public/data/` 下的星系 JSON（及 gzip / 搜索索引）。**勿**在编辑器中直接打开巨型 `data/raw/TMDB_all_movies.csv`；请用 `[data/subsample/](data/subsample/)` 了解列结构，并阅读 `[data/README.md](data/README.md)` 中的命令与目录约定。
 
-完整一次性管线（与月度 UMAP 语义一致，必须 `--densmap`）：
+### 资源 URL 覆盖（可选）
 
-```powershell
-.\.venv\Scripts\python.exe scripts\run_pipeline.py `
-  --input data\raw\TMDB_all_movies.csv `
-  --through-phase-2 --densmap --embedding-device cuda
-```
+解析顺序见 `[frontend/src/lib/galaxyAssetUrls.ts](frontend/src/lib/galaxyAssetUrls.ts)`。开发或部署时可设置：
 
-子样本冒烟：
+- `VITE_GALAXY_DATA_GZIP_URL`
+- `VITE_GALAXY_SEARCH_INDEX_GZIP_URL`
+- `VITE_TODAY_JSON_URL`
 
-```powershell
-.\.venv\Scripts\python.exe scripts\run_pipeline.py --input data\subsample\TMDB_all_movies_random20.csv
-```
+未设置时优先使用构建内 `galaxy_assets_manifest.json` 中的绝对 URL，再回退到相对路径下的打包资源。
 
-更多细节见 [`data/README.md`](data/README.md)。
+### CI 与静态部署
 
----
+**生产主路径：GitHub Actions → Cloudflare R2 + Cloudflare Pages**
 
-## 4. 自动化任务（Phase 18 出口）
+- 夜间刷新、月度 refit 等流水线（例如 `[nightly_vote_refresh.yml](.github/workflows/nightly_vote_refresh.yml)`、`[monthly_refit.yml](.github/workflows/monthly_refit.yml)`）在更新导出数据后，先将 **星系 gzip 等大文件上传到 R2**（`scripts/cron/upload_galaxy_r2.py` 等），再在同一 job 中 `**npm run build -w frontend`**，并用 `**cloudflare/wrangler-action@v3**` 在 `frontend` 工作目录下执行 `**pages deploy dist**`，把 `**frontend/dist**` 以 **Direct Upload** 方式发布到 **Cloudflare Pages**。这样 Pages 包内不含超大静态对象，避免「单文件 25 MiB」类校验失败；大资源由 **R2** 提供，入口 URL 写在随 dist 发布的 `**galaxy_assets_manifest.json`** 中。
+- **不要**依赖 Cloudflare 控制台里「连接 Git 仓库」的 Pages **自动构建**作为生产入口：若未按本仓库的 workspace 构建方式执行，容易误把未构建路径下的超大 `public/data/*.gz` 纳入校验。生产发布以 **GitHub Actions + wrangler `pages deploy`** 为准。
 
-| 任务                                 | Workflow                                                                                         | 入口脚本                                                                                                     | 频率                        | 作用                                                                                                                                                     |
-| ------------------------------------ | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **每日票数刷新**                     | [`.github/workflows/nightly_vote_refresh.yml`](.github/workflows/nightly_vote_refresh.yml)       | [`scripts/cron/nightly_vote_refresh.py`](scripts/cron/nightly_vote_refresh.py)                               | `0 20 * * *` UTC + dispatch | 沿用 frozen `threshold_versions`，UPDATE `vote_count/avg/popularity`，新过线片入 `movies_pending`；**含维度漂移探测（默认 fail CI）**；导出 + R2 + Pages |
-| **月度 refit**                       | [`.github/workflows/monthly_refit.yml`](.github/workflows/monthly_refit.yml)                     | [`scripts/cron/monthly_refit.py`](scripts/cron/monthly_refit.py)                                             | `0 20 1 * *` UTC + dispatch | 重算 dynamic threshold + 全量 DensMAP + Procrustes 对齐 v1 reference + 合并 pending；P18.5b 软闸；**含维度漂移探测（默认 fail CI）**；导出 + R2 + Pages  |
-| **R2 上传（被 cron 调用）**          | —                                                                                                | [`scripts/cron/upload_galaxy_r2.py`](scripts/cron/upload_galaxy_r2.py)                                       | 每次 cron 末端              | 上传 `galaxy_data.json.gz` / `galaxy_search_index.json.gz`，同步 **`today.json`** / **`og-today.png`**，写 `galaxy_assets_manifest.json`（含可选 **`today_url`**） |
-| **从 Supabase 导出**（被 cron 调用） | —                                                                                                | [`scripts/cron/export_from_supabase.py`](scripts/cron/export_from_supabase.py)                               | 每次 cron                   | 分页 + 并行拉 `movies` → `build_galaxy_payload` → 写 `frontend/public/data/*`                                                                            |
-| **Phase 18.1b 基准**                 | [`.github/workflows/phase18_refit_benchmark.yml`](.github/workflows/phase18_refit_benchmark.yml) | [`scripts/experiments/phase18_core_refit_benchmark.py`](scripts/experiments/phase18_core_refit_benchmark.py) | 仅 dispatch                 | 在 `ubuntu-24.04` 上跑 fusion → DensMAP → Procrustes → export，得墙钟与峰值 RSS                                                                          |
-| **GitHub Pages（灰度备线）**         | [`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml)                       | —                                                                                                            | push 到 `main`              | 兼作回滚备线，1–2 周双轨期                                                                                                                               |
+**灰度备用：GitHub Pages（短期；未来撤下）**
 
-操作指南：
+- `[deploy-pages.yml](.github/workflows/deploy-pages.yml)`：在 `push` 至 `main` 或手动触发时，使用 **Node 24** 安装依赖、执行 `npm run build -w frontend`，并将 `**frontend/dist` 部署到 GitHub Pages**。该工作流用于 **P18.6 切到 Cloudflare 之后的并行灰度对比**；**计划在验证完成后下线或停用**，不作为长期生产入口。工作流文件顶部注释亦说明此意图。
 
-- [`docs/guides/Supabase 操作教程.md`](docs/guides/Supabase%20操作教程.md)
-- [`docs/guides/P18.4 每日投票刷新与导出入口指南.md`](docs/guides/P18.4%20每日投票刷新与导出入口指南.md)
-- [`docs/guides/P18.5 月度星系 refit 操作指南.md`](docs/guides/P18.5%20月度星系%20refit%20操作指南.md)
-- [`docs/guides/P18.6 Cloudflare Pages 切换操作指南.md`](docs/guides/P18.6%20Cloudflare%20Pages%20切换操作指南.md)
-- [`docs/guides/P18.6b Cloudflare R2 上线操作手册.md`](docs/guides/P18.6b%20Cloudflare%20R2%20上线操作手册.md)
+### 文档索引（实现 SSOT）
+
+
+| 文档                                                                               | 内容                 |
+| -------------------------------------------------------------------------------- | ------------------ |
+| [TMDB 电影宇宙 PRD.md](docs/project_docs/TMDB%20电影宇宙%20PRD.md)                       | 产品愿景、用户旅程、功能范围     |
+| [TMDB 电影宇宙 Tech Spec.md](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md)         | 架构、加载阶段、渲染与相机契约    |
+| [TMDB 电影宇宙 Design Spec.md](docs/project_docs/TMDB%20电影宇宙%20Design%20Spec.md)     | 视觉与交互细则            |
+| [TMDB 电影宇宙 Data Pipeline.md](docs/project_docs/TMDB%20电影宇宙%20Data%20Pipeline.md) | 数据流、特征、导出与自动化 SSOT |
+| [TMDB 数据特征工程与 3D 映射总表.md](docs/project_docs/TMDB%20数据特征工程与%203D%20映射总表.md)       | 特征到渲染映射            |
+| [星球状态机 spec.md](docs/project_docs/星球状态机%20spec.md)                               | 选择 / 聚焦等行为状态机      |
+| [视觉参数总表.md](docs/project_docs/视觉参数总表.md)                                         | Shader 与视觉参数       |
+
 
 ---
 
-## 5. Secrets / `.env`
+## 数据与致谢
 
-复制 [`.env.example`](.env.example) 为 `.env`（已被 gitignore），按需填入。仓库 **Settings → Secrets and variables → Actions** 同样需要这些值用于 GHA：
-
-| 类别             | 变量                                                                                               | 备注                                              |
-| ---------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
-| Supabase         | `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY`                                                       | nightly + monthly 共用；`service_role` 切勿入仓   |
-| Kaggle           | `KAGGLE_USERNAME` / `KAGGLE_KEY`                                                                   | 用于 daily update 拉取                            |
-| 月度 bundle      | `GALAXY_EMBED_BUNDLE_URL`                                                                          | 单行 http(s) zip 直链；workflow 已 trim/CRLF 兼容 |
-| Cloudflare Pages | `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` / `CLOUDFLARE_PAGES_PROJECT_NAME`                 | API Token 仅需 **Account → Pages → Edit**         |
-| Cloudflare R2    | `R2_ACCOUNT_ID` / `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` / `R2_BUCKET` / `R2_PUBLIC_BASE_URL` | 5 个变量缺一即 R2 step 安全 skip                  |
-| CF Web Analytics | `CF_WEB_ANALYTICS_BEACON_TOKEN`（CI Secret） / `VITE_CF_BEACON_TOKEN`（构建注入名）                | 用于注入 Cloudflare beacon；未配置时构建仍成功    |
+本项目使用 [The Movie Database (TMDB)](https://www.themoviedb.org/) 提供的数据，**并非 TMDB 官方产品**。展示或再分发 TMDB 数据时，请遵循 [TMDB 的 logo 与署名政策](https://www.themoviedb.org/about/logos-attribution)。若管线或上游 CSV 含 IMDb 衍生字段，请同时遵守 [IMDb 非商业数据集](https://developer.imdb.com/non-commercial-datasets/) 的条款。完整第三方声明见 `**[NOTICE](NOTICE)`**。
 
 ---
 
-## 6. 部署拓扑（Phase 18 出口）
+## 许可证与再利用
 
-```
-Browser
-  ├── 前端 bundle  ←  Cloudflare Pages（Direct Upload via cloudflare/wrangler-action@v3）
-  └── galaxy_*.json.gz
-                ←  Cloudflare R2（公开读 + CORS；优先级见 frontend/src/lib/galaxyAssetUrls.ts）
 
-GitHub Pages（灰度备线）：仍由 deploy-pages.yml 在 push 到 main 时部署
-```
+| 范围                                        | 许可                                | 说明                                                                                                                                                                                                                                                           |
+| ----------------------------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **本仓库源代码**（含 `frontend/src`、`scripts/` 等） | **[Apache License 2.0](LICENSE)** | 可商用、可修改；再分发须保留版权声明与 `[NOTICE](NOTICE)` 文件；**建议**在界面或文档中署名 **The Movie Cosmos** 并链接 [themoviecosmos.com](https://themoviecosmos.com/)（详见 NOTICE 首选表述）。                                                                                                        |
+| `**docs/` 下 Markdown 文档**                 | **[CC BY 4.0](docs/LICENSE)**     | 可分享与改编文字说明；需适当署名并注明是否修改；文中**代码块**作为软件部分仍适用 Apache-2.0。                                                                                                                                                                                                       |
+| **TMDB / IMDb 数据与商标**                     | 各自条款                              | **不由** Apache-2.0 授权；见上文「数据来源」与 `[NOTICE](NOTICE)`。                                                                                                                                                                                                          |
+| **捆绑字体**                                  | 字体作者许可                            | **Butler**：Fabian De Smet，官方说明为 [个人与商业免费使用](https://www.fabiandesmet.com/portfolio/butler-font/)（请以作者页面当前条款为准）。 **Inter**：SIL OFL 1.1，见 `[assets/fonts/Inter-OFL.txt](assets/fonts/Inter-OFL.txt)`。说明汇总见 `[assets/fonts/README.md](assets/fonts/README.md)`。 |
 
-**P23.6（自定义域名）**：R2 bucket **CORS policy** 的 `AllowedOrigins` 须包含 `https://themoviecosmos.com`、`https://www.themoviecosmos.com`（若已绑定 www）以及备线 `https://the-movie-cosmos.pages.dev`；配置入口见 `docs/guides/P18.6b Cloudflare R2 上线操作手册.md`。生产默认域 **`the-movie-cosmos.pages.dev`** 已通过 Pages Functions **`frontend/functions/_middleware.js`** **301** 到 **`https://themoviecosmos.com`**（nightly / monthly 的 `wrangler-action` 使用 **`workingDirectory: frontend`** 与 **`pages deploy dist`**，使默认 **`./functions`** 指向 `frontend/functions`）。亦可改用 Cloudflare **Bulk Redirects** / **Redirect rules** 等效实现。**上线后控制台验收与 OG 自检** 见 [`docs/guides/P23.6 自定义域名上线后运维清单.md`](docs/guides/P23.6%20自定义域名上线后运维清单.md)。
 
-更多见 `docs/project_docs/TMDB 电影宇宙 Data Pipeline.md` §3.2 / §11 / §12。
-
----
-
-## 7. 浏览器与平台
-
-- **WebGL 2.0** 硬前置；不做 WebGL 1.0 降级（见 Tech Spec §7）。
-- 桌面浏览器（Chrome / Edge / Firefox / Safari 现代版）为主目标；移动端非主要适配对象。
-- **国内访问优化** 不在 Phase 18 范围。
-
----
-
-## 8. HUD 多语言与搜索（Phase 21）
-
-- **HUD i18n**：UI 文案支持 **EN / 简体中文 / 繁體中文 / 日本語 / Español / Français / العربية**，仅覆盖 HUD/DOM 文案；TMDB 数据库字段（标题、人名、genre 名等）保持原文。
-  - 切换：HUD 右上 **Info → Lang → Fullscreen** 中间的语言按钮，或 URL **`?lang=zh|zh-Hant|ja|es|fr|ar|en`**；选择会写入 `localStorage['tmc.locale']` 与 `?lang=` 同步。
-  - 实现：`frontend/src/lib/locales/*.json` + `useLocaleStore` + `useStrings()` / `getStrings()`，**不**引入 `react-i18next`。详见 Tech Spec §1.4.8。
-- **CJK / Unicode 搜索（Phase 21.1）**：搜索归一化升级到 **v2**（NFKC + 去 `Mn` 组合标记 + casefold），保留中日韩、西里尔、阿拉伯、谚文等非拉丁脚本；表意文字（汉字 / 假名 / 谚文）**单字即可触发联想**。`meta.search_normalize_version` 写为 `"v2"`，旧 v1 包仍可加载但前端 `console.warn`。
-- **流派 AND 多选（Phase 21.3）**：Genres 分段不再是输入联想，改为 **19 个 badge 网格 + AND 交集**；继续点击的 badge 若交集为 0 则即时灰显（死路预测）。详见 Design Spec §4.5。
-- **电影联想全量（Phase 21.6）**：取消硬编码 12 条上限；在滚动列表中可见全部命中（如 query `batman` 也能滚动到 `The Batman`）。
-
----
-
-## 9. License
-
-本项目当前未声明开源 License；如需复用请与维护者协商。

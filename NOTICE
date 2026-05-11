@@ -1,0 +1,54 @@
+The Movie Cosmos
+Copyright 2026 The Movie Cosmos contributors
+
+================================================================================
+This project — attribution (beyond Apache-2.0 requirements)
+================================================================================
+
+When you redistribute this software or derivative works in source or binary
+form, please retain this NOTICE file and visibly credit the project, for
+example:
+
+  "Based on The Movie Cosmos" + link to https://themoviecosmos.com/
+
+(Apache License 2.0 already requires preserving copyright notices and the
+contents of this NOTICE file; the line above is the maintainers' preferred
+credit wording.)
+
+================================================================================
+Third-party data — TMDB, IMDb, Kaggle (NOT relicensed as Apache-2.0)
+================================================================================
+
+Film metadata in this project is derived from public TMDB-related exports.
+This product uses the TMDB API / TMDB dataset but is not endorsed or
+certified by TMDB. Follow TMDB attribution rules:
+  https://www.themoviedb.org/about/logos-attribution
+
+Upstream bulk snapshot commonly used in the pipeline (maintainer Kaggle
+handle: alanvourch):
+  TMDB Movies Daily Updates (Kaggle)
+  https://www.kaggle.com/datasets/alanvourch/tmdb-movies-daily-updates
+
+TMDB's own data pipeline may incorporate or cross-reference fields sourced
+from IMDb. IMDb makes certain datasets available for personal and
+non-commercial use under their terms; holding, merging, or redistributing
+those IMDb dataset files (or large extracts) for commercial purposes may
+require a separate license from IMDb. Read the official notice:
+  https://developer.imdb.com/non-commercial-datasets/
+
+The Apache-2.0 license on *this repository's source code* does not grant
+rights to TMDB or IMDb data; you remain responsible for complying with TMDB
+and IMDb conditions when you process or republish datasets.
+
+================================================================================
+Third-party fonts (bundled under assets/fonts/)
+================================================================================
+
+Butler (Butler-Medium.ttf, Butler-Bold.ttf)
+  Copyright Fabian De Smet. Per the author's official site, Butler is free for
+  personal and commercial use (verify current terms on download).
+  https://www.fabiandesmet.com/portfolio/butler-font/
+
+Inter (Inter.ttf)
+  Copyright Rasmus Andersson and the Inter Project Authors.
+  SIL Open Font License 1.1 — see assets/fonts/Inter-OFL.txt

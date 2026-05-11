@@ -72,16 +72,30 @@
     "sliderAriaLabel": "公開年のフォーカス"
   },
   "info": {
-    "modalTitle": "この体験について",
-    "modalSubtitle": "プレースホルダーパネル：公開前に文言とリンクを確定します。",
-    "introHeading": "概要",
-    "introBody": "（プレースホルダー）The Movie Cosmos：約 60,000 本の映画を 2.5D 粒子ギャラクシーとして表示。タイムライン、検索（タイトル / 人物 / ジャンル）、複数選択ハイライト。製品文言は未定。",
-    "dataHeading": "データソース",
-    "dataBody": "（プレースホルダー）帰属と参考文献は仕上げ時に追加予定。現在未記載。",
-    "stackHeading": "スタック",
-    "stackBody": "（プレースホルダー）Vite + React + Three.js（インスタンス化ギャラクシー / ポストプロセス）、Zustand、gzip エクスポートパイプライン。概要は未定。",
-    "linksHeading": "リンク",
-    "linksBody": "（プレースホルダー）リンクは仕上げ時に提供予定。"
+    "modalTitle": "The Movie Cosmos",
+    "modalSubtitle": "TMDB の映画データベースに基づいて生成された、歩き回れる映画の銀河。",
+    "sections": [
+      {
+        "heading": "概要",
+        "body": "平面上で近いほど、あらすじ・ジャンル・言語などが似ている傾向；奥行きは公開日。大きいほど投票数が多い（対数）、明るいほど TMDB 平均点が高い、色相は主ジャンルに近い、大きい＝明るいとは限りません。"
+      },
+      {
+        "heading": "使い方",
+        "body": "読み込み後：カバー → 中央の球をタップして The Movie Today（UTC で日替わりの 1 本）。\n\nドラッグで視点を回転。Space なし：ホイールかタイムラインで公開年の奥行き移動。マクロ時は Space＋ホイールで一時的に寄る、Space を離すと距離が戻る。ホバーで一行プレビュー。\n\n上部バーで作品名・人物・ジャンルを検索；ESC で検索 → シート → フォーカスの順に戻る。クリックでフォーカスとサイドシート、隣の星で切り替え。"
+      },
+      {
+        "heading": "データと環境",
+        "body": "作品情報は TMDB（The Movie Database）由来です。The Movie Cosmos は TMDB の公式製品ではありません。銀河データは公開の映画情報からオフラインで作られます（多くは Kaggle の TMDB 日次スナップショットが起点）。商用再利用の前に TMDB・IMDb・Kaggle の条件を自分で確認してください。画面上のクレジットは TMDB の帰属表示に従います。法的・第三者の注記は GitHub リポジトリの NOTICE を参照してください。\n\n新しめのブラウザとハードウェア加速をオンにしてください。初回は大きな圧縮パックを落とします。かなり古いブラウザや制限の強いネットでは開けないことがあります。"
+      },
+      {
+        "heading": "プライバシー",
+        "body": "ログイン不要。全体の訪問量や表示の速さの把握に、Cloudflare の軽い計測（多くはクッキーなし）を使うことがあります。誰がどの作品を見たかを追うものではありません。ブロックされても体験は動きます。"
+      },
+      {
+        "heading": "リンク",
+        "body": "[GitHub リポジトリ](https://github.com/XYBuilds/chronicle_v3_3d_galaxy)\n\n[Kaggle: TMDB Movies Daily Updates](https://www.kaggle.com/datasets/alanvourch/tmdb-movies-daily-updates)"
+      }
+    ]
   },
   "scene": {
     "webgl2Required": "[Scene] WebGL2 が必要です（`gl_InstanceID`、デュアル InstancedMesh パイプライン）。ブラウザを更新するかハードウェアアクセラレーションを有効にしてください（Phase 7.2 ベースライン）。"

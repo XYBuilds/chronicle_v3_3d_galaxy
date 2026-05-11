@@ -16,6 +16,8 @@ import type { Movie } from '@/types/galaxy'
 // `RingGeometry(max(ε, r − stroke/2), r + stroke/2)`，`mesh.scale = 1`。
 // 标注：**Sprite** 永远朝向相机；方位角由 `movieId` 种子固定（同一电影稳定、各档同角）；
 //      径向置于外沿外 `LABEL_OUTSIDE_GAP_WORLD`。
+//      文字观感由两阶段决定：`LABEL_CANVAS_FONT_PX` 控制离屏 Canvas 里笔画粗细（贴图内占比 / 清晰度），
+//      `LABEL_SPRITE_WORLD_HEIGHT` 控制 Sprite 在世界单位里多高（整张贴图被拉伸多大 → 配合透视得到屏幕像素）。
 // ---------------------------------------------------------------------------
 
 /**
@@ -33,8 +35,11 @@ export const RING_INNER_RADIUS_FLOOR = 1e-5
 /** Ring alpha multiplier (also multiplied by focus fade `opacity`). */
 export const RING_OPACITY_BASE = 0.38
 
-/** Canvas text size (px); same for every tier. Smaller than legacy 32 to match HUD rating scale. */
-export const LABEL_CANVAS_FONT_PX = 24
+/**
+ * 贴图内字号：固定 `LABEL_CANVAS_W`×`LABEL_CANVAS_H` 的离屏 Canvas 上 `fillText` 使用的 **css px**。
+ * 决定字形在纹理里占多少、留白多少；过小易糊，过大浪费画布。屏幕上的最终大小还取决于 {@link LABEL_SPRITE_WORLD_HEIGHT}。
+ */
+export const LABEL_CANVAS_FONT_PX = 18
 
 /** Matches {@link FocusLReference} rating row (`font-semibold` ≈ 600). */
 export const LABEL_CANVAS_FONT_WEIGHT = 600
@@ -43,10 +48,11 @@ export const LABEL_CANVAS_FONT_WEIGHT = 600
 export const LABEL_OUTSIDE_GAP_WORLD = 0.006
 
 /**
- * Sprite vertical size in world units (width follows canvas aspect × `LABEL_CANVAS_W`/`LABEL_CANVAS_H`).
- * Also floored with `r * 0.06` so tiny tiers stay readable.
+ * Sprite 在 **世界坐标**里的竖边高度（`update` 中 `spr.scale`：高 = `max(this, r*0.06)`，宽 = 高×画布宽高比）。
+ * 整张 Canvas 纹理被映射到该四边形，与相机距离共同决定 **屏幕像素尺寸**。
+ * 与 {@link LABEL_CANVAS_FONT_PX} 分工：本项是「3D 里标牌多大」，前者是「贴图里字多粗」；可分别调场景占比与纹理清晰度。
  */
-export const LABEL_SPRITE_WORLD_HEIGHT = 0.024
+export const LABEL_SPRITE_WORLD_HEIGHT = 0.016
 
 /**
  * Same face order as `index.css` `@theme` `--font-sans` + fallbacks (HUD / {@link FocusLReference} rating digits).
@@ -108,7 +114,7 @@ function createLabelCanvasTexture(text: string): THREE.CanvasTexture {
   const cx = LABEL_CANVAS_W / 2
   const cy = LABEL_CANVAS_H / 2
   ctx.lineJoin = 'round'
-  ctx.lineWidth = 2.5
+  ctx.lineWidth = 0
   ctx.strokeStyle = 'rgba(0,0,0,0.78)'
   ctx.strokeText(text, cx, cy + 1)
   ctx.fillStyle = 'rgba(255,255,255,0.93)'

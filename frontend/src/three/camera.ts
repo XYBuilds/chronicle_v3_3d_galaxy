@@ -8,9 +8,9 @@ import { getOrbitDragDirectionMode, orbitDirectionSign } from '@/utils/orbitDrag
 /**
  * Perlin focus: world-space |Δz| from movie center to camera (camera at `movie.z - standoff`, axis-parallel +Z).
  * Absolute — tune here only (no `worldSpan` scaling).
- * P25.1 — ~1.5× on-screen planet vs former `1` (closer camera ≈ larger angular size).
+ * P25.1 — production standoff (定稿).
  */
-export const FOCUS_PERLIN_CAMERA_STANDOFF = 1 / 1.5
+export const FOCUS_PERLIN_CAMERA_STANDOFF = 0.4
 
 /** Writes world-space camera position for Perlin focus (yaw=0, pitch=0 orbit). */
 export function setFocusCameraPosition(out: THREE.Vector3, movie: Pick<Movie, 'x' | 'y' | 'z'>): THREE.Vector3 {

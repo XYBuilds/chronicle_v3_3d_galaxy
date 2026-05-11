@@ -14,10 +14,10 @@ import type { Movie } from '@/types/galaxy'
 //
 // 圆环：**世界空间绝对线宽** `RING_STROKE_WORLD`（与半径 r 无关）。几何为
 // `RingGeometry(max(ε, r − stroke/2), r + stroke/2)`，`mesh.scale = 1`。
-// 标注：**Sprite** 永远朝向相机；方位角由 `movieId` 种子固定（同一电影稳定、各档同角）；
-//      径向置于外沿外 `LABEL_OUTSIDE_GAP_WORLD`。
-//      文字观感由两阶段决定：`LABEL_CANVAS_FONT_PX` 控制离屏 Canvas 里笔画粗细（贴图内占比 / 清晰度），
-//      `LABEL_SPRITE_WORLD_HEIGHT` 控制 Sprite 在世界单位里多高（整张贴图被拉伸多大 → 配合透视得到屏幕像素）。
+// 标注：**Sprite** 永远朝向相机；`sprite.center = (0.5,0.5)`，**位置**为环面局部 XY 上
+// `radialDist` 处的一点（圆心即锚点）。**字号（可读大小）**只调 `LABEL_TEXT_WORLD_HEIGHT`
+//（世界单位垂直边长；与 `max(·, r*0.06)` 取大保证极小环不糊成一团）。
+// Canvas 纹理分辨率与其中 `font px` 为**内部**固定比例，仅影响栅格清晰度，不参与与世界的二次缩放博弈。
 // ---------------------------------------------------------------------------
 
 /**
@@ -36,10 +36,10 @@ export const RING_INNER_RADIUS_FLOOR = 1e-5
 export const RING_OPACITY_BASE = 0.38
 
 /**
- * 贴图内字号：固定 `LABEL_CANVAS_W`×`LABEL_CANVAS_H` 的离屏 Canvas 上 `fillText` 使用的 **css px**。
- * 决定字形在纹理里占多少、留白多少；过小易糊，过大浪费画布。屏幕上的最终大小还取决于 {@link LABEL_SPRITE_WORLD_HEIGHT}。
+ * **唯一**对外可调「字号」：tier 标签 Sprite 在世界坐标中的垂直边长（`scale.y`），
+ * 锚点为 `sprite.position`（见 `update` 中 `radialDist`）。与 `max(·, r * 0.06)` 取大。
  */
-export const LABEL_CANVAS_FONT_PX = 18
+export const LABEL_TEXT_WORLD_HEIGHT = 0.016
 
 /** Matches {@link FocusLReference} rating row (`font-semibold` ≈ 600). */
 export const LABEL_CANVAS_FONT_WEIGHT = 600
@@ -48,20 +48,24 @@ export const LABEL_CANVAS_FONT_WEIGHT = 600
 export const LABEL_OUTSIDE_GAP_WORLD = 0.006
 
 /**
- * Sprite 在 **世界坐标**里的竖边高度（`update` 中 `spr.scale`：高 = `max(this, r*0.06)`，宽 = 高×画布宽高比）。
- * 整张 Canvas 纹理被映射到该四边形，与相机距离共同决定 **屏幕像素尺寸**。
- * 与 {@link LABEL_CANVAS_FONT_PX} 分工：本项是「3D 里标牌多大」，前者是「贴图里字多粗」；可分别调场景占比与纹理清晰度。
- */
-export const LABEL_SPRITE_WORLD_HEIGHT = 0.016
-
-/**
  * Same face order as `index.css` `@theme` `--font-sans` + fallbacks (HUD / {@link FocusLReference} rating digits).
  */
 export const LABEL_UI_FONT_STACK =
   '"Geist Variable", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif'
 
-const LABEL_CANVAS_W = 720
-const LABEL_CANVAS_H = 112
+/** Texture width/height (px) — GPU 清晰度；与 `LABEL_TEX_FONT_FILL` 成对，勿单独当「字号」调。 */
+const LABEL_TEX_W = 720
+const LABEL_TEX_H = 112
+
+/**
+ * 纹理内字号占画布高度比例（派生 `ctx.font` px）。与 `LABEL_TEX_H` 成对，保持字形在贴图内垂直占比恒定。
+ * 若只改世界大小，请只改 `LABEL_TEXT_WORLD_HEIGHT`。
+ */
+const LABEL_TEX_FONT_FILL = 18 / 112
+
+function labelTextureFontPx(): number {
+  return Math.max(8, Math.round(LABEL_TEX_H * LABEL_TEX_FONT_FILL))
+}
 
 /** Mulberry32 PRNG in [0, 1) — stable per integer seed. */
 function mulberry32(seed: number): () => number {
@@ -100,21 +104,22 @@ function createRingMesh(): THREE.Mesh {
 
 function createLabelCanvasTexture(text: string): THREE.CanvasTexture {
   const canvas = document.createElement('canvas')
-  canvas.width = LABEL_CANVAS_W
-  canvas.height = LABEL_CANVAS_H
+  canvas.width = LABEL_TEX_W
+  canvas.height = LABEL_TEX_H
   const ctx = canvas.getContext('2d')
   if (!ctx) {
     throw new Error('[FocusSizeReferenceRings] canvas 2d context unavailable')
   }
-  ctx.clearRect(0, 0, LABEL_CANVAS_W, LABEL_CANVAS_H)
+  ctx.clearRect(0, 0, LABEL_TEX_W, LABEL_TEX_H)
   ctx.direction = useLocaleStore.getState().locale === 'ar' ? 'rtl' : 'ltr'
-  ctx.font = `${LABEL_CANVAS_FONT_WEIGHT} ${LABEL_CANVAS_FONT_PX}px ${LABEL_UI_FONT_STACK}`
+  const fontPx = labelTextureFontPx()
+  ctx.font = `${LABEL_CANVAS_FONT_WEIGHT} ${fontPx}px ${LABEL_UI_FONT_STACK}`
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  const cx = LABEL_CANVAS_W / 2
-  const cy = LABEL_CANVAS_H / 2
+  const cx = LABEL_TEX_W / 2
+  const cy = LABEL_TEX_H / 2
   ctx.lineJoin = 'round'
-  ctx.lineWidth = 0
+  ctx.lineWidth = Math.max(1, fontPx * 0.12)
   ctx.strokeStyle = 'rgba(0,0,0,0.78)'
   ctx.strokeText(text, cx, cy + 1)
   ctx.fillStyle = 'rgba(255,255,255,0.93)'
@@ -135,6 +140,7 @@ function makeLabelSprite(text: string): THREE.Sprite {
     depthTest: true,
   })
   const sprite = new THREE.Sprite(mat)
+  /** Billboard 中心 = `sprite.position`（环面锚点）；世界尺寸仅由 `update` 内 `LABEL_TEXT_WORLD_HEIGHT` 决定。 */
   sprite.center.set(0.5, 0.5)
   sprite.renderOrder = 2.7
   return sprite
@@ -195,7 +201,7 @@ export function createFocusSizeReferenceRings(movies: readonly Movie[]): FocusSi
   group.visible = false
   group.renderOrder = 2.5
 
-  const aspect = LABEL_CANVAS_W / LABEL_CANVAS_H
+  const aspect = LABEL_TEX_W / LABEL_TEX_H
 
   const rings: THREE.Mesh[] = []
   const sprites: THREE.Sprite[] = []
@@ -312,7 +318,7 @@ export function createFocusSizeReferenceRings(movies: readonly Movie[]): FocusSi
 
       const sprMat = spr.material as THREE.SpriteMaterial
       sprMat.opacity = 0.95 * op
-      const h = Math.max(LABEL_SPRITE_WORLD_HEIGHT, r * 0.06)
+      const h = Math.max(LABEL_TEXT_WORLD_HEIGHT, r * 0.06)
       spr.scale.set(h * aspect, h, 1)
     }
   }

@@ -16,7 +16,7 @@ uniform float uHuntGamma;
 uniform int uHuntApplyMask;
 uniform int uHoveredInstanceId;
 uniform int uFocusedInstanceId;
-uniform float uFocusCameraBlend;
+uniform float uFocusActiveDimBlend;
 uniform int uFocusTargetInstanceId;
 uniform float uFocusNonTargetActiveAlpha;
 uniform float uFocusHoveredActiveAlpha;
@@ -107,8 +107,8 @@ void main() {
 
   bool isFocusTarget =
     (uFocusTargetInstanceId >= 0) && (gl_InstanceID == uFocusTargetInstanceId);
-  float blend = clamp(uFocusCameraBlend, 0.0, 1.0);
-  float dimAlpha = mix(1.0, uFocusNonTargetActiveAlpha, blend);
+  float dimBlend = clamp(uFocusActiveDimBlend, 0.0, 1.0);
+  float dimAlpha = mix(1.0, uFocusNonTargetActiveAlpha, dimBlend);
   bool isHovered = (uHoveredInstanceId >= 0) && (gl_InstanceID == uHoveredInstanceId);
   bool hoverAlphaBoost = (uSelectionMode == 2) && isHovered && !isFocusTarget;
   float hoverShown = max(dimAlpha, clamp(uFocusHoveredActiveAlpha, 0.0, 1.0));

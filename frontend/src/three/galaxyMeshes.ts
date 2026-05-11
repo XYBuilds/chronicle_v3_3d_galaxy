@@ -113,6 +113,8 @@ function makeSharedUniforms(
       uFocusedInstanceId: { value: -1 },
       /** P11.1 — focus fly-in/out: same eased progress as camera lerp (scene.ts). */
       uFocusCameraBlend: { value: 0 },
+      /** P25.3 — active non-target dim: 0→1 on macro→focus only; stays 1 during focus retarget so neighbors never flash opaque. */
+      uFocusActiveDimBlend: { value: 0 },
       /** P11.1 — instance id of the movie being focused (-1 = no focus transition). */
       uFocusTargetInstanceId: { value: -1 },
       /** P11.1 / P13.6 — non-target active alpha at focus blend=1 (tuned down from 0.1 for dense neighbor sphere). */

@@ -268,6 +268,7 @@ export function mountGalaxyScene(
   const uZw = galUniforms.uZVisWindow as THREE.Uniform<number>
   const uFocused = galUniforms.uFocusedInstanceId as THREE.Uniform<number>
   const uFocusCameraBlend = galUniforms.uFocusCameraBlend as THREE.Uniform<number>
+  const uFocusActiveDimBlend = galUniforms.uFocusActiveDimBlend as THREE.Uniform<number>
   const uFocusTargetInstanceId = galUniforms.uFocusTargetInstanceId as THREE.Uniform<number>
   const uFocusNonTargetActiveAlpha = galUniforms.uFocusNonTargetActiveAlpha as THREE.Uniform<number>
   const uFocusHoveredActiveAlpha = galUniforms.uFocusHoveredActiveAlpha as THREE.Uniform<number>
@@ -285,6 +286,7 @@ export function mountGalaxyScene(
   uZCamDistUniform.value = useGalaxyInteractionStore.getState().zCamDistance
   uFocused.value = -1
   uFocusCameraBlend.value = 0
+  uFocusActiveDimBlend.value = 0
   uFocusTargetInstanceId.value = -1
   scene.add(galaxy.idle)
   scene.add(galaxy.active)
@@ -423,6 +425,7 @@ export function mountGalaxyScene(
           uFocused.value = idxToday
           uFocusTargetInstanceId.value = idxToday
           uFocusCameraBlend.value = 1
+          uFocusActiveDimBlend.value = 1
           planet.mesh.visible = true
           planet.material.uniforms.uAlpha.value = 1
           inputLocked = false
@@ -437,6 +440,7 @@ export function mountGalaxyScene(
       uFocused.value = -1
       uFocusTargetInstanceId.value = -1
       uFocusCameraBlend.value = 0
+      uFocusActiveDimBlend.value = 0
       planet.mesh.visible = false
       planet.material.uniforms.uAlpha.value = 0
       inputLocked = false
@@ -459,10 +463,12 @@ export function mountGalaxyScene(
       }
       uFocusTargetInstanceId.value = pendingSelectInstanceIndex
       uFocusCameraBlend.value = p
+      uFocusActiveDimBlend.value = selectingEnteredFromMacro ? p : 1
       if (!focusDriver.active) {
         selectionPhase = 'selected'
         uFocused.value = pendingSelectInstanceIndex
         uFocusCameraBlend.value = 1
+        uFocusActiveDimBlend.value = 1
         planet.mesh.visible = true
         planet.material.uniforms.uAlpha.value = 1
         camera.position.copy(toCam)
@@ -485,10 +491,12 @@ export function mountGalaxyScene(
       camera.quaternion.slerpQuaternions(deselectFromQuat, deselectToQuat, camWeight)
       uFocusTargetInstanceId.value = pendingSelectInstanceIndex
       uFocusCameraBlend.value = p
+      uFocusActiveDimBlend.value = p
       if (!focusDriver.active) {
         selectionPhase = 'idle'
         uFocusTargetInstanceId.value = -1
         uFocusCameraBlend.value = 0
+        uFocusActiveDimBlend.value = 0
         planet.mesh.visible = false
         planet.material.uniforms.uAlpha.value = 0
         camera.rotation.setFromQuaternion(deselectToQuat)
@@ -503,6 +511,7 @@ export function mountGalaxyScene(
     uFocused.value = pendingSelectInstanceIndex
     uFocusTargetInstanceId.value = pendingSelectInstanceIndex
     uFocusCameraBlend.value = 1
+    uFocusActiveDimBlend.value = 1
     planet.mesh.visible = true
     planet.material.uniforms.uAlpha.value = 1
     const mSel = movies[pendingSelectInstanceIndex]
@@ -1137,7 +1146,9 @@ export function mountGalaxyScene(
     const ringsPhaseActive =
       selectionPhase === 'selecting' || selectionPhase === 'selected' || selectionPhase === 'deselecting'
     const mRings = movies[pendingSelectInstanceIndex]
-    const ringOpacity = uFocusCameraBlend.value * (planet.material.uniforms.uAlpha.value as number)
+    const ringOpacity =
+      Math.max(uFocusCameraBlend.value, uFocusActiveDimBlend.value) *
+      (planet.material.uniforms.uAlpha.value as number)
     if (ringsPhaseActive && mRings) {
       ringsPivot.set(mRings.x, mRings.y, mRings.z)
       sizeRings.update({

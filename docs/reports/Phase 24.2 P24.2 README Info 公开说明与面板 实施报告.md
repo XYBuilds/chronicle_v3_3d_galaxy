@@ -2,7 +2,8 @@
 
 ## 1. 报告范围
 
-本报告汇总 **P24.2**（Phase 24 子项）的**最终决策**与**仓库内已落地的最终操作**，对应计划：[`.cursor/plans/phase_24_launch_content_cleanup.plan.md`](../../.cursor/plans/phase_24_launch_content_cleanup.plan.md) 中「P24.2 README / Info 英文定稿」。
+本报告汇总 **P24.2**（Phase 24 子项）的**最终决策**与**仓库内已落地的最终操作**，对应计划：[`.cursor/plans/phase_24_launch_content_cleanup.plan.md`](../../.cursor/plans/phase_24_launch_content_cleanup.plan.md) 中「P24.2 README / Info 英文定稿」。  
+计划外、同属本 phase **对外可见收口** 的 **favicon** 变更一并记入（§3.6、§4.4），便于与 README / Info 联合验收。
 
 **不在本报告范围**：P24.1（发布链路 / R2 / dist 守卫，见 [Phase 24.1 实施报告](Phase%2024.1%20P24.1%20Cloudflare%20R2%20发布链路清理%20实施报告.md)）、P24.3（`docs/project_docs` 与运维清单的 SSOT 文档同步）。  
 **不变更**：UMAP、embedding、genre/lang 权重、主交互与视觉参数（与 Phase 24 总目标一致）。
@@ -59,6 +60,12 @@
 
 1. **DialogContent** 最大高度定为 **`max-h-[min(60dvh,32rem)]`**（宽度仍为 `w-[min(100vw-1.5rem,36rem)]`），相对原先更高的上限 **下调可视高度**，正文区依赖 **`min-h-0` + `flex-1` + `overflow-y-auto`** 滚动（与 Drawer 同类问题同源修复思路）。
 
+### 3.6 Favicon（站点图标）
+
+1. **决策**：用 **带环行星** emoji（**🪐**，U+1FA90 *RINGED PLANET*）替代原先自定义矢量星标，作为浏览器标签页 / 书签的识别锚点，与产品「星系」意象一致。  
+2. **实现**：[`frontend/public/favicon.svg`](../../frontend/public/favicon.svg) 使用 SVG `<text>` 渲染该字符，并指定 **Segoe UI Emoji / Apple Color Emoji / Noto Color Emoji / Twemoji Mozilla** 等彩色字体栈；[`frontend/index.html`](../../frontend/index.html) 仍通过 `<link rel="icon" type="image/svg+xml" href="/favicon.svg" />` 引用，无需改 HTML。  
+3. **版式参数（冻结）**：`viewBox="0 0 32 32"`，`font-size="30"`；水平居中 `x="16"`、`text-anchor="middle"`；垂直方向经目视微调为 **`y="20"`** + `dominant-baseline="middle"`，以抵消 emoji 在方框内 **视觉重心偏上** 的常见现象。
+
 ---
 
 ## 4. 仓库内最终操作清单（按类别）
@@ -83,6 +90,12 @@
 | 文件 | 操作摘要 |
 |------|----------|
 | [`frontend/src/hud/InfoModal.tsx`](../../frontend/src/hud/InfoModal.tsx) | `sections` 渲染；正文区原生纵向滚动（避免 ScrollArea 在 flex+max-h 下无法滚动）；`[label](url)` 与 `https://` 链接化；**DialogContent** `max-h-[min(60dvh,32rem)]`、`min-h-0`。 |
+
+### 4.4 品牌与静态资源（Favicon）
+
+| 文件 | 操作摘要 |
+|------|----------|
+| [`frontend/public/favicon.svg`](../../frontend/public/favicon.svg) | 以 **🪐**（U+1FA90）为内容的 SVG favicon；`font-size="30"`，`y="20"` 等版式见 §3.6。 |
 
 ---
 
@@ -109,7 +122,8 @@
 
 1. 本地切换语言，打开 **Info**，确认各小节无裸 `**`、链接可点、**正文可滚动**、弹层高度符合预期。  
 2. 通读根 **README.md** 与 **README.en.md** 的部署与隐私段落，确认与 **P24.1**、**P20.5** 行为一致。  
-3. 运行前端 **`npx tsc -b --noEmit`** 与 **`vitest run src/lib/locales/locales.schema.spec.ts`**（实施期用于保证各 locale `info` 结构一致）。
+3. 运行前端 **`npx tsc -b --noEmit`** 与 **`vitest run src/lib/locales/locales.schema.spec.ts`**（实施期用于保证各 locale `info` 结构一致）。  
+4. **Favicon**：硬刷新或无痕窗口查看 **`/favicon.svg`**；若浏览器缓存旧图标，可清空站点数据或暂时改名 query（一般重新部署后时间会更新缓存）。
 
 ---
 
@@ -119,3 +133,11 @@
 - P24.1 实施报告：[Phase 24.1 P24.1 Cloudflare R2 发布链路清理 实施报告.md](Phase%2024.1%20P24.1%20Cloudflare%20R2%20发布链路清理%20实施报告.md)  
 - P20.5 Web Analytics：[P20.5 Cloudflare Web Analytics 接入操作指南.md](../guides/P20.5%20Cloudflare%20Web%20Analytics%20%E6%8E%A5%E5%85%A5%E6%93%8D%E4%BD%9C%E6%8C%87%E5%8D%97.md)  
 - P18.6 / R2 运维：[P18.6 Cloudflare Pages 切换操作指南.md](../guides/P18.6%20Cloudflare%20Pages%20%E5%88%87%E6%8D%A2%E6%93%8D%E4%BD%9C%E6%8C%87%E5%8D%97.md)、[P18.6b Cloudflare R2 上线操作手册.md](../guides/P18.6b%20Cloudflare%20R2%20%E4%B8%8A%E7%BA%BF%E6%93%8D%E4%BD%9C%E6%89%8B%E5%86%8C.md)
+
+---
+
+## 9. 修订记录
+
+| 日期 | 摘要 |
+|------|------|
+| 2026-05-11 | 增补 **§3.6 / §4.4**：Favicon 改为 **🪐** SVG（`font-size=30`，`y=20`）；**§7** 增加 favicon 缓存与验收说明。 |

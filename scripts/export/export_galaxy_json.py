@@ -176,6 +176,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--size-max", type=float, default=25.0)
     p.add_argument("--emissive-min", type=float, default=0.1)
     p.add_argument("--emissive-max", type=float, default=1.5)
+    p.add_argument(
+        "--cast-max",
+        type=int,
+        default=20,
+        help="Cap cast[] length per movie (default 20). Use 0 to emit full cast from CSV (P25.4+).",
+    )
     return p.parse_args(argv)
 
 
@@ -198,6 +204,7 @@ def _movie_row(
     emissive: float,
     genre_color: list[float],
     genre_hue: float,
+    cast_max: int = 20,
 ) -> dict[str, Any]:
     genres = parse_genre_list(row.get("genres"))
     tagline_raw = row["tagline"] if "tagline" in row.index else ""
@@ -218,7 +225,10 @@ def _movie_row(
         poster_url = POSTER_BASE + (ps if ps.startswith("/") else "/" + ps)
 
     cast_full = _split_list_cell(row.get("cast"))
-    cast_out = cast_full[:20]
+    if cast_max <= 0:
+        cast_out = cast_full
+    else:
+        cast_out = cast_full[:cast_max]
 
     title_s = str(row.get("title", "")).strip()
     orig_s = str(row.get("original_title", "")).strip()
@@ -284,6 +294,7 @@ def build_galaxy_payload(
     emissive_max: float = 1.5,
     subset_z_min_inclusive: float | None = None,
     subset_z_max_exclusive: float | None = None,
+    cast_max: int = 20,
 ) -> tuple[dict[str, Any], list[str]]:
     """Build ``{"meta": ..., "movies": ...}`` from a cleaned frame + UMAP xy (same row order)."""
     if generated_at is None:
@@ -370,6 +381,7 @@ def build_galaxy_payload(
             emissive=float(emissive[i]),
             genre_color=[r, g, b],
             genre_hue=gh,
+            cast_max=cast_max,
         )
         movies.append(m)
 
@@ -548,6 +560,7 @@ def main(argv: list[str] | None = None) -> int:
         emissive_max=float(args.emissive_max),
         subset_z_min_inclusive=args.subset_z_min_inclusive,
         subset_z_max_exclusive=args.subset_z_max_exclusive,
+        cast_max=int(args.cast_max),
     )
 
     write_galaxy_export_files(

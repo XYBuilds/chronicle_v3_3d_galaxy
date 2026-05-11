@@ -13,7 +13,7 @@ todos:
     status: completed
   - id: p254-cast-export-impact
     content: P25.4 全量 cast 进入 galaxy_data.json.gz 的影响评估：gzip 增量、parse 时间、内存、极端长 cast UI；确认不影响 UMAP
-    status: pending
+    status: completed
   - id: p255-drawer-cast-layout
     content: P25.5 Drawer cast UI 改三列、去序号、支持全量 cast；小屏降列；调整 drawer 宽度
     status: pending

@@ -10,7 +10,7 @@ todos:
     status: completed
   - id: p253-active-mesh-retarget-alpha
     content: P25.3 修复 activeR 内换星时非目标 active mesh 短暂回到不透明的问题；拆分相机过渡进度与 focus dim alpha 语义
-    status: pending
+    status: completed
   - id: p254-cast-export-impact
     content: P25.4 全量 cast 进入 galaxy_data.json.gz 的影响评估：gzip 增量、parse 时间、内存、极端长 cast UI；确认不影响 UMAP
     status: pending

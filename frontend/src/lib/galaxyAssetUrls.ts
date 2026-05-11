@@ -112,6 +112,13 @@ export async function resolveGalaxyDataGzipUrl(defaultRelativeGzip: string): Pro
     return exp
   }
 
+  // Manifest ships production R2 URLs. In dev, prefer the Vite-served gzip under `public/data`
+  // so a local `export_galaxy_json.py` run is what the app loads (P25.5 full cast, etc.).
+  if (import.meta.env.DEV) {
+    console.log('[GalaxyAssets] dev: skip manifest, use bundled galaxy gzip', { url: defaultRelativeGzip })
+    return defaultRelativeGzip
+  }
+
   const man = await fetchManifestOnce()
   if (man !== null) {
     return man.galaxy_data_gzip_url
@@ -128,6 +135,11 @@ export async function resolveSearchIndexGzipUrl(defaultRelativeGzip: string): Pr
   }
 
   if (experimentDatasetGalaxyUrl() !== null) {
+    return defaultRelativeGzip
+  }
+
+  if (import.meta.env.DEV) {
+    console.log('[GalaxyAssets] dev: skip manifest, use bundled search index gzip', { url: defaultRelativeGzip })
     return defaultRelativeGzip
   }
 

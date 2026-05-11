@@ -7,7 +7,7 @@ todos:
     status: completed
   - id: p242-public-english-copy
     content: P24.2 README / Info 英文定稿：补齐 The Movie Cosmos 用户向介绍、数据来源、TMDB/Kaggle attribution、字体 attribution、非官方关系、技术栈、更新机制、隐私/analytics 简述
-    status: pending
+    status: completed
   - id: p243-ssot-doc-sync
     content: P24.3 SSOT 文档同步：同步 README、Data Pipeline、运维指南与相关报告索引，明确生产主链路为 GHA Direct Upload，Cloudflare Git 构建路径不作为发布入口
     status: pending

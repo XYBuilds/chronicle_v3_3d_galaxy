@@ -24,6 +24,7 @@ function primaryHueRad(movie: Movie, palette: Record<string, string>): number {
 /**
  * P13.5 — Focus-only OKLab L legend: primary-genre hue spectrum + pointer from `vote_average`.
  * P14.7.1 — Vertical spectrum to the left of the on-screen planet (after horizontal Timeline layout review).
+ * P25.1 — Responsive horizontal offset: laptops stay closer to center; wide screens sit farther left to clear the larger focus planet.
  */
 export function FocusLReference() {
   const str = useStrings()
@@ -61,7 +62,7 @@ export function FocusLReference() {
     <div
       className={cn(
         'pointer-events-none fixed top-1/2 z-[35] flex -translate-y-1/2 flex-row items-stretch gap-4 select-none',
-        'left-[max(0.75rem,calc(50vw-22rem))]',
+        'left-[max(0.5rem,calc(50vw-15.5rem))] lg:left-[max(0.75rem,calc(50vw-23rem))] 2xl:left-[max(0.75rem,calc(50vw-26rem))]',
       )}
       role="img"
       aria-label={str.focusLReference.ariaLabel(ratingStr, movie.title)}

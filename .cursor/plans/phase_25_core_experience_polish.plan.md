@@ -4,7 +4,7 @@ overview: Phase 25 集中处理用户浏览电影时最核心的体验 polish：
 todos:
   - id: p251-focus-scale-hud-layout
     content: P25.1 Focus 星球视觉尺寸放大约 1.5x；调整 focus camera standoff，并联动 rating reference、focus exit 按钮、小屏 viewport clamp
-    status: pending
+    status: completed
   - id: p252-focus-passive-timeline
     content: P25.2 Focus 下 timeline 可见但不可操作：禁用 pointer/keyboard slider 写入，保留年份指示与被动读数
     status: pending

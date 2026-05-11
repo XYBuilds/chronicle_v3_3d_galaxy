@@ -179,8 +179,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument(
         "--cast-max",
         type=int,
-        default=20,
-        help="Cap cast[] length per movie (default 20). Use 0 to emit full cast from CSV (P25.4+).",
+        default=0,
+        help="Cap cast[] to first N names per movie; 0 or negative = full cast from CSV (default 0, Phase 25.5).",
     )
     return p.parse_args(argv)
 
@@ -204,7 +204,7 @@ def _movie_row(
     emissive: float,
     genre_color: list[float],
     genre_hue: float,
-    cast_max: int = 20,
+    cast_max: int = 0,
 ) -> dict[str, Any]:
     genres = parse_genre_list(row.get("genres"))
     tagline_raw = row["tagline"] if "tagline" in row.index else ""
@@ -294,7 +294,7 @@ def build_galaxy_payload(
     emissive_max: float = 1.5,
     subset_z_min_inclusive: float | None = None,
     subset_z_max_exclusive: float | None = None,
-    cast_max: int = 20,
+    cast_max: int = 0,
 ) -> tuple[dict[str, Any], list[str]]:
     """Build ``{"meta": ..., "movies": ...}`` from a cleaned frame + UMAP xy (same row order)."""
     if generated_at is None:

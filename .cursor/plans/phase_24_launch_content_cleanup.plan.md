@@ -10,7 +10,7 @@ todos:
     status: completed
   - id: p243-ssot-doc-sync
     content: P24.3 SSOT 文档同步：同步 README、Data Pipeline、运维指南与相关报告索引，明确生产主链路为 GHA Direct Upload，Cloudflare Git 构建路径不作为发布入口
-    status: pending
+    status: completed
 isProject: false
 ---
 

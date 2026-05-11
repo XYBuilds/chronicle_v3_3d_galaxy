@@ -20,7 +20,7 @@
 
 ## 2. 当前 Production 参数
 
-当前线上 `galaxy_data` 版本以 `frontend/public/data/galaxy_data.json` 的 `meta` 为准：
+当前线上 `galaxy_data` 的版本与 UMAP / embedding 等 **meta** 以 **生产环境实际加载的主包**为准：浏览器经 `galaxy_assets_manifest.json`（或 `VITE_GALAXY_DATA_GZIP_URL` 等覆盖）从 **Cloudflare R2** 拉取的 **`galaxy_data.json.gz`** 解压后的 `meta`。本地若存在 `frontend/public/data/galaxy_data.json`（未压缩副本），仅便于开发/对照，**不保证**与线上 R2 对象字节级一致，亦**不作为**仓库需跟踪的生产 SSOT。
 
 ```json
 {
@@ -623,8 +623,8 @@ P18.5b 上线初期采用「软闸 + 强日志 + artifact」策略，原因是 G
 [GitHub Pages]（灰度备线，仍由 push-to-main workflow 部署）
 ```
 
-- **Pages 职责**：托管 `frontend/dist`（前端 React+Three.js 应用壳）。**Direct Upload via `cloudflare/wrangler-action@v3`** 作为生产发布主链路；Pages 侧 Git 自动构建已 **Disconnect**，避免与 CI 行为冲突。
-- **R2 职责**：托管所有 **超过 Cloudflare Pages 单文件 25MiB 上限** 的静态对象（当前主要是 `galaxy_data.json.gz`，约 31MB）。Bucket 配置公开读（`r2.dev` 子域或自定义域），CORS 允许 Pages 站点源 `GET` / `HEAD`。**P23.6**：CORS **AllowedOrigins** 须同时包含自定义域与 **`https://the-movie-cosmos.pages.dev`** 备线（详见 README §6 与 P23.6 运维清单）。
+- **Pages 职责**：托管 `frontend/dist`（前端 React+Three.js 应用壳）。**Direct Upload via `cloudflare/wrangler-action@v3`**（GitHub Actions nightly / monthly 或等价生产 workflow）作为**唯一**生产发布主链路；Cloudflare 控制台「连接 Git 仓库」触发的 Pages **自动构建不作为生产入口**（应 **Disconnect** 或禁用生产分支自动部署），避免未执行 monorepo 构建与 R2 前置步骤时，把仓库内路径下的超大 `*.json.gz` 误纳入 **Pages 输出目录校验**（触发 25MiB 硬限报错）。详见根目录 `README.md`「CI 与静态部署」与 [P24.1 实施报告](../reports/Phase%2024.1%20P24.1%20Cloudflare%20R2%20发布链路清理%20实施报告.md)。
+- **R2 职责**：托管所有 **超过 Cloudflare Pages 单文件 25MiB 上限** 的静态对象（当前主要是 `galaxy_data.json.gz`，约 31MB）。**P24.1**：`galaxy_data.json.gz`、`galaxy_search_index.json.gz` **不纳入 Git**；由 CI 生成后上传 R2，必要时 prune 本地 `frontend/public/data/` 下大 gzip，再构建 `dist`。Bucket 配置公开读（`r2.dev` 子域或自定义域），CORS 允许 Pages 站点源 `GET` / `HEAD`。**P23.6**：CORS **AllowedOrigins** 须同时包含自定义域与 **`https://the-movie-cosmos.pages.dev`** 备线（详见 README §6 与 P23.6 运维清单）。
 - **前端 URL 解析**（[`frontend/src/lib/galaxyAssetUrls.ts`](../../frontend/src/lib/galaxyAssetUrls.ts) 优先级）：
   1. 构建期 `VITE_GALAXY_DATA_GZIP_URL` / `VITE_GALAXY_SEARCH_INDEX_GZIP_URL`
   2. 运行时 `?dataset=` 实验参数

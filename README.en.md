@@ -1,10 +1,10 @@
 # The Movie Cosmos
 
-**The Movie Cosmos** turns a large slice of the TMDB catalog into a walkable starfield: **similar films cluster together in meaning**, **time** reads as depth you can move along; **larger** stars usually mean more ratings, **brighter** often means a higher TMDB score, and **color** loosely follows primary genre. The in-app brand mark is **the movie cosmos** (all lowercase). For algorithms, field names, and the data pipeline, see **[For developers](#for-developers)** and the [feature → rendering mapping table](docs/project_docs/TMDB%20数据特征工程与%203D%20映射总表.md).
+**The Movie Cosmos** turns a large slice of the TMDB catalog into a walkable starfield: films that are closer in content tend to cluster together, release time maps to depth along Z; larger stars usually mean more ratings, brighter often means a higher score, and color loosely follows genre. For algorithms, field names, and the data pipeline, see **[For developers](#for-developers)** and the [feature → rendering mapping table](docs/project_docs/TMDB%20数据特征工程与%203D%20映射总表.md).
 
 **Live site:** [themoviecosmos.com](https://themoviecosmos.com/)
 
-> **Language:** This file is the English mirror of [README.md](README.md) (Chinese). Keep the two in sync when editing product-facing sections.
+**Chinese readme:** [README.md](README.md)
 
 ---
 
@@ -25,7 +25,7 @@ For loading phases, search, keyboard behavior, and other **product-level** detai
 
 **Interaction**
 
-- **Orbit / pan**: click-drag on the canvas to pan or rotate the view (exact mapping follows the current implementation).
+- **Pan / rotate the view**: click-drag on the canvas to pan or rotate the viewing direction (exact mapping follows the current implementation).
 - **Move in time (timeline)**: when **Space is not held**, use the mouse wheel or the timeline so the view moves along **release-year depth**, i.e. the era band represented by `zCurrent`.
 - **Local dolly (Space + wheel)**: in **macro roam** (wheel drives time, and you are **not** in a focus session), **hold Space** and scroll to temporarily magnify the starfield near the current era while keeping the world point under the cursor on the current `zCurrent` plane; **release Space** to reset viewing distance to the default. Product definition: [Design Spec](docs/project_docs/TMDB%20电影宇宙%20Design%20Spec.md) (dual wheel modes, Phase 17) and [Tech Spec §1.4.3](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md).
 - **Quick preview**: hover a film instance for a tooltip (title, primary genre, etc.) without stopping camera motion.
@@ -53,7 +53,7 @@ Field-level mapping: [TMDB 数据特征工程与 3D 映射总表](docs/project_d
 
 - **Select**: in browse mode, **click** a film instance; the camera animates into **focus** and opens the side **detail sheet** (poster, overview, spoken languages, cast & crew, etc.).
 - **Orbit and switch**: in focus, **drag** to orbit the focused body and its **neighborhood**; **click** another neighbor sphere to switch focus (state machine: [planet state machine spec](docs/project_docs/星球状态机%20spec.md)).
-- **Reading aids**: the UI exposes references for **vote_count tiers** and **score → lightness (L)** mapping; definitions in the [visual parameters table](docs/project_docs/视觉参数总表.md).
+- **Reading aids**: the UI exposes references tied to **vote_count tiers** and **score → lightness (L)** mapping; definitions in the [visual parameters table](docs/project_docs/视觉参数总表.md).
 - **Exit**: use **exit focus** or **ESC** as specified in the product docs to return to browse; see [Design Spec](docs/project_docs/TMDB%20电影宇宙%20Design%20Spec.md).
 
 **Focus visuals**
@@ -61,10 +61,10 @@ Field-level mapping: [TMDB 数据特征工程与 3D 映射总表](docs/project_d
 
 | Visual                       | Meaning                                                                                                                                           |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Stripe boundaries**      | The sphere is partitioned with **Perlin noise** into rings, then colored; up to **8** declared genres.                                          |
-| **Stripe order and width**   | **Genre order** follows TMDB **genre vote counts**; **earlier genres get wider stripes**, then taper by a fixed ratio (same **1/φ** rhythm as macro genre weights). |
-| **Hue**                      | Each ring uses that genre’s **primary palette color**; **primary genre** prefers exported `genre_hue`.                                          |
-| **Brightness**               | Still driven mainly by **TMDB average**: **higher score → brighter**, consistent with the macro galaxy.                                          |
+| **Stripe boundaries**      | The sphere is partitioned with **Perlin noise** into rings, then colored; up to 8 declared genres.                                          |
+| **Stripe order and width**   | Genre order follows TMDB genre vote counts; **earlier genres get wider stripes**, then taper by a fixed ratio (same 1/φ rhythm as macro genre weights). |
+| **Hue**                      | Each ring uses that genre’s **primary palette color**; **primary genre** prefers `genre_hue` from the export.                                          |
+| **Brightness**               | Still rises mainly with TMDB average: **higher score → brighter**, consistent with the macro galaxy.                                          |
 | **Relief**                   | Slight **stepped relief** on stripes to read layers in 3D.                                                                                        |
 | **Concentric rings**         | Rings mark **vote count** tiers as a “how big is this star in the universe?” gauge.                                                               |
 | **Sidebar brightness strip** | Vertical strip + pointer show **score** on the same lightness scale as the sphere.                                                              |
@@ -76,7 +76,7 @@ Implementation and tunables: [视觉参数总表](docs/project_docs/视觉参数
 
 ### Browser and environment
 
-Use a **recent** desktop or mobile browser with hardware acceleration enabled. The site requires **WebGL 2**; payloads are **gzip**-compressed—very old browsers without `DecompressionStream` may fail to load. On errors the UI shows hints; see [MDN: DecompressionStream](https://developer.mozilla.org/en-US/docs/Web/API/DecompressionStream) (roughly Safari 16.4+, Chrome 80+, Firefox 113+).
+Use a **recent** desktop or mobile browser with hardware acceleration enabled. The site requires **WebGL 2**; payloads are **compressed** for transfer—very old browsers without decompression support may fail to load. On errors the UI shows hints; see [MDN: DecompressionStream](https://developer.mozilla.org/en-US/docs/Web/API/DecompressionStream) (roughly Safari 16.4+, Chrome 80+, Firefox 113+).
 
 ### Privacy and analytics (brief)
 
@@ -87,7 +87,7 @@ Use a **recent** desktop or mobile browser with hardware acceleration enabled. T
 
 ### Data sources
 
-Film metadata comes from the [TMDB](https://www.themoviedb.org/) ecosystem; full snapshots are often ingested via Kaggle **[TMDB Movies Daily Updates](https://www.kaggle.com/datasets/alanvourch/tmdb-movies-daily-updates)**. TMDB may also merge fields from the [IMDb non-commercial datasets](https://developer.imdb.com/non-commercial-datasets/)—if you **commercialize or redistribute** raw tables, read TMDB and IMDb terms yourself. On-screen TMDB data must follow [TMDB logos & attribution](https://www.themoviedb.org/about/logos-attribution); legal and third-party notices live in [NOTICE](NOTICE). **Where offline galaxy files come from** is covered under **[For developers](#for-developers)** (“Stack and data flow”) and the [Data Pipeline](docs/project_docs/TMDB%20电影宇宙%20Data%20Pipeline.md).
+Film metadata comes from the [TMDB](https://www.themoviedb.org/) ecosystem; full snapshots are often ingested via Kaggle **[TMDB Movies Daily Updates](https://www.kaggle.com/datasets/alanvourch/tmdb-movies-daily-updates)**. TMDB may also merge fields from the [IMDb non-commercial datasets](https://developer.imdb.com/non-commercial-datasets/)—if you **commercialize or redistribute** raw tables, read TMDB and IMDb terms yourself. On-screen TMDB data must follow [TMDB logos & attribution](https://www.themoviedb.org/about/logos-attribution); legal and third-party notices live in [NOTICE](NOTICE). **Where data comes from and how offline galaxy files are built** is covered under **[For developers](#for-developers)** (“Stack and data flow”) and the [Data Pipeline](docs/project_docs/TMDB%20电影宇宙%20Data%20Pipeline.md).
 
 > **Optional media:** add a screenshot or GIF here for richer social previews.
 
@@ -130,7 +130,7 @@ flowchart LR
 
 > **Diagram note:** edges from `Export` to `Pages` / `R2` show where artifacts **land**. **Actual order** in GitHub Actions: **upload large gzip to R2 first**, then **Vite build** (manifest points at public R2 URLs), then **`wrangler pages deploy`** for `dist`. The CI box is omitted for brevity.
 
-### Repository layout
+### Repository structure and layout
 
 Conceptual layout (tree-style). Omitted: `node_modules/`, `.venv/`, `data/raw/`, `data/output/`, `logs/`, and other **gitignored / generated** trees; data directory conventions: [`data/README.md`](data/README.md).
 
@@ -152,7 +152,7 @@ Conceptual layout (tree-style). Omitted: `node_modules/`, `.venv/`, `data/raw/`,
 ├── frontend/
 │   ├── public/                # Static entry, data/manifest, optional local gzip
 │   ├── src/                   # hud/, three/, components/, lib/ …
-│   ├── README.md              # Pointer to root READMEs
+│   ├── README.md              # Placeholder; points to root README
 │   └── dist/                  # Vite output (usually not committed)
 ├── scripts/
 │   ├── run_pipeline.py        # Pipeline entrypoint
@@ -174,7 +174,7 @@ Conceptual layout (tree-style). Omitted: `node_modules/`, `.venv/`, `data/raw/`,
 ├── requirements.cpu.txt
 ├── requirements.gpu.txt
 ├── .env.example               # Env sample; optional VITE_* data URL overrides
-├── README.en.md               # This file (English)
+├── README.en.md               # English (kept in sync with README.md)
 └── README.md                  # Chinese (primary narrative entry)
 ```
 
@@ -249,4 +249,3 @@ This project uses data from [The Movie Database (TMDB)](https://www.themoviedb.o
 | **Bundled fonts** | Per-font licenses | **Butler**: Fabian De Smet — [personal & commercial free use](https://www.fabiandesmet.com/portfolio/butler-font/) (verify current terms on the author site). **Inter**: SIL OFL 1.1 — [`assets/fonts/Inter-OFL.txt`](assets/fonts/Inter-OFL.txt). Summary: [`assets/fonts/README.md`](assets/fonts/README.md). |
 
 
-Why **Apache-2.0** (and not “MIT only”): aligns with common open-source practice, and a dedicated **`NOTICE`** file makes it easier to pin the **TMDB / IMDb / Kaggle / fonts** acknowledgement and compliance chain. **MIT** is equally viable, but maintainers would still need to keep a legal / credits section of comparable length in README themselves.

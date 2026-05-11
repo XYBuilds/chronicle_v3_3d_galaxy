@@ -589,7 +589,7 @@ chronicle_v3_3d_galaxy/
 * **代码风格**：ESLint + Prettier，采用默认推荐规则集即可，不必自定义过多规则。  
 * **Git**：  
   * `data/raw/` 下的大文件加入 `.gitignore`（或 Git LFS）。  
-  * `frontend/public/data/`：推荐 Git **仅跟踪** `galaxy_data.json.gz`；未压缩 `galaxy_data.json` 由管线本地生成并 **gitignore**（见仓库根 `.gitignore`）。  
+  * `frontend/public/data/`：**P24.1** 起 **`galaxy_data.json.gz`、`galaxy_search_index.json.gz` 不纳入版本库**（避免 Cloudflare Pages Git 路径误校验 25MiB 上限）；管线/CI 生成后上传 **R2**，仓库内可跟踪小文件如 **`galaxy_assets_manifest.json`**（见根目录 `.gitignore` 与 `Data Pipeline.md` §12）。未压缩 `galaxy_data.json` 仍宜本地生成并 **gitignore**，仅作开发校验。  
   * Commit message 无强制格式，保持简洁可读即可。
 
 ## **7\. 浏览器兼容性**

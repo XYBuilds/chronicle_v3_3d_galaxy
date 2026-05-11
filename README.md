@@ -212,6 +212,7 @@ npm run dev
 **生产主路径：GitHub Actions → Cloudflare R2 + Cloudflare Pages**
 
 - 夜间刷新、月度 refit 等流水线（例如 `[nightly_vote_refresh.yml](.github/workflows/nightly_vote_refresh.yml)`、`[monthly_refit.yml](.github/workflows/monthly_refit.yml)`）在更新导出数据后，先将 **星系 gzip 等大文件上传到 R2**（`scripts/cron/upload_galaxy_r2.py` 等），再在同一 job 中 `**npm run build -w frontend`**，并用 `**cloudflare/wrangler-action@v3**` 在 `frontend` 工作目录下执行 `**pages deploy dist**`，把 `**frontend/dist**` 以 **Direct Upload** 方式发布到 **Cloudflare Pages**。这样 Pages 包内不含超大静态对象，避免「单文件 25 MiB」类校验失败；大资源由 **R2** 提供，入口 URL 写在随 dist 发布的 `**galaxy_assets_manifest.json`** 中。
+- **`galaxy_data.json.gz`、`galaxy_search_index.json.gz` 不提交 Git**（见根目录 `[.gitignore](.gitignore)` 与 [P24.1 实施报告](docs/reports/Phase%2024.1%20P24.1%20Cloudflare%20R2%20发布链路清理%20实施报告.md)）；仓库内仅保留小体积 **`galaxy_assets_manifest.json`** 等可由 Pages 托管的静态项；大对象始终经 CI 上传 **R2**。
 - **不要**依赖 Cloudflare 控制台里「连接 Git 仓库」的 Pages **自动构建**作为生产入口：若未按本仓库的 workspace 构建方式执行，容易误把未构建路径下的超大 `public/data/*.gz` 纳入校验。生产发布以 **GitHub Actions + wrangler `pages deploy`** 为准。
 
 **灰度备用：GitHub Pages（短期；未来撤下）**

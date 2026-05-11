@@ -153,7 +153,9 @@ export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailD
         showCloseButton={false}
         className={cn(
           /* Override `sheet` default `data-[side=right]:sm:max-w-sm` (plain `sm:max-w-*` loses merge/specificity). */
-          'min-h-0 max-h-[100dvh] gap-0 overflow-hidden border-l border-border bg-popover p-0 data-[side=right]:sm:max-w-lg',
+          'min-h-0 max-h-[100dvh] gap-0 overflow-hidden border-l border-border bg-popover p-0',
+          /* P25.5: cap width on small laptops (leave galaxy visible); widen on large screens for 3-col cast. */
+          'data-[side=right]:sm:max-w-[min(32rem,88vw)] data-[side=right]:xl:max-w-2xl data-[side=right]:2xl:max-w-[46rem]',
           'transition-[transform,opacity] duration-[300ms] ease-[var(--sheet-ease)] data-ending-style:duration-[450ms]',
         )}
         style={{ ['--sheet-ease' as string]: SHEET_OPEN_EASE }}
@@ -278,14 +280,13 @@ export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailD
                 <h3 className="text-[0.65rem] font-bold uppercase tracking-wider text-muted-foreground">
                   {str.drawer.sections.cast}
                 </h3>
-                <div className="grid grid-cols-1 gap-x-8 gap-y-2.5 sm:grid-cols-2">
+                <ul className="m-0 grid list-none grid-cols-1 gap-x-4 gap-y-2 p-0 sm:grid-cols-2 lg:grid-cols-3">
                   {movie.cast.map((name, i) => (
-                    <div key={`${name}-${i}`} className="flex min-w-0 items-baseline gap-2">
-                      <span className="w-6 shrink-0 text-right text-xs tabular-nums text-muted-foreground">{i + 1}.</span>
-                      <span className="min-w-0 flex-1 truncate text-xs leading-snug text-foreground">{name}</span>
-                    </div>
+                    <li key={`cast-${i}-${name}`} className="min-w-0 break-words text-xs leading-snug text-foreground">
+                      {name}
+                    </li>
                   ))}
-                </div>
+                </ul>
               </section>
             ) : null}
           </div>

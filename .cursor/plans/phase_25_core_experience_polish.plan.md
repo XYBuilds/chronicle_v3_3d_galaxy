@@ -16,7 +16,7 @@ todos:
     status: completed
   - id: p255-drawer-cast-layout
     content: P25.5 Drawer cast UI 改三列、去序号、支持全量 cast；小屏降列；调整 drawer 宽度
-    status: pending
+    status: completed
   - id: p256-drawer-layer-motion-copy
     content: P25.6 Drawer z-index 提升至所有 HUD 之上；向左滑入/向右退出动画；Exit focus 文案改为 Back to cosmos / Return to cosmos 等最终文案
     status: pending

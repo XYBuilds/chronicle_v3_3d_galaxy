@@ -390,6 +390,8 @@ export interface TimelineProps {
 export function Timeline({ orientation = 'vertical' }: TimelineProps) {
   const zRange = useGalaxyDataStore((s) => s.data?.meta.z_range)
   const cameraZ = useSyncExternalStore(subscribeGalaxyCameraZ, getGalaxyCameraZ, getGalaxyCameraZ)
+  /** P25.2 — Film focus: timeline stays visible (bridge `cameraZ`) but must not write `zCurrent`. */
+  const filmFocus = useGalaxyInteractionStore((s) => s.selectedMovieId !== null)
 
   const onZCurrentChange = useCallback(
     (z: number) => {
@@ -421,7 +423,7 @@ export function Timeline({ orientation = 'vertical' }: TimelineProps) {
       orientation={orientation}
       zRange={[zRange[0], zRange[1]]}
       cameraZ={cameraZ}
-      onZCurrentChange={onZCurrentChange}
+      onZCurrentChange={filmFocus ? undefined : onZCurrentChange}
     />
   )
 }

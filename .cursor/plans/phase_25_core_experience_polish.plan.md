@@ -7,7 +7,7 @@ todos:
     status: completed
   - id: p252-focus-passive-timeline
     content: P25.2 Focus 下 timeline 可见但不可操作：禁用 pointer/keyboard slider 写入，保留年份指示与被动读数
-    status: pending
+    status: completed
   - id: p253-active-mesh-retarget-alpha
     content: P25.3 修复 activeR 内换星时非目标 active mesh 短暂回到不透明的问题；拆分相机过渡进度与 focus dim alpha 语义
     status: pending

@@ -17,7 +17,7 @@
 
 在 **WSL Ubuntu**、**`chronicle`** conda 环境下，以 **`data/subsample/tmdb2025_random20.csv`** 触发 **Phase 2.6 自动路径**（`run_pipeline.py` 自动 `--through-phase-2` + 行数断言），完成 **清洗 → 嵌入（CUDA）→ 特征 → UMAP → 导出 → `validate_galaxy_json.py`** 的端到端验证；并修正 **conda 环境规格**、**Miniforge 安装脚本**与 **`umap_projection.py`** 中与 **cuML / DensMAP / 极小样本** 相关的阻塞问题。
 
-关联工作流说明见：**[`docs/workflows/Phase 6M7 后续数据处理流程.md`](../workflows/Phase%206M7%20后续数据处理流程.md)**。
+关联工作流说明见：**[`docs/guides/Phase 6M7 后续数据处理流程.md`](../guides/Phase%206M7%20后续数据处理流程.md)**。
 
 ---
 

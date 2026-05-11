@@ -1,6 +1,7 @@
 {
   "name": "chronicle-v3-3d-galaxy",
   "private": true,
+  "license": "Apache-2.0",
   "workspaces": [
     "frontend"
   ],

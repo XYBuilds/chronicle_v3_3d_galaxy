@@ -1,0 +1,22 @@
+# Documentation license (CC BY 4.0)
+
+Copyright 2026 The Movie Cosmos contributors
+
+The Markdown files in this `docs/` directory tree (including
+`project_docs/`, `reports/`, and `guides/`) are licensed under
+the **Creative Commons Attribution 4.0 International** license (CC BY 4.0).
+
+Human-readable summary:
+https://creativecommons.org/licenses/by/4.0/
+
+Full legal text:
+https://creativecommons.org/licenses/by/4.0/legalcode
+
+You may share and adapt the documentation if you give appropriate credit,
+provide a link to the license, and indicate whether changes were made.
+
+## Exception: embedded code
+
+Source code blocks embedded in those Markdown files are part of the
+repository's software and, when used as code, follow the **Apache License
+2.0** in the repository root `LICENSE` file.

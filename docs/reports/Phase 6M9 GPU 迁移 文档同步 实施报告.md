@@ -43,7 +43,7 @@ M1–M8 已把 UMAP 双后端（`umap-learn` / cuML）、管线 CLI、`meta.umap
 - **主路径（全量、DensMAP、大 `n_neighbors`）**：WSL2 Ubuntu、conda env **`chronicle`**（`scripts/env/rapids_env.yml` / `install_chronicle_conda_env.sh`）、`python scripts/run_pipeline.py --through-phase-2 --umap-backend cuml --densmap ...`；仓库在 WSL 家目录、产物可 **`sync_artifacts_to_windows.sh`** 回写 Windows 工作区。  
 - **回退路径**：Windows **`.venv`** + `pip install -r requirements.txt` + **`umap-learn`**；`--cpu` 或 `--umap-backend umap` 显式锁 CPU。  
 - **契约**：`meta.umap_params` 必含与导出一致的 **`densmap`**；换 UMAP 后端或不可比版本须 **bump 宇宙数据版本** 并记变更。  
-- **更细的里程碑与命令**：见各 **`Phase 6M1`–`6M8`** 实施报告及 `docs/workflows/` 中相关流程说明。
+- **更细的里程碑与命令**：见各 **`Phase 6M1`–`6M8`** 实施报告及 `docs/guides/` 中相关流程说明。
 
 ---
 

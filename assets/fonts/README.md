@@ -1,10 +1,10 @@
 # Bundled fonts
 
-| File                | Family / source                                                                                                              | Used by                                                | License                                            |
-| ------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ | -------------------------------------------------- |
-| `Inter.ttf`         | [Inter](https://github.com/rsms/inter) variable font, mirrored via [google/fonts (`ofl/inter`)](https://github.com/google/fonts/tree/main/ofl/inter) | `scripts/cron/render_og_today.py` (P23.5 OG card body) | SIL Open Font License v1.1 (`Inter-OFL.txt`)       |
-| `Butler-Medium.ttf` | [Butler](https://www.fabiandesmet.com/portfolio/butler-font/) — Fabian De Smet                                               | `scripts/cron/render_og_today.py` (P23.5 brand line)   | Free for personal & commercial use (Fabian De Smet) |
-| `Butler-Bold.ttf`   | [Butler](https://www.fabiandesmet.com/portfolio/butler-font/) — Fabian De Smet                                               | reserved for heavier brand variants if needed          | Free for personal & commercial use (Fabian De Smet) |
+| File                | Family / source                                                                                                                                      | Used by                                                | License                                                                                                                                           |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Inter.ttf`         | [Inter](https://github.com/rsms/inter) variable font, mirrored via [google/fonts (`ofl/inter`)](https://github.com/google/fonts/tree/main/ofl/inter) | `scripts/cron/render_og_today.py` (P23.5 OG card body) | SIL Open Font License v1.1 (`Inter-OFL.txt`)                                                                                                      |
+| `Butler-Medium.ttf` | [Butler](https://www.fabiandesmet.com/portfolio/butler-font/) — Fabian De Smet                                                                       | `scripts/cron/render_og_today.py` (P23.5 brand line)   | Author states **100% free for personal & commercial** use; confirm on [official Butler page](https://www.fabiandesmet.com/portfolio/butler-font/) |
+| `Butler-Bold.ttf`   | [Butler](https://www.fabiandesmet.com/portfolio/butler-font/) — Fabian De Smet                                                                       | reserved for heavier brand variants if needed          | Same as Butler-Medium (see official page)                                                                                                         |
 
 ## Notes
 
@@ -24,5 +24,4 @@ the font's default style (regular weight) and prints a warning rather than faili
 
 - **Inter** © Rasmus Andersson and the Inter Project Authors. Licensed under SIL Open
   Font License v1.1 — see `Inter-OFL.txt`.
-- **Butler** © Fabian De Smet. Free for personal and commercial use. Official source:
-  <https://www.fabiandesmet.com/portfolio/butler-font/>.
+- **Butler** © Fabian De Smet. Per the [official Butler site](https://www.fabiandesmet.com/portfolio/butler-font/), the family is offered free for personal and commercial projects; keep this credit line if you redistribute the font files.

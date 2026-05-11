@@ -278,14 +278,13 @@ export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailD
                 <h3 className="text-[0.65rem] font-bold uppercase tracking-wider text-muted-foreground">
                   {str.drawer.sections.cast}
                 </h3>
-                <div className="grid grid-cols-1 gap-x-8 gap-y-2.5 sm:grid-cols-2">
+                <ul className="m-0 grid list-none grid-cols-1 gap-x-4 gap-y-2 p-0 sm:grid-cols-2 lg:grid-cols-3">
                   {movie.cast.map((name, i) => (
-                    <div key={`${name}-${i}`} className="flex min-w-0 items-baseline gap-2">
-                      <span className="w-6 shrink-0 text-right text-xs tabular-nums text-muted-foreground">{i + 1}.</span>
-                      <span className="min-w-0 flex-1 truncate text-xs leading-snug text-foreground">{name}</span>
-                    </div>
+                    <li key={`cast-${i}-${name}`} className="min-w-0 break-words text-xs leading-snug text-foreground">
+                      {name}
+                    </li>
                   ))}
-                </div>
+                </ul>
               </section>
             ) : null}
           </div>

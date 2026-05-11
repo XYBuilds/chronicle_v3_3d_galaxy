@@ -21,7 +21,7 @@
 | 项 | 说明 |
 |----|------|
 | 数据源 | `data/output/cleaned.csv` + `data/output/umap_xy.npy`（与正式导出同序、同规模；本机样例 **59 341** 条影片） |
-| 导出逻辑复用 | `scripts/export/export_galaxy_json.py` 中 `build_galaxy_payload`；新增 CLI **`--cast-max`**：`20`（默认）与 **`0`（全量，0 表示不截断）** |
+| 导出逻辑复用 | `scripts/export/export_galaxy_json.py` 中 `build_galaxy_payload`；CLI **`--cast-max`**：**`0`（默认）= 全量不截断**；正整数 **`N`** = 每人最多保留前 `N` 个名字（用于与 cap-20 对比试验） |
 | 评估脚本 | `scripts/analysis/evaluate_full_cast_impact.py`：两次构建 payload → `json.dumps(..., separators=(",", ":"))` → `gzip.compress(..., compresslevel=9)` |
 | Python 基准 | 同进程 `gzip.decompress` + `json.loads`，重复 **N** 次取 **median**（消除冷启动抖动） |
 | Node 基准（可选） | `zlib.gunzipSync` + `JSON.parse`，与浏览器栈更接近；需 `--write-temp-gz <dir>` 与 `--node-bench` |
@@ -97,7 +97,7 @@ Node 与 Python 绝对毫秒数不可横向对比（运行时与实现不同）�
 | 首屏解析 | **略增**（毫秒～百毫秒级，依机器与迭代次数波动）；无红线条。 |
 | 极端 cast UI | **必须**在 P25.5 用滚动 + 多列/响应式列数承接（最长 463 人）。 |
 
-**建议**：按 Phase 25 计划进入 **P25.5**（Drawer：去序号、三列/小屏降列、全量 cast、宽度与滚动）；导出端将默认 `cast_max` 从 20 改为全量时，在 **P25.7** 同步 Data Pipeline / Tech Spec §cast 契约。
+**建议**：按 Phase 25 计划进入 **P25.5**（Drawer：去序号、三列/小屏降列、全量 cast、宽度与滚动）；导出端默认 `cast_max` **已改为全量（0）**（见提交与 Tech Spec / Data Pipeline）；其余 SSOT 大段改写原定于 **P25.7**。
 
 ---
 
@@ -105,7 +105,7 @@ Node 与 Python 绝对毫秒数不可横向对比（运行时与实现不同）�
 
 | 路径 | 说明 |
 |------|------|
-| `scripts/export/export_galaxy_json.py` | `--cast-max`（默认 20；**0 = 不截断全量 cast**）；`build_galaxy_payload(..., cast_max=...)` |
+| `scripts/export/export_galaxy_json.py` | **`--cast-max`**：**默认 `0`** = 不截断全量 cast；正整数 **`N`** = 截断为前 N 人；`build_galaxy_payload(..., cast_max=...)` |
 | `scripts/analysis/evaluate_full_cast_impact.py` | P25.4 量化脚本（体积 + Python/可选 Node 基准） |
 | `.gitignore` | 忽略 `.tmp/`（评估临时 gzip） |
 | `.cursor/plans/phase_25_core_experience_polish.plan.md` | **P25.4 todo** 标为 **completed** |

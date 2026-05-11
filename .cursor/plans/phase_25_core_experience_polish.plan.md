@@ -16,7 +16,7 @@ todos:
     status: completed
   - id: p255-drawer-cast-layout
     content: P25.5 Drawer cast UI 改三列、去序号、支持全量 cast；小屏降列；调整 drawer 宽度
-    status: pending
+    status: completed
   - id: p256-drawer-layer-motion-copy
     content: P25.6 Drawer z-index 提升至所有 HUD 之上；向左滑入/向右退出动画；Exit focus 文案改为 Back to cosmos / Return to cosmos 等最终文案
     status: pending
@@ -137,7 +137,7 @@ focus 内从一个 activeR 星球跳到另一个星球时，当前选择动画�
 
 ### 实施要点
 
-- 当前导出截断在 `scripts/export/export_galaxy_json.py`：`cast_full[:20]`。
+- 导出默认全量 cast：`scripts/export/export_galaxy_json.py` 默认 `--cast-max 0`（可选正整数截断）。
 - 准备一个评估脚本或临时导出参数，对比：
   - 20 人截断 gzip 体积。
   - 全量 cast gzip 体积。

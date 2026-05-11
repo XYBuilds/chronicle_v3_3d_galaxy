@@ -85,7 +85,7 @@ flowchart TD
 - Phase 2.2：genre 编码，输出 `data/output/genre_vectors.npy`。
 - Phase 2.3：language 编码，输出 `data/output/language_vectors.npy`。
 - Phase 2.4：特征融合 + UMAP/DensMAP，输出 `data/output/umap_xy.npy`。
-- Phase 2.5：导出 `galaxy_data.json`、`galaxy_data.json.gz`、`galaxy_search_index.json.gz`。
+- Phase 2.5：导出 `galaxy_data.json`、`galaxy_data.json.gz`、`galaxy_search_index.json.gz`。其中 **`movies[].cast`** 默认写入 **全量**（与 `cleaned.csv` 逗号拆分一致；`export_galaxy_json.py` 默认 **`--cast-max 0`** 表示不截断；正整数 `N` 则每人最多保留前 N 个名字，供缩包试验）。
 
 ### 3.2 Phase 18 出口：自动化部署形态（实际落地）
 

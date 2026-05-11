@@ -39,13 +39,13 @@ export const RING_OPACITY_BASE = 0.38
  * **唯一**对外可调「字号」：tier 标签 Sprite 在世界坐标中的垂直边长（`scale.y`），
  * 锚点为 `sprite.position`（见 `update` 中 `radialDist`）。与 `max(·, r * 0.06)` 取大。
  */
-export const LABEL_TEXT_WORLD_HEIGHT = 0.016
+export const LABEL_TEXT_WORLD_HEIGHT = 0.02
 
 /** Matches {@link FocusLReference} rating row (`font-semibold` ≈ 600). */
 export const LABEL_CANVAS_FONT_WEIGHT = 600
 
 /** World-space gap from ring outer edge (r + stroke/2) to label center along outward radial. */
-export const LABEL_OUTSIDE_GAP_WORLD = 0.006
+export const LABEL_OUTSIDE_GAP_WORLD = 0.003
 
 /**
  * Same face order as `index.css` `@theme` `--font-sans` + fallbacks (HUD / {@link FocusLReference} rating digits).

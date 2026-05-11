@@ -33,8 +33,11 @@ export const RING_INNER_RADIUS_FLOOR = 1e-5
 /** Ring alpha multiplier (also multiplied by focus fade `opacity`). */
 export const RING_OPACITY_BASE = 0.38
 
-/** Canvas text size (px); same for every tier. */
-export const LABEL_CANVAS_FONT_PX = 32
+/** Canvas text size (px); same for every tier. Smaller than legacy 32 to match HUD rating scale. */
+export const LABEL_CANVAS_FONT_PX = 24
+
+/** Matches {@link FocusLReference} rating row (`font-semibold` ≈ 600). */
+export const LABEL_CANVAS_FONT_WEIGHT = 600
 
 /** World-space gap from ring outer edge (r + stroke/2) to label center along outward radial. */
 export const LABEL_OUTSIDE_GAP_WORLD = 0.006
@@ -43,11 +46,13 @@ export const LABEL_OUTSIDE_GAP_WORLD = 0.006
  * Sprite vertical size in world units (width follows canvas aspect × `LABEL_CANVAS_W`/`LABEL_CANVAS_H`).
  * Also floored with `r * 0.06` so tiny tiers stay readable.
  */
-export const LABEL_SPRITE_WORLD_HEIGHT = 0.028
+export const LABEL_SPRITE_WORLD_HEIGHT = 0.024
 
-/** Same stack as Tailwind `font-sans` / app UI (thinnest weight 100). */
+/**
+ * Same face order as `index.css` `@theme` `--font-sans` + fallbacks (HUD / {@link FocusLReference} rating digits).
+ */
 export const LABEL_UI_FONT_STACK =
-  'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif'
+  '"Geist Variable", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif'
 
 const LABEL_CANVAS_W = 720
 const LABEL_CANVAS_H = 112
@@ -97,13 +102,13 @@ function createLabelCanvasTexture(text: string): THREE.CanvasTexture {
   }
   ctx.clearRect(0, 0, LABEL_CANVAS_W, LABEL_CANVAS_H)
   ctx.direction = useLocaleStore.getState().locale === 'ar' ? 'rtl' : 'ltr'
-  ctx.font = `100 ${LABEL_CANVAS_FONT_PX}px ${LABEL_UI_FONT_STACK}`
+  ctx.font = `${LABEL_CANVAS_FONT_WEIGHT} ${LABEL_CANVAS_FONT_PX}px ${LABEL_UI_FONT_STACK}`
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   const cx = LABEL_CANVAS_W / 2
   const cy = LABEL_CANVAS_H / 2
   ctx.lineJoin = 'round'
-  ctx.lineWidth = 3
+  ctx.lineWidth = 2.5
   ctx.strokeStyle = 'rgba(0,0,0,0.78)'
   ctx.strokeText(text, cx, cy + 1)
   ctx.fillStyle = 'rgba(255,255,255,0.93)'

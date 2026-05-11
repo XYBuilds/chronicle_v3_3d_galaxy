@@ -82,7 +82,7 @@ function Section({ title, body }: { title: string; body: string }) {
   )
 }
 
-/** 居中 Modal：文案在 `lib/locales/*.json`；壳体较 `dialog` 默认（32rem×42rem）放大一档。 */
+/** 居中 Modal：文案在 `lib/locales/*.json` */
 export function InfoModal({ open, onOpenChange }: InfoModalProps) {
   const s = useStrings()
 
@@ -91,7 +91,7 @@ export function InfoModal({ open, onOpenChange }: InfoModalProps) {
       <DialogContent
         id="app-info-dialog"
         showCloseButton
-        className="min-h-0 gap-0 p-0 w-[min(100vw-1.5rem,36rem)] max-h-[min(90dvh,48rem)]"
+        className="min-h-0 gap-0 p-0 w-[min(100vw-1.5rem,36rem)] max-h-[min(60dvh,32rem)]"
       >
         <DialogHeader className="relative z-20 shrink-0 gap-0 border-b border-border/70 bg-popover px-6 pb-5 pt-7 text-left shadow-[0_6px_18px_-10px_color-mix(in_oklch,var(--foreground)_10%,transparent)] sm:px-7">
           <DialogTitle className="pr-10 text-2xl font-bold leading-tight tracking-tight text-foreground">

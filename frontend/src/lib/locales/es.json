@@ -84,8 +84,12 @@
         "body": "Tras la carga: portada → toca el globo central para The Movie Today (un título al día, UTC).\n\nArrastra para orbitar. Sin Espacio: rueda o línea de tiempo te mueven en profundidad por año. En recorrido macro, mantén Espacio y rueda para acercarte; suelta Espacio para restablecer la distancia. Pasa el cursor para una vista previa de una línea.\n\nBusca títulos, personas o géneros arriba; ESC retrocede búsqueda, panel y foco. Clic en una película para el foco y la hoja lateral; clic en vecinas para cambiar."
       },
       {
-        "heading": "Datos, entorno y pila",
-        "body": "Datos de TMDB; los volcados completos suelen empezar en Kaggle «TMDB Movies Daily Updates». Puede haber campos de IMDb: lee las licencias antes de un uso comercial. Atribución TMDB; avisos legales y de terceros en NOTICE del repositorio.\n\nNavegador reciente y aceleración por hardware. Requiere WebGL 2 y gzip (DecompressionStream). Referencia: Safari 16.4+, Chrome 80+, Firefox 113+.\n\nTubería: Python limpia → incrustaciones multilingües → fusiona género/idioma → UMAP (random_state=42) → galaxia gzip + índice de búsqueda; el eje Z (año) no entra en UMAP. UI: Vite + React 19 + Three.js puro + Zustand."
+        "heading": "Datos y tu equipo",
+        "body": "Los datos de películas vienen de TMDB (The Movie Database). The Movie Cosmos no es un producto oficial de TMDB. Armamos la galaxia offline a partir de listados públicos (a menudo un snapshot gratuito en Kaggle). Si reutilizas tablas en negocio, lee las condiciones de TMDB, IMDb y Kaggle. Los créditos en pantalla siguen las reglas de atribución de TMDB; avisos legales y de terceros en el NOTICE del repositorio en GitHub.\n\nUsa un navegador reciente con aceleración por hardware. La primera visita descarga un paquete grande comprimido; navegadores muy viejos o redes bloqueadas pueden impedir que abra."
+      },
+      {
+        "heading": "Privacidad",
+        "body": "Sin registro. A veces usamos estadísticas ligeras de Cloudflare (casi sin cookies) para tráfico global y rapidez, no para saber quién eres ni qué película eliges. Los bloqueadores pueden ocultarlas; la experiencia sigue igual."
       },
       {
         "heading": "Enlaces",

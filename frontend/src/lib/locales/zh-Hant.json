@@ -84,8 +84,12 @@
         "body": "載入完成 → 封面 → 點正中星球 → The Movie Today（UTC 每日一部）。\n\n拖曳轉視角；未按空格時用滾輪或時間軸沿上映年縱深；宏觀漫遊時按住空格再滾輪可臨時推近，鬆空格觀察距離復位；懸停可看一行摘要。\n\n頂欄搜片名、影人、類型；ESC 逐級退出搜尋、側欄、聚焦。瀏覽態按一下進聚焦並開側欄，可點鄰星切換。"
       },
       {
-        "heading": "資料、環境與實作",
-        "body": "來自 TMDB；全量快照常見入口為 Kaggle「TMDB Movies Daily Updates」，或含 IMDb 欄位，商用／再分發前請自讀條款；展示遵守 TMDB 署名，法律與第三方說明見倉庫 NOTICE。\n\n需較新瀏覽器、硬體加速、WebGL 2 與 gzip（DecompressionStream）。\n\n管線：Python 清洗 → 多語言嵌入 → 融合類型／語言 → UMAP（random_state=42）→ gzip 星系與搜尋索引，上映年 Z 不進 UMAP；前端 Vite + React 19 + 原生 Three.js + Zustand。"
+        "heading": "資料與裝置",
+        "body": "影片資訊來自 TMDB（The Movie Database）。The Movie Cosmos 不是 TMDB 官方出品。星系資料由公開的影片清單離線整理（常見起點是 Kaggle 上的 TMDB 日更快照）。若要商用或再分發原始資料，請自行閱讀 TMDB、IMDb、Kaggle 條款。畫面展示遵守 TMDB 署名；更多法律與第三方說明見 GitHub 倉庫的 NOTICE。\n\n請使用較新瀏覽器並開啟硬體加速。首次造訪會下載較大的壓縮檔；過舊瀏覽器或受限網路可能無法開啟。"
+      },
+      {
+        "heading": "隱私",
+        "body": "無需登入。可能啟用 Cloudflare 的輕量統計，只看整體流量與大致速度（通常不用 cookie），不用來辨識你或你點了哪部片。廣告封鎖可能擋掉統計，不影響使用。"
       },
       {
         "heading": "連結",

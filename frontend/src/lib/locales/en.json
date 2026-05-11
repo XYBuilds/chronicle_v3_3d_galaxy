@@ -84,8 +84,12 @@
         "body": "After loading: cover → tap the center globe for The Movie Today (one pick per UTC day).\n\nDrag to orbit. Without Space: scroll wheel or timeline moves you along release-year depth. In macro roam, hold Space and scroll to dolly in; release Space to reset distance. Hover shows a one-line preview.\n\nSearch titles, people, or genres in the bar; ESC unwinds search, side sheet, then focus. Click a film for focus and the side sheet; click neighbors to switch."
       },
       {
-        "heading": "Data, runtime & stack",
-        "body": "Film data from TMDB; full snapshots often start from the Kaggle dataset “TMDB Movies Daily Updates.” Rows may include IMDb-sourced fields — read TMDB and IMDb terms before commercial reuse. Display follows TMDB attribution; legal and third-party notes: repo NOTICE.\n\nUse a recent browser with hardware acceleration. WebGL 2 and gzip (DecompressionStream) required. Baseline: Safari 16.4+, Chrome 80+, Firefox 113+.\n\nPipeline: Python clean → multilingual sentence embeddings → fuse genres/languages → UMAP (random_state=42) → gzipped galaxy + search index; release-year Z is not in UMAP. UI: Vite + React 19 + vanilla Three.js + Zustand."
+        "heading": "Data & device",
+        "body": "Film facts come from TMDB (The Movie Database). The Movie Cosmos is not an official TMDB product. We build our offline galaxy from public movie listings (often starting from a free Kaggle snapshot). If you reuse raw data commercially, read TMDB, IMDb, and Kaggle terms yourself. On-screen use follows TMDB credits; legal and third-party notes are in the GitHub repo NOTICE.\n\nUse a recent browser with hardware acceleration. The first visit downloads a large compressed pack—very old browsers or locked-down networks may not open it."
+      },
+      {
+        "heading": "Privacy",
+        "body": "No sign-in. We may turn on Cloudflare’s simple, mostly cookie-free stats for overall traffic and how fast the site feels—not to identify you or your film picks. Ad or privacy blockers can hide those pings; the galaxy still runs."
       },
       {
         "heading": "Links",

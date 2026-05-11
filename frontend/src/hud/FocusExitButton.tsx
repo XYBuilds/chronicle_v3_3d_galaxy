@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils'
 /**
  * P22.5 — Exit focus, anchored like {@link FocusLReference}: rating legend sits left of the on-screen
  * planet (`top-1/2` + horizontal offset); this control sits below the planet (`left-1/2` + downward offset).
+ * P25.1 — Vertical offset 定稿：`50%+22rem`（`lg+` `24rem`），并受 safe-area / 短视口上限约束。
  */
 export function FocusExitButton() {
   const selectedMovieId = useGalaxyInteractionStore((s) => s.selectedMovieId)
@@ -17,7 +18,7 @@ export function FocusExitButton() {
       className={cn(
         'pointer-events-none fixed left-1/2 z-[60] flex -translate-x-1/2 justify-center',
         /* Below viewport center (planet); cap so short viewports / home indicator don’t clip */
-        'top-[min(calc(50%+16rem),calc(100dvh-max(1.5rem,env(safe-area-inset-bottom,0px))-4rem))]',
+        'top-[min(calc(50%+22rem),calc(100dvh-max(1.5rem,env(safe-area-inset-bottom,0px))-4rem))] lg:top-[min(calc(50%+24rem),calc(100dvh-max(1.5rem,env(safe-area-inset-bottom,0px))-4rem))]',
       )}
     >
       <button

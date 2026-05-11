@@ -153,9 +153,7 @@ export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailD
         showCloseButton={false}
         className={cn(
           /* Override `sheet` default `data-[side=right]:sm:max-w-sm` (plain `sm:max-w-*` loses merge/specificity). */
-          'min-h-0 max-h-[100dvh] gap-0 overflow-hidden border-l border-border bg-popover p-0',
-          /* P25.5: cap width on small laptops (leave galaxy visible); widen on large screens for 3-col cast. */
-          'data-[side=right]:sm:max-w-[min(32rem,88vw)] data-[side=right]:xl:max-w-2xl data-[side=right]:2xl:max-w-[46rem]',
+          'min-h-0 max-h-[100dvh] gap-0 overflow-hidden border-l border-border bg-popover p-0 data-[side=right]:sm:max-w-lg',
           'transition-[transform,opacity] duration-[300ms] ease-[var(--sheet-ease)] data-ending-style:duration-[450ms]',
         )}
         style={{ ['--sheet-ease' as string]: SHEET_OPEN_EASE }}

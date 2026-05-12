@@ -144,10 +144,14 @@
       calc(100vw - var(--hud-inset-sm) - max(var(--hud-inset-sm), env(safe-area-inset-right, 0px))));
   --hud-timeline-h-margin-bottom: 2rem;
   --hud-timeline-h-margin-bottom-sm: 2.5rem;
-  /* P25.1 focus planet clearance; tuned at design baseline */
-  --hud-focus-ref-clearance: 15.5rem;
-  --hud-focus-ref-clearance-lg: 23rem;
-  --hud-focus-ref-clearance-2xl: 26rem;
+  /**
+   * Focus rating reference (FocusLReference): left edge = max(inset, `50vw - this`).
+   * Value is `100vw / 6` — horizontal distance from viewport center to the block start (one-sixth of viewport width).
+   * Companion: `--hud-focus-ref-height-from-vw` = `100vw / 3` for the spectrum column height.
+   */
+  --hud-focus-ref-center-gap-from-vw: calc(100vw / 6);
+  /** Vertical height of the rating spectrum + label column (`FocusLReference`). */
+  --hud-focus-ref-height-from-vw: calc(100vh * 0.4);
   --hud-focus-exit-below-center: 22rem;
   --hud-focus-exit-below-center-lg: 24rem;
   --hud-focus-exit-viewport-pad: 4rem;

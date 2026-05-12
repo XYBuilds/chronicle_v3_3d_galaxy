@@ -24,6 +24,27 @@ export function getSelectionMaskPickSet(
   return new Set(selectionIds)
 }
 
+const _worldScreenProject = new THREE.Vector3()
+
+/**
+ * Project world position to viewport CSS pixels (client coordinates).
+ * HUD canvas anchor — Design Spec / `HUD_Design_System.md` §3.3.
+ */
+export function worldToScreenCss(
+  world: THREE.Vector3,
+  camera: THREE.PerspectiveCamera,
+  domElement: HTMLElement,
+): { x: number; y: number } {
+  _worldScreenProject.copy(world)
+  _worldScreenProject.project(camera)
+  const rect = domElement.getBoundingClientRect()
+  const w = Math.max(1, rect.width)
+  const h = Math.max(1, rect.height)
+  const x = (_worldScreenProject.x * 0.5 + 0.5) * w + rect.left
+  const y = (-_worldScreenProject.y * 0.5 + 0.5) * h + rect.top
+  return { x, y }
+}
+
 /** GLSL `smoothstep` replica for CPU gates (P8.4 pick: `inFocus > 0.5`). */
 export function smoothstep(edge0: number, edge1: number, x: number): number {
   const t = THREE.MathUtils.clamp((x - edge0) / (edge1 - edge0), 0, 1)

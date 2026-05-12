@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils'
 /**
  * P13.5 — Focus-only OKLab L legend: primary-genre hue spectrum + pointer from `vote_average`.
  * P14.7.1 — Vertical spectrum to the left of the on-screen planet (after horizontal Timeline layout review).
- * P26.2 — Horizontal: `50vw - (100vw/6)` vs inset; vertical height `--hud-focus-ref-height-from-vw` (`100vw/3`).
+ * P26.2 — Placement from `:root` `--hud-focus-ref-center-gap` / `--hud-focus-ref-height` (each uses `max(min, fluid)`).
  */
 export function FocusLReference() {
   const str = useStrings()
@@ -49,12 +49,12 @@ export function FocusLReference() {
     <div
       className={cn(
         'pointer-events-none fixed top-1/2 z-[var(--z-hud-focus-chrome)] flex -translate-y-1/2 flex-row items-stretch gap-4 select-none',
-        'left-[max(var(--hud-inset-xs),calc(50vw-var(--hud-focus-ref-center-gap-from-vw)))] sm:left-[max(var(--hud-inset-sm),calc(50vw-var(--hud-focus-ref-center-gap-from-vw)))]',
+        'left-[max(var(--hud-inset-xs),calc(50vw-var(--hud-focus-ref-center-gap)))] sm:left-[max(var(--hud-inset-sm),calc(50vw-var(--hud-focus-ref-center-gap)))]',
       )}
       role="img"
       aria-label={str.focusLReference.ariaLabel(ratingStr, movie.title)}
     >
-      <div className="relative flex h-[var(--hud-focus-ref-height-from-vw)] w-2.5 shrink-0 flex-col-reverse overflow-hidden">
+      <div className="relative flex h-[var(--hud-focus-ref-height)] w-2.5 shrink-0 flex-col-reverse overflow-hidden">
         {style.stripeColors.map((bg, k) => (
           <div
             key={k}
@@ -69,7 +69,7 @@ export function FocusLReference() {
           aria-hidden
         />
       </div>
-      <div className="relative h-[var(--hud-focus-ref-height-from-vw)] min-w-[4.5rem] shrink-0">
+      <div className="relative h-[var(--hud-focus-ref-height)] min-w-[4.5rem] shrink-0">
         <div
           className="pointer-events-none absolute left-0 flex flex-row items-center"
           style={{ top: `${pointerTopPct}%`, transform: 'translateY(-50%)' }}

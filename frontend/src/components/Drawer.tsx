@@ -156,8 +156,8 @@ export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailD
           'z-[var(--z-hud-drawer)]',
           /* Full-width slide: enter from the right edge, exit back off-screen right. */
           'data-[side=right]:data-starting-style:translate-x-full data-[side=right]:data-ending-style:translate-x-full',
-          /* Cap at `--hud-drawer-max-w` (see `:root`: min of 28vw planet margin, 32rem readable, safe-area). */
-          'min-h-0 max-h-[100dvh] gap-0 overflow-hidden border-l border-border bg-popover p-0 data-[side=right]:max-w-[var(--hud-drawer-max-w)] data-[side=right]:sm:max-w-[var(--hud-drawer-max-w)]',
+          /* Width: floor `--hud-drawer-min-w`, cap `--hud-drawer-max-w` (planet / readable / safe-area). */
+          'min-h-0 max-h-[100dvh] gap-0 overflow-hidden border-l border-border bg-popover p-0 data-[side=right]:min-w-[var(--hud-drawer-min-w)] data-[side=right]:max-w-[var(--hud-drawer-max-w)] data-[side=right]:sm:max-w-[var(--hud-drawer-max-w)]',
           /* Slide only: keep full opacity (override sheet default fade). */
           'data-starting-style:opacity-100 data-ending-style:opacity-100',
           'transition-transform duration-[300ms] ease-[var(--sheet-ease)] data-ending-style:duration-[450ms]',

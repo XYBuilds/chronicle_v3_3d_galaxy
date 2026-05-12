@@ -10,6 +10,7 @@ import { Loading } from '@/components/Loading'
 import { MovieTooltip } from '@/components/MovieTooltip'
 import { Timeline } from '@/components/Timeline'
 import { CoverBackdrop } from '@/hud/CoverBackdrop'
+import { P26ColorAuditPanel } from '@/hud/P26ColorAuditPanel'
 import { HoverRing } from '@/hud/HoverRing'
 import { FocusExitButton } from '@/hud/FocusExitButton'
 import { FocusLReference } from '@/hud/FocusLReference'
@@ -18,6 +19,8 @@ import { InfoButton } from '@/hud/InfoButton'
 import { LanguageSwitch } from '@/hud/LanguageSwitch'
 import { isGalaxyFullscreenAvailable, toggleGalaxyFullscreen } from '@/hud/fullscreenApi'
 import { resolveTodayMovieId } from '@/data/loadToday'
+import { useP26ColorAuditFromQuery } from '@/hooks/useP26ColorAuditFromQuery'
+import { parseP26ForcedTodayMovieId } from '@/lib/p26TodayMovieOverride'
 import { clearSearch, useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
 import { useCoverModeStore } from '@/store/coverModeStore'
 import { useGalaxyDataStore } from '@/store/galaxyDataStore'
@@ -33,6 +36,7 @@ function App() {
   useLocaleFromQuery()
   const strings = useStrings()
   const timelineOrientation = useTimelineOrientationFromQuery()
+  const p26ColorAudit = useP26ColorAuditFromQuery()
   const status = useGalaxyDataStore((s) => s.status)
   const data = useGalaxyDataStore((s) => s.data)
   const errorMessage = useGalaxyDataStore((s) => s.errorMessage)
@@ -99,8 +103,18 @@ function App() {
     if (status !== 'ready' || !data || !indexHydrationTerminal || coverBootReady) return
     let cancelled = false
     void (async () => {
-      const { movieId } = await resolveTodayMovieId(data.movies)
+      const resolved = await resolveTodayMovieId(data.movies)
       if (cancelled) return
+      const valid = new Set(data.movies.map((m) => m.id))
+      const forced = parseP26ForcedTodayMovieId(window.location.search, valid)
+      const movieId = forced ?? resolved.movieId
+      if (forced !== null) {
+        console.log('[App] P26.1 todayMovieId query override', {
+          forced,
+          resolvedFromFeed: resolved.movieId,
+          usedFallback: resolved.usedFallback,
+        })
+      }
       console.log('[App] today resolved → cover + scene gate', { movieId })
       useCoverModeStore.getState().setCover(movieId)
       setCoverBootReady(true)
@@ -331,6 +345,7 @@ function App() {
         <LanguageSwitch />
         <FullscreenButton />
       </div>
+      {p26ColorAudit ? <P26ColorAuditPanel /> : null}
       {!coverMode ? (
         <>
           <SearchBar hasSearchIndex={hasSearchIndex} movies={data.movies} animateZCurrentTo={animateZCurrentTo} />

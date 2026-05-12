@@ -64,7 +64,7 @@
     "focusSearch": "التركيز على البحث (Cmd/Ctrl+K)",
     "close": "إغلاق",
     "toggleLanguage": "اختر لغة الواجهة",
-    "exitFocus": "العودة إلى الكون"
+    "exitFocus": "عرض الكون"
   },
   "timeline": {
     "label": "الجدول الزمني (سنة الإصدار)",

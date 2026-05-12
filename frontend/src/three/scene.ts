@@ -976,7 +976,6 @@ export function mountGalaxyScene(
   container.appendChild(renderer.domElement)
 
   const canvas = renderer.domElement
-  canvas.dataset.galaxyWebgl = '1'
 
   const getCameraMode = () =>
     useCoverModeStore.getState().coverMode ? 'orbit' : selectionPhase === 'selected' ? 'orbit' : 'macro'

@@ -28,7 +28,7 @@ const _worldScreenProject = new THREE.Vector3()
 
 /**
  * Project world position to viewport CSS pixels (client coordinates).
- * HUD canvas anchor — Design Spec / `HUD_Design_System.md` §3.3.
+ * HUD canvas anchor — Design Spec §3.0.3.3.
  */
 export function worldToScreenCss(
   world: THREE.Vector3,

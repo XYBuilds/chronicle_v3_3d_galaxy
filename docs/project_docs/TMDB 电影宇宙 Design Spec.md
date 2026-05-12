@@ -51,7 +51,7 @@
 
 1. **相机推进**（生产 **`700 ms` 选中** / **`450 ms` 取消**，`easeOutCubic`；以《视觉参数总表》为准）：飞向 **固定物距** 的 focus 机位；**宏观段**轴线与 Z 平行。**Phase 13**：**`selected`** 阶段相机切换为**轨道相机**——绕焦点 world 位置（pivot）**偏航 / 俯仰**查看，**半径恒为 `FOCUS_PERLIN_CAMERA_STANDOFF`**；**滚轮不响应**（不推拉、不改变该距离），以保证 Perlin 球屏幕尺寸与 **`vote_count`** 严格对应。进入 / 退出 focus 时位姿与 **`uFocusCameraBlend`** 等由统一 **`transitionDriver`**（`focusDriver.progress`）驱动，含 **position lerp + quaternion slerp**（见 Tech Spec §1.4.2 / §1.4.3 与状态机 spec §3.4.6）。  
 2. **双 mesh 与 Perlin 切换**：飞入过程中，该影片在 **idle + active** 两 mesh 上 **instance 尺度归零**（`uFocusedInstanceId`）；**C 层**为 **`IcosahedronGeometry(1, 8)`** + **Perlin**（**P8.3 → P11.3**）：CPU 上 noise 分位数定面积比，片元 **分档** + 色相来自 **genre_hue** + L/C。旧版 `detail=4` / 单一 `uThreshold` 已废弃。  
-3. **档案抽屉滑出**：右侧 **`Sheet`** 详情；**Phase 25.6** 起为**自视口右缘整幅向左滑入**、关闭时**向右滑出**（仅 **`transform`**，不透明度过渡关闭），**`z-[110]`** 高于常规 HUD，低于 **Info** 对话框（`z-[120]`+）；缓动与时长见《视觉参数总表》与 `Drawer.tsx` / `Phase 25.6` 实施报告。  
+3. **档案抽屉滑出**：右侧 **`Sheet`** 详情；**Phase 25.6** 起为**自视口右缘整幅向左滑入**、关闭时**向右滑出**（仅 **`transform`**，不透明度过渡关闭）。**Phase 26.2** 起叠放以 **`--z-hud-drawer`**（见 **§3.0.5**）为准，高于 Hover / Tooltip，低于 **Info** 模态（**`--z-hud-modal-*`**）；缓动与时长见《视觉参数总表》与 `Drawer.tsx` / `Phase 25.6` 实施报告。  
 4. **取消选中 / 回退**：时长见上，相机与 mesh 显隐由 `scene.ts` 状态机驱动。  
 
 * **环境景深重构**：未被选中的背景星球（无论远近）依然保持极简单色渲染，作为视觉背景，凸显主体。在视距窗口视图下等价于 §2.1 的 A 背景层。**Phase 13**：**球形邻域**内的背景 / active 影片按 mask **可见且可拾取**（`uSelectionMode = 2`），用户可点击**邻域 active** 切换 focus；与 Phase 11.6 Perlin 球拾取优先级一致。
@@ -70,6 +70,159 @@
 * **Phase 21.2 — HUD i18n（多语言）**：HUD 文案扩展为多语言，**仅 HUD / DOM 层**翻译；TMDB 电影标题、人名、genre 名等数据库字段保持原文。当前提供 **EN / 简体中文 / 繁體中文 / 日本語 / Español / Français / العربية**（实现以 [`frontend/src/lib/locales/`](../../frontend/src/lib/locales/) 与 [`LOCALE_IDS`](../../frontend/src/lib/locales/index.ts) 为准）。运行时由 **`useLocaleStore`** 维护当前 locale，**React 组件**用 **`useStrings()`**，**非 React 路径**（loader 错误、`scene.ts`、Three.js Sprite 等）用 **`getStrings()`**；详见 Tech Spec §1.4.8。`zh.json` / `zh-Hant.json` 等所有 locale JSON 的 **leaf key paths** 与 `en.json` 一致，由 `locales.schema.spec.ts` 单测断言。
 * **初始化与持久化**：`?lang=zh|zh-Hant|ja|es|fr|ar|en` query → `localStorage['tmc.locale']` → `navigator.language` 启发式 → 默认 `en`。**`setLocale`** 同步写 localStorage 与 `?lang=`（`history.replaceState`），并更新 `<html lang>` 与 `dir`（**`ar` → `rtl`**）。
 * **LanguageSwitch HUD**：HUD 右上常驻按钮组顺序固定为 **Info → Lang → Fullscreen**。`LanguageSwitch` 为 Lucide `Languages` 图标按钮 + 下拉菜单，菜单使用**母语标签（endonym）**展示（`简体中文` / `繁體中文` / `日本語` / `Español` / `Français` / `العربية` / `English`）。RTL 全局环境下下拉 `<ul>` 显式 `dir="ltr"`，保证勾选 ✓ 始终位于选项右侧。Three.js focus 尺寸参考圆环的 vote-tier Sprite 标签订阅 `useLocaleStore`，locale 变更时重绘。
+
+### **3.0 Phase 26.2 — HUD 空间设计体系（视口、内容框与 token SSOT）**
+
+> **定位**：本节是 **DOM HUD 与视口几何**的共同语言，与 **§2** 状态机、**§3.1** 起各控件专节互补。**实现上的数值 SSOT** 为 **`frontend/src/index.css`** 中 `:root` 的 **`--hud-*`** / **`--z-hud-*`**；组件内以 `var(--…)` 引用，避免散落魔法数。
+
+#### **3.0.1 目标设备与输入假设**
+
+| 维度 | 约定 |
+|------|------|
+| **设计基准（视口）** | **约 1600×900**（逻辑像素）**横屏**：HUD 间距、密度与 **P26.2 级回归截图** 的**首要参照**；版式与 Focus 邻域以该尺度「够用且舒服」为第一目标。**不是分辨率硬下限**——更小的横屏仍可访问；底线为 **无功能性裁切**（关键 CTA 可点、文案可读）， exhaustive 视觉 polish 优先低于设计基准。 |
+| **主用户与输入** | 桌面 / 笔记本浏览器；**鼠标指针**为主交互。 |
+| **纵横比** | 自 **1∶1（方屏）** 至 **超宽屏** 连续变化；布局须在「偏窄的横屏」与「极宽横屏」两端都可读、不重叠关键信息。 |
+| **触控** | **不做触屏专项支持**（不要求 44px 触控热区、不做拇指区假设、不验收手指遮挡）。平板 / 手机为**非目标**，仅偶然访问时不保证体验。 |
+| **刘海 / 相机 housing** | **保留 §3.0.3.2 内容框**：用 `env(safe-area-inset-*)` 与 token 取 max，以适配 **带刘海的 MacBook** 等「横屏 + 物理遮挡」场景；与「触控安全区」无绑定。 |
+
+以下各节在「断点、clamp、较短 `dvh`」等处均指：**以设计基准横屏为主、覆盖 1∶1～超宽的窗口缩放与浏览器 chrome**；**非**小屏手机竖屏专项。
+
+#### **3.0.2 设计目标**
+
+| 目标 | 说明 |
+|------|------|
+| **可读** | 3D 画布始终是主角；HUD 低对比、细线、少遮挡。 |
+| **可推理** | 任意控件的位置、层级、显隐都能用同一套**空间参照 + 模式**解释，而非「历史 class 堆叠」。 |
+| **可验收** | **设计基准**下必过；另在 **1∶1～超宽** 与 **低于基准的横屏压窗** 做抽样，验收 **无功能性裁切** 与 **刘海内容框**（§3.0.3.2）。 |
+| **可实现** | DOM 排版与画布锚点分工清晰，减少「为盖住某层临时改 z-index」。 |
+
+**品牌叙述**（与仓库 branding 规则一致）：叙述性文字用 **The Movie Cosmos**；浏览器标题、封面、HUD 内品牌标识用 **the movie cosmos**。
+
+#### **3.0.3 三层空间参照系**
+
+HUD 元素**不得混用参照系而不声明**。统一为下列三类之一。
+
+##### **3.0.3.1 视口框（Viewport frame）**
+
+* **定义**：以 `100vw` / `100dvh`（或等价 `fixed inset-0` 宿主）为外矩形，边距为设计 token（见 §3.0.6）。
+* **适用**：搜索条、右上角工具组、时间轴（边对齐）、Cover 相关全屏层等**与星球投影无绑定**的排版。
+* **实现提示**：优先相对「视口」`fixed` + token；在 **较短横屏高度** 或 **方屏导致水平紧张** 时用 `clamp` / `min()` 防止裁切；与 §3.0.3.2 配合处理刘海侧。
+
+##### **3.0.3.2 内容框（Content layout frame）**
+
+* **定义**：在视口框内侧再收缩一层：\(\mathrm{inset}_{\mathrm{edge}} = \max(\mathrm{token}_{\mathrm{edge}},\ \texttt{env(safe-area-inset-*)})\)，其中 `safe-area` 在 `env(..., 0px)` 退化。
+* **动机**：**MacBook 刘海 / 圆角屏**下的可用矩形为主；若产品需要全屏沉浸，再在 `index.html` viewport 层评估 `viewport-fit=cover`（与当前实现是否一致以 Tech Spec / 代码为准）。
+* **适用**：所有「应避开刘海区」的**常驻**控件；与 §3.0.3.1 关系：**内容框 ⊆ 视口框**。
+* **现状与方向**：体系化后应统一约定哪些组件必须读内容框（至少：**顶栏 / 右上工具 / 搜索** 与 **顶/左 safe-area** 取 max）。实现见 **`index.css`** `--hud-inset-*` 与各 `fixed` 容器上的 `max(var(--hud-inset-*), env(...))`。
+
+##### **3.0.3.3 画布锚点（Canvas anchor）**
+
+* **定义**：由 Three 桥接写入的**屏幕像素坐标**（如 `hoverAnchorCss`）及派生量（如 `hoverPlanetRadiusCss` → `hoverRingLayout`）。
+* **适用**：Hover 环、片名片 Tooltip 的触发点、与星球半径成比例的 offset。
+* **规则**：**不**用视口 token 去「手调」锚点位置；半径与 gap 的公式保持**单一来源**（与 §3.2 Tooltip、`hoverRingLayout.ts`、实现模块一致）。
+* **性能注**：当前工程在 **`pointermove`** 路径更新 hover 锚点，并对连续相等的值 **去重**，**不**在 `requestAnimationFrame` 每帧向 React 灌入锚点；与「每帧 setState 改 top/left」类反模式不同。若未来需要「相机运动但锚点始终贴住悬停体」，优先 **rAF 直写 DOM** 或轻量订阅，而非每帧 React `setState`。
+
+#### **3.0.4 模式（Mode）与地盘**
+
+交互状态驱动 HUD **显隐与强度**，与 **§2.1 / §2.2** 一致；本节只从**空间设计**归纳。
+
+| 模式 / 条件 | 空间设计要点 |
+|-------------|----------------|
+| **宏观漫游（idle）** | Timeline、Search、右上工具为主；Hover/Tooltip 随指针与锚点。 |
+| **Focus** | 星球邻域：`FocusLReference` 居星球左侧；`FocusExitButton` 置底居中；Timeline 只读、不驱动 `zCurrent`；Drawer 可从右侧占幅滑入。 |
+| **Cover** | 全屏品牌与遮罩优先；与漫游 HUD 互斥挂载策略以 App 实现为准。 |
+| **Drawer 打开** | Sheet 贴视口边缘滑入；须与 **§3.0.5** z 语义一致，避免误挡退出焦点等关键操作（与 **§2.2** / `Drawer.tsx` 实施为准）。 |
+
+**地盘原则**：每一模式下列出「主舞台 / 次信息 / 系统入口」，并标明是否允许与 3D 中心重叠；新增控件须先落入某一地盘，再分配 z 档位。
+
+#### **3.0.5 叠放层级（z）语义表**
+
+数值以 **`--z-hud-*`** 为准，可与下表语义序微调，但**语义序**不可颠倒。
+
+| 语义档位 | 典型内容 | 相对顺序（低 → 高；以 `index.css` 中 `--z-hud-*` 为准） |
+|----------|-----------|----------------------|
+| **Canvas** | WebGL 宿主 | 最低（DOM 下） |
+| **Cover veil / brand** | Cover 遮罩与品牌层 | `--z-hud-cover-veil` → `--z-hud-cover-brand` |
+| **Ambient HUD** | Timeline、右上工具 | `--z-hud-timeline`、`--z-hud-top-tools`（语言下拉 `--z-hud-lang-menu` 紧随其后） |
+| **Focus chrome / exit** | `FocusLReference`、`FocusExitButton` | `--z-hud-focus-chrome`、`--z-hud-focus-exit` |
+| **Hover feedback** | Hover 环、Tooltip | `--z-hud-hover-ring`、`--z-hud-tooltip` |
+| **Search** | 顶部搜索条（含展开面板） | **`--z-hud-search`** 高于 Hover / Tooltip，以便联想层压在画布反馈之上 |
+| **Drawer** | 详情 Sheet | **`--z-hud-drawer`** |
+| **Modal** | Info 对话框等 | **`--z-hud-modal-overlay`** → **`--z-hud-modal-content`** |
+
+**规则**：禁止为单个 PR「+10 盖过邻居」；若冲突，应调整地盘或模式而非无限堆 z。
+
+#### **3.0.6 间距与尺寸 token（`:root`）**
+
+下列 token 在 **`frontend/src/index.css`** 定义；命名与语义为本节 SSOT。
+
+| Token 语义 | 用途 | 说明 |
+|------------|------|------|
+| `--hud-inset-xs` / `--hud-inset-sm` / `--hud-inset-md` | 视口边默认 gutter（与 safe-area 取 max 前的基准） | **P26.2 产品约定**：三档统一 **1rem**，不做阶梯缩小 |
+| `--hud-gap-stack` | 纵向堆叠间距 | 如右上工具按钮组 |
+| `--hud-radius-chrome` | HUD 控件圆角 | 与 `--radius` 家族对齐或略小 |
+| `--hud-search-max-w` / `--hud-search-width` | 搜索条最大宽度与「视口 − gutter − 横向 safe-area」合成宽度 | 与 §4.1 搜索条布局一致 |
+| `--hud-drawer-max-by-planet-safe` / `--hud-drawer-max-readable` / `--hud-drawer-max-w` / `--hud-drawer-min-w` | 右侧 Drawer 宽度的上/下限 | **最大**：`min(0.28×100vw, 32rem, 右侧留白公式)` — `0.28` 略紧于「中间三分之一」纯几何，为 Focus Perlin 留出中心加权空域；**最小**：详情可读地板（如 **18rem**），极窄下可能与 max 竞合，以浏览器 min/max 解析为准 |
+| `--hud-focus-ref-center-gap-*` / `--hud-focus-ref-height-*` | Focus 评分参考条水平锚点与竖直高度 | 水平：`max(下限, 100vw/6)`；竖直：`max(下限, 100vh×0.4)` 等（以 `index.css` 为准） |
+| `--hud-focus-exit-*` | 退出 Focus 按钮相对视口中心与底部的 clamp | 与 `FocusExitButton` 中 `100dvh`、safe-area 组合一致 |
+
+**指针命中**：以桌面惯例即可（如 shadcn `Button` / `IconButton` 默认 padding），**不**设独立「触控最小边长」token。
+
+**水平搜索条**：宽度宜为「内容框宽度 − 水平 inset ×2」的函数，并设 `max-width` 避免超宽屏一条过长。
+
+**竖直方向**：对依赖 `50%` + `rem` 的控件（如退出焦点），继续采用 **`min(理想位置, 短视口上限)`** 与 **`safe-area-inset-*`** 的组合，避免 **较短窗口高度** 或 **底部/侧边 safe-area** 导致裁切。
+
+#### **3.0.7 断点与密度**
+
+* **Tailwind 断点**（`sm` / `lg` / `2xl` 等）作为**密度切换**触发，而非随意混用魔法数。
+* **Focus 星球邻域**：在 **1∶1～超宽** 范围内，水平锚点以 **视口比例 + inset 下限** 表达（见 `--hud-focus-ref-*`）；方屏时保证不越左缘；超宽时避免与星球、Drawer 抢位。
+* **横置时间轴**（**§3.1.1**）：与左侧竖轴、右上工具的地盘分工以 **§3.1** 为准；两种 orientation **共享** token 与 z 语义，仅改变刻度几何。
+
+#### **3.0.8 动效与过渡（空间的一部分）**
+
+| 类型 | 原则 |
+|------|------|
+| **Drawer** | 以 **§2.2** 为准：整幅位移进出场、与 duration / easing 常量一致。 |
+| **模式切换** | Cover ↔ 漫游、进入 / 退出 Focus，避免同一控件无意义大跳；若必须变位，应有可感知的过渡或统一对齐边。 |
+| **微交互** | Tooltip、按钮 hover 时长短于抽屉，避免「全屏同一 easing」的拖沓感。 |
+
+#### **3.0.9 信息架构与控件秩序**
+
+* **右上常驻顺序**（已定稿）：Info → Language → Fullscreen（本节篇首与 **§3.7**）。
+* **搜索**：主入口；与 Drawer 同时存在时，明确主次（例如 Drawer 打开时搜索是否保持可点，以产品决策为准并回写实现）。
+* **退出 Focus**：单一主路径（`FocusExitButton` / **`STRINGS.hud.exitFocus`**）；不依赖「点空白关闭」。
+
+#### **3.0.10 国际化与 RTL**
+
+* 文案键与模板以 **`en.json`** 为结构 SSOT；插值变量与 HTML 标签不得破坏（仓库 `sync-doc` 规则）。
+* **`ar` locale**：`html` 上 `dir="rtl"`；下拉等需保持可读性的区域可按 **`LanguageSwitch`** 的 **`dir="ltr"`** 等例外执行，并在组件级注释标明「例外原因」。
+
+#### **3.0.11 可及性（A11y）与输入形态**
+
+* **指针**：Hover / Click 为主；不要求触屏手势或双指缩放（页面级 Ctrl+滚轮缩放仍遵循浏览器约定）。
+* **键盘**：焦点顺序应沿内容框与语义档位合理循环；Focus 态下 Timeline 不作为 **`slider`** 暴露（**§3.1**）。
+* **读屏**：抽屉标题 / 描述、`aria-label` 与 **`STRINGS` / `en.json`** 及本篇 **§3** 专节已定稿文案同源。
+
+#### **3.0.12 工程映射与单一事实来源**
+
+| Concern | SSOT |
+|---------|------|
+| 文案与 i18n | `frontend/src/lib/locales/en.json` + `locales.schema.spec.ts` |
+| 星球邻域几何 / Tooltip offset | `frontend/src/hud/hoverRingLayout.ts`（及本节 §3.0.3.3） |
+| Focus 动画时长 | 《视觉参数总表》+ `scene.ts` / `transitionDriver` |
+| HUD 布局与 z token | **`frontend/src/index.css`** `:root`（本节 §3.0.5–§3.0.6） |
+
+**反模式**：在业务组件内散落互不关联的 `z-[N]`、`top-[calc(...)]` 而无注释归属 §3.0。
+
+#### **3.0.13 验收清单（P26.2 视口回归）**
+
+以下可在 PR 或发布前勾选：**必测**为 **§3.0.1 设计基准**（约 1600×900 横屏）+ **比例两端**（约 1∶1、超宽）；**抽样**可选低于基准的横屏压窗，确认无功能性裁切与 safe-area。
+
+* [ ] **较短 `dvh`**（横屏窗口压扁）：搜索条、退出焦点、竖/横 Timeline 无裁切、不与浏览器底栏 / safe-area 冲突。
+* [ ] **刘海 / safe-area**：`env(safe-area-inset-*)` 下右上工具、搜索、顶缘控件不进入刘海不可用区（若启用 `viewport-fit=cover` 需单列一条）。
+* [ ] **比例两端**：**约 1∶1** 与 **超宽** 各至少一屏截图归档；超宽下搜索条不过度拉伸（`max-width` 仍生效）。
+* [ ] **Focus**：`FocusLReference` 不与横置 Timeline、Drawer 同时不可读（以 **§3.1** / **§2.2** 分工为准）。
+* [ ] **z 序**：Hover / Tooltip 低于 Search 联想层；Drawer 高于 Search；Info 模态始终最顶（见 **§3.0.5**）。
 
 ### **3.1 全局时间轴 (Timeline Indicator)**
 
@@ -180,7 +333,7 @@
 
 ### **3.7 全局键盘快捷键与全屏 / 语言控件（Phase 14 · HUD ；Phase 21.2 LanguageSwitch）**
 
-* **HUD 右上按钮组**（实现位置 `App.tsx`，`<div className="pointer-events-none fixed right-3 top-3 ... flex gap-2">`）：从左到右依次为 **`InfoButton` → `LanguageSwitch` → `FullscreenButton`**。容器 `pointer-events-none`，子按钮自身 `pointer-events-auto`，避免遮挡 3D 画布的鼠标穿透。
+* **HUD 右上按钮组**（实现位置 `App.tsx`；边距与 z 以 **`index.css`** 中 **`--hud-inset-*`**、**`--z-hud-top-tools`** 等为准，见 **§3.0**）：从左到右依次为 **`InfoButton` → `LanguageSwitch` → `FullscreenButton`**。容器 `pointer-events-none`，子按钮自身 `pointer-events-auto`，避免遮挡 3D 画布的鼠标穿透。
 * **全屏按钮**：**`FullscreenButton`**（`frontend/src/hud/FullscreenButton.tsx`；**`lucide-react`** Maximize / Minimize）；监听 **`fullscreenchange`** / **`webkitfullscreenchange`** 同步图标；行为与下述 **`F`** 一致（Safari 等需 **webkit** 前缀检测时以源码为准）。
 * **语言开关**：**`LanguageSwitch`**（`frontend/src/hud/LanguageSwitch.tsx`；Lucide `Languages` 图标 + 下拉）。点击展开 `role="menu"` 菜单，列出**母语标签**；当前 locale 项 `aria-checked` + 行尾 ✓；点击其它项即时切换并持久化（详见 §3 头部 SSOT 段落与 Tech Spec §1.4.8）。下拉 `<ul>` 显式 `dir="ltr"`，使阿拉伯语等 RTL 全局下勾选位置仍稳定在右侧。
 
@@ -204,7 +357,7 @@
 
 ### **4.1 布局与控件**
 
-* **位置**：`fixed` 贴顶居中，`top-4`、`left-1/2` + `-translate-x-1/2`；`z-index` 高于画布且低于系统级 modal（实现约定 **`z-[90]`**）；容器 **`max-w-lg`**、水平内边距防贴边。
+* **位置**：`fixed` 贴顶居中；水平宽度与顶边距以 **`--hud-search-width`**、**`--hud-inset-*`** 与 safe-area 组合为准（见 **§3.0.6**）。**`z-index`** 以 **`--z-hud-search`** 为准：实现上 **高于** Hover 环与 Tooltip（便于联想层压在画布悬停反馈之上），但 **低于** Drawer 与 **Info** modal（**§3.0.5**）。
 * **idle / active 双态（Phase 21.4）**：联想面板根容器（同时承担 document mousedown 关闭判定）通过 **`data-state="idle" | "active"`** 切换两种视觉，外层加 **`group`** 让 input / tab 条用 **`group-data-[state=*]`** 跟随：
   * **active 触发**（**任一**为真即 active）：**`hoverInside`**（鼠标进入容器任意区域）、**`focusInside`**（任一可聚焦子元素获焦；`onFocusCapture`/`onBlurCapture` 仅在 `relatedTarget` 不在容器内时清除）、**`panelVisible`**（movie / person 分段下 `listOpen && canShowList`）。
   * **idle 视觉**：`bg-transparent` + `border-border/40` + `shadow-none` + `backdrop-blur-none`，最大限度让出星空。

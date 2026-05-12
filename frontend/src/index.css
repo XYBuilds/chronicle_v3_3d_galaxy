@@ -116,11 +116,13 @@
   --ui-edge-canvas-color-strong: rgb(255 255 255 / 0.7);
 
   /**
-   * P26.2 — HUD layout + z semantics (docs/temp/HUD_Design_System.md §3.2, §5–§6).
+   * P26.2 — HUD layout + z semantics (`docs/project_docs/TMDB 电影宇宙 Design Spec.md` §3.0).
    * Baseline ~1600×900; clamp across 1∶1–ultrawide + MacBook notch via safe-area.
+   * `--hud-inset-*`: default gutter from viewport edges (content-frame floor before `max(..., env(safe-area-*))`).
+   * Product: unified **1rem** for xs / sm / md — no tiered shrink.
    */
-  --hud-inset-xs: 0.5rem;
-  --hud-inset-sm: 0.75rem;
+  --hud-inset-xs: 1rem;
+  --hud-inset-sm: 1rem;
   --hud-inset-md: 1rem;
   --hud-gap-stack: 0.5rem;
   --hud-radius-chrome: var(--radius-md);

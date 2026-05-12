@@ -3,7 +3,7 @@ import { createNoise3D, type NoiseFunction3D } from 'simplex-noise'
 
 import { lightnessFromVoteAverage } from '@/lib/colorMath'
 import type { Meta, Movie } from '@/types/galaxy'
-import { genreHueForGenreName, hueFromGenreColor } from '@/utils/genreHue'
+import { genreHueForGenreName, hueFromGenreColor, primaryGenreHueRad } from '@/utils/genreHue'
 
 import perlinFragmentShader from './shaders/perlin.frag.glsl'
 import perlinVertexShader from './shaders/perlin.vert.glsl'
@@ -353,11 +353,12 @@ export function createSelectionPlanet(): SelectionPlanetHandle {
         number,
         number,
       ])
+    const primaryHue = primaryGenreHueRad(movie, palette)
     const fbColor = new THREE.Color(movie.genre_color[0], movie.genre_color[1], movie.genre_color[2])
-    /** Pipeline primary genre (first non-empty in TMDB order); matches export `genre_hue`. */
+    /** Pipeline primary genre (first non-empty in TMDB order); matches export `genre_hue` when in sync with palette. */
     const primaryGenreName = movie.genres.filter(Boolean)[0] ?? ''
     const hues = genres.map((g) =>
-      movie.genre_hue != null && g === primaryGenreName ? movie.genre_hue : genreHueForGenreName(g, palette, fbHue),
+      g === primaryGenreName ? primaryHue : genreHueForGenreName(g, palette, fbHue),
     )
     const padHue = hues.length > 0 ? hues[hues.length - 1]! : fbHue
 

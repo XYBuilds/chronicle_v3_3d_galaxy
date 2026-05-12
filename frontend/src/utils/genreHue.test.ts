@@ -5,7 +5,9 @@ import {
   hueFromGenreColor,
   pipelineRingSrgb01,
   pointColorFromHueVote,
+  primaryGenreHueRad,
 } from './genreHue'
+import type { Movie } from '@/types/galaxy'
 
 function angularDiffRad(a: number, b: number): number {
   let d = Math.abs(a - b) % (2 * Math.PI)
@@ -37,5 +39,20 @@ describe('genreHue (P8.1)', () => {
 
     expect(genreHueForGenreName('TV Movie', palette)).toBeCloseTo((2 * Math.PI) / 3, 12)
     expect(genreHueForGenreName('Thriller', palette)).toBeCloseTo((4 * Math.PI) / 3, 12)
+  })
+
+  it('primaryGenreHueRad uses palette when primary is known (ignores bogus genre_hue)', () => {
+    const palette = {
+      'Science Fiction': '#83ABFF',
+      'TV Movie': '#A4A0FF',
+      Thriller: '#C097F6',
+    }
+    const thrillerFromPalette = genreHueForGenreName('Thriller', palette, 0)
+    const m = {
+      genres: ['Thriller', 'Drama'],
+      genre_hue: 0.12345,
+      genre_color: [0.2, 0.8, 0.1],
+    } as Movie
+    expect(primaryGenreHueRad(m, palette)).toBeCloseTo(thrillerFromPalette, 12)
   })
 })

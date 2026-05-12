@@ -106,8 +106,8 @@ export function attachGalaxyActiveMeshInteraction(options: {
       state.selectedMovieId !== null ? (state.focusNeighborIds?.length ?? 0) : (state.selectionIds?.length ?? 0)
     console.log('[Interaction] selectionMaskPickSet refreshed | mode=', state.selectedMovieId !== null ? 2 : state.searchMode, '| size=', maskSize)
   })
-  const sizeAttr = activeMesh.geometry.getAttribute('aSize') as THREE.InstancedBufferAttribute | undefined
-  console.assert(!!sizeAttr, '[Interaction] active mesh must have aSize InstancedBufferAttribute')
+  const hvsAttr = activeMesh.geometry.getAttribute('aHueVoteSize') as THREE.InstancedBufferAttribute | undefined
+  console.assert(!!hvsAttr && hvsAttr.itemSize === 4, '[Interaction] active mesh must have aHueVoteSize (vec4) InstancedBufferAttribute')
   console.assert(
     activeMesh.count === movies.length,
     `[Interaction] activeMesh.count ${activeMesh.count} must equal movies.length ${movies.length}`,

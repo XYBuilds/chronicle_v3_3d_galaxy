@@ -158,7 +158,9 @@ export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailD
           'data-[side=right]:data-starting-style:translate-x-full data-[side=right]:data-ending-style:translate-x-full',
           /* Override `sheet` default `data-[side=right]:sm:max-w-sm` (plain `sm:max-w-*` loses merge/specificity). */
           'min-h-0 max-h-[100dvh] gap-0 overflow-hidden border-l border-border bg-popover p-0 data-[side=right]:sm:max-w-lg',
-          'transition-[transform,opacity] duration-[300ms] ease-[var(--sheet-ease)] data-ending-style:duration-[450ms]',
+          /* Slide only: keep full opacity (override sheet default fade). */
+          'data-starting-style:opacity-100 data-ending-style:opacity-100',
+          'transition-transform duration-[300ms] ease-[var(--sheet-ease)] data-ending-style:duration-[450ms]',
         )}
         style={{ ['--sheet-ease' as string]: SHEET_OPEN_EASE }}
       >

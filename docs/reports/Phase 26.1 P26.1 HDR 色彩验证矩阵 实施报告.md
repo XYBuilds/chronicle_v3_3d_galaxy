@@ -1,5 +1,7 @@
 # Phase 26.1 — HDR / 色彩验证矩阵（实施记录）
 
+**详细测试步骤（设备矩阵、URL、浮层说明、`readPixels` 限制、记录表）**：见 `docs/guides/P26.1 HDR 与色彩验证测试指南.md`。
+
 ## 目标
 
 按 `.cursor/plans/phase_26_device_spatial_optimization.plan.md` 中 **P26.1** 要求：在 Mac / Windows、HDR 开/关、多浏览器下，对 idle/active 星点、focus Perlin、rating reference、cover 字、HUD 白边等建立**可复现的同一颜色源**对比流程，并区分偏色来自 CSS token、WebGL `SRGBColorSpace`、系统 HDR 或截图链路。

@@ -22,7 +22,7 @@ todos:
     status: completed
   - id: p257-ssot-doc-sync
     content: P25.7 SSOT 文档同步：同步 Tech Spec、Design Spec、视觉参数总表、Data Pipeline（如 cast 契约变化）与 phase 实施报告
-    status: pending
+    status: completed
 isProject: false
 ---
 

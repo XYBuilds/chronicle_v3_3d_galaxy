@@ -58,7 +58,7 @@ inFocus = smoothstep(zLo - W, zLo, aZ) × (1 - smoothstep(zHi, zHi + W, aZ))
 | 路径 | 条件 | `transparent` | `depthWrite` | `alphaTest` | 备注 |
 |------|------|---------------|--------------|-------------|------|
 | **A — opaque（宏观默认）** | **`selectionPhase === 'idle'`**（**`scene.ts` 闭包**，非 Zustand）且 **`selectedMovieId === null`**（store） | `false` | `true` | `0.01` | 条带 / mask 内 **`sActive > 0`** 片元写深度；宏观浏览与 **Phase 17** Space dolly 推近后遮挡正确 |
-| **B — transparent（focus 特例）** | **`selectionPhase`** 为 **`selecting` / `selected` / `deselecting`** **或** **`selectedMovieId !== null`** | `true` | `false` | `0.01` | **P11.1** **`vFocusAlphaMult`** / **`uFocusCameraBlend`** 压暗非目标邻域 active |
+| **B — transparent（focus 特例）** | **`selectionPhase`** 为 **`selecting` / `selected` / `deselecting`** **或** **`selectedMovieId !== null`** | `true` | `false` | `0.01` | **P11.1** **`vFocusAlphaMult`**；压暗由 **`uFocusActiveDimBlend`**（与 **`uFocusNonTargetActiveAlpha`**）驱动，**`uFocusCameraBlend`** 主司相机插值（**Phase 25.3** 起二者在 focus 内换星时解耦） |
 
 * **切换**：由 **`scene.ts`** 每帧用 **`selectionPhase`（闭包）× `selectedMovieId`（store）** 判定路径，仅在 **`transparent` / `depthWrite`** 与目标不一致时设置 **`material.needsUpdate = true`**（触发 shader 重编译；用户操作边界上频率极低）。切换**无**时间插值动画。  
 * **与 P11.1 兼容**：路径 **A** 下宏观 active 片元 **alpha 恒为 1**（mask / 条带外 **`sActive = 0`** 已丢弃），与 opaque 深度写入无冲突；路径 **B** 下 focus 飞入/保持/飞出仍走 **§3.4.3**。
@@ -105,15 +105,16 @@ inFocus = smoothstep(zLo - W, zLo, aZ) × (1 - smoothstep(zHi, zHi + W, aZ))
 - **`uFocusDimMode = 0`**（本 Phase 默认）：凡处于 focus 会话、在 **idle** 层上且实例非焦点，即适用 §3.4.1 乘子降级（**active** 见 §3.4.3）。
 - **`uFocusDimMode = 1`**（接口预留）：仅在 **`selectionMask == 0`**（或非选中）时对非焦点实例暗化；selected 高亮路径与 `selectionMask` 数据通道留给后续 Phase（搜索 / 多选）。**Phase 11 代码侧仅保证 uniform 存在；未接入 `selectionMask` 前，行为与 mode=0 等价（条件中占位为假）。**
 
-#### 3.4.3 focus 飞入/保持/飞出：非目标 **active** 透明度与相机同步（Phase 11.1 · **已实装**）
+#### 3.4.3 focus 飞入/保持/飞出：非目标 **active** 透明度与相机同步（Phase 11.1 · **已实装**；**Phase 25.3** 补充）
 
 **范围**：仅 **`galaxyActive`** 片元 alpha；**idle** 不参与本条。**原计划**「近相机距离剔除 + NDC 外推」（`uFocusOcclusionRadius` / `uCameraWorldPos`）**未**按原计划实装；若仍需防 Perlin 与近邻 active 穿模，可另开任务叠加。
 
-- **运行时 uniform**（与《视觉参数总表》§2、`scene.ts` 一致）：
-  - **`uFocusCameraBlend ∈ [0,1]`**：与选中相机动画**同一标量**——`selecting` 时等于 `easeOutCubic(t)`（与 `camera.position.lerpVectors(fromCam, toCam, ·)` 第三个参数一致）；`selected` 恒为 **1**；`deselecting` 为 **`1 - easeOutCubic(t)`**；`idle` 为 **0**。
+- **运行时 uniform**（与《视觉参数总表》§2、`scene.ts` / `galaxyActive.vert.glsl` 一致）：
+  - **`uFocusCameraBlend ∈ [0,1]`**：与**相机**飞入/飞出动画**同一标量**——`selecting` 时等于 `easeOutCubic(t)`（与 `camera.position.lerpVectors(fromCam, toCam, ·)` 第三个参数一致）；`selected` 恒为 **1**；`deselecting` 为 **`1 - easeOutCubic(t)`**；`idle` 为 **0**。
+  - **`uFocusActiveDimBlend ∈ [0,1]`**（**Phase 25.3**）：驱动顶点 **`dimAlpha = mix(1.0, uFocusNonTargetActiveAlpha, clamp(uFocusActiveDimBlend,0,1))`**，再经 hover 分支写入 **`vFocusAlphaMult`**。**宏观 idle → focus** 首次 **`selecting`**：与 **`uFocusCameraBlend`** 同为 **`p`**。**focus 内换星**（`selectingEnteredFromMacro === false`）：**`selecting` 全程 `uFocusActiveDimBlend = 1`**，仅相机 lerp 重跑，**避免**邻域 active 在换星过渡中短暂回到不透明。**`deselecting`**：与 **`uFocusCameraBlend`** 同步降为 **`1 - p`**。
   - **`uFocusTargetInstanceId`**：`selecting` / `selected` / `deselecting` 为当前操作对应的 **`pendingSelectInstanceIndex`**；`idle` 为 **-1**。用于在 **`uFocusedInstanceId === -1`** 的飞入阶段仍能识别「目标」实例，使目标 active **alpha 恒为 1**（飞入中仍不透明）。
-  - **`uFocusNonTargetActiveAlpha`**：定稿默认 **0.08**（**Phase 13.6**：邻域 active 变密后由 **0.10** 下调；见《视觉参数总表》§2）；非目标 active 片元 `alpha = mix(1.0, uFocusNonTargetActiveAlpha, uFocusCameraBlend)`（在 vert 打包为 `vFocusAlphaMult` 传入片元）。
-  - **Phase 17 · focus 邻域 hover alpha**（与 **`uSelectionMode === 2`** 绑定，**不**作用于 person/genre **`uSelectionMode === 1`**）：`scene.ts` 将 **`hoveredMovieId`** 映射为 **`uHoveredInstanceId`**（无 hover 时为 **`-1`**）。当 **`gl_InstanceID === uHoveredInstanceId`** 且非主目标（**`gl_InstanceID !== uFocusTargetInstanceId`** 路径与现有 P11.1 目标识别一致）时，令 **`dimAlpha = mix(1.0, uFocusNonTargetActiveAlpha, uFocusCameraBlend)`**，再 **`vFocusAlphaMult = max(dimAlpha, clamp(uFocusHoveredActiveAlpha, 0, 1))`**（默认 **`uFocusHoveredActiveAlpha = 0.4`**，可调 **`__galaxyColor.focusHoveredActiveAlpha`**）。**R 外**实例仍走 idle，**不**经本条。主 Perlin 焦点在双 mesh 上 **`sActive = 0`**，hover 命中焦点 id **不**额外「亮起」一颗 active 目标球。
+  - **`uFocusNonTargetActiveAlpha`**：定稿默认 **0.08**（**Phase 13.6**：邻域 active 变密后由 **0.10** 下调；见《视觉参数总表》§2）。
+  - **Phase 17 · focus 邻域 hover alpha**（与 **`uSelectionMode === 2`** 绑定，**不**作用于 person/genre **`uSelectionMode === 1`**）：`scene.ts` 将 **`hoveredMovieId`** 映射为 **`uHoveredInstanceId`**（无 hover 时为 **`-1`**）。当 **`gl_InstanceID === uHoveredInstanceId`** 且非主目标时，**`vFocusAlphaMult = max(dimAlpha, clamp(uFocusHoveredActiveAlpha, 0, 1))`**（默认 **`uFocusHoveredActiveAlpha = 0.4`**，可调 **`__galaxyColor.focusHoveredActiveAlpha`**），其中 **`dimAlpha`** 同上式由 **`uFocusActiveDimBlend`** 决定。**R 外**实例仍走 idle，**不**经本条。主 Perlin 焦点在双 mesh 上 **`sActive = 0`**，hover 命中焦点 id **不**额外「亮起」一颗 active 目标球。
 - **焦点实例在 `selected` 后**仍在 vert 上 `sActive = 0`（双 mesh 隐藏），Perlin 为主视觉；本条主要压低**其余** slab 内 active，突出 focus。
 
 #### 3.4.4 焦点近相机遮挡剔除（原计划 P11.1 · **未实装**）

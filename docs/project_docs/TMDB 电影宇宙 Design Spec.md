@@ -31,7 +31,7 @@
 * **视距窗口（Phase 5.1.5 · 方案 1）**：在时间轴 Z 上定义闭区间 **`[zCurrent, zCurrent + zVisWindow]`**：  
   * **`zCurrent`**、**`zVisWindow`**、**`zCamDistance`**：前两者语义不变；**`zCamDistance` 默认仍为 30**，**Phase 17 起**为**运行时可调**物理后退距离（**按住 Space + 滚轮** dolly；**松开 Space** 复位默认；局部 dolly clamp **`[2,30]`**），详见 Tech Spec §1.4.1 / §1.4.3。  
   * 状态在 Zustand 中维护；**拾取**以 **active mesh** + 世界球逻辑为准（Tech Spec §1.5）。  
-* **与旧 A/B「点大小」的对应（心智模型）**：条带外可见性主要由 **idle** 支路 + **`uBgSizeMul`** 体现；条带内由 **active** 支路 + **`uActiveSizeMul`** 体现；**初值** `uSizeScale=0.3`，`uActiveSizeMul=0.02`，`uBgSizeMul=0.002`（以《视觉参数总表》与 `galaxyMeshes.ts` 为准）。
+* **与旧 A/B「点大小」的对应（心智模型）**：条带外可见性主要由 **idle** 支路 + **`uBgSizeMul`** 体现；条带内由 **active** 支路 + **`uActiveSizeMul`** 体现；**初值** `uSizeScale=0.3`，**`uActiveSizeMul=0.01`**（**P22.2**，约为历史 **`0.02` 的 0.5×**），`uBgSizeMul=0.002`（以《视觉参数总表》与 **`galaxyUniformDefaults.ts`** / `galaxyMeshes.ts` 为准）。
 * **Phase 19**：宏观漫游（含电影名联想未 focus、Space dolly 推近）下 **active** **默认 opaque + depthWrite**；**仅** focus 会话内保留非目标 **active** 片元 **alpha**（**P11.1**），与《星球状态机 spec》**§3.2.1** 路径 **B** 一致。
 
 | 层             | 定义                | 视觉                      | 交互                                        |
@@ -51,7 +51,7 @@
 
 1. **相机推进**（生产 **`700 ms` 选中** / **`450 ms` 取消**，`easeOutCubic`；以《视觉参数总表》为准）：飞向 **固定物距** 的 focus 机位；**宏观段**轴线与 Z 平行。**Phase 13**：**`selected`** 阶段相机切换为**轨道相机**——绕焦点 world 位置（pivot）**偏航 / 俯仰**查看，**半径恒为 `FOCUS_PERLIN_CAMERA_STANDOFF`**；**滚轮不响应**（不推拉、不改变该距离），以保证 Perlin 球屏幕尺寸与 **`vote_count`** 严格对应。进入 / 退出 focus 时位姿与 **`uFocusCameraBlend`** 等由统一 **`transitionDriver`**（`focusDriver.progress`）驱动，含 **position lerp + quaternion slerp**（见 Tech Spec §1.4.2 / §1.4.3 与状态机 spec §3.4.6）。  
 2. **双 mesh 与 Perlin 切换**：飞入过程中，该影片在 **idle + active** 两 mesh 上 **instance 尺度归零**（`uFocusedInstanceId`）；**C 层**为 **`IcosahedronGeometry(1, 8)`** + **Perlin**（**P8.3 → P11.3**）：CPU 上 noise 分位数定面积比，片元 **分档** + 色相来自 **genre_hue** + L/C。旧版 `detail=4` / 单一 `uThreshold` 已废弃。  
-3. **档案抽屉滑出**（`easeOutCubic`，在 Perlin 稳定后）：侧边详情滑入。  
+3. **档案抽屉滑出**：右侧 **`Sheet`** 详情；**Phase 25.6** 起为**自视口右缘整幅向左滑入**、关闭时**向右滑出**（仅 **`transform`**，不透明度过渡关闭），**`z-[110]`** 高于常规 HUD，低于 **Info** 对话框（`z-[120]`+）；缓动与时长见《视觉参数总表》与 `Drawer.tsx` / `Phase 25.6` 实施报告。  
 4. **取消选中 / 回退**：时长见上，相机与 mesh 显隐由 `scene.ts` 状态机驱动。  
 
 * **环境景深重构**：未被选中的背景星球（无论远近）依然保持极简单色渲染，作为视觉背景，凸显主体。在视距窗口视图下等价于 §2.1 的 A 背景层。**Phase 13**：**球形邻域**内的背景 / active 影片按 mask **可见且可拾取**（`uSelectionMode = 2`），用户可点击**邻域 active** 切换 focus；与 Phase 11.6 Perlin 球拾取优先级一致。
@@ -79,7 +79,7 @@
 * **当前位置标记**：高亮指示器显示 **`zCurrent`**（Phase 5.1.5 / **Phase 13**）——即用户当前关注的发行年；**HUD 订阅 `bridgeZ = zCurrent`**（与 Tech Spec §1.4.1 单一路径一致）。**Focus 态 `FocusLReference`**（§2.2）：**Phase 14.7.1** 起置于**星球左侧**竖条，与 **`?timeline=horizontal`** 底部横轴、右上角 **Info / 全屏**控件分工，避免重叠或可读性明显下降（窄屏以实现对齐为准）。  
   * **宏观 idle 态**：`zCurrent` 由滚轮 / 时间轴与相机 **`zCurrent - zCamDistance`** 同步。  
   * **focus 态及过渡**：`zCurrent` 与焦点 **`movie.z`** 对齐（可与飞入动画**渐变**）；**退出 focus 后 `zCurrent` 保留在 `movie.z`**。
-* **交互（可选 / 规划中）**：点击刻度或拖动 thumb 可快速跳转至对应年代，反向写入 `zCurrent`（相机跟随）——本阶段实现为纯被动指示即可；拖动交互作为 **Phase 5.3.1** 单独排期。  
+* **交互（宏观 idle · Phase 5.3.1 已落地）**：拖动轨道或点击刻度 / 键盘方向键可写入 **`zCurrent`**（与 `galaxyCameraZBridge` 一致）。**Phase 25.2 · focus 被动态**：**单片 focus**（`selectedMovieId !== null`）下 Timeline **仍渲染**读数与刻度，但**不**绑定 **`onZCurrentChange`**——用户操作不改变 **`zCurrent`**；无障碍不将轨道暴露为 **`slider`**（见 `Timeline.tsx`）。  
 * **视觉基调**：极低存在感——半透明、细线、小字号，避免遮挡 3D 场景主体。具体视觉样式参照 Figma 设计稿。
 
 #### **3.1.1 Orientation 双变体（Phase 14）**
@@ -99,7 +99,7 @@
   * 需确保能够有效区分 UI 与 3D 场景层次，防止完全遮挡底层宇宙。  
   * 信息层级分明：海报、标题/原名、日期、Tagline 等主次清晰。  
   * 滑出/收回动画遵循 §2.2 定义的时序与缓动函数。
-* **P22.5 退出入口收口**：Drawer 右上角 `X`（`SheetClose`）已移除；focus 退出由屏幕底部居中的 floating 按钮触发（`FocusExitButton`，文案 `Exit focus`）。不接受“点击空白区域退出 focus”的交互路径。
+* **P22.5 退出入口收口**：Drawer 右上角 `X`（`SheetClose`）已移除；focus 退出由屏幕底部居中的 floating 按钮触发（**`FocusExitButton`**）。**Phase 25.6 文案定稿**：英文 **`STRINGS.hud.exitFocus`** = **`View cosmos`**（全 locale 键对齐，见 `frontend/src/lib/locales/en.json`）。不接受“点击空白区域退出 focus”的交互路径。
 * **P22.3 海报档位**：`poster_url` 对应 TMDB `w780` 档位，用于提升 Drawer 海报清晰度（尤其高 DPI 屏幕）。
 
 ### **3.4 Phase 9 — HUD 排版、流派表面与 Dev 主题**
@@ -117,7 +117,7 @@
 * **Overview**：区块标题 `text-[0.65rem] font-bold uppercase tracking-wider text-muted-foreground`；正文 `text-sm leading-relaxed`。  
 * **Details**：两列网格 `grid-cols-2`；字段名小标题与值层次区分（标签 `font-semibold` 档、值 `text-muted-foreground`）；实现细节以 `Drawer.tsx` 为准。  
 * **Details 四组显隐（Phase 14.6）**：仅约束 **Details** 小标题下的元数据网格（Overview / Cast / 外链等不重排）。**组 1** Runtime → Language：**整组永远渲染**；单栏无有效数据时**值**显示斜杠占位 `/`；**Runtime = 0 分钟视为有**，须正常展示。**组 2** Director → Producers → Writers、**组 3** Director of Photography → Music Composer：逐栏判断，无数据则**该栏不渲染**；组内三栏或两栏尽缺则**整组不出现**。**组 4** Budget → Revenue：单栏无（含 **`0`** / `null` / `undefined` / 缺失）则该栏值为 `/`；两栏皆无则**整组不渲染**。栏从左到右填满一行再换行；组与组之间仅换行，不增分割线。完整判定表见仓库 **`.cursor/plans/phase_14_hud_polish_ed74e27e.plan.md`** §P14.6（与 Storybook **`Drawer.stories`** 对照验收）。  
-* **Cast**：`sm` 及以上双列编号列表（序号 + `truncate` 人名），窄屏单列。  
+* **Cast（Phase 25.5）**：**无序号**；响应式 **`grid-cols-1` / `sm:grid-cols-2` / `lg:grid-cols-3`**，与 **`movies[].cast` 全量**（主包默认不截断，见 Tech Spec §2 / Data Pipeline）一致；长列表在抽屉**可滚动正文区**内换行展示，不撑破视口。  
 * **Sheet 骨架**：保留 shadcn `Sheet` / `SheetContent` / `AspectRatio`；**`SHEET_OPEN_EASE`**（Phase 4.3）时序不改。  
 * **六人字段**：在 `director` / `writers` / `cast` 之外展示 **`director_of_photography`**、**`producers`**、**`music_composer`**；对应数组为空时 **整块不渲染**。  
 * **外链**：TMDB 影片页始终可链；**`imdb_id` 非空** 时额外提供 IMDb ghost 按钮（`https://www.imdb.com/title/{imdb_id}/`）。

@@ -4,7 +4,7 @@
 | --- | --- |
 | Phase | 26（设备与空间感优化）子项 **P26.1** |
 | 计划来源 | `.cursor/plans/phase_26_device_spatial_optimization.plan.md` §「P26.1 HDR / 色彩验证矩阵」 |
-| 报告性质 | **最终决策 + 已执行操作** 归档；本阶段 **不做** 原计划中的跨设备 HDR 矩阵「验收」 |
+| 报告性质 | **工作留档**：记录本阶段决策与已执行操作；**不作为** 项目规范层面的 SSOT（权威条文仍以 `docs/project_docs/` 等约定为准）。本阶段 **不做** 原计划中的跨设备 HDR 矩阵「验收」。 |
 
 ---
 
@@ -28,7 +28,7 @@
 | D2 | **本阶段不开展 P26.1 原计划中的跨设备 HDR 色彩矩阵验收** | 与 HDR 管线缺失（D3）及问题已收敛（D1）一致；不再要求按矩阵表逐项签字。 |
 | D3 | **HDR 不作为本阶段交付物** | 记录为技术债/未来方向；若上线 HDR，需另列：输出色彩空间、合成与 HUD、测试矩阵与回退策略。 |
 | D4 | **移除 P26.1 专用 QA 工具链** | 含浮层、`p26ColorAudit` / `p26Today` 等 query、WebGL canvas 标记、关联单测与独立测试指南（§5）。 |
-| D5 | **保留生产级渲染修复与相关注释** | `galaxyIdle` / `galaxyActive` 顶点着色器及实例属性打包逻辑保留，作为 SSOT 级实现记录（§4）。 |
+| D5 | **保留生产级渲染修复与相关注释** | `galaxyIdle` / `galaxyActive` 顶点着色器及实例属性打包逻辑保留，与代码内注释一并作为实现侧说明（§4）。 |
 
 ---
 
@@ -70,7 +70,7 @@
 
 ---
 
-## 4. 保留的代码与文档（生产 SSOT）
+## 4. 保留的代码路径（实现参考）
 
 | 路径 | 状态 |
 | --- | --- |
@@ -96,7 +96,7 @@
 
 **不再支持的 query（若书签中有请删除）**：`p26ColorAudit`、`p26Today`；以及曾用于矩阵的 **`?todayMovieId=` / `?p26Today=` 对 Cover「今日」影片的 URL 覆盖**（现已恢复为仅由 `resolveTodayMovieId` / `today.json` 决定，与 store 字段 `todayMovieId` 无关）。
 
-> 说明：历史上若存在 `docs/reports/Phase 26.1 P26.1 HDR 色彩验证矩阵 实施报告.md` 等草稿，以 **本报告** 为 P26.1 最终口径。
+> 说明：`docs/reports/` 下其它草稿若与本报告不一致，以 **仓库当前代码与 `docs/project_docs/` 中已采纳条文** 为准；本文件仅作 P26.1 阶段工作记录。
 
 ---
 
@@ -109,7 +109,7 @@
 
 ## 7. 后续建议（非本阶段承诺）
 
-1. **P26.4 / Design Spec**：若需 SSOT 同步，可将 §2～§4 摘要写入 `docs/project_docs/TMDB 电影宇宙 Design Spec.md` 的「跨设备色彩」小节，并指向本报告。  
+1. **P26.4 / Design Spec**：若需把结论写回规范，可将 §2～§4 **摘要** 并入 `docs/project_docs/TMDB 电影宇宙 Design Spec.md` 等 **项目文档**（必要时在脚注中引用本工作记录路径）。  
 2. **HDR**：若未来实现显示端 HDR，需单独定义：目标色域、tone mapping、与 HUD/CSS 的合成顺序、以及回归用例（可重新引入受控 debug 面板，但应走正式产品/i18n 策略）。  
 3. **P26.2 / P26.3**：仍可按 `phase_26_device_spatial_optimization.plan.md` 继续，与本报告收口无冲突。
 
@@ -120,8 +120,8 @@
 - 删除：`P26ColorAuditPanel.tsx`、`useP26ColorAuditFromQuery.ts`、`p26TodayMovieOverride.ts`、`p26TodayMovieOverride.spec.ts`、`docs/guides/P26.1 HDR 与色彩验证测试指南.md`
 - 修改：`frontend/src/App.tsx`（恢复纯 `resolveTodayMovieId` 流程；去掉浮层）
 - 修改：`frontend/src/three/scene.ts`（去掉 `data-galaxy-webgl`）
-- 新增：本文件 `docs/reports/Phase 26.1 P26.1 Mac 色彩修复与阶段收口 最终实施报告.md`（取代此前同主题的 `Phase 26.1 P26.1 最终决策与实施报告.md` 草稿文件名，以本路径为 SSOT）
+- 新增：本文件 `docs/reports/Phase 26.1 P26.1 Mac 色彩修复与阶段收口 最终实施报告.md`（取代此前同主题的 `Phase 26.1 P26.1 最终决策与实施报告.md` 草稿文件名；**仍属 `docs/reports` 工作留档**，非项目 SSOT）
 
 ---
 
-*本报告取代 P26.1 阶段内所有临时矩阵表与验证指南的效力，作为该子项的最终书面结论。*
+*本文件为 P26.1 子项的工作留档；临时矩阵表与验证指南已删除。若与后续 `docs/project_docs` 或代码不一致，以规范文档与实现为准。*

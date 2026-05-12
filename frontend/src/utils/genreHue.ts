@@ -2,6 +2,8 @@
  * Phase 8.1 — genre hue (radians on [0, 2π)) matches pipeline `H_i = 2π·i/N` and galaxy shaders’ OKLab path.
  */
 
+import type { Movie } from '@/types/galaxy'
+
 /** OKLCH L/C for the export palette ring (`export_galaxy_json.py`). */
 export const PIPELINE_OKLCH_L = 0.75
 export const PIPELINE_OKLCH_C = 0.14
@@ -51,6 +53,23 @@ export function genreHueForGenreName(genreName: string, palette: Record<string, 
   const idx = order.indexOf(genreName)
   if (idx < 0) return fallbackHue
   return genreHueFromPaletteIndex(idx, order.length)
+}
+
+/**
+ * Primary-genre hue (rad) for instanced stars, Perlin bands, and HUD stripes.
+ * Uses frozen `meta.genre_palette` key order (same as `genreHueForGenreName`); does not trust
+ * `movie.genre_hue` when the primary label exists in the palette — avoids drift vs DOM/WebGL swatches.
+ */
+export function primaryGenreHueRad(movie: Movie, genrePalette: Record<string, string>): number {
+  const primary = movie.genres.filter(Boolean)[0] ?? ''
+  const fbHue =
+    movie.genre_hue ??
+    hueFromGenreColor([movie.genre_color[0], movie.genre_color[1], movie.genre_color[2]] as [
+      number,
+      number,
+      number,
+    ])
+  return genreHueForGenreName(primary, genrePalette, fbHue)
 }
 
 function oklabToLinearSrgb(lab: readonly [number, number, number]): [number, number, number] {

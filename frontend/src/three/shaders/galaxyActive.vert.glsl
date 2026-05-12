@@ -30,14 +30,19 @@ uniform float uCoverMode;
 uniform float uCoverTodayInstanceId;
 uniform float uCoverActiveSizeBoost;
 
-attribute float hue;
-attribute float voteNorm;
-attribute float aSize;
+/**
+ * P26.1 — packed instance attribute. vec4 (16-byte stride) for Apple Metal / ANGLE-Metal
+ * alignment friendliness (defensive; not the cause of any current symptom). .w unused.
+ */
+attribute vec4 aHueVoteSize;
 
 varying vec3 vColor;
 varying float vFocusAlphaMult;
 
 void main() {
+  float hue = aHueVoteSize.x;
+  float voteNorm = aHueVoteSize.y;
+  float aSize = aHueVoteSize.z;
   float aZ = instanceMatrix[3][2];
   bool exemptNearCull =
     ((uFocusedInstanceId >= 0) && (gl_InstanceID == uFocusedInstanceId))
@@ -103,7 +108,14 @@ void main() {
     : uChroma;
   float a = C_base_after_hunt * cos(hue);
   float labB = C_base_after_hunt * sin(hue);
-  vColor = linear_to_srgb(oklab_to_linear_srgb(vec3(L_base, a, labB)));
+  /**
+   * P26.1 — clamp linear sRGB to [0,1] before gamma encode. OKLab hue families outside the
+   * displayable sRGB gamut produce negative linear channels; pow(negative, 1/2.4) is undefined
+   * in GLSL ES 3.0 and on macOS/ANGLE-Metal returns NaN that leaks through mix(), breaking
+   * active star hues on Mac while Windows/D3D11 silently returns 0. Mirrors perlin.frag.glsl.
+   */
+  vec3 lin = clamp(oklab_to_linear_srgb(vec3(L_base, a, labB)), 0.0, 1.0);
+  vColor = linear_to_srgb(lin);
 
   bool isFocusTarget =
     (uFocusTargetInstanceId >= 0) && (gl_InstanceID == uFocusTargetInstanceId);

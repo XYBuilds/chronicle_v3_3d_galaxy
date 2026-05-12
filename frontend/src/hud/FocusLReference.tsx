@@ -5,21 +5,8 @@ import { srgb01FromHueAndVoteNorm, srgb01ToCss } from '@/lib/colorMath'
 import { useStrings } from '@/lib/strings'
 import { useGalaxyDataStore } from '@/store/galaxyDataStore'
 import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
-import type { Movie } from '@/types/galaxy'
-import { genreHueForGenreName, hueFromGenreColor } from '@/utils/genreHue'
+import { primaryGenreHueRad } from '@/utils/genreHue'
 import { cn } from '@/lib/utils'
-
-function primaryHueRad(movie: Movie, palette: Record<string, string>): number {
-  const primary = movie.genres.filter(Boolean)[0] ?? ''
-  const fbHue =
-    movie.genre_hue ??
-    hueFromGenreColor([movie.genre_color[0], movie.genre_color[1], movie.genre_color[2]] as [
-      number,
-      number,
-      number,
-    ])
-  return genreHueForGenreName(primary, palette, fbHue)
-}
 
 /**
  * P13.5 — Focus-only OKLab L legend: primary-genre hue spectrum + pointer from `vote_average`.
@@ -39,7 +26,7 @@ export function FocusLReference() {
 
   const style = useMemo(() => {
     if (!movie || !snap || !data) return null
-    const hue = primaryHueRad(movie, data.meta.genre_palette)
+    const hue = primaryGenreHueRad(movie, data.meta.genre_palette)
     /** Ten rating bins: 0.5, 1.5, …, 9.5 → voteNorm = (k+0.5)/10; P17.2 chroma uses Hunt(active) like `galaxyActive.vert.glsl`. */
     const stripeColors: string[] = []
     for (let k = 0; k < 10; k++) {

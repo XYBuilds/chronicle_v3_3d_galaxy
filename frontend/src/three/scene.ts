@@ -197,7 +197,7 @@ export function mountGalaxyScene(
   const webglLabel = gl instanceof WebGL2RenderingContext ? 'WebGL2' : 'WebGL1'
 
   const pr = Math.min(window.devicePixelRatio, 2)
-  const galaxy = createGalaxyDualMeshes(movies, pr, renderer.capabilities.maxTextureSize)
+  const galaxy = createGalaxyDualMeshes(movies, meta.genre_palette, pr, renderer.capabilities.maxTextureSize)
   const galUniforms = galaxy.idleMaterial.uniforms
   const movieIdToIndex = buildMovieIdToIndexMap(movies)
   const selectionMaskUniforms: SelectionMaskUniformBag = {

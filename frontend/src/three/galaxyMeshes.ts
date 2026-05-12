@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 
 import type { Movie } from '@/types/galaxy'
-import { hueFromGenreColor } from '@/utils/genreHue'
+import { primaryGenreHueRad } from '@/utils/genreHue'
 
 import galaxyActiveFragmentShader from './shaders/galaxyActive.frag.glsl'
 import galaxyActiveVertexShader from './shaders/galaxyActive.vert.glsl'
@@ -16,30 +16,34 @@ export { NEAR_CULL_WORLD_Z } from './nearCullWorldZ'
 
 const _dummy = new THREE.Object3D()
 
-function buildInstanceAttributes(movies: Movie[]): {
-  hues: Float32Array
-  voteNorms: Float32Array
-  sizes: Float32Array
+function buildInstanceAttributes(
+  movies: Movie[],
+  genrePalette: Record<string, string>,
+): {
+  /**
+   * Per instance: (hue, voteNorm, size, _pad=0) packed as vec4 — 16-byte stride for Apple
+   * Metal / ANGLE-Metal alignment friendliness (P26.1; defensive, not the cause of any current
+   * symptom — the Mac hue bug was OKLab → sRGB without gamut clamp, fixed in `galaxy*.vert.glsl`).
+   */
+  hueVoteSize: Float32Array
 } {
   const n = movies.length
   console.assert(n >= 0, '[GalaxyMeshes] movies length must be non-negative')
-  const hues = new Float32Array(n)
-  const voteNorms = new Float32Array(n)
-  const sizes = new Float32Array(n)
+  const hueVoteSize = new Float32Array(n * 4)
 
   for (let i = 0; i < n; i++) {
     const m = movies[i]
-    hues[i] =
-      m.genre_hue ??
-      hueFromGenreColor([m.genre_color[0], m.genre_color[1], m.genre_color[2]] as [number, number, number])
-    voteNorms[i] = THREE.MathUtils.clamp(m.vote_average / 10, 0, 1)
-    sizes[i] = m.size
+    const base = i * 4
+    hueVoteSize[base] = primaryGenreHueRad(m, genrePalette)
+    hueVoteSize[base + 1] = THREE.MathUtils.clamp(m.vote_average / 10, 0, 1)
+    hueVoteSize[base + 2] = m.size
+    hueVoteSize[base + 3] = 0
   }
 
-  console.assert(hues.length === n, '[GalaxyMeshes] hue buffer length must match movie count')
-  console.log(`[GalaxyMeshes] InstancedMesh count=${n} | idle detail=0 | active detail=1`)
+  console.assert(hueVoteSize.length === n * 4, '[GalaxyMeshes] packed buffer length')
+  console.log(`[GalaxyMeshes] InstancedMesh count=${n} | vec4 aHueVoteSize (xyz used, w pad) | idle detail=0 | active detail=1`)
 
-  return { hues, voteNorms, sizes }
+  return { hueVoteSize }
 }
 
 export interface GalaxyDualMeshHandle {
@@ -153,34 +157,32 @@ function makeSharedUniforms(
  */
 export function createGalaxyDualMeshes(
   movies: Movie[],
+  genrePalette: Record<string, string>,
   pixelRatio: number,
   maxTextureSize: number,
 ): GalaxyDualMeshHandle {
   const n = movies.length
-  const { hues, voteNorms, sizes } = buildInstanceAttributes(movies)
+  const { hueVoteSize } = buildInstanceAttributes(movies, genrePalette)
 
   const idleGeom = new THREE.IcosahedronGeometry(1, 0)
   const activeGeom = new THREE.IcosahedronGeometry(1, 1)
 
-  const hueIdle = new THREE.InstancedBufferAttribute(new Float32Array(hues), 1)
-  const hueActive = new THREE.InstancedBufferAttribute(new Float32Array(hues), 1)
-  const voteIdle = new THREE.InstancedBufferAttribute(new Float32Array(voteNorms), 1)
-  const voteActive = new THREE.InstancedBufferAttribute(new Float32Array(voteNorms), 1)
-  const sizeIdle = new THREE.InstancedBufferAttribute(new Float32Array(sizes), 1)
-  const sizeActive = new THREE.InstancedBufferAttribute(new Float32Array(sizes), 1)
+  const hvsIdle = new THREE.InstancedBufferAttribute(new Float32Array(hueVoteSize), 4)
+  const hvsActive = new THREE.InstancedBufferAttribute(new Float32Array(hueVoteSize), 4)
 
   for (let i = 0; i < n; i++) {
-    console.assert(hueIdle.array[i] === hueActive.array[i], '[GalaxyMeshes] hue idle/active must match')
-    console.assert(voteIdle.array[i] === voteActive.array[i], '[GalaxyMeshes] voteNorm idle/active must match')
-    console.assert(sizeIdle.array[i] === sizeActive.array[i], '[GalaxyMeshes] size idle/active must match')
+    const b = i * 4
+    console.assert(
+      hvsIdle.array[b] === hvsActive.array[b] &&
+        hvsIdle.array[b + 1] === hvsActive.array[b + 1] &&
+        hvsIdle.array[b + 2] === hvsActive.array[b + 2] &&
+        hvsIdle.array[b + 3] === hvsActive.array[b + 3],
+      '[GalaxyMeshes] aHueVoteSize idle/active must match',
+    )
   }
 
-  idleGeom.setAttribute('hue', hueIdle)
-  idleGeom.setAttribute('voteNorm', voteIdle)
-  idleGeom.setAttribute('aSize', sizeIdle)
-  activeGeom.setAttribute('hue', hueActive)
-  activeGeom.setAttribute('voteNorm', voteActive)
-  activeGeom.setAttribute('aSize', sizeActive)
+  idleGeom.setAttribute('aHueVoteSize', hvsIdle)
+  activeGeom.setAttribute('aHueVoteSize', hvsActive)
 
   /** Single uniform bag — both materials read the same values each frame (P8.4). */
   const { uniforms: sharedUniforms, disposeSelectionMaskTexture } = makeSharedUniforms(pixelRatio, n, maxTextureSize)

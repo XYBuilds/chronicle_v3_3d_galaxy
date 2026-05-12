@@ -77,7 +77,7 @@ export function LanguageSwitch({ styleMode = 'default' }: LanguageSwitchProps) {
           role="menu"
           aria-orientation="vertical"
           className={cn(
-            'absolute right-0 top-[calc(100%+0.25rem)] z-[60] min-w-[10rem] rounded-lg border border-white/10 bg-black/90 py-1 text-left shadow-lg backdrop-blur-md',
+            'absolute right-0 top-[calc(100%+0.25rem)] z-[var(--z-hud-lang-menu)] min-w-[10rem] rounded-lg border border-white/10 bg-black/90 py-1 text-left shadow-lg backdrop-blur-md',
           )}
         >
           {LOCALE_IDS.map((id) => (

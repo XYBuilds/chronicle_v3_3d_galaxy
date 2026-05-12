@@ -363,7 +363,8 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
   return (
     <div
       className={cn(
-        'pointer-events-auto fixed top-4 left-1/2 z-[90] w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 px-2',
+        'pointer-events-auto fixed left-1/2 z-[var(--z-hud-search)] w-[var(--hud-search-width)] max-w-[var(--hud-search-max-w)] -translate-x-1/2 px-2',
+        'top-[max(var(--hud-inset-md),env(safe-area-inset-top,0px))]',
         isBlocked && 'opacity-60',
       )}
       role="search"

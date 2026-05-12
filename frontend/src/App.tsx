@@ -297,11 +297,11 @@ function App() {
           */}
           <div
             aria-hidden
-            className="pointer-events-none fixed inset-0 z-[25] cosmos-cover-entry-page-shade"
+            className="pointer-events-none fixed inset-0 z-[var(--z-hud-cover-veil)] cosmos-cover-entry-page-shade"
           />
           <div
             className={cn(
-              'pointer-events-none fixed inset-0 z-30 transition-opacity duration-300 ease-out',
+              'pointer-events-none fixed inset-0 z-[var(--z-hud-cover-brand)] transition-opacity duration-300 ease-out',
               coverMode ? 'opacity-100' : 'opacity-0',
             )}
             aria-hidden
@@ -326,7 +326,7 @@ function App() {
       ) : null}
       <HoverRing />
       <MovieTooltip />
-      <div className="pointer-events-none fixed right-3 top-3 z-40 flex items-center gap-2 sm:right-4 sm:top-4">
+      <div className="pointer-events-none fixed z-[var(--z-hud-top-tools)] flex items-center gap-[var(--hud-gap-stack)] right-[max(var(--hud-inset-sm),env(safe-area-inset-right,0px))] top-[max(var(--hud-inset-sm),env(safe-area-inset-top,0px))] sm:right-[max(var(--hud-inset-md),env(safe-area-inset-right,0px))] sm:top-[max(var(--hud-inset-md),env(safe-area-inset-top,0px))]">
         <InfoButton />
         <LanguageSwitch />
         <FullscreenButton />

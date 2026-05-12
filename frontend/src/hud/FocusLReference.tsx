@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils'
 /**
  * P13.5 — Focus-only OKLab L legend: primary-genre hue spectrum + pointer from `vote_average`.
  * P14.7.1 — Vertical spectrum to the left of the on-screen planet (after horizontal Timeline layout review).
- * P25.1 — Responsive horizontal offset: laptops stay closer to center; wide screens sit farther left to clear the larger focus planet.
+ * P26.2 — Placement from `:root` `--hud-focus-ref-center-gap` / `--hud-focus-ref-height` (each uses `max(min, fluid)`).
  */
 export function FocusLReference() {
   const str = useStrings()
@@ -48,13 +48,13 @@ export function FocusLReference() {
   return (
     <div
       className={cn(
-        'pointer-events-none fixed top-1/2 z-[35] flex -translate-y-1/2 flex-row items-stretch gap-4 select-none',
-        'left-[max(0.5rem,calc(50vw-15.5rem))] lg:left-[max(0.75rem,calc(50vw-23rem))] 2xl:left-[max(0.75rem,calc(50vw-26rem))]',
+        'pointer-events-none fixed top-1/2 z-[var(--z-hud-focus-chrome)] flex -translate-y-1/2 flex-row items-stretch gap-4 select-none',
+        'left-[max(var(--hud-inset-xs),calc(50vw-var(--hud-focus-ref-center-gap)))] sm:left-[max(var(--hud-inset-sm),calc(50vw-var(--hud-focus-ref-center-gap)))]',
       )}
       role="img"
       aria-label={str.focusLReference.ariaLabel(ratingStr, movie.title)}
     >
-      <div className="relative flex h-[min(70vh,28rem)] w-2.5 shrink-0 flex-col-reverse overflow-hidden">
+      <div className="relative flex h-[var(--hud-focus-ref-height)] w-2.5 shrink-0 flex-col-reverse overflow-hidden">
         {style.stripeColors.map((bg, k) => (
           <div
             key={k}
@@ -69,7 +69,7 @@ export function FocusLReference() {
           aria-hidden
         />
       </div>
-      <div className="relative h-[min(70vh,28rem)] min-w-[4.5rem] shrink-0">
+      <div className="relative h-[var(--hud-focus-ref-height)] min-w-[4.5rem] shrink-0">
         <div
           className="pointer-events-none absolute left-0 flex flex-row items-center"
           style={{ top: `${pointerTopPct}%`, transform: 'translateY(-50%)' }}

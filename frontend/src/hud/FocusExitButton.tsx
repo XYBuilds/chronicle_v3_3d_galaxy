@@ -16,9 +16,9 @@ export function FocusExitButton() {
   return (
     <div
       className={cn(
-        'pointer-events-none fixed left-1/2 z-[60] flex -translate-x-1/2 justify-center',
+        'pointer-events-none fixed left-1/2 z-[var(--z-hud-focus-exit)] flex -translate-x-1/2 justify-center',
         /* Below viewport center (planet); cap so short viewports / home indicator don’t clip */
-        'top-[min(calc(50%+22rem),calc(100dvh-max(1.5rem,env(safe-area-inset-bottom,0px))-4rem))] lg:top-[min(calc(50%+24rem),calc(100dvh-max(1.5rem,env(safe-area-inset-bottom,0px))-4rem))]',
+        'top-[min(calc(50%+var(--hud-focus-exit-below-center)),calc(100dvh-max(var(--hud-inset-md),env(safe-area-inset-bottom,0px))-var(--hud-focus-exit-viewport-pad)))] lg:top-[min(calc(50%+var(--hud-focus-exit-below-center-lg)),calc(100dvh-max(var(--hud-inset-md),env(safe-area-inset-bottom,0px))-var(--hud-focus-exit-viewport-pad)))]',
       )}
     >
       <button

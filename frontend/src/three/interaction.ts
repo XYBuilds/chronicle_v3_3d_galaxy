@@ -11,6 +11,7 @@ import {
   getSelectionMaskPickSet,
   pickClosestActiveMovieAlongRay,
   rayPositiveSphereFirstT,
+  worldToScreenCss,
 } from './screenRadius'
 
 /**
@@ -34,26 +35,10 @@ export function computePointScreenRadiusCss(
 /** Pixels of movement with primary button held before we treat the gesture as camera pan, not a pick click. */
 const CLICK_MAX_MOVE_PX = 6
 
-const _worldProject = new THREE.Vector3()
 const _raycaster = new THREE.Raycaster()
 const _ndc = new THREE.Vector2()
 const _pickCameraWorldPos = new THREE.Vector3()
-
-/** Project world position to viewport CSS pixels (client coordinates). */
-function worldToScreenCss(
-  world: THREE.Vector3,
-  camera: THREE.PerspectiveCamera,
-  domElement: HTMLElement,
-): { x: number; y: number } {
-  _worldProject.copy(world)
-  _worldProject.project(camera)
-  const rect = domElement.getBoundingClientRect()
-  const w = Math.max(1, rect.width)
-  const h = Math.max(1, rect.height)
-  const x = (_worldProject.x * 0.5 + 0.5) * w + rect.left
-  const y = (-_worldProject.y * 0.5 + 0.5) * h + rect.top
-  return { x, y }
-}
+const _worldProject = new THREE.Vector3()
 
 type HoverEmitSnap = { id: number | null; ax: number; ay: number; planetR: number }
 

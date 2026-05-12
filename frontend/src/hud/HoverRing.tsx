@@ -16,7 +16,7 @@ export function HoverRing() {
   const d = outerR * 2
   return (
     <div
-      className="pointer-events-none fixed z-[90] box-border rounded-full border-solid bg-transparent"
+      className="pointer-events-none fixed z-[var(--z-hud-hover-ring)] box-border rounded-full border-solid bg-transparent"
       style={{
         left: anchor.x - outerR,
         top: anchor.y - outerR,

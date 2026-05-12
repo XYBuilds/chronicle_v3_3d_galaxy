@@ -26,7 +26,7 @@ function DialogBackdrop({ className, ...props }: DialogPrimitive.Backdrop.Props)
     <DialogPrimitive.Backdrop
       data-slot="dialog-backdrop"
       className={cn(
-        "fixed inset-0 z-[120] bg-black/55 backdrop-blur-[1px] transition-[opacity] duration-200 ease-out data-ending-style:opacity-0 data-starting-style:opacity-0",
+        "fixed inset-0 z-[var(--z-hud-modal-overlay)] bg-black/55 backdrop-blur-[1px] transition-[opacity] duration-200 ease-out data-ending-style:opacity-0 data-starting-style:opacity-0",
         className,
       )}
       {...props}
@@ -48,7 +48,7 @@ function DialogContent({
       <DialogPrimitive.Popup
         data-slot="dialog-content"
         className={cn(
-          "fixed top-1/2 left-1/2 z-[121] flex max-h-[min(90dvh,42rem)] w-[min(100vw-1.5rem,32rem)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-xl border border-border bg-popover bg-clip-padding text-sm text-popover-foreground shadow-xl outline-none transition-[opacity,transform] duration-200 ease-out data-ending-style:scale-[0.98] data-ending-style:opacity-0 data-starting-style:scale-[0.98] data-starting-style:opacity-0",
+          "fixed top-1/2 left-1/2 z-[var(--z-hud-modal-content)] flex max-h-[min(90dvh,42rem)] w-[min(calc(100vw_-_2_*_var(--hud-inset-md)),var(--hud-dialog-default-max-w))] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-xl border border-border bg-popover bg-clip-padding text-sm text-popover-foreground shadow-xl outline-none transition-[opacity,transform] duration-200 ease-out data-ending-style:scale-[0.98] data-ending-style:opacity-0 data-starting-style:scale-[0.98] data-starting-style:opacity-0",
           className,
         )}
         {...props}

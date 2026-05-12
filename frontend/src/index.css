@@ -114,6 +114,46 @@
   /* P14.x — Hover ring + Timeline sit on the black WebGL canvas only; lock to dark-theme edge */
   --ui-edge-canvas-color: rgb(255 255 255 / 0.45);
   --ui-edge-canvas-color-strong: rgb(255 255 255 / 0.7);
+
+  /**
+   * P26.2 — HUD layout + z semantics (docs/temp/HUD_Design_System.md §3.2, §5–§6).
+   * Baseline ~1600×900; clamp across 1∶1–ultrawide + MacBook notch via safe-area.
+   */
+  --hud-inset-xs: 0.5rem;
+  --hud-inset-sm: 0.75rem;
+  --hud-inset-md: 1rem;
+  --hud-gap-stack: 0.5rem;
+  --hud-radius-chrome: var(--radius-md);
+  --hud-search-max-w: 32rem;
+  --hud-modal-max-w: 36rem;
+  --hud-dialog-default-max-w: 32rem;
+  /** Full-width search: min(cap, vw − gutters − horizontal safe-area). */
+  --hud-search-width: min(var(--hud-search-max-w), calc(100vw - 2 * var(--hud-inset-sm) - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)));
+  /** Right drawer: cap width so sheet + safe-area does not eat the whole galaxy on laptops. */
+  --hud-drawer-max-w: min(32rem, calc(100vw - var(--hud-inset-sm) - max(var(--hud-inset-sm), env(safe-area-inset-right, 0px))));
+  --hud-timeline-h-margin-bottom: 2rem;
+  --hud-timeline-h-margin-bottom-sm: 2.5rem;
+  /* P25.1 focus planet clearance; tuned at design baseline */
+  --hud-focus-ref-clearance: 15.5rem;
+  --hud-focus-ref-clearance-lg: 23rem;
+  --hud-focus-ref-clearance-2xl: 26rem;
+  --hud-focus-exit-below-center: 22rem;
+  --hud-focus-exit-below-center-lg: 24rem;
+  --hud-focus-exit-viewport-pad: 4rem;
+
+  --z-hud-cover-veil: 25;
+  --z-hud-cover-brand: 30;
+  --z-hud-timeline: 38;
+  --z-hud-search: 40;
+  --z-hud-top-tools: 44;
+  --z-hud-focus-chrome: 46;
+  --z-hud-focus-exit: 60;
+  --z-hud-lang-menu: 60;
+  --z-hud-hover-ring: 90;
+  --z-hud-tooltip: 100;
+  --z-hud-drawer: 110;
+  --z-hud-modal-overlay: 120;
+  --z-hud-modal-content: 121;
 }
 
 * {
@@ -285,6 +325,7 @@ html[data-theme="light"] {
   from {
     color: var(--cosmos-universe-bg);
   }
+
   to {
     color: var(--cosmos-brand-muted);
   }
@@ -294,6 +335,7 @@ html[data-theme="light"] {
   from {
     opacity: 1;
   }
+
   to {
     opacity: 0;
   }
@@ -303,6 +345,7 @@ html[data-theme="light"] {
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -328,6 +371,7 @@ html[data-theme="light"] {
   from {
     background-color: var(--cosmos-brand-muted);
   }
+
   to {
     background-color: transparent;
   }
@@ -339,6 +383,7 @@ html[data-theme="light"] {
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   .cosmos-cover-entry-the-movie,
   .cosmos-cover-entry-cosmos-opacity,
   .cosmos-cover-entry-today-opacity {

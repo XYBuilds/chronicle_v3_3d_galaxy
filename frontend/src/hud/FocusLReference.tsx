@@ -48,8 +48,8 @@ export function FocusLReference() {
   return (
     <div
       className={cn(
-        'pointer-events-none fixed top-1/2 z-[35] flex -translate-y-1/2 flex-row items-stretch gap-4 select-none',
-        'left-[max(0.5rem,calc(50vw-15.5rem))] lg:left-[max(0.75rem,calc(50vw-23rem))] 2xl:left-[max(0.75rem,calc(50vw-26rem))]',
+        'pointer-events-none fixed top-1/2 z-[var(--z-hud-focus-chrome)] flex -translate-y-1/2 flex-row items-stretch gap-4 select-none',
+        'left-[max(var(--hud-inset-xs),calc(50vw-var(--hud-focus-ref-clearance)))] lg:left-[max(var(--hud-inset-sm),calc(50vw-var(--hud-focus-ref-clearance-lg)))] 2xl:left-[max(var(--hud-inset-sm),calc(50vw-var(--hud-focus-ref-clearance-2xl)))]',
       )}
       role="img"
       aria-label={str.focusLReference.ariaLabel(ratingStr, movie.title)}

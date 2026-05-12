@@ -38,7 +38,7 @@ export function MovieTooltipHud({
       <TooltipTrigger
         type="button"
         tabIndex={-1}
-        className="pointer-events-none fixed z-[100] h-px w-px min-h-0 min-w-0 overflow-hidden border-0 bg-transparent p-0"
+        className="pointer-events-none fixed z-[var(--z-hud-tooltip)] h-px w-px min-h-0 min-w-0 overflow-hidden border-0 bg-transparent p-0"
         style={{
           left: anchor?.x ?? -9999,
           top: anchor?.y ?? -9999,

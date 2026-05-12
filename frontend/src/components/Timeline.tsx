@@ -201,7 +201,8 @@ export function TimelineHud({
       <div
         className={cn(
           // Horizontal rail width: `w-[50vw]` + max-width cap; vertical track uses `h-[80vh]` (see below).
-          'pointer-events-none fixed bottom-8 left-1/2 z-30 flex h-24 w-[50vw] max-w-[calc(100vw-2rem)] -translate-x-1/2 select-none flex-col items-stretch sm:bottom-10',
+          'pointer-events-none fixed left-1/2 z-[var(--z-hud-timeline)] flex h-24 w-[50vw] max-w-[var(--hud-search-width)] -translate-x-1/2 select-none flex-col items-stretch',
+          'bottom-[max(var(--hud-timeline-h-margin-bottom),env(safe-area-inset-bottom,0px))] sm:bottom-[max(var(--hud-timeline-h-margin-bottom-sm),env(safe-area-inset-bottom,0px))]',
           className,
         )}
         role={interactive ? 'presentation' : 'img'}
@@ -290,7 +291,8 @@ export function TimelineHud({
   return (
     <div
       className={cn(
-        'pointer-events-none fixed left-3 top-[8vh] z-30 flex h-[80vh] w-12 select-none flex-col overflow-visible sm:left-5',
+        'pointer-events-none fixed top-[8vh] z-[var(--z-hud-timeline)] flex h-[80vh] w-12 select-none flex-col overflow-visible',
+        'left-[max(var(--hud-inset-sm),env(safe-area-inset-left,0px))] sm:left-[max(var(--hud-inset-md),env(safe-area-inset-left,0px))]',
         className,
       )}
       role={interactive ? 'presentation' : 'img'}

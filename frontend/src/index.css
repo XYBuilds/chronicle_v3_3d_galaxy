@@ -129,8 +129,19 @@
   --hud-dialog-default-max-w: 32rem;
   /** Full-width search: min(cap, vw − gutters − horizontal safe-area). */
   --hud-search-width: min(var(--hud-search-max-w), calc(100vw - 2 * var(--hud-inset-sm) - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)));
-  /** Right drawer: cap width so sheet + safe-area does not eat the whole galaxy on laptops. */
-  --hud-drawer-max-w: min(32rem, calc(100vw - var(--hud-inset-sm) - max(var(--hud-inset-sm), env(safe-area-inset-right, 0px))));
+  /**
+   * Right drawer max width — min of:
+   * - `100vw * 0.28`: keeps the right rail narrow enough that the focus Perlin sphere (center-weighted)
+   *   stays clear; slightly tighter than a literal center-third band (~0.33vw).
+   * - `--hud-drawer-max-readable` (32rem): layout / line-length cap; binds when `0.28 * 100vw` would exceed it.
+   * - remaining width after right gutter + safe-area.
+   */
+  --hud-drawer-max-by-planet-safe: calc(100vw * 0.28);
+  /** Upper bound for drawer width (comfortable column); pairs with planet-safe factor above in `min()`. */
+  --hud-drawer-max-readable: 32rem;
+  --hud-drawer-max-w: min(var(--hud-drawer-max-by-planet-safe),
+      var(--hud-drawer-max-readable),
+      calc(100vw - var(--hud-inset-sm) - max(var(--hud-inset-sm), env(safe-area-inset-right, 0px))));
   --hud-timeline-h-margin-bottom: 2rem;
   --hud-timeline-h-margin-bottom-sm: 2.5rem;
   /* P25.1 focus planet clearance; tuned at design baseline */

@@ -64,7 +64,7 @@
     "focusSearch": "検索にフォーカス（Cmd/Ctrl+K）",
     "close": "閉じる",
     "toggleLanguage": "表示言語を選択",
-    "exitFocus": "フォーカスを終了"
+    "exitFocus": "宇宙に戻る"
   },
   "timeline": {
     "label": "タイムライン（公開年）",

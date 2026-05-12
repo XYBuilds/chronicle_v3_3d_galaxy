@@ -19,7 +19,7 @@ todos:
     status: completed
   - id: p256-drawer-layer-motion-copy
     content: P25.6 Drawer z-index 提升至所有 HUD 之上；向左滑入/向右退出动画；Exit focus 文案改为 Back to cosmos / Return to cosmos 等最终文案
-    status: pending
+    status: completed
   - id: p257-ssot-doc-sync
     content: P25.7 SSOT 文档同步：同步 Tech Spec、Design Spec、视觉参数总表、Data Pipeline（如 cast 契约变化）与 phase 实施报告
     status: pending

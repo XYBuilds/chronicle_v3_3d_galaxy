@@ -152,6 +152,10 @@ export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailD
         side="right"
         showCloseButton={false}
         className={cn(
+          /* P25.6 — above hover ring / search / tooltip (≤100); below app info dialog (≥120). */
+          'z-[110]',
+          /* Full-width slide: enter from the right edge, exit back off-screen right. */
+          'data-[side=right]:data-starting-style:translate-x-full data-[side=right]:data-ending-style:translate-x-full',
           /* Override `sheet` default `data-[side=right]:sm:max-w-sm` (plain `sm:max-w-*` loses merge/specificity). */
           'min-h-0 max-h-[100dvh] gap-0 overflow-hidden border-l border-border bg-popover p-0 data-[side=right]:sm:max-w-lg',
           'transition-[transform,opacity] duration-[300ms] ease-[var(--sheet-ease)] data-ending-style:duration-[450ms]',

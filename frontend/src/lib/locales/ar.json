@@ -60,6 +60,7 @@
   },
   "hud": {
     "openInfo": "فتح لوحة المعلومات (محتوى مؤقت)",
+    "openFeedback": "إرسال ملاحظات",
     "toggleFullscreen": "تبديل ملء الشاشة (F)",
     "focusSearch": "التركيز على البحث (Cmd/Ctrl+K)",
     "close": "إغلاق",

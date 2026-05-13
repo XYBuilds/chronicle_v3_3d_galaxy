@@ -1,6 +1,6 @@
 ---
 name: phase 27 growth light features
-overview: Phase 27 在主体验与上线链路稳定后，补充轻量增长与完整度功能：The Movie Today 分享、first-time onboarding、人名点击进入 person search、Donate / Buy Me a Coffee，以及英文 Info 定稿后的多语言同步。此 phase 不承担底层数据管线、focus/drawer 主体验或 HDR 实验。
+overview: Phase 27 在主体验与上线链路稳定后，补充轻量增长与完整度功能：The Movie Today 分享、first-time onboarding、人名点击进入 person search，以及英文 Info 定稿后的多语言同步。Donate / Buy Me a Coffee 已迁至 Phase 28（与 Tally 反馈、Discord 社区一并收口）。此 phase 不承担底层数据管线、focus/drawer 主体验或 HDR 实验。
 todos:
   - id: p271-today-share
     content: P27.1 The Movie Today share：Web Share API + copy link fallback；复用现有 today.json 与 OG image 基础
@@ -11,14 +11,11 @@ todos:
   - id: p273-clickable-people-search
     content: P27.3 Drawer 人名可点击进入 person search：复用 search index person key 归一化，覆盖 cast / crew 可点击范围
     status: pending
-  - id: p274-donate-support
-    content: P27.4 Donate / Buy Me a Coffee 接入：待 attribution、非官方关系、隐私说明稳定后放入 Info/README，避免主 HUD 打扰
-    status: pending
   - id: p275-i18n-sync
     content: P27.5 英文 Info / README 定稿后同步多语言 HUD 文案，保持 en.json 为翻译 SSOT
     status: pending
   - id: p276-ssot-doc-sync
-    content: P27.6 SSOT 文档同步：同步 PRD、Design Spec、Tech Spec、README 与相关指南，记录分享、onboarding、人名搜索、donate 与多语言策略
+    content: P27.6 SSOT 文档同步：同步 PRD、Design Spec、Tech Spec、README 与相关指南，记录分享、onboarding、人名搜索与多语言策略（支持/反馈/社区见 Phase 28）
     status: pending
 isProject: false
 ---
@@ -27,7 +24,7 @@ isProject: false
 
 ## 目标
 
-在发布链路、公开说明、focus/drawer 主体验和跨设备验证稳定后，补充分享、引导、搜索联动和支持入口，提高传播、回访和完整度。
+在发布链路、公开说明、focus/drawer 主体验和跨设备验证稳定后，补充分享、引导、搜索联动，提高传播、回访和完整度。（支持、Tally 反馈与 Discord 见 Phase 28。）
 
 ## 范围
 
@@ -35,7 +32,6 @@ isProject: false
 - The Movie Today 分享。
 - LocalStorage first-time onboarding。
 - Drawer 中人名点击进入 person search。
-- Donate / Buy Me a Coffee。
 - 英文文案定稿后的多语言同步。
 
 **不做**：
@@ -51,18 +47,16 @@ flowchart TD
     P271["P27.1 The Movie Today share"]
     P272["P27.2 First-time onboarding"]
     P273["P27.3 人名点击进入 person search"]
-    P274["P27.4 Donate / Buy Me a Coffee"]
     P275["P27.5 多语言同步"]
     P276["P27.6 SSOT 文档同步"]
 
     P271 --> P272
     P273 --> P272
-    P274 --> P275
     P272 --> P276
     P275 --> P276
 ```
 
-P27.1 / P27.3 / P27.4 可独立推进；P27.5 应等英文内容稳定后做；P27.6 在本 phase 行为定稿后收口。
+P27.1 / P27.3 可独立推进；P27.5 应等英文内容稳定后做；P27.6 在本 phase 行为定稿后收口。
 
 ## P27.1 The Movie Today Share
 
@@ -117,25 +111,6 @@ P27.1 / P27.3 / P27.4 可独立推进；P27.5 应等英文内容稳定后做；P
 - 点击 director / producer / writer 等 crew 人名后行为一致。
 - 找不到索引 key 时不报错，并提供合理无操作或提示。
 
-## P27.4 Donate / Buy Me a Coffee
-
-### 前置
-
-- P24 英文 attribution、非官方关系、隐私说明已稳定。
-- 避免在公开说明不完整时加入收款入口。
-
-### 实施要点
-
-- 入口优先放在 Info 页 / README，而不是主 HUD。
-- 文案克制，避免打扰沉浸体验。
-- 外链使用 `target="_blank"` + `rel="noopener noreferrer"`。
-
-### 验收
-
-- 支持入口可访问。
-- 不影响主体验。
-- 与非官方关系 / 数据 attribution 不冲突。
-
 ## P27.5 多语言同步
 
 ### 实施要点
@@ -154,10 +129,9 @@ P27.1 / P27.3 / P27.4 可独立推进；P27.5 应等英文内容稳定后做；P
 
 ### 实施要点
 
-- 同步 `docs/project_docs/TMDB 电影宇宙 PRD.md` 中分享、onboarding、donate 与回访/传播相关需求。
-- 同步 `docs/project_docs/TMDB 电影宇宙 Design Spec.md` 中 onboarding、share、person search 点击态和 support 入口的交互规范。
+- 同步 `docs/project_docs/TMDB 电影宇宙 PRD.md` 中分享、onboarding 与回访/传播相关需求（支持/反馈/社区见 Phase 28）。
+- 同步 `docs/project_docs/TMDB 电影宇宙 Design Spec.md` 中 onboarding、share、person search 点击态的交互规范。
 - 同步 `docs/project_docs/TMDB 电影宇宙 Tech Spec.md` 中 localStorage key、Web Share fallback、person search 入口、locale 同步策略。
-- 如 README / Info 增加 Donate 或支持入口，同步根 `README.md` 的公开说明。
 - 写 Phase 27 实施报告。
 
 ### 验收

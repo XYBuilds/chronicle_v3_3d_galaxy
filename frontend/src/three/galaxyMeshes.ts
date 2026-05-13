@@ -7,11 +7,13 @@ import galaxyActiveFragmentShader from './shaders/galaxyActive.frag.glsl'
 import galaxyActiveVertexShader from './shaders/galaxyActive.vert.glsl'
 import galaxyIdleFragmentShader from './shaders/galaxyIdle.frag.glsl'
 import galaxyIdleVertexShader from './shaders/galaxyIdle.vert.glsl'
+import { IDLE_NEAR_FADE_DEFAULTS } from './idleNearFade'
 import { NEAR_CULL_WORLD_Z } from './nearCullWorldZ'
 import { computeSelectionMaskAtlasDimensions } from './selectionMask'
 import { DEFAULT_GALAXY_U_ACTIVE_SIZE_MUL, DEFAULT_GALAXY_U_SIZE_SCALE } from './galaxyUniformDefaults'
 
 export { DEFAULT_GALAXY_U_ACTIVE_SIZE_MUL, DEFAULT_GALAXY_U_SIZE_SCALE } from './galaxyUniformDefaults'
+export { IDLE_NEAR_FADE_DEFAULTS } from './idleNearFade'
 export { NEAR_CULL_WORLD_Z } from './nearCullWorldZ'
 
 const _dummy = new THREE.Object3D()
@@ -142,6 +144,11 @@ function makeSharedUniforms(
       /** P22.1 — paired with `uCameraWorldPos`; see `nearCullWorldZ.ts`. */
       uNearCullWorldZ: { value: NEAR_CULL_WORLD_Z },
       uCameraWorldPos: { value: new THREE.Vector3() },
+      /** P26.3 — idle camera-distance near fade experiment (`idleNearFade.ts`). Default off. */
+      uIdleNearFadeEnabled: { value: IDLE_NEAR_FADE_DEFAULTS.enabled },
+      uIdleNearFadeStartDist: { value: IDLE_NEAR_FADE_DEFAULTS.startDist },
+      uIdleNearFadeWidth: { value: IDLE_NEAR_FADE_DEFAULTS.width },
+      uIdleNearFadeMinAlpha: { value: IDLE_NEAR_FADE_DEFAULTS.minAlpha },
       /** P23.3 — cover mode: draw only today instance; matched with `uCoverTodayInstanceId`. */
       uCoverMode: { value: 0 },
       uCoverTodayInstanceId: { value: -1 },

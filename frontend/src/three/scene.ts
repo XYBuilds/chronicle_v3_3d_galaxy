@@ -19,6 +19,7 @@ import {
 } from './camera'
 import { CONSTELLATION_SURFACE_GAP_WORLD, createConstellation } from './constellation'
 import { createGalaxyDualMeshes } from './galaxyMeshes'
+import { IDLE_NEAR_FADE_DEFAULTS } from './idleNearFade'
 import { attachGalaxyActiveMeshInteraction } from './interaction'
 import { createSelectionPlanet, type SelectionPlanetHandle } from './planet'
 import { computeActiveWorldRadius, getSelectionMaskPickSet, resolveSelectionWorldRadius } from './screenRadius'
@@ -89,6 +90,17 @@ interface GalaxyInteractionDebug {
   log: () => void
 }
 
+/** Dev console: `window.__galaxyIdleNearFade` — P26.3 camera-distance idle near fade experiment (default off). */
+interface GalaxyIdleNearFadeDebug {
+  /** >0.5 enables shader fade + idle `transparent` / no depth-write path. */
+  enabled: number
+  /** World units — same as `uIdleNearFadeStartDist`. */
+  startDist: number
+  width: number
+  minAlpha: number
+  log: () => void
+}
+
 /** Dev console: `window.__planetTerrace` — Perlin focus sphere terrace + P11.4 lighting uniforms. */
 interface SelectionPlanetTerraceDebug {
   /** Unit-sphere extrusion per band step; world radius uses `× (1 + cuts × stepHeight)`. Clamped to [0, 0.25] on set. */
@@ -111,6 +123,7 @@ declare global {
     __bloom?: BloomDebugControls
     __galaxyPointScale?: GalaxyPointScaleDebug
     __galaxyColor?: GalaxyColorDebug
+    __galaxyIdleNearFade?: GalaxyIdleNearFadeDebug
     __galaxyInteraction?: GalaxyInteractionDebug
     __planetTerrace?: SelectionPlanetTerraceDebug
   }
@@ -859,6 +872,45 @@ export function mountGalaxyScene(
   window.__galaxyColor = galaxyColorDebug
   galaxyColorDebug.log()
 
+  const uIdleNearFadeEnabled = galUniforms.uIdleNearFadeEnabled as THREE.Uniform<number>
+  const uIdleNearFadeStartDist = galUniforms.uIdleNearFadeStartDist as THREE.Uniform<number>
+  const uIdleNearFadeWidth = galUniforms.uIdleNearFadeWidth as THREE.Uniform<number>
+  const uIdleNearFadeMinAlpha = galUniforms.uIdleNearFadeMinAlpha as THREE.Uniform<number>
+
+  const idleNearFadeDebug: GalaxyIdleNearFadeDebug = {
+    get enabled() {
+      return uIdleNearFadeEnabled.value
+    },
+    set enabled(value: number) {
+      uIdleNearFadeEnabled.value = value > 0.5 ? 1 : 0
+    },
+    get startDist() {
+      return uIdleNearFadeStartDist.value
+    },
+    set startDist(value: number) {
+      uIdleNearFadeStartDist.value = Math.max(0.05, value)
+    },
+    get width() {
+      return uIdleNearFadeWidth.value
+    },
+    set width(value: number) {
+      uIdleNearFadeWidth.value = Math.max(0.05, value)
+    },
+    get minAlpha() {
+      return uIdleNearFadeMinAlpha.value
+    },
+    set minAlpha(value: number) {
+      uIdleNearFadeMinAlpha.value = THREE.MathUtils.clamp(value, 0, 1)
+    },
+    log() {
+      console.log(
+        `[Galaxy] P26.3 idle near-fade enabled=${uIdleNearFadeEnabled.value > 0.5 ? 'on' : 'off'} | uIdleNearFadeStartDist=${uIdleNearFadeStartDist.value.toFixed(3)} uIdleNearFadeWidth=${uIdleNearFadeWidth.value.toFixed(3)} uIdleNearFadeMinAlpha=${uIdleNearFadeMinAlpha.value.toFixed(3)} | defaults from idleNearFade.ts: start=${IDLE_NEAR_FADE_DEFAULTS.startDist} width=${IDLE_NEAR_FADE_DEFAULTS.width} minA=${IDLE_NEAR_FADE_DEFAULTS.minAlpha}`,
+      )
+    },
+  }
+  window.__galaxyIdleNearFade = idleNearFadeDebug
+  idleNearFadeDebug.log()
+
   const planetTerraceDebug: SelectionPlanetTerraceDebug = {
     get stepHeight() {
       return planet.material.uniforms.uStepHeight.value as number
@@ -1090,6 +1142,18 @@ export function mountGalaxyScene(
         wantOpaque ? 'opaque (path A · macro browse)' : 'transparent (path B · focus)',
       )
     }
+    const idleMat = galaxy.idleMaterial
+    const idleNearFadeOn = (galUniforms.uIdleNearFadeEnabled as THREE.Uniform<number>).value > 0.5
+    if (idleMat.transparent !== idleNearFadeOn || idleMat.depthWrite !== !idleNearFadeOn) {
+      idleMat.transparent = idleNearFadeOn
+      idleMat.depthWrite = !idleNearFadeOn
+      idleMat.alphaTest = idleNearFadeOn ? 0.003 : 0
+      idleMat.needsUpdate = true
+      console.log(
+        '[Idle material]',
+        idleNearFadeOn ? 'transparent (P26.3 near-fade experiment)' : 'opaque + depthWrite (default)',
+      )
+    }
     // P12.6 / P13.2 — person/genre mask vs focus spherical neighborhood vs timeline slab
     const selectionDrawMode =
       st.selectedMovieId !== null ? 2 : st.searchMode === 'person' || st.searchMode === 'genre' ? 1 : 0
@@ -1245,6 +1309,9 @@ export function mountGalaxyScene(
     }
     if (window.__galaxyColor === galaxyColorDebug) {
       delete window.__galaxyColor
+    }
+    if (window.__galaxyIdleNearFade === idleNearFadeDebug) {
+      delete window.__galaxyIdleNearFade
     }
     if (window.__galaxyInteraction === interactionDebug) {
       delete window.__galaxyInteraction

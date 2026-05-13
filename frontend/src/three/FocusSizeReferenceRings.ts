@@ -39,7 +39,7 @@ export const RING_OPACITY_BASE = 0.38
  * **唯一**对外可调「字号」：tier 标签 Sprite 在世界坐标中的垂直边长（`scale.y`），
  * 锚点为 `sprite.position`（见 `update` 中 `radialDist`）。与 `max(·, r * 0.06)` 取大。
  */
-export const LABEL_TEXT_WORLD_HEIGHT = 0.02
+export const LABEL_TEXT_WORLD_HEIGHT = 0.06
 
 /** Matches {@link FocusLReference} rating row (`font-semibold` ≈ 600). */
 export const LABEL_CANVAS_FONT_WEIGHT = 600

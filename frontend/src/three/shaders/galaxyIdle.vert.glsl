@@ -32,6 +32,8 @@ uniform float uIdleNearFadeMinAlpha;
 /** P27 — mode 1: aZ > zHi dim; -1: aZ < uZCurrent dim; 0: off. outsideAlpha in (0,1]. */
 uniform float uIdleZFadeMode;
 uniform float uIdleZFadeOutsideAlpha;
+/** 1 = apply P26.3 near + P27.4 Z idle fades; 0 = focus session (selecting/selected/deselecting), fades off. */
+uniform float uIdleMacroFadesActive;
 uniform float uCoverMode;
 uniform float uCoverTodayInstanceId;
 uniform float uCoverActiveSizeBoost;
@@ -97,22 +99,24 @@ void main() {
   }
 
   float nearFadeAlpha = 1.0;
-  if (uIdleNearFadeEnabled > 0.5 && !exemptIdleNearFade) {
-    float distCam = distance(uCameraWorldPos, starWorld);
-    float wFade = max(uIdleNearFadeWidth, 1e-6);
-    float tFade = smoothstep(
-      uIdleNearFadeStartDist,
-      uIdleNearFadeStartDist + wFade,
-      distCam
-    );
-    nearFadeAlpha = mix(uIdleNearFadeMinAlpha, 1.0, tFade);
-  }
-  if (abs(uIdleZFadeMode) > 0.5 && !exemptIdleNearFade) {
-    float zA = clamp(uIdleZFadeOutsideAlpha, 0.0, 1.0);
-    if (uIdleZFadeMode > 0.5 && aZ > zHi) {
-      nearFadeAlpha *= zA;
-    } else if (uIdleZFadeMode < -0.5 && aZ < uZCurrent) {
-      nearFadeAlpha *= zA;
+  if (uIdleMacroFadesActive > 0.5) {
+    if (uIdleNearFadeEnabled > 0.5 && !exemptIdleNearFade) {
+      float distCam = distance(uCameraWorldPos, starWorld);
+      float wFade = max(uIdleNearFadeWidth, 1e-6);
+      float tFade = smoothstep(
+        uIdleNearFadeStartDist,
+        uIdleNearFadeStartDist + wFade,
+        distCam
+      );
+      nearFadeAlpha = mix(uIdleNearFadeMinAlpha, 1.0, tFade);
+    }
+    if (abs(uIdleZFadeMode) > 0.5 && !exemptIdleNearFade) {
+      float zA = clamp(uIdleZFadeOutsideAlpha, 0.0, 1.0);
+      if (uIdleZFadeMode > 0.5 && aZ > zHi) {
+        nearFadeAlpha *= zA;
+      } else if (uIdleZFadeMode < -0.5 && aZ < uZCurrent) {
+        nearFadeAlpha *= zA;
+      }
     }
   }
   vNearFadeAlpha = nearFadeAlpha;

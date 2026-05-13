@@ -7,6 +7,7 @@ import * as THREE from 'three'
  * - mode **-1**: idle stars with **aZ < zCurrent** multiply alpha by `outsideAlpha`.
  *
  * Matches `galaxyIdle.vert.glsl`. Defaults: see `IDLE_Z_FADE_DEFAULTS`; tune at runtime via `window.__galaxyIdleZFade`.
+ * **Focus session** (`selectionPhase !== 'idle'`): `scene.ts` sets `uIdleMacroFadesActive = 0` so this branch does not run in the shader.
  */
 export const IDLE_Z_FADE_DEFAULTS = {
   /** 1 = future side of slab; 0 = off; -1 = past side of slab (before zCurrent). */

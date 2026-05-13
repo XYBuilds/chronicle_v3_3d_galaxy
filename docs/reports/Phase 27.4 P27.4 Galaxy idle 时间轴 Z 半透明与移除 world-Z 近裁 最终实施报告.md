@@ -36,10 +36,11 @@
 | D6 | **P27.4 仅两 uniform：`uIdleZFadeMode`、`uIdleZFadeOutsideAlpha`** | 不设 margin、ramp、独立 minAlpha；边界为 **`aZ` 与 `uZCurrent`、`zHi = uZCurrent + uZVisWindow` 的严格比较**。 |
 | D7 | **`mode` 三态语义** | `1`：仅当 `aZ > zHi` 时 `nearFadeAlpha *= outsideAlpha`；`-1`：仅当 `aZ < uZCurrent` 时乘；`0`：不乘。闭区间 **`[uZCurrent, zHi]`** 内 **不** 施加 Z 乘子（与 `mode` 取 `1` 或 `−1` 无关）。 |
 | D8 | **与 P26.3 相乘** | 先算近距淡出 `nearFadeAlpha`，再乘 Z 乘子；`vNearFadeAlpha` 为合成结果。 |
-| D9 | **idle 材质透明路径** | `scene.ts`：`uIdleNearFadeEnabled > 0.5` **或** `abs(uIdleZFadeMode) > 0.5` 时任一成立，则 idle 走 **transparent + 无 depthWrite**（与仅开近距淡出时一致）。 |
-| D10 | **CPU 拾取门控** | `screenRadius.ts`：近距与 Z 乘子分别计算后 **相乘** 得 `prod`；`floorA` 为各启用项下限的 **乘积**；当 `!exemptFade && inF <= 0.5 && prod <= floorA + 0.05` 时跳过该候选（与 P26.3 门槛同一结构，扩展为双因子）。 |
+| D9 | **idle 材质透明路径** | `scene.ts`：**`selectionPhase === 'idle'`** **且**（**`uIdleNearFadeEnabled > 0.5`** **或** **`abs(uIdleZFadeMode) > 0.5`**）→ idle **transparent + 无 depthWrite**。**focus**（**selecting / selected / deselecting**）→ **opaque**，与 **`uIdleMacroFadesActive`** 一致。 |
+| D10 | **CPU 拾取门控** | `screenRadius.ts`：近距与 Z 乘子分别计算后 **相乘** 得 `prod`；`floorA` 为各启用项下限的 **乘积**；当 `!exemptFade && inF <= 0.5 && prod <= floorA + 0.05` 时跳过该候选。**`idleMacroFadesActive === false`**（**`interaction.ts`** **`getIdleMacroFadesActive`**）时整段跳过。 |
 | D11 | **Dev：`window.__galaxyIdleZFade`** | 暴露 `mode` / `outsideAlpha` 读写（setter 将 mode 规范为 `-1 | 0 | 1`）、`log()`；场景 `dispose` 时从 `window` 摘除。 |
 | D12 | **GLSL 注释避免反引号** | `vite-plugin-glsl` 会把注释中的 `` ` `` 误当作模板字符串起点，导致 Vite 编译失败；相关注释改为纯标识符写法。 |
+| D13 | **focus 禁用 idle 淡出** | **`uIdleMacroFadesActive`**：`scene.ts` **`selectionPhase === 'idle' ? 1 : 0`**；**`galaxyIdle.vert.glsl`** 包裹 **P26.3 + P27.4** 两段；拾取与 idle 材质与 GPU 对齐。 |
 
 ---
 
@@ -75,12 +76,12 @@
 | 路径 | 操作摘要 |
 | --- | --- |
 | `frontend/src/three/nearCullWorldZ.ts` | **删除**（P22.1 世界 Z 近裁常量源文件移除）。 |
-| `frontend/src/three/shaders/galaxyIdle.vert.glsl` | 移除 `uNearCullWorldZ` 及对应 early-return；`exemptIdleNearFade`；增加 `uIdleZFadeMode` / `uIdleZFadeOutsideAlpha` 及 Z 乘子分支；注释避免反引号。 |
+| `frontend/src/three/shaders/galaxyIdle.vert.glsl` | 移除 `uNearCullWorldZ` 及对应 early-return；`exemptIdleNearFade`；**`uIdleMacroFadesActive`** 包裹 **P26.3 + P27.4**；`uIdleZFadeMode` / `uIdleZFadeOutsideAlpha`；注释避免反引号。 |
 | `frontend/src/three/shaders/galaxyActive.vert.glsl` | 移除 `uNearCullWorldZ` 分支；移除未使用的 `uCameraWorldPos`。 |
-| `frontend/src/three/galaxyMeshes.ts` | 去掉 `NEAR_CULL_WORLD_Z` 与 `uNearCullWorldZ`；增加 `IDLE_Z_FADE_DEFAULTS` 与两个 P27 uniform。 |
+| `frontend/src/three/galaxyMeshes.ts` | 去掉 `NEAR_CULL_WORLD_Z` 与 `uNearCullWorldZ`；增加 `IDLE_Z_FADE_DEFAULTS` 与 **`uIdleMacroFadesActive`** 等 uniform。 |
 | `frontend/src/three/idleZFade.ts` | **新建**：默认值、`computeIdleZFadeAlpha`。 |
 | `frontend/src/three/idleZFade.spec.ts` | **新建**：Vitest 覆盖 mode 0 / exempt / mode 1 与 -1 边界 / outsideAlpha clamp。 |
-| `frontend/src/three/screenRadius.ts` | 移除 Z 近裁循环过滤与 `cameraWorldZ` 参数；重命名 exempt；合并近距与 Z 的 `prod` / `floorA` 拾取门控；`import computeIdleZFadeAlpha`。 |
+| `frontend/src/three/screenRadius.ts` | 移除 Z 近裁与 `cameraWorldZ`；**`idleMacroFadesActive`** 与 **`idleNearFadeExemptMovieId`**；近距与 Z 的 `prod` / `floorA` 拾取门控；`import computeIdleZFadeAlpha`。 |
 | `frontend/src/three/interaction.ts` | 传入 `idleNearFadeExemptMovieId`，不再传 `cameraWorldZ`。 |
 | `frontend/src/three/scene.ts` | `GalaxyIdleZFadeDebug`、`window.__galaxyIdleZFade`、idle 材质透明条件含 Z mode、`dispose` 清理。 |
 | `.cursor/plans/phase_27_growth_light_features.plan.md` | 增加 P27.4 正文节；YAML `todos` 按 P27.1–P27.6 编号排序；`p274` 标为 completed。 |

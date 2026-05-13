@@ -145,19 +145,21 @@ P27.1 / P27.3 / P27.4 可独立推进；P27.5 应等英文内容稳定后做；P
 
 **默认**：`frontend/src/three/idleZFade.ts` 中 `IDLE_Z_FADE_DEFAULTS`：**`mode`** / **`outsideAlpha`** 以该文件为准（当前仓库为 **`−1`** 与 **`0.5`**）；进站行为与控制台 **`window.__galaxyIdleZFade`** 一致。
 
-**涉及文件**：`idleZFade.ts`、`idleZFade.spec.ts`、`galaxyIdle.vert.glsl`、`galaxyMeshes.ts`、`scene.ts`（`__galaxyIdleZFade`、`log()`、idle 材质在「近距淡出开」或 **Z-mode 非关** 时任一成立时走透明路径）、`screenRadius.ts`（与近距淡出乘积 + `floorA` 门控，豁免 focus/cover today）。
+**涉及文件**：`idleZFade.ts`、`idleZFade.spec.ts`、`galaxyIdle.vert.glsl`、`galaxyMeshes.ts`、`scene.ts`（`__galaxyIdleZFade`、`log()`、**`uIdleMacroFadesActive`**、idle 材质：**宏观**且（近距开或 Z-mode 非关）→ 透明路径）、`interaction.ts`（**`getIdleMacroFadesActive`**）、`screenRadius.ts`（**`idleMacroFadesActive`**、`prod` / `floorA`、豁免 focus/cover today）。
 
 **实现过程备忘（维护者）**：
 
 - 曾用 smoothstep + margin/ramp；用户要求简化为硬边界后已删除 ramp/margin 及相关 uniform。
 - CPU 侧若使用 `THREE.MathUtils.smoothstep`，其签名为 **`(x, min, max)`**，与 GLSL `smoothstep(edge0, edge1, x)` 顺序不同；当前硬边界实现不再依赖该差异，但若日后恢复软边需对齐。
 - `vite-plugin-glsl` 会扫描 GLSL 注释：**注释内反引号 `` ` `` 可能触发类 JS 解析错误**；idle 顶点着色器注释已改为纯标识符写法（无反引号）。
+- **focus 会话**（`selectionPhase` 为 **selecting / selected / deselecting**）：**`uIdleMacroFadesActive = 0`**，**P26.3** 与 **P27.4** 在 idle 顶点着色器内**不应用**；idle 材质 **opaque + depthWrite**；**CPU 拾取** 不应用 idle fade 门控（**`getIdleMacroFadesActive`**）。
 
 ### 验收（P27.4）
 
 - 无 `nearCullWorldZ` / `uNearCullWorldZ` / `NEAR_CULL_WORLD_Z` 残留引用；`tsc` / 相关单测通过。
 - `mode` 为 0 时视觉与拾取与未开 Z 淡出一致；`1` / `-1` 时仅对应侧的 idle 变半透明，条带内不变。
-- 开 Z 淡出或近距淡出时 idle 材质透明路径与拾取门控与 shader 一致；focus / cover today 豁免仍生效。
+- **focus**（selecting / selected / deselecting）下 idle **不透明**、无 idle fade 拾取门控，与 **`uIdleMacroFadesActive`** 一致。
+- **宏观 idle**：开 Z 淡出或近距淡出时 idle 材质透明路径与拾取门控与 shader 一致；focus / cover today **exempt** 仍生效。
 
 ## P27.5 多语言同步
 

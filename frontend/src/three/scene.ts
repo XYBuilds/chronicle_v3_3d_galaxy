@@ -302,6 +302,7 @@ export function mountGalaxyScene(
   const uZCamDistUniform = galUniforms.uZCamDistance as THREE.Uniform<number>
   const uHoveredInstanceId = galUniforms.uHoveredInstanceId as THREE.Uniform<number>
   const uCameraWorldPosGal = galUniforms.uCameraWorldPos as THREE.Uniform<THREE.Vector3>
+  const uIdleMacroFadesActive = galUniforms.uIdleMacroFadesActive as THREE.Uniform<number>
   const uCoverModeGal = galUniforms.uCoverMode as THREE.Uniform<number>
   const uCoverTodayInstanceIdGal = galUniforms.uCoverTodayInstanceId as THREE.Uniform<number>
   const uCoverActiveSizeBoostGal = galUniforms.uCoverActiveSizeBoost as THREE.Uniform<number>
@@ -1110,6 +1111,7 @@ export function mountGalaxyScene(
     movies,
     activeMaterial: galaxy.activeMaterial,
     selectionPlanet: planet,
+    getIdleMacroFadesActive: () => selectionPhase === 'idle',
   })
 
   /** P23.3 — align timeline + orbit pivot with “The Movie Today”; Perlin sphere + same standoff as focus orbit. */
@@ -1193,7 +1195,9 @@ export function mountGalaxyScene(
     const idleMat = galaxy.idleMaterial
     const idleNearFadeOn = (galUniforms.uIdleNearFadeEnabled as THREE.Uniform<number>).value > 0.5
     const idleZFadeOn = Math.abs((galUniforms.uIdleZFadeMode as THREE.Uniform<number>).value) > 0.5
-    const idleAlphaFadeOn = idleNearFadeOn || idleZFadeOn
+    const macroIdleForIdleFades = selectionPhase === 'idle'
+    uIdleMacroFadesActive.value = macroIdleForIdleFades ? 1 : 0
+    const idleAlphaFadeOn = (idleNearFadeOn || idleZFadeOn) && macroIdleForIdleFades
     if (idleMat.transparent !== idleAlphaFadeOn || idleMat.depthWrite !== !idleAlphaFadeOn) {
       idleMat.transparent = idleAlphaFadeOn
       idleMat.depthWrite = !idleAlphaFadeOn

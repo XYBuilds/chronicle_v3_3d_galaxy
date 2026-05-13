@@ -32,7 +32,7 @@
 | D3 | ~~**保留 legacy Z 近裁 uniform**~~ **（已删除，Phase 27.4）** | **`uNearCullWorldZ`** 与 **`nearCullWorldZ.ts`** 已从工程移除；**不得**再与 P26.3 拾取/ exempt 混为一谈。 |
 | D4 | **CPU 使用 Three `smoothstep` 参数顺序** | `THREE.MathUtils.smoothstep(x, min, max)` 与 GLSL `smoothstep(edge0, edge1, x)` 参数顺序不同；`idleNearFade.ts` 已固定为 **`smoothstep(dist, startDist, startDist + width)`**，与 vert 中 `smoothstep(uIdleNearFadeStartDist, uIdleNearFadeStartDist + wFade, distCam)` **数值一致**。 |
 | D5 | **拾取门限** | **P26.3**：当 `uIdleNearFadeEnabled > 0.5` 时，若 `!exemptFade && inFocus ≤ 0.5 && fadeAlpha ≤ minAlpha + 0.05`，则 **跳过**该实例的 active 球求交（`screenRadius.ts`）。**Phase 27.4** 起与 **Z 乘子**合并为 **乘积 `prod`** 与 **`floorA`** 门槛（见 Tech Spec **§1.5**）。`inFocus > 0.5` 的 slab 主体内仍允许拾取，避免挡在眼前的「主亮星」无法点中。 |
-| D6 | **idle 材质双态** | `scene.ts` 每帧：**`uIdleNearFadeEnabled > 0.5` 或 `abs(uIdleZFadeMode) > 0.5`**（P27.4）→ `idleMaterial.transparent = true`、`depthWrite = false`、`alphaTest = 0.003`；否则恢复 **opaque + depthWrite**（与 P17.1 idle opaque 优化路径一致）。 |
+| D6 | **idle 材质双态** | `scene.ts` 每帧：**`selectionPhase === 'idle'`** **且**（**`uIdleNearFadeEnabled > 0.5` 或 `abs(uIdleZFadeMode) > 0.5`**）→ transparent；**否则**（含 **focus**）**opaque**；**`uIdleMacroFadesActive`** 与 shader 同步。 |
 | D7 | **默认参数（当前仓库）** | `IDLE_NEAR_FADE_DEFAULTS`：**enabled = 1**，**startDist = 4.0**，**width = 4.0**，**minAlpha = 0.1**（见 `idleNearFade.ts`）。即 **默认打开** idle 近距渐变与透明路径；若需完全回退实验，将 `enabled` 置 `0` 或通过 `window.__galaxyIdleNearFade.enabled = 0`。 |
 | D8 | **Dev 调试面** | `window.__galaxyIdleNearFade`：`enabled / startDist / width / minAlpha` 读写即改共享 uniforms；`log()` 打印当前值与 defaults 引用。`dispose` 时从 `window` 上摘除。 |
 

@@ -156,6 +156,7 @@ export type ActiveRayPickResult = { index: number; hitPoint: THREE.Vector3; t: n
  * @param selectionMaskPickSet — if set (person/genre search), only these ids use full active radius; others skipped.
  * @param cameraWorldPos — P26.3 full camera world position; must match `uCameraWorldPos` for idle near-fade pick gate.
  * @param idleNearFadeExemptMovieId — focus or cover “today” film id exempt from idle near-fade / Z-fade pick skip (matches shader exemptions).
+ * @param idleMacroFadesActive — when false (focus session: selecting/selected/deselecting), skip idle fade pick gate (matches `uIdleMacroFadesActive`).
  * @param coverTodayInstanceIndex — P23.3 when set (≥0), only this instance can be picked (matches cover shader cull).
  * @param coverActiveSizeBoost — P23.3 must match `uCoverActiveSizeBoost` when picking the cover instance.
  * @param coverTodayWorldPickRadius — when cover picks only today: use Perlin `lastRadius` for ray–sphere (same as focus vs planet UI).
@@ -170,6 +171,8 @@ export function pickClosestActiveMovieAlongRay(options: {
   selectionMaskPickSet?: Set<number> | null
   cameraWorldPos: THREE.Vector3
   idleNearFadeExemptMovieId: number | null
+  /** When false, idle near/Z fade pick gate is off (focus session; matches `uIdleMacroFadesActive`). Default true. */
+  idleMacroFadesActive?: boolean
   coverTodayInstanceIndex?: number | null
   coverActiveSizeBoost?: number
   coverTodayWorldPickRadius?: number | null
@@ -184,6 +187,7 @@ export function pickClosestActiveMovieAlongRay(options: {
     selectionMaskPickSet,
     cameraWorldPos,
     idleNearFadeExemptMovieId,
+    idleMacroFadesActive = true,
     coverTodayInstanceIndex,
     coverActiveSizeBoost = 1,
     coverTodayWorldPickRadius = null,
@@ -215,7 +219,7 @@ export function pickClosestActiveMovieAlongRay(options: {
     const exemptFade = m.id === idleNearFadeExemptMovieId
     const uFadeEn = (u.uIdleNearFadeEnabled as THREE.Uniform<number>).value
     const uZMode = (u.uIdleZFadeMode as THREE.Uniform<number>).value
-    if (uFadeEn > 0.5 || Math.abs(uZMode) > 0.5) {
+    if (idleMacroFadesActive && (uFadeEn > 0.5 || Math.abs(uZMode) > 0.5)) {
       let prod = 1
       let floorA = 1
       if (uFadeEn > 0.5) {

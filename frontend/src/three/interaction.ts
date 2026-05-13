@@ -71,8 +71,13 @@ export function attachGalaxyActiveMeshInteraction(options: {
   activeMaterial: THREE.ShaderMaterial
   /** P11.6 — focus 态优先用 `lastRadius` 包围球 vs active 射线球取最近命中；GPU 位移顶点不可靠故不用 mesh raycast。 */
   selectionPlanet?: SelectionPlanetHandle
+  /**
+   * When false, idle P26.3 / P27.4 alpha pick gate is skipped (matches `uIdleMacroFadesActive` in focus session).
+   * Default: always true (macro-only callers).
+   */
+  getIdleMacroFadesActive?: () => boolean
 }): () => void {
-  const { camera, domElement, activeMesh, movies, activeMaterial, selectionPlanet } = options
+  const { camera, domElement, activeMesh, movies, activeMaterial, selectionPlanet, getIdleMacroFadesActive } = options
   const maskPickFromState = () => {
     const s = useGalaxyInteractionStore.getState()
     return getSelectionMaskPickSet(s.selectedMovieId, s.focusNeighborIds, s.searchMode, s.selectionIds)
@@ -142,6 +147,7 @@ export function attachGalaxyActiveMeshInteraction(options: {
     const covIdx =
       cov.coverMode && cov.todayMovieId !== null ? movies.findIndex((m) => m.id === cov.todayMovieId) : null
     const covBoost = (activeMaterial.uniforms.uCoverActiveSizeBoost as THREE.Uniform<number>).value
+    const macroFades = getIdleMacroFadesActive?.() !== false
     return {
       ray,
       movies,
@@ -153,6 +159,7 @@ export function attachGalaxyActiveMeshInteraction(options: {
       cameraWorldPos: _pickCameraWorldPos,
       idleNearFadeExemptMovieId:
         cov.coverMode && cov.todayMovieId !== null ? cov.todayMovieId : st.selectedMovieId,
+      idleMacroFadesActive: macroFades,
       coverTodayInstanceIndex: cov.coverMode && covIdx !== null && covIdx >= 0 ? covIdx : null,
       coverActiveSizeBoost: cov.coverMode ? covBoost : 1,
       coverTodayWorldPickRadius:

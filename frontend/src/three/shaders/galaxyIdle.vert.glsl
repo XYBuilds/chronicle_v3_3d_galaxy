@@ -23,13 +23,17 @@ uniform sampler2D uSelectionMask;
 uniform int uSelectionMode;
 uniform int uSelectionAtlasWidth;
 uniform int uSelectionAtlasHeight;
-uniform float uNearCullWorldZ;
 uniform vec3 uCameraWorldPos;
-/** P26.3 — idle near-distance alpha (`uIdleNearFadeEnabled` > 0.5 enables branch). */
+/** P26.3 — idle near-distance alpha (uIdleNearFadeEnabled > 0.5 enables branch). */
 uniform float uIdleNearFadeEnabled;
 uniform float uIdleNearFadeStartDist;
 uniform float uIdleNearFadeWidth;
 uniform float uIdleNearFadeMinAlpha;
+/** P27 — mode 1: aZ > zHi dim; -1: aZ < uZCurrent dim; 0: off. outsideAlpha in (0,1]. */
+uniform float uIdleZFadeMode;
+uniform float uIdleZFadeOutsideAlpha;
+/** 1 = apply P26.3 near + P27.4 Z idle fades; 0 = focus session (selecting/selected/deselecting), fades off. */
+uniform float uIdleMacroFadesActive;
 uniform float uCoverMode;
 uniform float uCoverTodayInstanceId;
 uniform float uCoverActiveSizeBoost;
@@ -51,15 +55,9 @@ void main() {
   float aY = instanceMatrix[3][1];
   float aZ = instanceMatrix[3][2];
   vec3 starWorld = vec3(aX, aY, aZ);
-  bool exemptNearCull =
+  bool exemptIdleNearFade =
     ((uFocusedInstanceId >= 0) && (gl_InstanceID == uFocusedInstanceId))
     || (uCoverMode > 0.5 && float(gl_InstanceID) == uCoverTodayInstanceId);
-  if (!exemptNearCull && abs(uCameraWorldPos.z - aZ) < uNearCullWorldZ) {
-    gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
-    vColor = vec3(0.0);
-    vNearFadeAlpha = 1.0;
-    return;
-  }
   if (uCoverMode > 0.5 && float(gl_InstanceID) != uCoverTodayInstanceId) {
     gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
     vColor = vec3(0.0);
@@ -101,15 +99,25 @@ void main() {
   }
 
   float nearFadeAlpha = 1.0;
-  if (uIdleNearFadeEnabled > 0.5 && !exemptNearCull) {
-    float distCam = distance(uCameraWorldPos, starWorld);
-    float wFade = max(uIdleNearFadeWidth, 1e-6);
-    float tFade = smoothstep(
-      uIdleNearFadeStartDist,
-      uIdleNearFadeStartDist + wFade,
-      distCam
-    );
-    nearFadeAlpha = mix(uIdleNearFadeMinAlpha, 1.0, tFade);
+  if (uIdleMacroFadesActive > 0.5) {
+    if (uIdleNearFadeEnabled > 0.5 && !exemptIdleNearFade) {
+      float distCam = distance(uCameraWorldPos, starWorld);
+      float wFade = max(uIdleNearFadeWidth, 1e-6);
+      float tFade = smoothstep(
+        uIdleNearFadeStartDist,
+        uIdleNearFadeStartDist + wFade,
+        distCam
+      );
+      nearFadeAlpha = mix(uIdleNearFadeMinAlpha, 1.0, tFade);
+    }
+    if (abs(uIdleZFadeMode) > 0.5 && !exemptIdleNearFade) {
+      float zA = clamp(uIdleZFadeOutsideAlpha, 0.0, 1.0);
+      if (uIdleZFadeMode > 0.5 && aZ > zHi) {
+        nearFadeAlpha *= zA;
+      } else if (uIdleZFadeMode < -0.5 && aZ < uZCurrent) {
+        nearFadeAlpha *= zA;
+      }
+    }
   }
   vNearFadeAlpha = nearFadeAlpha;
 

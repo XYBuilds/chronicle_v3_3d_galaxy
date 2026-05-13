@@ -7,7 +7,7 @@ todos:
     status: pending
   - id: p282-tally-feedback
     content: P28.2 Tally 用户反馈：表单创建与嵌入/外链策略；生产环境用 env 或配置注入表单 URL；隐私与数据流向简短说明
-    status: pending
+    status: completed
   - id: p283-discord-community
     content: P28.3 Discord 社区入口：邀请链接放入 Info/README 与必要 locale；外链 target=_blank + rel=noopener noreferrer；说明为社区交流非官方支持工单
     status: pending

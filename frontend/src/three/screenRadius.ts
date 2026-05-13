@@ -3,8 +3,8 @@ import * as THREE from 'three'
 import type { SearchMode } from '@/store/galaxyInteractionStore'
 import type { Movie } from '@/types/galaxy'
 
-import { NEAR_CULL_WORLD_Z } from './nearCullWorldZ'
 import { computeIdleNearFadeAlpha } from './idleNearFade'
+import { computeIdleZFadeAlpha } from './idleZFade'
 
 /**
  * P12.6+ / P13.2 — CPU pick/hover must match shader `inFocus`.
@@ -154,9 +154,9 @@ export type ActiveRayPickResult = { index: number; hitPoint: THREE.Vector3; t: n
  * built-in raycast ignores per-vertex `sActive` scale).
  * @param requireSlabInteraction — if true, require `movieZInFocusFactor > 0.5` (P8.4 click gate); hover passes false.
  * @param selectionMaskPickSet — if set (person/genre search), only these ids use full active radius; others skipped.
- * @param cameraWorldZ — P22.1 world-Z of the camera (same space as `movie.z`); must match `uCameraWorldPos.z` in galaxy shaders.
  * @param cameraWorldPos — P26.3 full camera world position; must match `uCameraWorldPos` for idle near-fade pick gate.
- * @param nearCullExemptMovieId — P22.1 focus film id exempt from near-Z cull on pick (matches shader `uFocusedInstanceId` path).
+ * @param idleNearFadeExemptMovieId — focus or cover “today” film id exempt from idle near-fade / Z-fade pick skip (matches shader exemptions).
+ * @param idleMacroFadesActive — when false (focus session: selecting/selected/deselecting), skip idle fade pick gate (matches `uIdleMacroFadesActive`).
  * @param coverTodayInstanceIndex — P23.3 when set (≥0), only this instance can be picked (matches cover shader cull).
  * @param coverActiveSizeBoost — P23.3 must match `uCoverActiveSizeBoost` when picking the cover instance.
  * @param coverTodayWorldPickRadius — when cover picks only today: use Perlin `lastRadius` for ray–sphere (same as focus vs planet UI).
@@ -169,9 +169,10 @@ export function pickClosestActiveMovieAlongRay(options: {
   zVisWindow: number
   requireSlabInteraction: boolean
   selectionMaskPickSet?: Set<number> | null
-  cameraWorldZ: number
   cameraWorldPos: THREE.Vector3
-  nearCullExemptMovieId: number | null
+  idleNearFadeExemptMovieId: number | null
+  /** When false, idle near/Z fade pick gate is off (focus session; matches `uIdleMacroFadesActive`). Default true. */
+  idleMacroFadesActive?: boolean
   coverTodayInstanceIndex?: number | null
   coverActiveSizeBoost?: number
   coverTodayWorldPickRadius?: number | null
@@ -184,9 +185,9 @@ export function pickClosestActiveMovieAlongRay(options: {
     zVisWindow,
     requireSlabInteraction,
     selectionMaskPickSet,
-    cameraWorldZ,
     cameraWorldPos,
-    nearCullExemptMovieId,
+    idleNearFadeExemptMovieId,
+    idleMacroFadesActive = true,
     coverTodayInstanceIndex,
     coverActiveSizeBoost = 1,
     coverTodayWorldPickRadius = null,
@@ -205,12 +206,6 @@ export function pickClosestActiveMovieAlongRay(options: {
   for (let i = 0; i < movies.length; i++) {
     if (covIdx !== null && i !== covIdx) continue
     const m = movies[i]
-    if (
-      Math.abs(cameraWorldZ - m.z) < NEAR_CULL_WORLD_Z &&
-      m.id !== nearCullExemptMovieId
-    ) {
-      continue
-    }
     let inF: number
     if (selectionMaskPickSet && selectionMaskPickSet.size > 0) {
       if (!selectionMaskPickSet.has(m.id)) continue
@@ -221,24 +216,35 @@ export function pickClosestActiveMovieAlongRay(options: {
     if (inF < 1e-6) continue
     if (requireSlabInteraction && inF <= slabGate) continue
 
+    const exemptFade = m.id === idleNearFadeExemptMovieId
     const uFadeEn = (u.uIdleNearFadeEnabled as THREE.Uniform<number>).value
-    if (uFadeEn > 0.5) {
-      const exemptFade = m.id === nearCullExemptMovieId
-      const minAF = (u.uIdleNearFadeMinAlpha as THREE.Uniform<number>).value
-      const startDF = (u.uIdleNearFadeStartDist as THREE.Uniform<number>).value
-      const widthDF = (u.uIdleNearFadeWidth as THREE.Uniform<number>).value
-      const fadeAlpha = computeIdleNearFadeAlpha(
-        cameraWorldPos,
-        m.x,
-        m.y,
-        m.z,
-        uFadeEn,
-        startDF,
-        widthDF,
-        minAF,
-        exemptFade,
-      )
-      if (!exemptFade && inF <= slabGate && fadeAlpha <= minAF + 0.05) {
+    const uZMode = (u.uIdleZFadeMode as THREE.Uniform<number>).value
+    if (idleMacroFadesActive && (uFadeEn > 0.5 || Math.abs(uZMode) > 0.5)) {
+      let prod = 1
+      let floorA = 1
+      if (uFadeEn > 0.5) {
+        const minAF = (u.uIdleNearFadeMinAlpha as THREE.Uniform<number>).value
+        const startDF = (u.uIdleNearFadeStartDist as THREE.Uniform<number>).value
+        const widthDF = (u.uIdleNearFadeWidth as THREE.Uniform<number>).value
+        prod *= computeIdleNearFadeAlpha(
+          cameraWorldPos,
+          m.x,
+          m.y,
+          m.z,
+          uFadeEn,
+          startDF,
+          widthDF,
+          minAF,
+          exemptFade,
+        )
+        floorA *= minAF
+      }
+      if (Math.abs(uZMode) > 0.5) {
+        const oa = THREE.MathUtils.clamp((u.uIdleZFadeOutsideAlpha as THREE.Uniform<number>).value, 0, 1)
+        prod *= computeIdleZFadeAlpha(m.z, zCurrent, zVisWindow, uZMode, oa, exemptFade)
+        floorA *= oa
+      }
+      if (!exemptFade && inF <= slabGate && prod <= floorA + 0.05) {
         continue
       }
     }

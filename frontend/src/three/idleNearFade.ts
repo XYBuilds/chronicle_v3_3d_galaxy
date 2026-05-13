@@ -2,8 +2,9 @@ import * as THREE from 'three'
 
 /**
  * P26.3 — Camera-distance idle near fade: star alpha ramps from `minAlpha` to 1 by camera–star world distance.
- * **Shipped default:** `IDLE_NEAR_FADE_DEFAULTS.enabled === 1` (fade + idle transparent path on at boot).
+ * **Shipped default:** `IDLE_NEAR_FADE_DEFAULTS.enabled === 1` (fade + idle transparent path on at boot in macro).
  * Set `enabled` to `0` here or at runtime via `window.__galaxyIdleNearFade.enabled = 0` to restore opaque idle + no pick gate.
+ * **Focus session** (`selectionPhase !== 'idle'`): `uIdleMacroFadesActive = 0` disables the shader branch regardless of `enabled`.
  */
 export const IDLE_NEAR_FADE_DEFAULTS = {
   /** > 0.5 enables shader + idle transparent path + CPU pick gate. */

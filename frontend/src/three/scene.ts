@@ -20,6 +20,7 @@ import {
 import { CONSTELLATION_SURFACE_GAP_WORLD, createConstellation } from './constellation'
 import { createGalaxyDualMeshes } from './galaxyMeshes'
 import { IDLE_NEAR_FADE_DEFAULTS } from './idleNearFade'
+import { IDLE_Z_FADE_DEFAULTS } from './idleZFade'
 import { attachGalaxyActiveMeshInteraction } from './interaction'
 import { createSelectionPlanet, type SelectionPlanetHandle } from './planet'
 import { computeActiveWorldRadius, getSelectionMaskPickSet, resolveSelectionWorldRadius } from './screenRadius'
@@ -101,6 +102,15 @@ interface GalaxyIdleNearFadeDebug {
   log: () => void
 }
 
+/** Dev console: window.__galaxyIdleZFade — P27 idle Z dim (see idleZFade.ts). */
+interface GalaxyIdleZFadeDebug {
+  /** 1 = dim aZ > zCurrent+zVisWindow; 0 = off; -1 = dim aZ < zCurrent. */
+  mode: number
+  /** Alpha multiplier on the dimmed side (0…1). */
+  outsideAlpha: number
+  log: () => void
+}
+
 /** Dev console: `window.__planetTerrace` — Perlin focus sphere terrace + P11.4 lighting uniforms. */
 interface SelectionPlanetTerraceDebug {
   /** Unit-sphere extrusion per band step; world radius uses `× (1 + cuts × stepHeight)`. Clamped to [0, 0.25] on set. */
@@ -124,6 +134,7 @@ declare global {
     __galaxyPointScale?: GalaxyPointScaleDebug
     __galaxyColor?: GalaxyColorDebug
     __galaxyIdleNearFade?: GalaxyIdleNearFadeDebug
+    __galaxyIdleZFade?: GalaxyIdleZFadeDebug
     __galaxyInteraction?: GalaxyInteractionDebug
     __planetTerrace?: SelectionPlanetTerraceDebug
   }
@@ -911,6 +922,43 @@ export function mountGalaxyScene(
   window.__galaxyIdleNearFade = idleNearFadeDebug
   idleNearFadeDebug.log()
 
+  const uIdleZFadeMode = galUniforms.uIdleZFadeMode as THREE.Uniform<number>
+  const uIdleZFadeOutsideAlpha = galUniforms.uIdleZFadeOutsideAlpha as THREE.Uniform<number>
+
+  const idleZFadeDebug: GalaxyIdleZFadeDebug = {
+    get mode() {
+      return uIdleZFadeMode.value
+    },
+    set mode(value: number) {
+      const x = Number(value)
+      uIdleZFadeMode.value = x > 0.5 ? 1 : x < -0.5 ? -1 : 0
+    },
+    get outsideAlpha() {
+      return uIdleZFadeOutsideAlpha.value
+    },
+    set outsideAlpha(value: number) {
+      uIdleZFadeOutsideAlpha.value = THREE.MathUtils.clamp(value, 0, 1)
+    },
+    log() {
+      const m = uIdleZFadeMode.value
+      const label = m > 0.5 ? 'future (aZ > zHi)' : m < -0.5 ? 'past (aZ < zCurrent)' : 'off'
+      console.log(
+        '[Galaxy] P27 idle Z-fade mode=' +
+          m +
+          ' (' +
+          label +
+          ') outsideAlpha=' +
+          uIdleZFadeOutsideAlpha.value.toFixed(3) +
+          ' | defaults idleZFade.ts: mode=' +
+          IDLE_Z_FADE_DEFAULTS.mode +
+          ' outsideAlpha=' +
+          IDLE_Z_FADE_DEFAULTS.outsideAlpha,
+      )
+    },
+  }
+  window.__galaxyIdleZFade = idleZFadeDebug
+  idleZFadeDebug.log()
+
   const planetTerraceDebug: SelectionPlanetTerraceDebug = {
     get stepHeight() {
       return planet.material.uniforms.uStepHeight.value as number
@@ -1144,14 +1192,18 @@ export function mountGalaxyScene(
     }
     const idleMat = galaxy.idleMaterial
     const idleNearFadeOn = (galUniforms.uIdleNearFadeEnabled as THREE.Uniform<number>).value > 0.5
-    if (idleMat.transparent !== idleNearFadeOn || idleMat.depthWrite !== !idleNearFadeOn) {
-      idleMat.transparent = idleNearFadeOn
-      idleMat.depthWrite = !idleNearFadeOn
-      idleMat.alphaTest = idleNearFadeOn ? 0.003 : 0
+    const idleZFadeOn = Math.abs((galUniforms.uIdleZFadeMode as THREE.Uniform<number>).value) > 0.5
+    const idleAlphaFadeOn = idleNearFadeOn || idleZFadeOn
+    if (idleMat.transparent !== idleAlphaFadeOn || idleMat.depthWrite !== !idleAlphaFadeOn) {
+      idleMat.transparent = idleAlphaFadeOn
+      idleMat.depthWrite = !idleAlphaFadeOn
+      idleMat.alphaTest = idleAlphaFadeOn ? 0.003 : 0
       idleMat.needsUpdate = true
       console.log(
         '[Idle material]',
-        idleNearFadeOn ? 'transparent (P26.3 near-fade on)' : 'opaque + depthWrite (P26.3 near-fade off)',
+        idleAlphaFadeOn
+          ? `transparent (P26.3 near=${idleNearFadeOn ? 'on' : 'off'} · P27 z=${idleZFadeOn ? 'on' : 'off'})`
+          : 'opaque + depthWrite (idle alpha fades off)',
       )
     }
     // P12.6 / P13.2 — person/genre mask vs focus spherical neighborhood vs timeline slab
@@ -1312,6 +1364,9 @@ export function mountGalaxyScene(
     }
     if (window.__galaxyIdleNearFade === idleNearFadeDebug) {
       delete window.__galaxyIdleNearFade
+    }
+    if (window.__galaxyIdleZFade === idleZFadeDebug) {
+      delete window.__galaxyIdleZFade
     }
     if (window.__galaxyInteraction === interactionDebug) {
       delete window.__galaxyInteraction

@@ -11,6 +11,9 @@ todos:
   - id: p273-clickable-people-search
     content: P27.3 Drawer 人名可点击进入 person search：复用 search index person key 归一化，覆盖 cast / crew 可点击范围
     status: pending
+  - id: p274-galaxy-idle-z-nearcull
+    content: P27.4 Galaxy idle 时间轴 Z 半透明（mode/outsideAlpha）与移除 P22.1 world-Z 近裁（nearCullWorldZ）；拾取与 shader 对齐；Tech Spec/视觉参数表等若仍写 NEAR_CULL 则在 P27.6 收口
+    status: completed
   - id: p275-i18n-sync
     content: P27.5 英文 Info / README 定稿后同步多语言 HUD 文案，保持 en.json 为翻译 SSOT
     status: pending
@@ -32,6 +35,7 @@ isProject: false
 - The Movie Today 分享。
 - LocalStorage first-time onboarding。
 - Drawer 中人名点击进入 person search。
+- Galaxy idle 时间轴 Z 半透明与 world-Z 近裁移除（P27.4，见下节）。
 - 英文文案定稿后的多语言同步。
 
 **不做**：
@@ -47,6 +51,7 @@ flowchart TD
     P271["P27.1 The Movie Today share"]
     P272["P27.2 First-time onboarding"]
     P273["P27.3 人名点击进入 person search"]
+    P274["P27.4 Idle Z 半透明 + 移除 world-Z 近裁"]
     P275["P27.5 多语言同步"]
     P276["P27.6 SSOT 文档同步"]
 
@@ -54,9 +59,10 @@ flowchart TD
     P273 --> P272
     P272 --> P276
     P275 --> P276
+    P274 --> P276
 ```
 
-P27.1 / P27.3 可独立推进；P27.5 应等英文内容稳定后做；P27.6 在本 phase 行为定稿后收口。
+P27.1 / P27.3 / P27.4 可独立推进；P27.5 应等英文内容稳定后做；P27.6 在本 phase 行为定稿后收口（含 P27.4 涉及的文档用语更新）。
 
 ## P27.1 The Movie Today Share
 
@@ -110,6 +116,48 @@ P27.1 / P27.3 可独立推进；P27.5 应等英文内容稳定后做；P27.6 在
 - 点击 cast 人名后，高亮该人的相关电影。
 - 点击 director / producer / writer 等 crew 人名后行为一致。
 - 找不到索引 key 时不报错，并提供合理无操作或提示。
+
+## P27.4 Galaxy idle 时间轴 Z 半透明与移除 P22.1 world-Z 近裁
+
+本节汇总已落地实现（见会话 [Idle Z 半透明与调参](6bbe4ddd-c9e9-4096-83d5-3f6eda724f8e)、[移除 nearCullWorldZ](2aced334-1914-4d93-b8c5-9cecbf4282a1)）。
+
+### A. 移除 `nearCullWorldZ`（P22.1 world-Z 近裁）
+
+- **删除** `frontend/src/three/nearCullWorldZ.ts`。
+- **`galaxyIdle.vert.glsl` / `galaxyActive.vert.glsl`**：去掉 `uNearCullWorldZ` 及「相机世界 Z 与粒子 Z 差值小于阈值则裁掉顶点」的分支；idle 侧 focus/cover 豁免变量统一为 `exemptIdleNearFade`（语义与近距淡出豁免一致）。
+- **`galaxyActive.vert.glsl`**：active 不再需要 `uCameraWorldPos` 时一并移除声明。
+- **`galaxyMeshes.ts`**：去掉 `NEAR_CULL_WORLD_Z` 的 import/re-export 与 `uNearCullWorldZ` uniform。
+- **`screenRadius.ts`**：`pickClosestActiveMovieAlongRay` 不再按 world-Z 条带跳过候选；去掉 `cameraWorldZ` 参数；原 `nearCullExemptMovieId` 重命名为 **`idleNearFadeExemptMovieId`**（仅服务 P26.3 idle 近距淡出拾取豁免，与 shader 一致）。
+- **`interaction.ts`**：按新参数名传入，不再传 `cameraWorldZ`。
+
+若 `docs/project_docs/视觉参数总表.md`、`TMDB 电影宇宙 Tech Spec.md` 等仍写 `NEAR_CULL_WORLD_Z` / `nearCullWorldZ`，在 **P27.6** 文档同步中删改对齐。
+
+### B. Idle 时间轴 Z 半透明（硬边界，无 ramp / margin）
+
+**目标**：仅对 **idle** 层按上映年 `aZ`（与 `zCurrent`、`zVisWindow` 同单位）乘透明度因子；与 **近距淡出**（P26.3）相乘；CPU 拾取与 GPU 一致。
+
+**参数（最终形态）**：
+
+| 参数 | Uniform / 调试 | 含义 |
+|------|------------------|------|
+| **mode** | `uIdleZFadeMode`，`window.__galaxyIdleZFade.mode` | `1`：`aZ > zCurrent + zVisWindow` 时 idle 乘以 `outsideAlpha`；`0`：关闭；`-1`：`aZ < zCurrent` 时乘以 `outsideAlpha`。条带内 `zCurrent ≤ aZ ≤ zCurrent + zVisWindow` 不被本规则压暗。 |
+| **outsideAlpha** | `uIdleZFadeOutsideAlpha`，`window.__galaxyIdleZFade.outsideAlpha` | 被压暗一侧的 alpha 乘子，范围 0～1（CPU/GPU clamp）。 |
+
+**默认**：`frontend/src/three/idleZFade.ts` 中 `IDLE_Z_FADE_DEFAULTS`：`mode: 0`，`outsideAlpha: 0.35`（进站不启用；控制台或改默认值可开）。
+
+**涉及文件**：`idleZFade.ts`、`idleZFade.spec.ts`、`galaxyIdle.vert.glsl`、`galaxyMeshes.ts`、`scene.ts`（`__galaxyIdleZFade`、`log()`、idle 材质在「近距淡出开」或「`|mode| > 0`」时任一成立时走透明路径）、`screenRadius.ts`（与近距淡出乘积 + `floorA` 门控，豁免 focus/cover today）。
+
+**实现过程备忘（维护者）**：
+
+- 曾用 smoothstep + margin/ramp；用户要求简化为硬边界后已删除 ramp/margin 及相关 uniform。
+- CPU 侧若使用 `THREE.MathUtils.smoothstep`，其签名为 **`(x, min, max)`**，与 GLSL `smoothstep(edge0, edge1, x)` 顺序不同；当前硬边界实现不再依赖该差异，但若日后恢复软边需对齐。
+- `vite-plugin-glsl` 会扫描 GLSL 注释：**注释内反引号 `` ` `` 可能触发类 JS 解析错误**；idle 顶点着色器注释已改为纯标识符写法（无反引号）。
+
+### 验收（P27.4）
+
+- 无 `nearCullWorldZ` / `uNearCullWorldZ` / `NEAR_CULL_WORLD_Z` 残留引用；`tsc` / 相关单测通过。
+- `mode` 为 0 时视觉与拾取与未开 Z 淡出一致；`1` / `-1` 时仅对应侧的 idle 变半透明，条带内不变。
+- 开 Z 淡出或近距淡出时 idle 材质透明路径与拾取门控与 shader 一致；focus / cover today 豁免仍生效。
 
 ## P27.5 多语言同步
 

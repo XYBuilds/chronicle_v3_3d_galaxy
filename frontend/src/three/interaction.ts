@@ -150,9 +150,8 @@ export function attachGalaxyActiveMeshInteraction(options: {
       zVisWindow: st.zVisWindow,
       requireSlabInteraction,
       selectionMaskPickSet: maskPickFromState(),
-      cameraWorldZ: _pickCameraWorldPos.z,
       cameraWorldPos: _pickCameraWorldPos,
-      nearCullExemptMovieId:
+      idleNearFadeExemptMovieId:
         cov.coverMode && cov.todayMovieId !== null ? cov.todayMovieId : st.selectedMovieId,
       coverTodayInstanceIndex: cov.coverMode && covIdx !== null && covIdx >= 0 ? covIdx : null,
       coverActiveSizeBoost: cov.coverMode ? covBoost : 1,

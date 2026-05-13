@@ -24,8 +24,6 @@ uniform sampler2D uSelectionMask;
 uniform int uSelectionMode;
 uniform int uSelectionAtlasWidth;
 uniform int uSelectionAtlasHeight;
-uniform float uNearCullWorldZ;
-uniform vec3 uCameraWorldPos;
 uniform float uCoverMode;
 uniform float uCoverTodayInstanceId;
 uniform float uCoverActiveSizeBoost;
@@ -44,15 +42,6 @@ void main() {
   float voteNorm = aHueVoteSize.y;
   float aSize = aHueVoteSize.z;
   float aZ = instanceMatrix[3][2];
-  bool exemptNearCull =
-    ((uFocusedInstanceId >= 0) && (gl_InstanceID == uFocusedInstanceId))
-    || (uCoverMode > 0.5 && float(gl_InstanceID) == uCoverTodayInstanceId);
-  if (!exemptNearCull && abs(uCameraWorldPos.z - aZ) < uNearCullWorldZ) {
-    gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
-    vColor = vec3(0.0);
-    vFocusAlphaMult = 1.0;
-    return;
-  }
   if (uCoverMode > 0.5 && float(gl_InstanceID) != uCoverTodayInstanceId) {
     gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
     vColor = vec3(0.0);

@@ -13,7 +13,7 @@ todos:
     status: completed
   - id: p264-ssot-doc-sync
     content: P26.4 SSOT 文档同步：同步 Design Spec、视觉参数总表、Tech Spec 与 phase 决策记录，记录跨设备色彩结论、裁切实验参数与是否进入 production 默认
-    status: pending
+    status: completed
 isProject: false
 ---
 

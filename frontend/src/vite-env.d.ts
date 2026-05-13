@@ -12,6 +12,8 @@ interface ImportMetaEnv {
   readonly VITE_GALAXY_SEARCH_INDEX_GZIP_URL?: string
   /** P23.1: absolute URL to ``today.json`` (optional; manifest ``today_url`` or bundled file is fallback). */
   readonly VITE_TODAY_JSON_URL?: string
+  /** P28.2: Tally form key for ``data-tally-open``. Empty / ``0`` / ``false`` hides the HUD feedback button. */
+  readonly VITE_TALLY_FEEDBACK_FORM_ID?: string
 }
 
 declare module '*.glsl' {

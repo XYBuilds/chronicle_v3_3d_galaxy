@@ -4,10 +4,10 @@ overview: Phase 26 处理跨设备视觉偏差与空间浏览速度感。先用 
 todos:
   - id: p261-hdr-color-validation
     content: P26.1 HDR / 色彩验证矩阵：Mac HDR on/off、Safari/Chrome、Windows HDR on/off；记录 idle/active/HUD/cover/reference 颜色表现，定位偏色来源
-    status: pending
+    status: completed
   - id: p262-small-screen-regression
     content: P26.2 小屏布局系统化验收：MacBook 默认缩放下复查 drawer、focus HUD、timeline、search、info modal，并收敛 viewport clamp
-    status: pending
+    status: completed
   - id: p263-camera-distance-cull-experiment
     content: P26.3 Camera-distance idle near-cull 实验：从硬显示/隐藏改为距离 alpha fade；加入 debug uniforms；验证 shader 可见性、CPU picking、透明排序与性能
     status: pending

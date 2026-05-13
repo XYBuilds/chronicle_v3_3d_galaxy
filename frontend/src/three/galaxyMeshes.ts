@@ -144,7 +144,7 @@ function makeSharedUniforms(
       /** P22.1 — paired with `uCameraWorldPos`; see `nearCullWorldZ.ts`. */
       uNearCullWorldZ: { value: NEAR_CULL_WORLD_Z },
       uCameraWorldPos: { value: new THREE.Vector3() },
-      /** P26.3 — idle camera-distance near fade experiment (`idleNearFade.ts`). Default off. */
+      /** P26.3 — idle camera-distance near fade; initial values from `IDLE_NEAR_FADE_DEFAULTS` (see `idleNearFade.ts`). */
       uIdleNearFadeEnabled: { value: IDLE_NEAR_FADE_DEFAULTS.enabled },
       uIdleNearFadeStartDist: { value: IDLE_NEAR_FADE_DEFAULTS.startDist },
       uIdleNearFadeWidth: { value: IDLE_NEAR_FADE_DEFAULTS.width },

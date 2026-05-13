@@ -5,6 +5,7 @@
 | Phase | 26（设备与空间感优化）子项 **P26.3** |
 | 计划来源 | [`.cursor/plans/phase_26_device_spatial_optimization.plan.md`](../../.cursor/plans/phase_26_device_spatial_optimization.plan.md) §「P26.3 Camera-distance Idle Near-cull 实验」 |
 | 日期 | 2026-05-13 |
+| 修订 | 2026-05-13 — 消除代码/注释与默认 `enabled: 1` 的漂移：`idleNearFade.ts`、`galaxyMeshes.ts`、`scene.ts`、`galaxyIdle.vert.glsl` 注释已与 SSOT 对齐；本报告 §6 重写。 |
 | 关联会话 | Cursor agent transcript [P26.3 idle near-fade](f96126be-41c3-4f04-b825-c948afe6fe65)（本地 `agent-transcripts` 目录，文件名同 UUID） |
 | 状态 | **已落地**：idle 双网格之 **idle** 支路采用 **相机世界坐标 → 星体世界坐标** 的欧氏距离驱动 **alpha 渐变**；**CPU active 射线拾取**在「低 slab 权重 + 极低 idle 透明度」时与视觉对齐；**Dev 控制台**可调 uniforms。 |
 | 报告性质 | **工作留档**：汇总本阶段最终决策与已执行操作。**参数 SSOT** 以 [`frontend/src/three/idleNearFade.ts`](../../frontend/src/three/idleNearFade.ts) 中 `IDLE_NEAR_FADE_DEFAULTS` 与运行时 `galaxy*.ShaderMaterial` 的同名 uniform 为准；若与本文表格不一致，以代码为准。 |
@@ -66,14 +67,14 @@
 
 | 路径 | 操作摘要 |
 | --- | --- |
-| `frontend/src/three/idleNearFade.ts` | **新建**：`IDLE_NEAR_FADE_DEFAULTS`、`computeIdleNearFadeAlpha`（CPU 镜像）。 |
+| `frontend/src/three/idleNearFade.ts` | `IDLE_NEAR_FADE_DEFAULTS`、`computeIdleNearFadeAlpha`（CPU 镜像）；模块注释与默认 `enabled === 1` 及关闭方式一致。 |
 | `frontend/src/three/idleNearFade.spec.ts` | **新建**：Vitest 覆盖 disabled / exempt / 内外距离三段。 |
-| `frontend/src/three/shaders/galaxyIdle.vert.glsl` | 增加 `uIdleNearFade*`、`starWorld`、`vNearFadeAlpha`；在 `sIdle` 有效分支内计算距离 fade。 |
+| `frontend/src/three/shaders/galaxyIdle.vert.glsl` | 增加 `uIdleNearFade*`、`starWorld`、`vNearFadeAlpha`；在 `sIdle` 有效分支内计算距离 fade；**uniform 块注释**与启用语义一致。 |
 | `frontend/src/three/shaders/galaxyIdle.frag.glsl` | 输出带 **alpha** 的 `gl_FragColor`。 |
-| `frontend/src/three/galaxyMeshes.ts` | 注册四个新 uniform；`export { IDLE_NEAR_FADE_DEFAULTS }`。 |
+| `frontend/src/three/galaxyMeshes.ts` | 注册四个新 uniform；`export { IDLE_NEAR_FADE_DEFAULTS }`；**uniform 注册处注释**与 `idleNearFade.ts` 一致。 |
 | `frontend/src/three/screenRadius.ts` | `pickClosestActiveMovieAlongRay` 增加 `cameraWorldPos`；在 fade 开启时调用 `computeIdleNearFadeAlpha` 并应用 **D5** 门槛。 |
 | `frontend/src/three/interaction.ts` | `syncCameraWorldForPick()` 在构建 pick options 前刷新 `_pickCameraWorldPos`；传入 `cameraWorldZ` / `cameraWorldPos`。 |
-| `frontend/src/three/scene.ts` | `window.__galaxyIdleNearFade` 调试对象；`tick` 内 idle 材质透明/深度写切换；`dispose` 清理 `window` 引用；`import { IDLE_NEAR_FADE_DEFAULTS }` 用于 `log()` 提示。 |
+| `frontend/src/three/scene.ts` | `window.__galaxyIdleNearFade` 调试对象；`tick` 内 idle 材质透明/深度写切换；`dispose` 清理 `window` 引用；`import { IDLE_NEAR_FADE_DEFAULTS }` 用于 `log()` 提示；**JSDoc 与 idle 材质日志**与默认启用一致。 |
 | `.cursor/plans/phase_26_device_spatial_optimization.plan.md` | 将 **p263** todo 标为 **completed**（计划内状态与实施同步）。 |
 
 ---
@@ -89,11 +90,11 @@
 
 ---
 
-## 6. 已知问题与文档漂移
+## 6. 已知产品限制（非文档漂移）
 
-1. **`idleNearFade.ts` 顶部注释**仍写「Defaults keep the path **off**」，与当前 `enabled: 1` **不一致**；以 **§2 D7 / §3.1** 为准，后续可单独 PR 修正注释与 `galaxyMeshes` 内联注释（「Default off」）。  
-2. **`scene.ts` 中 `GalaxyIdleNearFadeDebug` 接口注释**仍写「default off」；同上，以代码默认值为准。  
-3. **active 网格**无距离 fade：极近机位下 slab 内 active 仍可能全不透明，与 idle 淡化并存——符合「仅实验 idle」范围；若需全链路一致，需另开任务改 `galaxyActive` 与拾取半径模型。
+- **active 网格无距离 fade**：极近机位下 slab 内 active 仍可能全不透明，与 idle 淡化并存；属 **P26.3 范围界定**（仅 idle 着色器与 idle 材质路径）。若需全链路一致，需另开任务改 `galaxyActive.vert.glsl` 与拾取半径模型。
+
+**注释 SSOT（修订后）**：`IDLE_NEAR_FADE_DEFAULTS` 与 `uIdleNearFade*` 的语义以 [`frontend/src/three/idleNearFade.ts`](../../frontend/src/three/idleNearFade.ts) 模块注释为准；`galaxyMeshes.ts` 注册处、`scene.ts` 的 `window.__galaxyIdleNearFade`、`galaxyIdle.vert.glsl` 的 uniform 注释已与 **默认启用** 表述一致。
 
 ---
 

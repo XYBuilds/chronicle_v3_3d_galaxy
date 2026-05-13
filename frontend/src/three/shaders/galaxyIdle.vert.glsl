@@ -25,7 +25,7 @@ uniform int uSelectionAtlasWidth;
 uniform int uSelectionAtlasHeight;
 uniform float uNearCullWorldZ;
 uniform vec3 uCameraWorldPos;
-/** P26.3 — camera-distance idle near fade experiment (>0.5 = on). */
+/** P26.3 — idle near-distance alpha (`uIdleNearFadeEnabled` > 0.5 enables branch). */
 uniform float uIdleNearFadeEnabled;
 uniform float uIdleNearFadeStartDist;
 uniform float uIdleNearFadeWidth;

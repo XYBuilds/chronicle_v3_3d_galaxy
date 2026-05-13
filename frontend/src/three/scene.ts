@@ -90,7 +90,7 @@ interface GalaxyInteractionDebug {
   log: () => void
 }
 
-/** Dev console: `window.__galaxyIdleNearFade` — P26.3 camera-distance idle near fade experiment (default off). */
+/** Dev console: `window.__galaxyIdleNearFade` — P26.3 idle near-fade uniforms (mirrors `IDLE_NEAR_FADE_DEFAULTS` at boot). */
 interface GalaxyIdleNearFadeDebug {
   /** >0.5 enables shader fade + idle `transparent` / no depth-write path. */
   enabled: number
@@ -1151,7 +1151,7 @@ export function mountGalaxyScene(
       idleMat.needsUpdate = true
       console.log(
         '[Idle material]',
-        idleNearFadeOn ? 'transparent (P26.3 near-fade experiment)' : 'opaque + depthWrite (default)',
+        idleNearFadeOn ? 'transparent (P26.3 near-fade on)' : 'opaque + depthWrite (P26.3 near-fade off)',
       )
     }
     // P12.6 / P13.2 — person/genre mask vs focus spherical neighborhood vs timeline slab

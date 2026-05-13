@@ -177,7 +177,7 @@ export function mountGalaxyScene(
   const zLo = Math.min(zRange[0], zRange[1])
   /** Macro camera standoff along Z (absolute world units; not derived from `z_range` span). */
   const zCamDistance = 30
-  const zVisWindow = 1
+  const zVisWindow = 0.5
   /** Rev 4 plan: start at the earliest year in `z_range` so the first screen is the time origin. */
   const zCurrent = zLo
   useGalaxyInteractionStore.setState({ zCurrent, zVisWindow, zCamDistance })

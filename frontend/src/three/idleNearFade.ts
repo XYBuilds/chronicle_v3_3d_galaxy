@@ -8,7 +8,7 @@ export const IDLE_NEAR_FADE_DEFAULTS = {
   /** > 0.5 enables shader + idle transparent path + CPU pick gate. */
   enabled: 1,
   /** World units: below this camera–star distance, alpha ramps up from `minAlpha`. */
-  startDist: 4,
+  startDist: 4.0,
   /** World units: `smoothstep` width from `startDist` to full opacity. */
   width: 4.0,
   /** Lower clamp on idle alpha when inside the fade band. */

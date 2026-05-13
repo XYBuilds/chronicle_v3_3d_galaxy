@@ -2,18 +2,17 @@ import { Languages } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
+import { hudTopToolButtonChrome, type HudButtonStyleMode } from '@/hud/hudTopToolButtonChrome'
 import { LOCALE_IDS, LOCALE_NATIVE_LABELS, type LocaleId } from '@/lib/locales'
 import { useStrings } from '@/lib/strings'
 import { useLocaleStore } from '@/store/localeStore'
 import { cn } from '@/lib/utils'
 
-type HudButtonStyleMode = 'default' | 'outline'
-
 interface LanguageSwitchProps {
   styleMode?: HudButtonStyleMode
 }
 
-/** HUD 右上：语言下拉（Lucide `Languages`）；顺序在 Info 与 Fullscreen 之间。 */
+/** HUD 右上：语言下拉（Lucide `Languages`）；位于 Info 与 Fullscreen 之间。 */
 export function LanguageSwitch({ styleMode = 'default' }: LanguageSwitchProps) {
   const s = useStrings()
   const locale = useLocaleStore((x) => x.locale)
@@ -57,13 +56,7 @@ export function LanguageSwitch({ styleMode = 'default' }: LanguageSwitchProps) {
         aria-haspopup="menu"
         className={cn(
           'size-10',
-          styleMode === 'outline'
-            ? 'border border-black/35 bg-transparent text-black/85 shadow-none'
-            : 'border border-white/10 bg-black/45 text-white/85 shadow-md backdrop-blur-sm',
-          'motion-safe:transition-[background-color,border-color,transform] motion-safe:duration-200',
-          styleMode === 'outline'
-            ? 'hover:bg-black/5 hover:text-black focus-visible:ring-2 focus-visible:ring-black/30'
-            : 'hover:bg-black/55 hover:text-white focus-visible:ring-2 focus-visible:ring-white/30',
+          hudTopToolButtonChrome(styleMode),
           open && (styleMode === 'outline' ? 'bg-black/10 ring-2 ring-black/20' : 'bg-black/55 ring-2 ring-white/25'),
         )}
         onClick={() => setOpen((o) => !o)}

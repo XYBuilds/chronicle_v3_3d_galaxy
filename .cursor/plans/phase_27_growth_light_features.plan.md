@@ -130,7 +130,7 @@ P27.1 / P27.3 / P27.4 可独立推进；P27.5 应等英文内容稳定后做；P
 - **`screenRadius.ts`**：`pickClosestActiveMovieAlongRay` 不再按 world-Z 条带跳过候选；去掉 `cameraWorldZ` 参数；原 `nearCullExemptMovieId` 重命名为 **`idleNearFadeExemptMovieId`**（仅服务 P26.3 idle 近距淡出拾取豁免，与 shader 一致）。
 - **`interaction.ts`**：按新参数名传入，不再传 `cameraWorldZ`。
 
-若 `docs/project_docs/视觉参数总表.md`、`TMDB 电影宇宙 Tech Spec.md` 等仍写 `NEAR_CULL_WORLD_Z` / `nearCullWorldZ`，在 **P27.6** 文档同步中删改对齐。
+**SSOT 正文**：`docs/project_docs/TMDB 电影宇宙 Tech Spec.md`（**§1.4.5a**）、`TMDB 电影宇宙 Design Spec.md`、`视觉参数总表.md` 已与 **P27.4** 对齐；其余子文档若仍出现旧符号，以 Tech Spec 为准。
 
 ### B. Idle 时间轴 Z 半透明（硬边界，无 ramp / margin）
 
@@ -143,9 +143,9 @@ P27.1 / P27.3 / P27.4 可独立推进；P27.5 应等英文内容稳定后做；P
 | **mode** | `uIdleZFadeMode`，`window.__galaxyIdleZFade.mode` | `1`：`aZ > zCurrent + zVisWindow` 时 idle 乘以 `outsideAlpha`；`0`：关闭；`-1`：`aZ < zCurrent` 时乘以 `outsideAlpha`。条带内 `zCurrent ≤ aZ ≤ zCurrent + zVisWindow` 不被本规则压暗。 |
 | **outsideAlpha** | `uIdleZFadeOutsideAlpha`，`window.__galaxyIdleZFade.outsideAlpha` | 被压暗一侧的 alpha 乘子，范围 0～1（CPU/GPU clamp）。 |
 
-**默认**：`frontend/src/three/idleZFade.ts` 中 `IDLE_Z_FADE_DEFAULTS`：`mode: 0`，`outsideAlpha: 0.35`（进站不启用；控制台或改默认值可开）。
+**默认**：`frontend/src/three/idleZFade.ts` 中 `IDLE_Z_FADE_DEFAULTS`：**`mode`** / **`outsideAlpha`** 以该文件为准（当前仓库为 **`−1`** 与 **`0.5`**）；进站行为与控制台 **`window.__galaxyIdleZFade`** 一致。
 
-**涉及文件**：`idleZFade.ts`、`idleZFade.spec.ts`、`galaxyIdle.vert.glsl`、`galaxyMeshes.ts`、`scene.ts`（`__galaxyIdleZFade`、`log()`、idle 材质在「近距淡出开」或「`|mode| > 0`」时任一成立时走透明路径）、`screenRadius.ts`（与近距淡出乘积 + `floorA` 门控，豁免 focus/cover today）。
+**涉及文件**：`idleZFade.ts`、`idleZFade.spec.ts`、`galaxyIdle.vert.glsl`、`galaxyMeshes.ts`、`scene.ts`（`__galaxyIdleZFade`、`log()`、idle 材质在「近距淡出开」或 **Z-mode 非关** 时任一成立时走透明路径）、`screenRadius.ts`（与近距淡出乘积 + `floorA` 门控，豁免 focus/cover today）。
 
 **实现过程备忘（维护者）**：
 

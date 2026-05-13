@@ -6,7 +6,7 @@ import * as THREE from 'three'
  * - mode **0**: off (multiplier 1).
  * - mode **-1**: idle stars with **aZ < zCurrent** multiply alpha by `outsideAlpha`.
  *
- * Matches `galaxyIdle.vert.glsl`. Default `mode: 0` at boot. Tune via `window.__galaxyIdleZFade`.
+ * Matches `galaxyIdle.vert.glsl`. Defaults: see `IDLE_Z_FADE_DEFAULTS`; tune at runtime via `window.__galaxyIdleZFade`.
  */
 export const IDLE_Z_FADE_DEFAULTS = {
   /** 1 = future side of slab; 0 = off; -1 = past side of slab (before zCurrent). */

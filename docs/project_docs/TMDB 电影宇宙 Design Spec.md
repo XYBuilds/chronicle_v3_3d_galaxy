@@ -7,7 +7,7 @@
 * **天体体积 (Size)**：映射 vote\_count（评价人数）。  
   * 规则：使用**对数缩放 (Log Scale)**。爆款呈现为巨大恒星，长尾呈现为微小星尘。  
 * **内核亮度（OKLab Lightness / L）**：映射 vote\_average（评分，1–10 分）。  
-  * 规则：宏观星系 shader 内由 **rating→L** 曲线（Phase 10.1：`uLMin`/`uLMax`、分段压缩与非线性）得到 **L_star**，再经 **Phase 17 距离-L**（观测深度相对 **`zCamDistance`** 参考面的 **\(2/3\)** 次幂衰减，见《视觉参数总表》）得到 **L_distance**，最后由 **Hunt 效应** 令色度 **C** 随 **L** 同步衰减（**`C_new ∝ (L/uLMax)^γ`**），模拟远处低光照下「变暗且降饱和」的感知。**Phase 17** 已移除 **P10.2 式**「用片元 alpha 替代 Z/slab 语义上的远近」；**Phase 26.3** 起在 **idle** 支路另增 **相机—星体欧氏距离 → 片元 alpha** 的近距渐变（掠过感），与 **距离-L** 分工（明暗仍主要由 **L/C** 承担）。**`uIdleNearFadeEnabled` 默认开启**（`idleNearFade.ts` **`IDLE_NEAR_FADE_DEFAULTS`**）；关闭时 idle 恢复 **opaque + depthWrite**（与状态机 spec §3.1、Tech Spec §1.1 一致）。**屏幕空间 Bloom** 不是当前产品的默认外观（生产默认不挂 `UnrealBloomPass`；本地可调 `window.__bloom`，见 Tech Spec §1.2）。  
+  * 规则：宏观星系 shader 内由 **rating→L** 曲线（Phase 10.1：`uLMin`/`uLMax`、分段压缩与非线性）得到 **L_star**，再经 **Phase 17 距离-L**（观测深度相对 **`zCamDistance`** 参考面的 **\(2/3\)** 次幂衰减，见《视觉参数总表》）得到 **L_distance**，最后由 **Hunt 效应** 令色度 **C** 随 **L** 同步衰减（**`C_new ∝ (L/uLMax)^γ`**），模拟远处低光照下「变暗且降饱和」的感知。**Phase 17** 已移除 **P10.2 式**「用片元 alpha 替代 Z/slab 语义上的远近」；**Phase 26.3** 起在 **idle** 支路另增 **相机—星体欧氏距离 → 片元 alpha** 的近距渐变（掠过感），与 **距离-L** 分工（明暗仍主要由 **L/C** 承担）。**Phase 27.4** 起可对时间轴 slab **单侧外** idle 再乘 **上映年 Z 硬边界 alpha**（`idleZFade.ts`，与 **P26.3** 输出相乘；**已移除** P22.1 **world-Z 顶点近裁**，见 Tech Spec **§1.4.5a**）。**`uIdleNearFadeEnabled` 默认开启**（`idleNearFade.ts` **`IDLE_NEAR_FADE_DEFAULTS`**）；idle 恢复 **opaque + depthWrite** 须 **近距关且 Z-mode 为关**（与状态机 spec §3.1、Tech Spec §1.1 一致）。**屏幕空间 Bloom** 不是当前产品的默认外观（生产默认不挂 `UnrealBloomPass`；本地可调 `window.__bloom`，见 Tech Spec §1.2）。  
 * **星系色彩 (Color)**：映射 genres（流派）。  
   * 规则：基础颜色由第一顺位主类别 genres\[0\] 决定，以保持大星团的纯粹色彩秩序。
 
@@ -31,7 +31,8 @@
 |------|---------------------|
 | **P26.1 色彩** | Mac 上 idle/active **色相异常**已在 **顶点着色器**侧修复：**OKLab→线性 sRGB** 在 **gamma 编码前 clamp 到 \[0,1\]**，避免负通道在 Metal/ANGLE 上 **`pow` 未定义 → NaN** 污染混色；与「系统 HDR 内容管线」**无**归因关系。当前产品为 **常规 SDR WebGL** + **`THREE.SRGBColorSpace`**；**未**交付显示端 HDR。**原计划跨设备 HDR 矩阵**本阶段**不**纳入发布验收；工作留档见 **`docs/reports/Phase 26.1 P26.1 Mac 色彩修复与阶段收口 最终实施报告.md`**。 |
 | **P26.2 小屏 HUD** | 视口 / safe-area / **`--hud-*`** / **`--z-hud-*`** 体系统一写入 **§3.0**；设计基准约 **1600×900** 横屏，**1∶1～超宽** 与刘海内容框抽样验收。实施留档见 **`docs/reports/Phase 26.2 P26.2 HUD 视口与安全区 token 最终实施报告.md`**。 |
-| **P26.3 idle 近距 fade** | **仅 idle** 使用 **相机世界坐标—实例世界坐标** 距离驱动 **`vNearFadeAlpha`**；**focus / Cover 今日** 实例 **exempt**（与 P22.1 exempt 语义对齐）。**生产默认 `enabled = 1`**（`startDist = width = 4`、`minAlpha = 0.1` 世界单位，见 **`idleNearFade.ts`**）；启用时 idle 材质走 **transparent、无 depthWrite**（**排序与 overdraw 成本**相对 P17.1 opaque 路径上升，见 P26.3 报告）。**CPU active 射线拾取**在 **`inFocus` 低且近透明**时跳过求交，与视觉对齐。运行时调参：**`window.__galaxyIdleNearFade`**。留档见 **`docs/reports/Phase 26.3 P26.3 Camera-distance idle 近距渐变与拾取对齐 最终实施报告.md`**。 |
+| **P26.3 idle 近距 fade** | **仅 idle** 使用 **相机世界坐标—实例世界坐标** 距离驱动 **`vNearFadeAlpha`**；**focus / Cover 今日** 实例 **exempt**（与顶点 **`exemptIdleNearFade`** 语义一致）。**生产默认 `enabled = 1`**（`startDist = width = 4`、`minAlpha = 0.1` 世界单位，见 **`idleNearFade.ts`**）；启用时 idle 材质走 **transparent、无 depthWrite**（**排序与 overdraw 成本**相对 P17.1 opaque 路径上升，见 P26.3 报告）。**CPU active 射线拾取**在 **`inFocus` 低且近透明**时跳过求交，与视觉对齐。运行时调参：**`window.__galaxyIdleNearFade`**。留档见 **`docs/reports/Phase 26.3 P26.3 Camera-distance idle 近距渐变与拾取对齐 最终实施报告.md`**（文内关于 **P22.1 Z 近裁** 的保留表述已过时，以 Tech Spec **§1.4.5a** 为准）。 |
+| **P27.4 idle 时间轴 Z dim** | **仅 idle**。**`uIdleZFadeMode`**（**`−1` / `0` / `1`**）与 **`uIdleZFadeOutsideAlpha`**：在 **`[zCurrent, zCurrent+zVisWindow]`** 外 **单侧** 将 **`vNearFadeAlpha`** 再乘 **`outsideAlpha`**（硬边界）；与 **P26.3** **相乘**。**exempt** 同 **P26.3**。**`scene.ts`**：近距 **或** **Z-mode 非关** 时 idle **透明路径**。**Dev**：**`window.__galaxyIdleZFade`**。留档 **`docs/reports/Phase 27.4 P27.4 Galaxy idle 时间轴 Z 半透明与移除 world-Z 近裁 最终实施报告.md`**。**P22.1 world-Z 近裁已删除。** |
 
 ## **2\. 交互状态与视觉反馈 (Interaction States)**
 
@@ -43,7 +44,7 @@
   * 状态在 Zustand 中维护；**拾取**以 **active mesh** + 世界球逻辑为准（Tech Spec §1.5）。  
 * **与旧 A/B「点大小」的对应（心智模型）**：条带外可见性主要由 **idle** 支路 + **`uBgSizeMul`** 体现；条带内由 **active** 支路 + **`uActiveSizeMul`** 体现；**初值** `uSizeScale=0.3`，**`uActiveSizeMul=0.01`**（**P22.2**，约为历史 **`0.02` 的 0.5×**），`uBgSizeMul=0.002`（以《视觉参数总表》与 **`galaxyUniformDefaults.ts`** / `galaxyMeshes.ts` 为准）。
 * **Phase 19**：宏观漫游（含电影名联想未 focus、Space dolly 推近）下 **active** **默认 opaque + depthWrite**；**仅** focus 会话内保留非目标 **active** 片元 **alpha**（**P11.1**），与《星球状态机 spec》**§3.2.1** 路径 **B** 一致。
-* **Phase 26.3**：宏观 **idle** 支路默认 **相机—星体距离 → 片元 alpha** 近距渐变（掠过感）；**active** 无同款距离 fade。决策与参数见 **§1.2**、Tech Spec **§1.1** / **§1.5**、《视觉参数总表》§2。
+* **Phase 26.3**：宏观 **idle** 支路默认 **相机—星体距离 → 片元 alpha** 近距渐变（掠过感）；**active** 无同款距离 fade。**Phase 27.4**：可选 **时间轴 Z** 对 slab 外 idle 再压 **`vNearFadeAlpha`**；**P22.1 world-Z 顶点近裁已移除**。决策与参数见 **§1.2**、Tech Spec **§1.1** / **§1.4.5a** / **§1.5**、《视觉参数总表》§2。
 
 | 层             | 定义                | 视觉                      | 交互                                        |
 | :------------- | :------------------ | :------------------------ | :------------------------------------------ |

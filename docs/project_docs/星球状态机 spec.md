@@ -36,8 +36,8 @@ inFocus = smoothstep(zLo - W, zLo, aZ) × (1 - smoothstep(zHi, zHi + W, aZ))
 | 维度 | 约定 |
 |------|------|
 | **z 范围** | 全 `aZ`；视觉上条带外更小更淡（由 `inFocus` 低驱动 `sIdle`） |
-| **大小** | `sIdle` 见上；P8.4 mesh：`IcosahedronGeometry(1, 0)`；**Phase 17 起**：idle 材质 **`transparent: false`**、**`depthWrite: true`**、**`depthTest: true`**（opaque 深度路径，修复同类半透明排序遮挡） |
-| **色彩** | **Phase 17 起**：`vote_average` 经 **P10.1** 得 **`L_star`** → **距离-L** 得 **`L_distance`**（Z 轴观测距离与 `uZCamDistance` 参考面，公式见《视觉参数总表》§2；**不**再用片元 alpha 表达远近）→ **Hunt** 色度衰减 **`C_new = C_base × clamp(L_distance / uLMax, 0, 1)^γ`**（`C_base` 即 `uChroma` 标量 × hue 的 a,b 分量；`γ` = `uHuntGamma`）；再 OKLab→sRGB。**旧 P10.2** `uDistanceFalloffK` / `uDistanceFalloffMode` **不再**参与 idle 颜色或 alpha（Phase 17 废弃） |
+| **大小** | `sIdle` 见上；P8.4 mesh：`IcosahedronGeometry(1, 0)`；**Phase 17 起**：`galaxyMeshes` **构造** idle 材质 **`transparent: false`**、**`depthWrite: true`**、**`depthTest: true`**（opaque 深度路径）。**Phase 26.3**：当 **`uIdleNearFadeEnabled > 0.5`** 时 **`scene.ts` RAF** 将 idle 切换为 **`transparent: true`**、**`depthWrite: false`**（与近距 **alpha** 一致）；**`enabled` 默认 `1`**，置 `0` 或 **`window.__galaxyIdleNearFade.enabled = 0`** 恢复 opaque 路径（见 Tech Spec §1.1） |
+| **色彩** | **Phase 17 起**：`vote_average` 经 **P10.1** 得 **`L_star`** → **距离-L** 得 **`L_distance`**（Z 轴观测距离与 `uZCamDistance` 参考面，公式见《视觉参数总表》§2）→ **Hunt** 色度衰减 **`C_new = C_base × clamp(L_distance / uLMax, 0, 1)^γ`**（`C_base` 即 `uChroma` 标量 × hue 的 a,b 分量；`γ` = `uHuntGamma`）；再 OKLab→sRGB。**P10.2** 式「用片元 alpha 顶替 slab/Z 语义」已废弃；**Phase 26.3** 起 **idle** 另用 **相机—星体欧氏距离** 驱动 **片元 alpha**（`vNearFadeAlpha`），与 **距离-L** 分工（明暗主由 **L/C**）。**旧 P10.2** `uDistanceFalloffK` / `uDistanceFalloffMode` **不再**参与 idle **颜色**链（Phase 17 废弃） |
 | **可交互性** | 不作为主拾取层（P8.4：Raycaster **仅** active mesh） |
 | **进入/退出** | 随 `uZCurrent` / `aZ` 连续变化；无独立时间轴动画 |
 
@@ -48,7 +48,7 @@ inFocus = smoothstep(zLo - W, zLo, aZ) × (1 - smoothstep(zHi, zHi + W, aZ))
 | **z 范围** | `inFocus > 0` 的条带及其 ±W 过渡区（select 会话下由 mask 重写，见 **§3.6**） |
 | **大小** | `sActive` 见上；mesh：`IcosahedronGeometry(1, 1)`，**`alphaTest: 0.01`**；**`transparent` / `depthWrite`** 运行时以 **§3.2.1** 双路径为准（`galaxyMeshes.ts` 构造初值为路径 **B**） |
 | **色彩** | 与 idle 同源 hue/L/C；**Phase 17 起** active 顶点路径同样接入 **Hunt**（与 idle 共享 `uHuntGamma` / `uHuntApplyMask` 的 **active 位**）；当前 `galaxyActive.frag` 为 **vColor 直通**；Lambert + rim 为计划内增强（原 P8.5 范围，已改轨以源码为准） |
-| **可交互性** | 主拾取；可选 `inFocus > 0.5` 门控 + 第二近邻容差（由 P8.2 结论定） |
+| **可交互性** | 主拾取；可选 `inFocus > 0.5` 门控 + 第二近邻容差（由 P8.2 结论定）。**Phase 26.3**：**`uIdleNearFadeEnabled > 0.5`** 时，CPU **`pickClosestActiveMovieAlongRay`** 在 **`inFocus` 低**且 **idle 近距 fade alpha** 近底时**跳过**该实例 active 球求交（与视觉对齐；**`inFocus > 0.5`** 条带主体内仍求交），见 Tech Spec §1.5 |
 | **进入/退出** | 连续，与 idle 互补叠加；**不得**在过渡区出现「双实心球」过曝（P8.5 硬验收） |
 
 #### 3.2.1 active 材质双路径（Phase 16 → Phase 19）
@@ -221,3 +221,4 @@ Perlin focus 球在片元侧按 **`vNoise`** 与 **`uThresh[0..K−2]`**（**K**
 | 2026-05-03 | **Phase 17 P17.3**：§3.4.6 **focus 滚轮 noop** 与 **`Space + wheel` dolly** 对齐（替换草案 Alt/Ctrl）；实施报告 [`Phase 17.3 P17.3 Space dolly 局部缩放与相机契约 实施报告.md`](../reports/Phase%2017.3%20P17.3%20Space%20dolly%20局部缩放与相机契约%20实施报告.md) |
 | 2026-05-03 | **Phase 17 P17.4**：§3.3 补 GPU hover 与邻域 alpha 分工；§3.4.3 补 **`uHoveredInstanceId` / `uFocusHoveredActiveAlpha`**；§3.4.5 补与 hover uniform 关系；基线见 **`docs/benchmarks/Phase 8 基线 P8.0 性能与 P8.4 准入.md`** **`## P17 出口`** |
 | 2026-05-03 | **Phase 19 P19**：§3.2.1 路径 **A** = **`selectionPhase === 'idle'` ∧ `selectedMovieId === null`**（宏观默认 opaque）；路径 **B** = focus 特例；演进说明 **Phase 16 → 19**（收敛 **`searchMode`** 矩阵口径） |
+| 2026-05-13 | **Phase 26 P26.4**：§3.1 idle 材质 **P26.3** 运行时透明路径与色彩链分工；§3.2 **active** 可交互性补 **idle 近距 fade** 下 CPU 拾取门限（对齐 Tech Spec §1.5） |

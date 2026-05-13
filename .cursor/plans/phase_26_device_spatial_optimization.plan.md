@@ -10,7 +10,7 @@ todos:
     status: completed
   - id: p263-camera-distance-cull-experiment
     content: P26.3 Camera-distance idle near-cull 实验：从硬显示/隐藏改为距离 alpha fade；加入 debug uniforms；验证 shader 可见性、CPU picking、透明排序与性能
-    status: pending
+    status: completed
   - id: p264-ssot-doc-sync
     content: P26.4 SSOT 文档同步：同步 Design Spec、视觉参数总表、Tech Spec 与 phase 决策记录，记录跨设备色彩结论、裁切实验参数与是否进入 production 默认
     status: pending

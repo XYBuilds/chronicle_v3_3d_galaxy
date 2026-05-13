@@ -118,9 +118,9 @@ export function attachGalaxyActiveMeshInteraction(options: {
     return _raycaster.ray
   }
 
-  const pickCameraWorldZ = () => {
+  const syncCameraWorldForPick = () => {
     camera.updateMatrixWorld()
-    return camera.getWorldPosition(_pickCameraWorldPos).z
+    camera.getWorldPosition(_pickCameraWorldPos)
   }
 
   /**
@@ -136,6 +136,7 @@ export function attachGalaxyActiveMeshInteraction(options: {
   }
 
   const buildActivePickOptions = (ray: THREE.Ray, requireSlabInteraction: boolean) => {
+    syncCameraWorldForPick()
     const st = useGalaxyInteractionStore.getState()
     const cov = useCoverModeStore.getState()
     const covIdx =
@@ -149,7 +150,8 @@ export function attachGalaxyActiveMeshInteraction(options: {
       zVisWindow: st.zVisWindow,
       requireSlabInteraction,
       selectionMaskPickSet: maskPickFromState(),
-      cameraWorldZ: pickCameraWorldZ(),
+      cameraWorldZ: _pickCameraWorldPos.z,
+      cameraWorldPos: _pickCameraWorldPos,
       nearCullExemptMovieId:
         cov.coverMode && cov.todayMovieId !== null ? cov.todayMovieId : st.selectedMovieId,
       coverTodayInstanceIndex: cov.coverMode && covIdx !== null && covIdx >= 0 ? covIdx : null,

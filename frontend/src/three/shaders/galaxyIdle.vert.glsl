@@ -25,6 +25,11 @@ uniform int uSelectionAtlasWidth;
 uniform int uSelectionAtlasHeight;
 uniform float uNearCullWorldZ;
 uniform vec3 uCameraWorldPos;
+/** P26.3 — idle near-distance alpha (`uIdleNearFadeEnabled` > 0.5 enables branch). */
+uniform float uIdleNearFadeEnabled;
+uniform float uIdleNearFadeStartDist;
+uniform float uIdleNearFadeWidth;
+uniform float uIdleNearFadeMinAlpha;
 uniform float uCoverMode;
 uniform float uCoverTodayInstanceId;
 uniform float uCoverActiveSizeBoost;
@@ -36,23 +41,29 @@ uniform float uCoverActiveSizeBoost;
 attribute vec4 aHueVoteSize;
 
 varying vec3 vColor;
+varying float vNearFadeAlpha;
 
 void main() {
   float hue = aHueVoteSize.x;
   float voteNorm = aHueVoteSize.y;
   float aSize = aHueVoteSize.z;
+  float aX = instanceMatrix[3][0];
+  float aY = instanceMatrix[3][1];
   float aZ = instanceMatrix[3][2];
+  vec3 starWorld = vec3(aX, aY, aZ);
   bool exemptNearCull =
     ((uFocusedInstanceId >= 0) && (gl_InstanceID == uFocusedInstanceId))
     || (uCoverMode > 0.5 && float(gl_InstanceID) == uCoverTodayInstanceId);
   if (!exemptNearCull && abs(uCameraWorldPos.z - aZ) < uNearCullWorldZ) {
     gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
     vColor = vec3(0.0);
+    vNearFadeAlpha = 1.0;
     return;
   }
   if (uCoverMode > 0.5 && float(gl_InstanceID) != uCoverTodayInstanceId) {
     gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
     vColor = vec3(0.0);
+    vNearFadeAlpha = 1.0;
     return;
   }
   float zHi = uZCurrent + uZVisWindow;
@@ -84,8 +95,23 @@ void main() {
 
   if (sIdle < 1e-6) {
     gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
+    vColor = vec3(0.0);
+    vNearFadeAlpha = 1.0;
     return;
   }
+
+  float nearFadeAlpha = 1.0;
+  if (uIdleNearFadeEnabled > 0.5 && !exemptNearCull) {
+    float distCam = distance(uCameraWorldPos, starWorld);
+    float wFade = max(uIdleNearFadeWidth, 1e-6);
+    float tFade = smoothstep(
+      uIdleNearFadeStartDist,
+      uIdleNearFadeStartDist + wFade,
+      distCam
+    );
+    nearFadeAlpha = mix(uIdleNearFadeMinAlpha, 1.0, tFade);
+  }
+  vNearFadeAlpha = nearFadeAlpha;
 
   vec3 scaled = position * sIdle;
   vec4 mvPosition = modelViewMatrix * instanceMatrix * vec4(scaled, 1.0);

@@ -4,7 +4,7 @@ overview: Phase 27 在主体验与上线链路稳定后，补充轻量增长与�
 todos:
   - id: p271-today-share
     content: P27.1 The Movie Today share：Web Share API + copy link fallback；复用现有 today.json 与 OG image 基础
-    status: pending
+    status: completed
   - id: p271-og-image-cache-bust
     content: P27.1a OG 分享图 URL 按日 cache-bust：`vite.config.ts` 构建期 `transformIndexHtml`，为 `og:image` / `twitter:image` 追加 `?v=YYYY-MM-DD`（优先 `today.json.date`，其次 `VITE_OG_TODAY_V`，否则 UTC 当天）；减轻社交平台对固定 `og-today.png` URL 的长期预览缓存
     status: completed

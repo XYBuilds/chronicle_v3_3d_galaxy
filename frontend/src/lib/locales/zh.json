@@ -65,7 +65,18 @@
     "focusSearch": "聚焦搜索（Cmd/Ctrl+K）",
     "close": "关闭",
     "toggleLanguage": "选择界面语言",
-    "exitFocus": "查看宇宙"
+    "exitFocus": "查看宇宙",
+    "shareTheMovieToday": "分享今日之选",
+    "shareTheMovieTodayTitle": "今日之选：{{title}}",
+    "shareTheMovieTodayText": "{{title}}（{{releaseYear}}）— The Movie Cosmos 的 UTC 每日午夜推荐影片。",
+    "shareTheMovieTodayLinkCopied": "链接已复制",
+    "shareTheMovieTodayAriaCopyLink": "复制站点链接",
+    "shareTheMovieTodayAriaX": "在 X 发帖…",
+    "shareTheMovieTodayAriaFacebook": "在 Facebook 分享…",
+    "shareTheMovieTodayAriaTelegram": "在 Telegram 分享…",
+    "shareTheMovieTodayAriaReddit": "在 Reddit 提交…",
+    "shareTheMovieTodayAriaDiscord": "打开 Discord 社区…",
+    "shareTheMovieTodayAriaEmail": "通过邮件分享…"
   },
   "timeline": {
     "label": "时间轴（上映年份）",

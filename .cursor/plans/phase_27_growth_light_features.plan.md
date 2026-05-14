@@ -5,6 +5,9 @@ todos:
   - id: p271-today-share
     content: P27.1 The Movie Today share：Web Share API + copy link fallback；复用现有 today.json 与 OG image 基础
     status: pending
+  - id: p271-og-image-cache-bust
+    content: P27.1a OG 分享图 URL 按日 cache-bust：`vite.config.ts` 构建期 `transformIndexHtml`，为 `og:image` / `twitter:image` 追加 `?v=YYYY-MM-DD`（优先 `today.json.date`，其次 `VITE_OG_TODAY_V`，否则 UTC 当天）；减轻社交平台对固定 `og-today.png` URL 的长期预览缓存
+    status: completed
   - id: p272-first-time-onboarding
     content: P27.2 LocalStorage first-time onboarding：轻量引导 Start/Search/Timeline/Focus/Exit，不做复杂 tour 系统
     status: pending
@@ -33,6 +36,7 @@ isProject: false
 
 **做**：
 - The Movie Today 分享。
+- OG / Twitter 卡片图 URL 按 UTC 日 `?v=` cache-bust（P27.1a，构建期注入，已落地）。
 - LocalStorage first-time onboarding。
 - Drawer 中人名点击进入 person search。
 - Galaxy idle 时间轴 Z 半透明与 world-Z 近裁移除（P27.4，见下节）。
@@ -66,6 +70,11 @@ P27.1 / P27.3 / P27.4 可独立推进；P27.5 应等英文内容稳定后做；P
 
 ## P27.1 The Movie Today Share
 
+### 已落地（OG 预览 URL）
+
+- **P27.1a**：生产 `index.html` 中 `og:image` / `twitter:image` 在 **Vite build** 时由插件写入 `https://themoviecosmos.com/data/og-today.png?v=<YYYY-MM-DD>`，日期与 `frontend/public/data/today.json` 的 `date` 一致（nightly 在写出 `today.json` 与 `og-today.png` 之后再 `npm run build` 即对齐）。源码 `index.html` 仍为无 query 的基 URL，避免手改两处日期。
+- 可选覆盖：环境变量 `VITE_OG_TODAY_V=YYYY-MM-DD`。曾修复 `vite.config.ts` 内 **`dirname` 重复声明** 导致 `tsc -b` 失败的问题。
+
 ### 实施要点
 
 - 增加 share 入口，优先放在 The Movie Today 相关界面或 Info 中，不打扰主 HUD。
@@ -81,6 +90,7 @@ P27.1 / P27.3 / P27.4 可独立推进；P27.5 应等英文内容稳定后做；P
 - 支持 Web Share 的设备可打开系统分享面板。
 - 不支持 Web Share 的浏览器可复制链接。
 - 分享链接在社交平台使用当前 OG 信息。
+- 部署后的首页 HTML 中 `og-today.png` 带 `?v=` 且与当日 `today.json.date` 一致（构建日志含 `[og-today-image-cache-bust]`）。
 
 ## P27.2 First-time Onboarding
 
@@ -138,10 +148,10 @@ P27.1 / P27.3 / P27.4 可独立推进；P27.5 应等英文内容稳定后做；P
 
 **参数（最终形态）**：
 
-| 参数 | Uniform / 调试 | 含义 |
-|------|------------------|------|
-| **mode** | `uIdleZFadeMode`，`window.__galaxyIdleZFade.mode` | `1`：`aZ > zCurrent + zVisWindow` 时 idle 乘以 `outsideAlpha`；`0`：关闭；`-1`：`aZ < zCurrent` 时乘以 `outsideAlpha`。条带内 `zCurrent ≤ aZ ≤ zCurrent + zVisWindow` 不被本规则压暗。 |
-| **outsideAlpha** | `uIdleZFadeOutsideAlpha`，`window.__galaxyIdleZFade.outsideAlpha` | 被压暗一侧的 alpha 乘子，范围 0～1（CPU/GPU clamp）。 |
+| 参数             | Uniform / 调试                                                    | 含义                                                                                                                                                                                   |
+| ---------------- | ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **mode**         | `uIdleZFadeMode`，`window.__galaxyIdleZFade.mode`                 | `1`：`aZ > zCurrent + zVisWindow` 时 idle 乘以 `outsideAlpha`；`0`：关闭；`-1`：`aZ < zCurrent` 时乘以 `outsideAlpha`。条带内 `zCurrent ≤ aZ ≤ zCurrent + zVisWindow` 不被本规则压暗。 |
+| **outsideAlpha** | `uIdleZFadeOutsideAlpha`，`window.__galaxyIdleZFade.outsideAlpha` | 被压暗一侧的 alpha 乘子，范围 0～1（CPU/GPU clamp）。                                                                                                                                  |
 
 **默认**：`frontend/src/three/idleZFade.ts` 中 `IDLE_Z_FADE_DEFAULTS`：**`mode`** / **`outsideAlpha`** 以该文件为准（当前仓库为 **`−1`** 与 **`0.5`**）；进站行为与控制台 **`window.__galaxyIdleZFade`** 一致。
 

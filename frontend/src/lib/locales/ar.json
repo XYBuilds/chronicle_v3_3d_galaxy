@@ -65,7 +65,18 @@
     "focusSearch": "التركيز على البحث (Cmd/Ctrl+K)",
     "close": "إغلاق",
     "toggleLanguage": "اختر لغة الواجهة",
-    "exitFocus": "عرض الكون"
+    "exitFocus": "عرض الكون",
+    "shareTheMovieToday": "مشاركة فيلم اليوم",
+    "shareTheMovieTodayTitle": "The Movie Today: {{title}}",
+    "shareTheMovieTodayText": "{{title}} ({{releaseYear}}) — اختيار اليوم عند منتصف الليل UTC في The Movie Cosmos.",
+    "shareTheMovieTodayLinkCopied": "تم نسخ الرابط",
+    "shareTheMovieTodayAriaCopyLink": "نسخ رابط الموقع",
+    "shareTheMovieTodayAriaX": "نشر على X…",
+    "shareTheMovieTodayAriaFacebook": "مشاركة على Facebook…",
+    "shareTheMovieTodayAriaTelegram": "مشاركة عبر Telegram…",
+    "shareTheMovieTodayAriaReddit": "النشر على Reddit…",
+    "shareTheMovieTodayAriaDiscord": "فتح مجتمع Discord…",
+    "shareTheMovieTodayAriaEmail": "مشاركة عبر البريد…"
   },
   "timeline": {
     "label": "الجدول الزمني (سنة الإصدار)",

@@ -64,7 +64,6 @@ function cfWebAnalyticsPlugin(): Plugin {
   }
 }
 
-const dirname = path.dirname(fileURLToPath(import.meta.url))
 /** npm workspace hoists deps to repo root; Vite's optimizer still resolves `frontend/node_modules/react-dom`. */
 const workspaceModules = path.resolve(dirname, '../node_modules')
 

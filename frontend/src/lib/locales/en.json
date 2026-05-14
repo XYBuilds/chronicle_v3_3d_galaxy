@@ -65,7 +65,18 @@
     "focusSearch": "Focus search (Cmd/Ctrl+K)",
     "close": "Close",
     "toggleLanguage": "Choose interface language",
-    "exitFocus": "View cosmos"
+    "exitFocus": "View cosmos",
+    "shareTheMovieToday": "Share The Movie Today",
+    "shareTheMovieTodayTitle": "The Movie Today: {{title}}",
+    "shareTheMovieTodayText": "{{title}} ({{releaseYear}}) — Today's UTC midnight pick in The Movie Cosmos.",
+    "shareTheMovieTodayLinkCopied": "Link copied",
+    "shareTheMovieTodayAriaCopyLink": "Copy site link",
+    "shareTheMovieTodayAriaX": "Post on X…",
+    "shareTheMovieTodayAriaFacebook": "Share on Facebook…",
+    "shareTheMovieTodayAriaTelegram": "Share in Telegram…",
+    "shareTheMovieTodayAriaReddit": "Submit to Reddit…",
+    "shareTheMovieTodayAriaDiscord": "Open Discord community…",
+    "shareTheMovieTodayAriaEmail": "Share by email…"
   },
   "timeline": {
     "label": "Timeline (release year)",

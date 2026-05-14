@@ -60,7 +60,7 @@
   },
   "hud": {
     "openInfo": "Open info panel",
-    "openFeedback": "Send feedback",
+    "openFeedback": "Feedback",
     "toggleFullscreen": "Toggle fullscreen (F)",
     "focusSearch": "Focus search (Cmd/Ctrl+K)",
     "close": "Close",

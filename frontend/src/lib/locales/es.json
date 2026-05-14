@@ -60,7 +60,7 @@
   },
   "hud": {
     "openInfo": "Abrir panel de información (contenido provisional)",
-    "openFeedback": "Enviar comentarios",
+    "openFeedback": "Feedback",
     "toggleFullscreen": "Pantalla completa (F)",
     "focusSearch": "Enfocar búsqueda (Cmd/Ctrl+K)",
     "close": "Cerrar",

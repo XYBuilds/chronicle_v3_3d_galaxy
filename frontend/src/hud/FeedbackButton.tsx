@@ -48,9 +48,9 @@ export function FeedbackButton({ styleMode = 'default' }: FeedbackButtonProps) {
       data-tally-open={formId}
       data-tally-layout="modal"
       data-tally-width="640"
+      data-tally-overlay="1"
       data-tally-emoji-text="💭"
-      data-tally-emoji-animation="head-shake"
-      data-tally-auto-close="3000"
+      data-tally-emoji-animation="wave"
     >
       <MessageSquareText className="size-[1.15rem] shrink-0" aria-hidden />
       <span>{s.hud.openFeedback}</span>

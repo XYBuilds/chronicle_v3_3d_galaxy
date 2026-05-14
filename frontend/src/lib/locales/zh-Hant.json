@@ -60,7 +60,7 @@
   },
   "hud": {
     "openInfo": "開啟資訊面板（暫用內容）",
-    "openFeedback": "傳送意見回饋",
+    "openFeedback": "回饋",
     "toggleFullscreen": "切換全螢幕（F）",
     "focusSearch": "聚焦搜尋（Cmd/Ctrl+K）",
     "close": "關閉",

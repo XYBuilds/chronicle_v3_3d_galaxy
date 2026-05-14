@@ -60,7 +60,7 @@
   },
   "hud": {
     "openInfo": "打开信息面板",
-    "openFeedback": "发送反馈",
+    "openFeedback": "反馈",
     "toggleFullscreen": "切换全屏（F）",
     "focusSearch": "聚焦搜索（Cmd/Ctrl+K）",
     "close": "关闭",

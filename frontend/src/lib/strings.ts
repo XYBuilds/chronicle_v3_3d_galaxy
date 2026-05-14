@@ -44,7 +44,13 @@ export function buildStrings(localeId: LocaleId) {
     },
     error: raw.error,
     searchBar: raw.searchBar,
-    hud: raw.hud,
+    hud: {
+      ...raw.hud,
+      shareTheMovieTodayTitle: (title: string) =>
+        interpolate(raw.hud.shareTheMovieTodayTitle, { title }),
+      shareTheMovieTodayText: (title: string, releaseYear: string) =>
+        interpolate(raw.hud.shareTheMovieTodayText, { title, releaseYear }),
+    },
     timeline: {
       ...raw.timeline,
       axisDescription: (minYear: number, maxYear: number, focusYear: number) =>

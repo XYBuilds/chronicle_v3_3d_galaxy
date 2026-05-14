@@ -14,6 +14,8 @@ interface ImportMetaEnv {
   readonly VITE_TODAY_JSON_URL?: string
   /** P28.2: Tally form key for ``data-tally-open``. Empty / ``0`` / ``false`` hides the HUD feedback button. */
   readonly VITE_TALLY_FEEDBACK_FORM_ID?: string
+  /** P28.3 optional: Discord invite URL (``https://discord.gg/…``). Empty falls back to ``https://discord.com/``. */
+  readonly VITE_DISCORD_INVITE_URL?: string
 }
 
 declare module '*.glsl' {

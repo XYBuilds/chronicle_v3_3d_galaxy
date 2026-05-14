@@ -1,3 +1,4 @@
+import { HUD_GALAXY_GLASS_SURFACE_CLASSNAME } from '@/hud/hudTopToolButtonChrome'
 import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
 import { useStrings } from '@/lib/strings'
 import { cn } from '@/lib/utils'
@@ -29,16 +30,15 @@ export function FocusExitButton() {
           useGalaxyInteractionStore.setState({ selectedMovieId: null })
         }}
         className={cn(
-          'pointer-events-auto rounded-full border border-border/80 px-5 py-2 text-sm font-medium',
-          /* idle — light：白字（压在星空画布上）；dark：沿用 foreground */
+          'pointer-events-auto rounded-full px-5 py-2 text-sm font-medium',
+          /* idle — 与右上工具钮同款玻璃底；light 白字压在星空上，dark 沿用 foreground */
+          HUD_GALAXY_GLASS_SURFACE_CLASSNAME,
           'text-white dark:text-foreground',
-          'transition-[background-color,box-shadow,backdrop-filter,color] duration-200 ease-out',
-          /* idle — outline */
-          'bg-transparent shadow-none backdrop-blur-none',
-          /* active / hover / focus — 原实心 + 模糊；字色跟 popover */
-          'hover:bg-popover/90 hover:text-popover-foreground hover:shadow-lg hover:backdrop-blur-md',
-          'focus-visible:bg-popover/90 focus-visible:text-popover-foreground focus-visible:shadow-lg focus-visible:backdrop-blur-md focus-visible:ring-2 focus-visible:ring-ring/50',
-          'active:bg-popover/90 active:text-popover-foreground active:shadow-lg active:backdrop-blur-md',
+          'transition-[background-color,box-shadow,backdrop-filter,border-color,color] duration-200 ease-out',
+          /* hover / focus / active — popover 实心；描边回到 theme border */
+          'hover:border-border/80 hover:bg-popover/90 hover:text-popover-foreground hover:shadow-lg hover:backdrop-blur-md',
+          'focus-visible:border-border/80 focus-visible:bg-popover/90 focus-visible:text-popover-foreground focus-visible:shadow-lg focus-visible:backdrop-blur-md focus-visible:ring-2 focus-visible:ring-ring/50',
+          'active:border-border/80 active:bg-popover/90 active:text-popover-foreground active:shadow-lg active:backdrop-blur-md',
         )}
       >
         {t.hud.exitFocus}

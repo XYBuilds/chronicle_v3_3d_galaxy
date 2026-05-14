@@ -11,6 +11,7 @@ import {
 import { GenreBadge } from '@/components/GenreBadge'
 import { buttonVariants } from '@/components/ui/button-variants'
 import { CloseButton } from '@/components/ui/close-button'
+import { HUD_GALAXY_GLASS_SURFACE_CLASSNAME } from '@/hud/hudTopToolButtonChrome'
 import { useStrings } from '@/lib/strings'
 import { cn } from '@/lib/utils'
 import {
@@ -382,10 +383,9 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
         }}
         className={cn(
           'group rounded-xl p-2 transition-[background-color,backdrop-filter,box-shadow,border-color] duration-150',
-          'border data-[state=idle]:border-border/40 data-[state=active]:border-border/80',
-          'data-[state=idle]:bg-transparent data-[state=active]:bg-popover/95',
-          'data-[state=idle]:backdrop-blur-none data-[state=active]:backdrop-blur-md',
-          'data-[state=idle]:shadow-none data-[state=active]:shadow-lg',
+          isActive
+            ? 'border border-border/80 bg-popover/95 backdrop-blur-md shadow-lg'
+            : HUD_GALAXY_GLASS_SURFACE_CLASSNAME,
           isBlocked && 'pointer-events-none',
         )}
         title={isBlocked ? disabledReason ?? undefined : undefined}

@@ -9,8 +9,8 @@ todos:
     content: P28.2 Tally 用户反馈：表单创建与嵌入/外链策略；生产环境用 env 或配置注入表单 URL；隐私与数据流向简短说明
     status: completed
   - id: p283-discord-community
-    content: P28.3 Discord 社区入口：邀请链接放入 Info/README 与必要 locale；外链 target=_blank + rel=noopener noreferrer；说明为社区交流非官方支持工单
-    status: pending
+    content: P28.3 Discord 社区入口：已在 Tally 表单 thank you page 配置 Discord 邀请链接（提交反馈后自然触达）；原计划的 Info/README/locale 并列入口改为可选（见 §P28.3 实际收口）
+    status: completed
   - id: p284-i18n-sync
     content: P28.4 多语言同步：Donate / Tally / Discord 相关英文定稿后同步各 locale，保持 en.json 为结构 SSOT
     status: pending
@@ -31,7 +31,7 @@ isProject: false
 **做**：
 - Donate / Buy Me a Coffee（自 Phase 27 P27.4 迁入）。
 - Tally：嵌入或外链表单，用于功能建议、问题报告、主观体验等反馈。
-- Discord：展示长期有效的邀请链接（或落地页跳转），用于讨论与共建；**服务器由项目维护者自行创建与管理**。
+- Discord：展示长期有效的邀请链接（应用内、README、**或** Tally thank you page 等任一/组合策略），用于讨论与共建；**服务器由项目维护者自行创建与管理**。
 - 英文文案定稿后的多语言同步（与本 phase 新增文案相关部分）。
 - SSOT 文档与实施报告。
 
@@ -95,17 +95,22 @@ P28.1 / P28.2 / P28.3 可在前置条件满足后并行推进；P28.4 待英文�
 
 ## P28.3 Discord 社区入口
 
-### 实施要点
+### 实际收口（与初版计划差异）
 
-- 使用 Discord **服务器邀请链接**（建议设置不过期或定期在文档中轮换并更新仓库）。
-- 入口位置与 Donate / Tally 并列或同区块（如 Info「社区与反馈」），保持视觉层级低于核心观影操作。
+- **Discord 邀请链接已在 Tally 后台配置于表单的 thank you page**（用户完成反馈提交后可见），由 Tally 托管展示与跳转；**仓库内无新增 Discord 专用 UI 块**。
+- **可选补充入口**（未作为本项验收硬性要求）：Phase 27.1 已在 HUD「The Movie Today」分享下拉中支持 **`VITE_DISCORD_INVITE_URL`**（见 `ShareMovieTodayButton.tsx`）；Info/README 并列文案仍可放在 P28.4 / P28.5 视需要补齐。
+
+### 实施要点（初版计划，仍作运维参考）
+
+- 使用 Discord **服务器邀请链接**（建议设置不过期或定期在各平台后台轮换）。
+- 若在应用内增加独立区块：与 Donate / Tally 并列或同区块，保持视觉层级低于核心观影操作。
 - 文案说明：社区用于讨论与反馈跟进，**非** TMDB 官方渠道、**非** 工单 SLA。
-- 同样 `target="_blank"` + `rel="noopener noreferrer"`。
+- 应用内外链：`target="_blank"` + `rel="noopener noreferrer"`（Tally 感谢页内链由 Tally 侧配置）。
 
-### 验收
+### 验收（修订后）
 
-- 新用户可从应用内或 README 找到 Discord 入口。
-- 链接失效时有计划内更新路径（文档或 issue 说明即可）。
+- 通过 **Tally 提交流程** 可在 thank you page 到达 Discord 邀请。**已满足**。
+- 链接失效时在 **Tally / Discord 后台** 更新即可，无需发版（建议在 P28.5 Tech Spec 中记一句维护责任边界）。
 
 ## P28.4 多语言同步
 

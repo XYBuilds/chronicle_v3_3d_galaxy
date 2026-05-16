@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -85,12 +85,29 @@ function Section({ title, body }: { title: string; body: string }) {
 /** 居中 Modal：文案在 `lib/locales/*.json` */
 export function InfoModal({ open, onOpenChange }: InfoModalProps) {
   const s = useStrings()
+  const bodyScrollRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const el = bodyScrollRef.current
+    if (!el) return
+    el.scrollTop = 0
+    const raf = requestAnimationFrame(() => {
+      el.scrollTop = 0
+    })
+    return () => cancelAnimationFrame(raf)
+  }, [open])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         id="app-info-dialog"
         showCloseButton
+        initialFocus={() => {
+          const el = bodyScrollRef.current
+          if (el) el.scrollTop = 0
+          return false
+        }}
         className="min-h-0 gap-0 p-0 w-[min(calc(100vw_-_2_*_var(--hud-inset-md)),var(--hud-modal-max-w))] max-h-[min(60dvh,32rem)]"
       >
         <DialogHeader className="relative z-20 shrink-0 gap-0 border-b border-border/70 bg-popover px-6 pb-5 pt-7 text-left shadow-[0_6px_18px_-10px_color-mix(in_oklch,var(--foreground)_10%,transparent)] sm:px-7">
@@ -103,6 +120,7 @@ export function InfoModal({ open, onOpenChange }: InfoModalProps) {
         </DialogHeader>
 
         <div
+          ref={bodyScrollRef}
           className={cn(
             'flex flex-col gap-7 px-6 py-5 sm:px-7 pb-6 motion-safe:scroll-smooth',
             infoModalBodyScrollClass,

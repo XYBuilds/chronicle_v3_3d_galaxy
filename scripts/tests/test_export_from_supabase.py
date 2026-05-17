@@ -11,9 +11,9 @@ _SCRIPTS_DIR = Path(__file__).resolve().parents[1]
 if str(_SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS_DIR))
 
-from cron.export_from_supabase import (  # noqa: E402
-    _is_retriable_supabase_error,
-    _supabase_execute_with_retry,
+from cron.supabase_retry import (  # noqa: E402
+    is_retriable_supabase_error,
+    supabase_execute_with_retry,
 )
 
 
@@ -22,16 +22,16 @@ class TestRetriableSupabaseError(unittest.TestCase):
         from postgrest.exceptions import APIError
 
         err = APIError({"message": "canceling statement due to statement timeout", "code": "57014"})
-        self.assertTrue(_is_retriable_supabase_error(err))
+        self.assertTrue(is_retriable_supabase_error(err))
 
     def test_non_retriable(self) -> None:
         from postgrest.exceptions import APIError
 
         err = APIError({"message": "permission denied", "code": "42501"})
-        self.assertFalse(_is_retriable_supabase_error(err))
+        self.assertFalse(is_retriable_supabase_error(err))
 
     def test_generic_exception(self) -> None:
-        self.assertFalse(_is_retriable_supabase_error(RuntimeError("boom")))
+        self.assertFalse(is_retriable_supabase_error(RuntimeError("boom")))
 
 
 class TestSupabaseExecuteWithRetry(unittest.TestCase):
@@ -42,7 +42,7 @@ class TestSupabaseExecuteWithRetry(unittest.TestCase):
             calls["n"] += 1
             return "ok"
 
-        self.assertEqual(_supabase_execute_with_retry(ok, label="t"), "ok")
+        self.assertEqual(supabase_execute_with_retry(ok, label="t"), "ok")
         self.assertEqual(calls["n"], 1)
 
     def test_retries_then_succeeds(self) -> None:
@@ -57,8 +57,8 @@ class TestSupabaseExecuteWithRetry(unittest.TestCase):
                 raise err
             return "ok"
 
-        with mock.patch("cron.export_from_supabase.time.sleep"):
-            self.assertEqual(_supabase_execute_with_retry(flaky, label="t"), "ok")
+        with mock.patch("cron.supabase_retry.time.sleep"):
+            self.assertEqual(supabase_execute_with_retry(flaky, label="t"), "ok")
         self.assertEqual(calls["n"], 3)
 
 

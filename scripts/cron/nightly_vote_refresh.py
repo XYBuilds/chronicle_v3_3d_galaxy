@@ -23,6 +23,7 @@ _REPO_ROOT = _SCRIPTS_DIR.parent
 if str(_SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS_DIR))
 
+from cron.supabase_retry import supabase_execute_with_retry  # noqa: E402
 from export.export_galaxy_json import decimal_year_with_jitter  # noqa: E402
 from feature_engineering.dim_drift_detector import DimDriftError, assert_no_dim_drift  # noqa: E402
 from feature_engineering.genre_encoding import (  # noqa: E402
@@ -142,7 +143,13 @@ def _fetch_all_movie_rows(supabase: Any, *, page_size: int) -> list[dict[str, An
     start = 0
     while True:
         end = start + page_size - 1
-        res = supabase.table("movies").select("*").order("id", desc=False).range(start, end).execute()
+        res = supabase_execute_with_retry(
+            lambda start=start, end=end: (
+                supabase.table("movies").select("*").order("id", desc=False).range(start, end).execute()
+            ),
+            label=f"movies page [{start},{end}]",
+            log_prefix="P18.4 nightly",
+        )
         batch = res.data or []
         if not batch:
             break
@@ -159,7 +166,13 @@ def _fetch_pending_ids(supabase: Any, *, page_size: int) -> set[int]:
     start = 0
     while True:
         end = start + page_size - 1
-        res = supabase.table("movies_pending").select("id").order("id", desc=False).range(start, end).execute()
+        res = supabase_execute_with_retry(
+            lambda start=start, end=end: (
+                supabase.table("movies_pending").select("id").order("id", desc=False).range(start, end).execute()
+            ),
+            label=f"movies_pending page [{start},{end}]",
+            log_prefix="P18.4 nightly",
+        )
         batch = res.data or []
         if not batch:
             break

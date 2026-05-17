@@ -24,14 +24,13 @@ from export.export_galaxy_json import (  # noqa: E402
     build_galaxy_payload,
     write_galaxy_export_files,
 )
+from cron.supabase_retry import supabase_execute_with_retry  # noqa: E402
 from feature_engineering.genre_encoding import DEFAULT_GENRE_WEIGHT_RATIO  # noqa: E402
 
 _DEFAULT_OUT_DIR = _REPO_ROOT / "frontend" / "public" / "data"
 
 # PostgREST: avoid select("*") — omits unused columns (e.g. title_normalized, z, timestamps)
 # and shrinks JSON payload vs full row transfer.
-_MAX_FETCH_RETRIES = max(1, int(os.environ.get("GALAXY_EXPORT_FETCH_RETRIES", "5")))
-_FETCH_RETRY_BASE_SEC = max(0.25, float(os.environ.get("GALAXY_EXPORT_FETCH_RETRY_BASE_SEC", "2.0")))
 
 _MOVIES_EXPORT_COLUMNS: tuple[str, ...] = (
     "id",
@@ -84,45 +83,14 @@ def _imdb_cell(val: object) -> str | None:
 
 
 def _movies_exact_count(supabase: Any) -> int:
-    r = _supabase_execute_with_retry(
+    r = supabase_execute_with_retry(
         lambda: supabase.table("movies").select("id", count="exact").limit(1).execute(),
         label="movies count",
+        log_prefix="P18.4 export",
     )
     c = getattr(r, "count", None)
     assert c is not None and c >= 0, "movies count not returned (need count=exact from PostgREST)"
     return int(c)
-
-
-def _is_retriable_supabase_error(exc: BaseException) -> bool:
-    """True for Postgres statement timeout (57014) and similar transient PostgREST failures."""
-    try:
-        from postgrest.exceptions import APIError
-    except ImportError:
-        return False
-    if not isinstance(exc, APIError):
-        return False
-    code = str(getattr(exc, "code", "") or "")
-    msg = str(getattr(exc, "message", "") or exc.args[0] if exc.args else "").lower()
-    return code == "57014" or "statement timeout" in msg or "canceling statement" in msg
-
-
-def _supabase_execute_with_retry(call: Any, *, label: str) -> Any:
-    last: BaseException | None = None
-    for attempt in range(1, _MAX_FETCH_RETRIES + 1):
-        try:
-            return call()
-        except Exception as e:
-            if not _is_retriable_supabase_error(e) or attempt >= _MAX_FETCH_RETRIES:
-                raise
-            last = e
-            delay = _FETCH_RETRY_BASE_SEC * (2 ** (attempt - 1))
-            print(
-                f"[P18.4 export] {label} retriable ({attempt}/{_MAX_FETCH_RETRIES}): "
-                f"{e!s}; sleep {delay:.1f}s",
-                flush=True,
-            )
-            time.sleep(delay)
-    raise AssertionError(f"{label}: retry loop exhausted") from last
 
 
 def _fetch_movies_shard(
@@ -145,7 +113,7 @@ def _fetch_movies_shard(
     while pos < row_end_exclusive:
         end = min(pos + page_size - 1, row_end_exclusive - 1)
         want = end - pos + 1
-        res = _supabase_execute_with_retry(
+        res = supabase_execute_with_retry(
             lambda pos=pos, end=end: (
                 supabase.table("movies")
                 .select(select_str)
@@ -154,6 +122,7 @@ def _fetch_movies_shard(
                 .execute()
             ),
             label=f"shard {shard_idx} range [{pos},{end}]",
+            log_prefix="P18.4 export",
         )
         batch = res.data or []
         if not batch:

@@ -17,6 +17,12 @@ with the Inter sans body to mirror the cover's typographic hierarchy
 (`frontend/src/index.css` registers Butler as `--font-butler` for the Loading + Cover
 brand mark at much larger display sizes).
 
+HUD web WOFFs live in `frontend/public/fonts/butler/` (built from the TTFs above):
+
+```bash
+python scripts/setup/build_butler_webfonts.py
+```
+
 If FreeType cannot apply variations on the host system, the Inter loader falls back to
 the font's default style (regular weight) and prints a warning rather than failing.
 

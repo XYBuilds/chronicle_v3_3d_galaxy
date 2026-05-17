@@ -1,3 +1,8 @@
+# Brand webfonts (Vite public/); avoid SPA fallback serving HTML as font/* .
+/fonts/*
+  Content-Type: font/woff
+  Cache-Control: public, max-age=31536000, immutable
+
 # Cloudflare Pages: short TTL so “which R2 URLs today” updates quickly; gzip assets use R2 immutable headers.
 /data/galaxy_assets_manifest.json
   Cache-Control: public, max-age=60, must-revalidate

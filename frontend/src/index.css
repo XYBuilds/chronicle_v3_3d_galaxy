@@ -3,34 +3,11 @@
 
 @custom-variant dark (&:is(.dark *));
 
-@font-face {
-  font-family: 'Butler FREE VERSION';
-  src: url('/fonts/butler/Butler-UltraLight.woff') format('woff');
-  font-weight: 200;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Butler FREE VERSION';
-  src: url('/fonts/butler/Butler-Light.woff') format('woff');
-  font-weight: 300;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Butler FREE VERSION';
-  src: url('/fonts/butler/Butler-Regular.woff') format('woff');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
+/* Butler FREE VERSION — Medium/Bold woff in public/fonts/butler (see assets/fonts/README.md). */
 @font-face {
   font-family: 'Butler FREE VERSION';
   src: url('/fonts/butler/Butler-Medium.woff') format('woff');
-  font-weight: 500;
+  font-weight: 200 600;
   font-style: normal;
   font-display: swap;
 }
@@ -38,23 +15,7 @@
 @font-face {
   font-family: 'Butler FREE VERSION';
   src: url('/fonts/butler/Butler-Bold.woff') format('woff');
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Butler FREE VERSION';
-  src: url('/fonts/butler/Butler-ExtraBold.woff') format('woff');
-  font-weight: 800;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Butler FREE VERSION';
-  src: url('/fonts/butler/Butler-Black.woff') format('woff');
-  font-weight: 900;
+  font-weight: 700 900;
   font-style: normal;
   font-display: swap;
 }

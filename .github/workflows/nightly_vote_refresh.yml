@@ -29,6 +29,8 @@ jobs:
       OPENBLAS_NUM_THREADS: "1"
       MKL_NUM_THREADS: "1"
       GALAXY_EXPORT_SEQ: ${{ github.run_number }}
+      # Lower parallel Supabase reads to avoid statement_timeout (57014); export retries + sequential fallback in code.
+      GALAXY_EXPORT_FETCH_WORKERS: "2"
     steps:
       - uses: actions/checkout@v4
 

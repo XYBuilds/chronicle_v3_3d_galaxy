@@ -28,6 +28,13 @@ import { createFocusSizeReferenceRings } from './FocusSizeReferenceRings'
 import { computeFocusNeighborIds } from './focusNeighborMask'
 import { buildMovieIdToIndexMap, setSelectionMask, type SelectionMaskUniformBag } from './selectionMask'
 import { createTransitionDriver } from './transitionDriver'
+import {
+  applyUniverseBackgroundColor,
+  COSMOS_UNIVERSE_BG_DEFAULT,
+  formatUniverseBgHex,
+  readUniverseBgHex,
+  resetUniverseBackgroundColor,
+} from './universeBackground'
 
 interface BloomDebugControls {
   strength: number
@@ -102,6 +109,15 @@ interface GalaxyIdleNearFadeDebug {
   log: () => void
 }
 
+/** Dev console: `window.__galaxyUniverseBg` — cosmos field / WebGL clear (`--cosmos-universe-bg`). */
+interface GalaxyUniverseBgDebug {
+  /** CSS hex, e.g. `#0a1628`; also `rgb()`, `hsl()`, or numeric `0x000000`. */
+  color: string
+  set: (value: string | number) => string
+  reset: () => string
+  log: () => void
+}
+
 /** Dev console: window.__galaxyIdleZFade — P27 idle Z dim (see idleZFade.ts). */
 interface GalaxyIdleZFadeDebug {
   /** 1 = dim aZ > zCurrent+zVisWindow; 0 = off; -1 = dim aZ < zCurrent. */
@@ -135,6 +151,7 @@ declare global {
     __galaxyColor?: GalaxyColorDebug
     __galaxyIdleNearFade?: GalaxyIdleNearFadeDebug
     __galaxyIdleZFade?: GalaxyIdleZFadeDebug
+    __galaxyUniverseBg?: GalaxyUniverseBgDebug
     __galaxyInteraction?: GalaxyInteractionDebug
     __planetTerrace?: SelectionPlanetTerraceDebug
   }
@@ -196,7 +213,7 @@ export function mountGalaxyScene(
   const { cx, cy } = xyCenter(meta)
 
   const scene = new THREE.Scene()
-  scene.background = new THREE.Color(0x000000)
+  scene.background = new THREE.Color(COSMOS_UNIVERSE_BG_DEFAULT)
 
   const camera = new THREE.PerspectiveCamera(50, 1, 0.05, 1e6)
   camera.position.set(cx, cy, zCurrent - zCamDistance)
@@ -960,6 +977,30 @@ export function mountGalaxyScene(
   window.__galaxyIdleZFade = idleZFadeDebug
   idleZFadeDebug.log()
 
+  const universeBgDebug: GalaxyUniverseBgDebug = {
+    get color() {
+      return readUniverseBgHex()
+    },
+    set color(value: string | number) {
+      applyUniverseBackgroundColor(value, scene)
+    },
+    set(value: string | number) {
+      return applyUniverseBackgroundColor(value, scene)
+    },
+    reset() {
+      return resetUniverseBackgroundColor(scene)
+    },
+    log() {
+      const bg = scene.background
+      const sceneHex = bg instanceof THREE.Color ? formatUniverseBgHex(bg) : String(bg)
+      console.log(
+        `[Galaxy] universe bg css=${readUniverseBgHex()} scene=${sceneHex} | default=${COSMOS_UNIVERSE_BG_DEFAULT} | e.g. __galaxyUniverseBg.color='#0a1628'`,
+      )
+    },
+  }
+  window.__galaxyUniverseBg = universeBgDebug
+  universeBgDebug.log()
+
   const planetTerraceDebug: SelectionPlanetTerraceDebug = {
     get stepHeight() {
       return planet.material.uniforms.uStepHeight.value as number
@@ -1371,6 +1412,9 @@ export function mountGalaxyScene(
     }
     if (window.__galaxyIdleZFade === idleZFadeDebug) {
       delete window.__galaxyIdleZFade
+    }
+    if (window.__galaxyUniverseBg === universeBgDebug) {
+      delete window.__galaxyUniverseBg
     }
     if (window.__galaxyInteraction === interactionDebug) {
       delete window.__galaxyInteraction

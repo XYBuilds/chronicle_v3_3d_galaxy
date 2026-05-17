@@ -111,11 +111,14 @@ interface GalaxyIdleNearFadeDebug {
 
 /** Dev console: `window.__galaxyUniverseBg` — cosmos field / WebGL clear (`--cosmos-universe-bg`). */
 interface GalaxyUniverseBgDebug {
-  /** CSS hex, e.g. `#0a1628`; also `rgb()`, `hsl()`, or numeric `0x000000`. */
-  color: string
-  set: (value: string | number) => string
-  reset: () => string
-  log: () => void
+  /** CSS hex from `--cosmos-universe-bg` (read-only). */
+  get color(): string
+  /** CSS hex, `rgb()`, `hsl()`, or numeric `0x000000`. */
+  set color(value: string | number)
+  /** Same as assigning to `.color`; avoids a property named `set` (accessor clash). */
+  apply(value: string | number): string
+  reset(): string
+  log(): void
 }
 
 /** Dev console: window.__galaxyIdleZFade — P27 idle Z dim (see idleZFade.ts). */
@@ -978,13 +981,13 @@ export function mountGalaxyScene(
   idleZFadeDebug.log()
 
   const universeBgDebug: GalaxyUniverseBgDebug = {
-    get color() {
+    get color(): string {
       return readUniverseBgHex()
     },
     set color(value: string | number) {
       applyUniverseBackgroundColor(value, scene)
     },
-    set(value: string | number) {
+    apply(value: string | number) {
       return applyUniverseBackgroundColor(value, scene)
     },
     reset() {

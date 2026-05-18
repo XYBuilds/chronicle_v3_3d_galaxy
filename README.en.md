@@ -85,6 +85,12 @@ Use a **recent** desktop or mobile browser with hardware acceleration enabled. T
 - With the secret **unset**, **no** analytics script is injected—behavior matches “no third-party analytics.”
 - Setup and verification: [P20.5 Cloudflare Web Analytics runbook](docs/guides/P20.5%20Cloudflare%20Web%20Analytics%20%E6%8E%A5%E5%85%A5%E6%93%8D%E4%BD%9C%E6%8C%87%E5%8D%97.md). **Ad blockers / privacy extensions** may block beacons; **the galaxy and HUD keep working**.
 
+### Feedback, support, and community (Phase 28)
+
+- **Support:** the main HUD can open **Ko-fi** (or another support URL you configure at build time). Env behavior is documented in [Tech Spec §5.3](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md) and `frontend/src/lib/kofiSupport.ts`.  
+- **Feedback:** a **Tally** entry on the same toolbar opens the hosted form; submissions are processed by Tally. **Do not** paste passwords or highly sensitive secrets into the form.  
+- **Discord:** the primary path is a Discord invite placed on the **Tally thank-you page** after a submission (operators update it in Tally / Discord; usually **no redeploy**). Optionally set `VITE_DISCORD_INVITE_URL` so the “The Movie Today” share menu’s Discord row points at your invite. The community is **not** an official TMDB channel.
+
 ### Data sources
 
 Film metadata comes from the [TMDB](https://www.themoviedb.org/) ecosystem; full snapshots are often ingested via Kaggle **[TMDB Movies Daily Updates](https://www.kaggle.com/datasets/alanvourch/tmdb-movies-daily-updates)**. TMDB may also merge fields from the [IMDb non-commercial datasets](https://developer.imdb.com/non-commercial-datasets/)—if you **commercialize or redistribute** raw tables, read TMDB and IMDb terms yourself. On-screen TMDB data must follow [TMDB logos & attribution](https://www.themoviedb.org/about/logos-attribution); legal and third-party notices live in [NOTICE](NOTICE). **Where data comes from and how offline galaxy files are built** is covered under **[For developers](#for-developers)** (“Stack and data flow”) and the [Data Pipeline](docs/project_docs/TMDB%20电影宇宙%20Data%20Pipeline.md).
@@ -202,6 +208,7 @@ Resolution order: [`frontend/src/lib/galaxyAssetUrls.ts`](frontend/src/lib/galax
 - `VITE_GALAXY_DATA_GZIP_URL`
 - `VITE_GALAXY_SEARCH_INDEX_GZIP_URL`
 - `VITE_TODAY_JSON_URL`
+- **Phase 28 (optional):** `VITE_KOFI_URL`, `VITE_TALLY_FEEDBACK_FORM_ID`, `VITE_DISCORD_INVITE_URL` — see [Tech Spec §5.3](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md).
 
 If unset, the build prefers absolute URLs inside `galaxy_assets_manifest.json`, then falls back to bundled relative paths.
 

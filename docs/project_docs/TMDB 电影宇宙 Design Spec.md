@@ -81,7 +81,7 @@
 * **Phase 14 — HUD 文案 SSOT**：所有面向用户的 HUD **英文**字面量以 **`frontend/src/lib/locales/en.json`** 为**键值与模板**的单一事实源；运行时由 **`frontend/src/lib/strings.ts`** 聚合，组件**仅**通过 **`useStrings()`** hook 引用。**不在**各 React 组件内写死可复用文案（**例外**：一次性 **dev-only** **`console.log`** 等开发审计输出可保留字面量）。
 * **Phase 21.2 — HUD i18n（多语言）**：HUD 文案扩展为多语言，**仅 HUD / DOM 层**翻译；TMDB 电影标题、人名、genre 名等数据库字段保持原文。当前提供 **EN / 简体中文 / 繁體中文 / 日本語 / Español / Français / العربية**（实现以 [`frontend/src/lib/locales/`](../../frontend/src/lib/locales/) 与 [`LOCALE_IDS`](../../frontend/src/lib/locales/index.ts) 为准）。运行时由 **`useLocaleStore`** 维护当前 locale，**React 组件**用 **`useStrings()`**，**非 React 路径**（loader 错误、`scene.ts`、Three.js Sprite 等）用 **`getStrings()`**；详见 Tech Spec §1.4.8。`zh.json` / `zh-Hant.json` 等所有 locale JSON 的 **leaf key paths** 与 `en.json` 一致，由 `locales.schema.spec.ts` 单测断言。
 * **初始化与持久化**：`?lang=zh|zh-Hant|ja|es|fr|ar|en` query → `localStorage['tmc.locale']` → `navigator.language` 启发式 → 默认 `en`。**`setLocale`** 同步写 localStorage 与 `?lang=`（`history.replaceState`），并更新 `<html lang>` 与 `dir`（**`ar` → `rtl`**）。
-* **LanguageSwitch HUD**：HUD 右上常驻按钮组顺序固定为 **Info → Lang → Fullscreen**。`LanguageSwitch` 为 Lucide `Languages` 图标按钮 + 下拉菜单，菜单使用**母语标签（endonym）**展示（`简体中文` / `繁體中文` / `日本語` / `Español` / `Français` / `العربية` / `English`）。RTL 全局环境下下拉 `<ul>` 显式 `dir="ltr"`，保证勾选 ✓ 始终位于选项右侧。Three.js focus 尺寸参考圆环的 vote-tier Sprite 标签订阅 `useLocaleStore`，locale 变更时重绘。
+* **LanguageSwitch HUD**：右上工具条从左到右为 **Feedback → Support → Info →（条件）Share today → Lang → Fullscreen**（见 **§3.7**、**§3.8**）。其中 **Lang** 为 **`LanguageSwitch`**：Lucide `Languages` 图标按钮 + 下拉菜单，菜单使用**母语标签（endonym）**展示（`简体中文` / `繁體中文` / `日本語` / `Español` / `Français` / `العربية` / `English`）。RTL 全局环境下下拉 `<ul>` 显式 `dir="ltr"`，保证勾选 ✓ 始终位于选项右侧。Three.js focus 尺寸参考圆环的 vote-tier Sprite 标签订阅 `useLocaleStore`，locale 变更时重绘。
 
 ### **3.0 Phase 26.2 — HUD 空间设计体系（视口、内容框与 token SSOT）**
 
@@ -241,7 +241,7 @@ HUD 元素**不得混用参照系而不声明**。统一为下列三类之一。
 在宏观漫游状态（层级零）下常驻显示的唯一 HUD 元素，为用户提供当前 Z 轴（时间纵深）的**位置感知**：
 
 * **形态**：屏幕边缘（建议左侧或底部）的**纵向 / 横向刻度条**，标注关键年份刻度。  
-* **当前位置标记**：高亮指示器显示 **`zCurrent`**（Phase 5.1.5 / **Phase 13**）——即用户当前关注的发行年；**HUD 订阅 `bridgeZ = zCurrent`**（与 Tech Spec §1.4.1 单一路径一致）。**Focus 态 `FocusLReference`**（§2.2）：**Phase 14.7.1** 起置于**星球左侧**竖条，与 **`?timeline=horizontal`** 底部横轴、右上角 **Info / 全屏**控件分工，避免重叠或可读性明显下降（窄屏以实现对齐为准）。  
+* **当前位置标记**：高亮指示器显示 **`zCurrent`**（Phase 5.1.5 / **Phase 13**）——即用户当前关注的发行年；**HUD 订阅 `bridgeZ = zCurrent`**（与 Tech Spec §1.4.1 单一路径一致）。**Focus 态 `FocusLReference`**（§2.2）：**Phase 14.7.1** 起置于**星球左侧**竖条，与 **`?timeline=horizontal`** 底部横轴、右上角 **Feedback / Support / Info / 全屏**等工具条控件分工，避免重叠或可读性明显下降（窄屏以实现对齐为准）。  
   * **宏观 idle 态**：`zCurrent` 由滚轮 / 时间轴与相机 **`zCurrent - zCamDistance`** 同步。  
   * **focus 态及过渡**：`zCurrent` 与焦点 **`movie.z`** 对齐（可与飞入动画**渐变**）；**退出 focus 后 `zCurrent` 保留在 `movie.z`**。
 * **交互（宏观 idle · Phase 5.3.1 已落地）**：拖动轨道或点击刻度 / 键盘方向键可写入 **`zCurrent`**（与 `galaxyCameraZBridge` 一致）。**Phase 25.2 · focus 被动态**：**单片 focus**（`selectedMovieId !== null`）下 Timeline **仍渲染**读数与刻度，但**不**绑定 **`onZCurrentChange`**——用户操作不改变 **`zCurrent`**；无障碍不将轨道暴露为 **`slider`**（见 `Timeline.tsx`）。  
@@ -345,9 +345,16 @@ HUD 元素**不得混用参照系而不声明**。统一为下列三类之一。
 
 ### **3.7 全局键盘快捷键与全屏 / 语言控件（Phase 14 · HUD ；Phase 21.2 LanguageSwitch）**
 
-* **HUD 右上按钮组**（实现位置 `App.tsx`；边距与 z 以 **`index.css`** 中 **`--hud-inset-*`**、**`--z-hud-top-tools`** 等为准，见 **§3.0**）：从左到右依次为 **`InfoButton` → `LanguageSwitch` → `FullscreenButton`**。容器 `pointer-events-none`，子按钮自身 `pointer-events-auto`，避免遮挡 3D 画布的鼠标穿透。
+* **HUD 右上工具条**（实现位置 **`frontend/src/App.tsx`**；边距与 z 以 **`index.css`** 中 **`--hud-inset-*`**、**`--z-hud-top-tools`** 等为准，见 **§3.0**）：从左到右依次为 **`FeedbackButton` → `SupportButton` → `InfoButton` →（有今日片源时）`ShareMovieTodayButton` → `LanguageSwitch` → `FullscreenButton`**。容器 `pointer-events-none`，子按钮自身 `pointer-events-auto`，避免遮挡 3D 画布的鼠标穿透。**Phase 28** 的反馈 / 支持细则见 **§3.8**。
 * **全屏按钮**：**`FullscreenButton`**（`frontend/src/hud/FullscreenButton.tsx`；**`lucide-react`** Maximize / Minimize）；监听 **`fullscreenchange`** / **`webkitfullscreenchange`** 同步图标；行为与下述 **`F`** 一致（Safari 等需 **webkit** 前缀检测时以源码为准）。
 * **语言开关**：**`LanguageSwitch`**（`frontend/src/hud/LanguageSwitch.tsx`；Lucide `Languages` 图标 + 下拉）。点击展开 `role="menu"` 菜单，列出**母语标签**；当前 locale 项 `aria-checked` + 行尾 ✓；点击其它项即时切换并持久化（详见 §3 头部 SSOT 段落与 Tech Spec §1.4.8）。下拉 `<ul>` 显式 `dir="ltr"`，使阿拉伯语等 RTL 全局下勾选位置仍稳定在右侧。
+
+### **3.8 Phase 28 — 支持（Ko-fi）、反馈（Tally）与 Discord 入口层级**
+
+* **视觉层级**：**Feedback**、**Support**、**Info** 与 **Share today** 同属右上 **Ambient HUD**（`--z-hud-top-tools`），样式为低对比 **secondary** 小控件；**不得**在尺寸、动效或文案上压过核心星系操作（搜索条、时间轴、focus 读数等仍优先）。  
+* **Support（Ko-fi）**：**`SupportButton`** 为 **`<a target="_blank" rel="noopener noreferrer">`** 打开支持页；图标 + 短文案走 **`STRINGS`**（与 §3 HUD SSOT 一致）。未配置或关闭时整颗按钮不渲染（不留下占位洞）。  
+* **Feedback（Tally）**：**`FeedbackButton`** 使用 Tally **`data-tally-open`** + 懒加载 **`embed.js`**；**`data-tally-layout="modal"`** 等属性以源码为准。弹层由 Tally 托管，**不阻塞** Three.js 主 RAF；未配置表单 id 时按钮不渲染。  
+* **Discord**：应用内**无**独立 Discord 图标块；**主路径**为用户在 **Tally 提交成功后的 thank you page** 点击维护者配置的邀请（由 **Tally / Discord** 后台更新链接即可，通常无需发版）。**可选补充**：**`ShareMovieTodayButton`** 分享下拉里 **Discord** 一行在配置了生产邀请 URL 时指向该链接（否则为通用占位域名，见 Tech Spec §5.3）。
 
 以下快捷键在 **App 级** 全局监听（与 §4 搜索 combobox 内 **`↓`/`↑`/`Enter`/`Tab`** 等**不重复登记**同一键位语义；实现以源码为准）：
 

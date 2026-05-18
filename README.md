@@ -85,6 +85,12 @@
 - **未配置**上述 Secret 时**不会**注入统计脚本，与「无第三方分析」行为一致。
 - 配置与验收见 [P20.5 Cloudflare Web Analytics 接入操作指南](docs/guides/P20.5%20Cloudflare%20Web%20Analytics%20%E6%8E%A5%E5%85%A5%E6%93%8D%E4%BD%9C%E6%8C%87%E5%8D%97.md)。**广告拦截 / 隐私类扩展**可能拦截上报请求，**不影响**星系与 HUD 的正常使用。
 
+### 反馈、支持与社区（Phase 28）
+
+- **支持**：主 HUD 右上可打开 **Ko-fi**（或部署配置的同类支持链接）；环境变量与降级见 [Tech Spec §5.3](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md) 与 `frontend/src/lib/kofiSupport.ts`。  
+- **反馈**：同一工具条上的 **Tally** 入口打开托管表单；提交内容由 Tally 处理。请在表单中**不要**填写密码或高度敏感信息。  
+- **Discord**：主要入口为在 **Tally 感谢页**配置的社区邀请（维护者在 Tally / Discord 后台更新链接即可，一般无需发版）。可选：在「The Movie Today」分享菜单中通过 `VITE_DISCORD_INVITE_URL` 配置直达邀请。社区**非** TMDB 官方渠道。
+
 ### 数据来源
 
 影片信息来自 [TMDB](https://www.themoviedb.org/) 生态；全量快照常见入口是 Kaggle 上的 **[TMDB Movies Daily Updates](https://www.kaggle.com/datasets/alanvourch/tmdb-movies-daily-updates)**。TMDB 背后还可能合并 [IMDb 公开数据集](https://developer.imdb.com/non-commercial-datasets/) 里的部分字段——若你要**商用或再分发**原始表，请自己读完 TMDB / IMDb 的条款。本站展示 TMDB 数据需遵守 [TMDB 署名说明](https://www.themoviedb.org/about/logos-attribution)；仓库里的法律与第三方清单见 `[NOTICE](NOTICE)`。**数据从哪来、怎么离线打成星系文件**，见下文 **[面向开发者](#面向开发者)** 里的「技术栈与数据流」与 [Data Pipeline](docs/project_docs/TMDB%20电影宇宙%20Data%20Pipeline.md)。
@@ -204,6 +210,7 @@ npm run dev
 - `VITE_GALAXY_DATA_GZIP_URL`
 - `VITE_GALAXY_SEARCH_INDEX_GZIP_URL`
 - `VITE_TODAY_JSON_URL`
+- **Phase 28（可选）**：`VITE_KOFI_URL`、`VITE_TALLY_FEEDBACK_FORM_ID`、`VITE_DISCORD_INVITE_URL` — 语义与默认值见 [Tech Spec §5.3](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md)。
 
 未设置时优先使用构建内 `galaxy_assets_manifest.json` 中的绝对 URL，再回退到相对路径下的打包资源。
 

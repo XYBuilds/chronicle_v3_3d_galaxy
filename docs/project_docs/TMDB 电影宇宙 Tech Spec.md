@@ -548,6 +548,18 @@ Browser
 * **Vite `base`** 在仓库内默认为 `process.env.VITE_BASE_PATH ?? '/'`；GitHub Pages 子路径部署由 `deploy-pages.yml` 注入对应 `VITE_BASE_PATH`，CF Pages 根路径部署直接使用默认值。
 * **国内访问优化** 不属于 Phase 18 出口；规划为 Phase 19+。
 
+### **5.3 Phase 28 — 支持、反馈与 Discord（`import.meta.env` / Vite）**
+
+以下为 **构建期注入** 的前端环境变量（`frontend/vite-env.d.ts` 有注释 SSOT；实现见 **`frontend/src/lib/kofiSupport.ts`**、**`frontend/src/lib/tallyFeedback.ts`**、**`frontend/src/hud/ShareMovieTodayButton.tsx`**）。**不得**将私密 webhook 或密钥写入仓库；Discord / Tally 的展示文案与 thank you 页在**各平台后台**维护。
+
+| 变量 | 作用 | 未设置时的行为（以实现为准） |
+| :--- | :--- | :--- |
+| **`VITE_KOFI_URL`** | 自愿支持页（默认语义为 **Ko-fi**；可为任意合法 `http:`/`https:` 收款或说明页） | **未设置**：使用代码内建的默认 Ko-fi URL（可覆盖的维护者页）。**`''` / `'0'` / `'false'`** 或非法 URL：**隐藏** HUD **Support** 按钮。 |
+| **`VITE_TALLY_FEEDBACK_FORM_ID`** | Tally 表单的 **form id**（供 **`data-tally-open`** 使用） | **未设置**：使用代码内建的默认 form id。**`''` / `'0'` / `'false'`**：**隐藏** HUD **Feedback** 按钮。 |
+| **`VITE_DISCORD_INVITE_URL`** | 「The Movie Today」**分享下拉**里 Discord 图标的跳转目标（**可选**） | **未设置或非 `http(s)`**：分享行仍显示 Discord 图标，但链接退化为 **`https://discord.com/`**（通用入口占位，**非**项目服务器邀请）。配置了合法 HTTPS 邀请链接时，该行指向该邀请。 |
+
+**Discord 社区 — 职责边界**：**主路径**为维护者在 **Tally 表单 thank you page** 配置的 Discord 邀请（用户完成反馈后可见）；链接失效时在 **Tally / Discord 后台** 更换即可，**通常无需发版**。应用内 **`VITE_DISCORD_INVITE_URL`** 仅服务「今日分享」下拉中的可选快捷入口，与 thank you 页策略**并行可选**，不是唯一触达方式。
+
 ## **6\. 项目目录结构**
 
 ```

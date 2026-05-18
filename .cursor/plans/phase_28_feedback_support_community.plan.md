@@ -16,7 +16,7 @@ todos:
     status: completed
   - id: p285-ssot-doc-sync
     content: P28.5 SSOT 文档同步：PRD、Design Spec、Tech Spec、README 记录支持入口、反馈渠道与社区策略；
-    status: pending
+    status: completed
 isProject: false
 ---
 

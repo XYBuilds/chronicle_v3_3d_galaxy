@@ -120,6 +120,7 @@
     "sheetDescription": "{{title}}、公開日 {{releaseDate}}。",
     "sheetDescriptionEmpty": "映画が選択されていません。",
     "votesLine": "{{count}} 票",
+    "personSearchNameAriaLabel": "{{name}} の映画を検索",
     "sections": {
       "overview": "あらすじ",
       "details": "詳細",

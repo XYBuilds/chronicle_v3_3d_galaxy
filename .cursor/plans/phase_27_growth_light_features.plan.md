@@ -13,7 +13,7 @@ todos:
     status: pending
   - id: p273-clickable-people-search
     content: P27.3 Drawer 人名可点击进入 person search：复用 search index person key 归一化，覆盖 cast / crew 可点击范围
-    status: pending
+    status: completed
   - id: p274-galaxy-idle-z-nearcull
     content: P27.4 Galaxy idle 时间轴 Z 半透明（mode/outsideAlpha）与移除 P22.1 world-Z 近裁（nearCullWorldZ）；拾取与 shader 对齐；Tech Spec/视觉参数表等若仍写 NEAR_CULL 则在 P27.6 收口
     status: completed

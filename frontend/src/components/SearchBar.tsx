@@ -24,6 +24,7 @@ import {
 import { useGalaxyDataStore } from '@/store/galaxyDataStore'
 import { useSearchIndexStore } from '@/store/searchIndexStore'
 import type { Movie } from '@/types/galaxy'
+import { enterPersonSearchSession, sortIdsByRelease } from '@/utils/personSearchSession'
 import type { TextHighlightRange } from '@/utils/searchScore'
 import {
   SEARCH_QUERY_DEBOUNCE_MS,
@@ -74,14 +75,6 @@ function HighlightedLabel({ label, ranges }: { label: string; ranges: TextHighli
     parts.push(<span key={`t${k++}`}>{label.slice(cursor)}</span>)
   }
   return <span className="truncate">{parts}</span>
-}
-
-function sortIdsByRelease(ids: readonly number[], movieById: ReadonlyMap<number, Movie>): number[] {
-  return [...ids].sort((a, b) => {
-    const da = movieById.get(a)?.release_date ?? ''
-    const db = movieById.get(b)?.release_date ?? ''
-    return da.localeCompare(db)
-  })
 }
 
 export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchBarProps) {
@@ -304,32 +297,13 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
         useGalaxyInteractionStore.setState({ selectedMovieId: s.movieId, searchQuery: q })
         setDebouncedQuery(q)
       } else if (s.kind === 'person' && searchIndex) {
-        const entry = searchIndex.people[s.personKey]
-        if (entry) {
-          const ids = sortIdsByRelease(entry.movie_ids, movieById)
-          const q = entry.full
-          console.log('[Search] person select', { key: s.personKey, full: entry.full, selectionLen: ids.length })
-          useGalaxyInteractionStore.setState({
-            searchMode: 'person',
-            selectionIds: ids,
-            selectionPersonKey: s.personKey,
-            selectedMovieId: null,
-            searchQuery: q,
-          })
-          setDebouncedQuery(q)
-          const zs = ids
-            .map((id) => movieById.get(id)?.z)
-            .filter((z): z is number => typeof z === 'number' && Number.isFinite(z))
-          if (zs.length === 0) {
-            console.warn('[Search] person select: no finite z for selectionIds', {
-              key: s.personKey,
-              idsLen: ids.length,
-            })
-          } else {
-            const zMin = Math.min(...zs)
-            animateZCurrentTo?.(zMin, 700)
-          }
-        }
+        const { applied, searchQuery: q } = enterPersonSearchSession({
+          personKey: s.personKey,
+          searchIndex,
+          movieById,
+          animateZCurrentTo,
+        })
+        if (applied) setDebouncedQuery(q)
       }
       setListOpen(false)
       setHighlightIndex(-1)

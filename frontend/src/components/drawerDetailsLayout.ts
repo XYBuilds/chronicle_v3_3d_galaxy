@@ -21,6 +21,8 @@ export interface DrawerDetailField {
   id: DrawerDetailFieldId
   /** Display string (including formatted money or missing-value slash from strings). */
   value: string
+  /** P27.3 — trimmed names for index-backed person links (director / crew lists only). */
+  rawNames?: readonly string[]
 }
 
 /** Four stacked groups for the Details section (see module docstring for order). */
@@ -41,13 +43,9 @@ export function formatUsdPresent(n: number | null | undefined): string | null {
   return new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)
 }
 
-function hasNameList(arr: readonly string[] | null | undefined): boolean {
-  if (arr == null) return false
-  return arr.some((s) => s.trim().length > 0)
-}
-
-function joinNames(arr: readonly string[]): string {
-  return arr.map((s) => s.trim()).filter(Boolean).join(', ')
+function trimmedNameList(arr: readonly string[] | null | undefined): string[] {
+  if (arr == null) return []
+  return arr.map((s) => s.trim()).filter(Boolean)
 }
 
 export function buildDrawerDetailsGroups(movie: Movie): DrawerDetailsGroups {
@@ -76,22 +74,27 @@ export function buildDrawerDetailsGroups(movie: Movie): DrawerDetailsGroups {
   }
 
   const group3: DrawerDetailField[] = []
-  if (hasNameList(movie.director)) {
-    group3.push({ id: 'director', value: joinNames(movie.director) })
+  const directors = trimmedNameList(movie.director)
+  if (directors.length > 0) {
+    group3.push({ id: 'director', value: directors.join(', '), rawNames: directors })
   }
-  if (hasNameList(movie.producers)) {
-    group3.push({ id: 'producers', value: joinNames(movie.producers) })
+  const producers = trimmedNameList(movie.producers)
+  if (producers.length > 0) {
+    group3.push({ id: 'producers', value: producers.join(', '), rawNames: producers })
   }
-  if (hasNameList(movie.writers)) {
-    group3.push({ id: 'writers', value: joinNames(movie.writers) })
+  const writers = trimmedNameList(movie.writers)
+  if (writers.length > 0) {
+    group3.push({ id: 'writers', value: writers.join(', '), rawNames: writers })
   }
 
   const group4: DrawerDetailField[] = []
-  if (hasNameList(movie.director_of_photography)) {
-    group4.push({ id: 'directorOfPhotography', value: joinNames(movie.director_of_photography) })
+  const dops = trimmedNameList(movie.director_of_photography)
+  if (dops.length > 0) {
+    group4.push({ id: 'directorOfPhotography', value: dops.join(', '), rawNames: dops })
   }
-  if (hasNameList(movie.music_composer)) {
-    group4.push({ id: 'musicComposer', value: joinNames(movie.music_composer) })
+  const composers = trimmedNameList(movie.music_composer)
+  if (composers.length > 0) {
+    group4.push({ id: 'musicComposer', value: composers.join(', '), rawNames: composers })
   }
 
   assert(group1[0]?.id === 'runtime' && group1[1]?.id === 'language', '[drawerDetailsLayout] group 1 order')

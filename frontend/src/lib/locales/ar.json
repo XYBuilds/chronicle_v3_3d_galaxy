@@ -120,6 +120,7 @@
     "sheetDescription": "{{title}}، صدر في {{releaseDate}}.",
     "sheetDescriptionEmpty": "لم يُحدَّد فيلم.",
     "votesLine": "{{count}} صوتًا",
+    "personSearchNameAriaLabel": "البحث عن أفلام تضم {{name}}",
     "sections": {
       "overview": "نظرة عامة",
       "details": "التفاصيل",

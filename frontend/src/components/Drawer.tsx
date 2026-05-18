@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ExternalLink, Star } from 'lucide-react'
 
 import { GenreBadgesList } from '@/components/GenreBadgesList'
@@ -18,6 +18,8 @@ import {
 } from '@/components/ui/sheet'
 import { useGalaxyDataStore } from '@/store/galaxyDataStore'
 import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
+import { useSearchIndexStore } from '@/store/searchIndexStore'
+import { tryEnterPersonSearchFromRawName } from '@/utils/personSearchSession'
 import type { LocaleStrings } from '@/lib/strings'
 import { useStrings } from '@/lib/strings'
 import type { Movie } from '@/types/galaxy'
@@ -66,6 +68,14 @@ export interface MovieDetailDrawerHudProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   movie: Movie | null
+  /** When true and the search index is loaded, cast / crew names start a person highlight session (P27.3). */
+  hasSearchIndex?: boolean
+  animateZCurrentTo?: (z: number, durationMs?: number) => void
+}
+
+export interface MovieDetailDrawerProps {
+  hasSearchIndex?: boolean
+  animateZCurrentTo?: (z: number, durationMs?: number) => void
 }
 
 const externalHudLinkClass = cn(
@@ -105,19 +115,70 @@ function drawerDetailLabel(id: DrawerDetailFieldId, str: LocaleStrings): string 
   }
 }
 
+function DrawerPersonNamesInline({
+  names,
+  str,
+  linkActive,
+  onPick,
+}: {
+  names: readonly string[]
+  str: LocaleStrings
+  linkActive: boolean
+  onPick: (raw: string) => void
+}) {
+  if (!linkActive) {
+    return <>{names.join(', ')}</>
+  }
+  return (
+    <span className="inline leading-snug">
+      {names.map((name, i) => (
+        <span key={`${i}-${name}`} className="inline">
+          {i > 0 ? <span className="text-muted-foreground">, </span> : null}
+          <button
+            type="button"
+            className={cn(
+              'inline max-w-full border-0 bg-transparent p-0 text-left align-baseline font-inherit text-inherit',
+              'underline-offset-2 hover:underline',
+            )}
+            aria-label={str.drawer.personSearchNameAriaLabel(name)}
+            onClick={() => onPick(name)}
+          >
+            {name}
+          </button>
+        </span>
+      ))}
+    </span>
+  )
+}
+
 function DrawerDetailCells({
   fields,
   str,
+  personLinkActive,
+  onPersonNamePick,
 }: {
   fields: readonly DrawerDetailField[]
   str: LocaleStrings
+  personLinkActive: boolean
+  onPersonNamePick: (rawName: string) => void
 }) {
   return (
     <>
       {fields.map((field) => (
         <div key={field.id} className="min-w-0">
           <div className={detailFieldLabelClass}>{drawerDetailLabel(field.id, str)}</div>
-          <div className="text-muted-foreground">{field.value}</div>
+          <div className="text-muted-foreground">
+            {field.rawNames && field.rawNames.length > 0 ? (
+              <DrawerPersonNamesInline
+                names={field.rawNames}
+                str={str}
+                linkActive={personLinkActive}
+                onPick={onPersonNamePick}
+              />
+            ) : (
+              field.value
+            )}
+          </div>
         </div>
       ))}
     </>
@@ -132,10 +193,41 @@ const drawerBodyScrollClass =
  * Click HUD: shadcn Sheet with poster, scores, overview, and cast list.
  * Use {@link MovieDetailDrawer} in the app; use this in Storybook with mock props.
  */
-export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailDrawerHudProps) {
+export function MovieDetailDrawerHud({
+  open,
+  onOpenChange,
+  movie,
+  hasSearchIndex = false,
+  animateZCurrentTo,
+}: MovieDetailDrawerHudProps) {
   const str = useStrings()
   const title = movie?.title ?? str.drawer.fallbackTitle
   const genrePalette = useGalaxyDataStore((s) => s.data?.meta.genre_palette) ?? null
+  const searchIndex = useSearchIndexStore((s) => s.data)
+  const movies = useGalaxyDataStore((s) => s.data?.movies)
+
+  const movieById = useMemo(() => {
+    const m = new Map<number, Movie>()
+    if (movies) {
+      for (const mv of movies) m.set(mv.id, mv)
+    }
+    return m
+  }, [movies])
+
+  const personLinkActive = Boolean(hasSearchIndex && searchIndex)
+
+  const onPersonNamePick = useCallback(
+    (rawName: string) => {
+      if (!searchIndex) return
+      tryEnterPersonSearchFromRawName({
+        rawName,
+        searchIndex,
+        movieById,
+        animateZCurrentTo,
+      })
+    },
+    [animateZCurrentTo, movieById, searchIndex],
+  )
 
   const detailGroups = useMemo(() => (movie ? buildDrawerDetailsGroups(movie) : null), [movie])
   const showDetailsSection = movie != null
@@ -256,21 +348,41 @@ export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailD
                   {detailGroups ? (
                     <>
                       <div className={detailsGroupGridClass}>
-                        <DrawerDetailCells fields={detailGroups.group1} str={str} />
+                        <DrawerDetailCells
+                          fields={detailGroups.group1}
+                          str={str}
+                          personLinkActive={personLinkActive}
+                          onPersonNamePick={onPersonNamePick}
+                        />
                       </div>
                       {detailGroups.group2.length > 0 ? (
                         <div className={detailsGroupGridClass}>
-                          <DrawerDetailCells fields={detailGroups.group2} str={str} />
+                          <DrawerDetailCells
+                            fields={detailGroups.group2}
+                            str={str}
+                            personLinkActive={personLinkActive}
+                            onPersonNamePick={onPersonNamePick}
+                          />
                         </div>
                       ) : null}
                       {detailGroups.group3.length > 0 ? (
                         <div className={detailsGroupGridClass}>
-                          <DrawerDetailCells fields={detailGroups.group3} str={str} />
+                          <DrawerDetailCells
+                            fields={detailGroups.group3}
+                            str={str}
+                            personLinkActive={personLinkActive}
+                            onPersonNamePick={onPersonNamePick}
+                          />
                         </div>
                       ) : null}
                       {detailGroups.group4.length > 0 ? (
                         <div className={detailsGroupGridClass}>
-                          <DrawerDetailCells fields={detailGroups.group4} str={str} />
+                          <DrawerDetailCells
+                            fields={detailGroups.group4}
+                            str={str}
+                            personLinkActive={personLinkActive}
+                            onPersonNamePick={onPersonNamePick}
+                          />
                         </div>
                       ) : null}
                     </>
@@ -287,7 +399,12 @@ export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailD
                 <ul className="m-0 grid list-none grid-cols-1 gap-x-4 gap-y-2 p-0 sm:grid-cols-2 lg:grid-cols-3">
                   {movie.cast.map((name, i) => (
                     <li key={`cast-${i}-${name}`} className="min-w-0 break-words text-xs leading-snug text-foreground">
-                      {name}
+                      <DrawerPersonNamesInline
+                        names={[name]}
+                        str={str}
+                        linkActive={personLinkActive}
+                        onPick={onPersonNamePick}
+                      />
                     </li>
                   ))}
                 </ul>
@@ -301,7 +418,10 @@ export function MovieDetailDrawerHud({ open, onOpenChange, movie }: MovieDetailD
 }
 
 /** Wires raycaster selection from Zustand to {@link MovieDetailDrawerHud}. */
-export function MovieDetailDrawer() {
+export function MovieDetailDrawer({
+  hasSearchIndex = false,
+  animateZCurrentTo,
+}: MovieDetailDrawerProps) {
   const selectedMovieId = useGalaxyInteractionStore((s) => s.selectedMovieId)
   const movies = useGalaxyDataStore((s) => s.data?.movies)
   const prevSelectedRef = useRef<number | null>(null)
@@ -364,6 +484,8 @@ export function MovieDetailDrawer() {
     <MovieDetailDrawerHud
       open={open}
       movie={movie}
+      hasSearchIndex={hasSearchIndex}
+      animateZCurrentTo={animateZCurrentTo}
       onOpenChange={(next) => {
         if (!next) useGalaxyInteractionStore.setState({ selectedMovieId: null })
       }}

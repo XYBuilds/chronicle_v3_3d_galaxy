@@ -13,6 +13,9 @@ import {
 const meta: Meta<typeof MovieDetailDrawerHud> = {
   title: 'Drawer',
   component: MovieDetailDrawerHud,
+  args: {
+    hasSearchIndex: false,
+  },
   decorators: [
     (Story) => (
       <div className="relative h-[720px] w-full min-w-[900px] bg-neutral-950 text-foreground">

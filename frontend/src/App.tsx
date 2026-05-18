@@ -351,7 +351,7 @@ function App() {
           <FocusLReference />
           <Timeline orientation={timelineOrientation} />
           <FocusExitButton />
-          <MovieDetailDrawer />
+          <MovieDetailDrawer animateZCurrentTo={animateZCurrentTo} hasSearchIndex={hasSearchIndex} />
         </>
       ) : null}
     </main>

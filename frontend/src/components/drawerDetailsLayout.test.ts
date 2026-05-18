@@ -74,6 +74,9 @@ describe('buildDrawerDetailsFields', () => {
     expect(iDir).toBeGreaterThan(-1)
     expect(iProd).toBeGreaterThan(iDir)
     expect(iWriters).toBeGreaterThan(iProd)
+    const dirField = fields[iDir]
+    expect(dirField?.rawNames?.length).toBeGreaterThan(0)
+    expect(dirField?.value).toBe(dirField?.rawNames?.join(', '))
   })
 
   it('P14.6 money block appears before director when present', () => {

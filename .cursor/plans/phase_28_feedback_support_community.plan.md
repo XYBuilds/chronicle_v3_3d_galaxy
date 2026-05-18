@@ -4,7 +4,7 @@ overview: Phase 28 集中处理「支持项目、收集反馈、社区交流」�
 todos:
   - id: p281-donate-support
     content: P28.1 Donate / Ko-fi：主 HUD 工具条与 Feedback、Info 平级入口；`VITE_KOFI_URL`（或等价配置）由实施对话中维护者提供；文案克制，外链安全属性齐全
-    status: pending
+    status: completed
   - id: p282-tally-feedback
     content: P28.2 Tally 用户反馈：表单创建与嵌入/外链策略；生产环境用 env 或配置注入表单 URL；隐私与数据流向简短说明
     status: completed

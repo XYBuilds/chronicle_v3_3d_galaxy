@@ -61,6 +61,7 @@
   "hud": {
     "openInfo": "فتح لوحة المعلومات (محتوى مؤقت)",
     "openFeedback": "ملاحظات",
+    "openSupport": "ادعم",
     "toggleFullscreen": "تبديل ملء الشاشة (F)",
     "focusSearch": "التركيز على البحث (Cmd/Ctrl+K)",
     "close": "إغلاق",

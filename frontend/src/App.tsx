@@ -14,6 +14,7 @@ import { HoverRing } from '@/hud/HoverRing'
 import { FocusExitButton } from '@/hud/FocusExitButton'
 import { FocusLReference } from '@/hud/FocusLReference'
 import { FeedbackButton } from '@/hud/FeedbackButton'
+import { SupportButton } from '@/hud/SupportButton'
 import { FullscreenButton } from '@/hud/FullscreenButton'
 import { InfoButton } from '@/hud/InfoButton'
 import { LanguageSwitch } from '@/hud/LanguageSwitch'
@@ -330,6 +331,7 @@ function App() {
       <MovieTooltip />
       <div className="pointer-events-none fixed z-[var(--z-hud-top-tools)] flex items-center gap-[var(--hud-gap-stack)] right-[max(var(--hud-inset-sm),env(safe-area-inset-right,0px))] top-[max(var(--hud-inset-sm),env(safe-area-inset-top,0px))] sm:right-[max(var(--hud-inset-md),env(safe-area-inset-right,0px))] sm:top-[max(var(--hud-inset-md),env(safe-area-inset-top,0px))]">
         <FeedbackButton />
+        <SupportButton />
         <InfoButton />
         {todayMovie ? (
           <ShareMovieTodayButton

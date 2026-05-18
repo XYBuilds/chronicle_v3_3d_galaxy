@@ -61,6 +61,7 @@
   "hud": {
     "openInfo": "Ouvrir le panneau d’informations (contenu provisoire)",
     "openFeedback": "Feedback",
+    "openSupport": "Soutenir",
     "toggleFullscreen": "Basculer le plein écran (F)",
     "focusSearch": "Focus recherche (Cmd/Ctrl+K)",
     "close": "Fermer",

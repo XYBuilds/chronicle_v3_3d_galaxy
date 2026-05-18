@@ -15,7 +15,7 @@ todos:
     content: P28.4 多语言同步：Ko-fi 支持 / Tally / Discord 相关英文定稿后同步各 locale，保持 en.json 为结构 SSOT
     status: pending
   - id: p285-ssot-doc-sync
-    content: P28.5 SSOT 文档同步：PRD、Design Spec、Tech Spec、README 记录支持入口、反馈渠道与社区策略；写 Phase 28 实施报告
+    content: P28.5 SSOT 文档同步：PRD、Design Spec、Tech Spec、README 记录支持入口、反馈渠道与社区策略；
     status: pending
 isProject: false
 ---
@@ -29,6 +29,7 @@ isProject: false
 ## 范围
 
 **做**：
+
 - Donate / **Ko-fi**（自 Phase 27 P27.4 迁入；**不使用** Buy Me a Coffee / bmac）。
 - Tally：嵌入或外链表单，用于功能建议、问题报告、主观体验等反馈。
 - Discord：展示长期有效的邀请链接（应用内、README、**或** Tally thank you page 等任一/组合策略），用于讨论与共建；**服务器由项目维护者自行创建与管理**。
@@ -36,6 +37,7 @@ isProject: false
 - SSOT 文档与实施报告。
 
 **不做**：
+
 - 不实现自建后端或用户账号体系；Tally 与 Discord 均为第三方。
 - 不承担 Phase 27 的 Today 分享、first-time onboarding、人名 person search（仍在 Phase 27）。
 - 不在此 phase 解决 TMDB / 数据管线或 focus/drawer 主体验改造。
@@ -55,6 +57,8 @@ flowchart TD
     P283 --> P284
     P284 --> P285
 ```
+
+
 
 P28.1 / P28.2 / P28.3 可在前置条件满足后并行推进；P28.4 待英文相关 copy 稳定；P28.5 在行为与文案定稿后收口。
 
@@ -108,7 +112,7 @@ P28.1 / P28.2 / P28.3 可在前置条件满足后并行推进；P28.4 待英文�
 ### 实际收口（与初版计划差异）
 
 - **Discord 邀请链接已在 Tally 后台配置于表单的 thank you page**（用户完成反馈提交后可见），由 Tally 托管展示与跳转；**仓库内无新增 Discord 专用 UI 块**。
-- **可选补充入口**（未作为本项验收硬性要求）：Phase 27.1 已在 HUD「The Movie Today」分享下拉中支持 **`VITE_DISCORD_INVITE_URL`**（见 `ShareMovieTodayButton.tsx`）；Info/README 并列文案仍可放在 P28.4 / P28.5 视需要补齐。
+- **可选补充入口**（未作为本项验收硬性要求）：Phase 27.1 已在 HUD「The Movie Today」分享下拉中支持 `**VITE_DISCORD_INVITE_URL`**（见 `ShareMovieTodayButton.tsx`）；Info/README 并列文案仍可放在 P28.4 / P28.5 视需要补齐。
 
 ### 实施要点（初版计划，仍作运维参考）
 
@@ -143,9 +147,9 @@ P28.1 / P28.2 / P28.3 可在前置条件满足后并行推进；P28.4 待英文�
 - 更新 `docs/project_docs/TMDB 电影宇宙 Design Spec.md`：主 HUD 支持（Ko-fi）/ Info / 外链入口层级、反馈入口交互（打开方式、不打断 galaxy）。
 - 更新 `docs/project_docs/TMDB 电影宇宙 Tech Spec.md`：环境变量名（含 `VITE_KOFI_URL`）、Tally URL 配置策略、Discord 链接维护说明。
 - 根 `README.md` / `README.en.md` 如增加社区或反馈说明，按品牌规范（叙述用 The Movie Cosmos，UI 标识用 the movie cosmos）与既有 attribution 对齐。
-- 撰写 Phase 28 实施报告（`docs/reports/`）。
 
 ### 验收
 
 - 文档中支持、Tally 反馈、Discord 的职责边界清晰。
 - README / Info / locales / PRD / Design Spec / Tech Spec 对同一入口的描述一致。
+

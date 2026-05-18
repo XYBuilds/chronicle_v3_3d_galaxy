@@ -61,6 +61,7 @@
   "hud": {
     "openInfo": "Open info panel",
     "openFeedback": "Feedback",
+    "openSupport": "Support",
     "toggleFullscreen": "Toggle fullscreen (F)",
     "focusSearch": "Focus search (Cmd/Ctrl+K)",
     "close": "Close",

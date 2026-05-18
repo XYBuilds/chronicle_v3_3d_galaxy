@@ -61,6 +61,7 @@
   "hud": {
     "openInfo": "情報パネルを開く（プレースホルダー）",
     "openFeedback": "フィードバック",
+    "openSupport": "サポート",
     "toggleFullscreen": "全画面切替（F）",
     "focusSearch": "検索にフォーカス（Cmd/Ctrl+K）",
     "close": "閉じる",

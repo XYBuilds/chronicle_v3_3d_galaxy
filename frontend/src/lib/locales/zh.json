@@ -61,6 +61,7 @@
   "hud": {
     "openInfo": "打开信息面板",
     "openFeedback": "反馈",
+    "openSupport": "支持",
     "toggleFullscreen": "切换全屏（F）",
     "focusSearch": "聚焦搜索（Cmd/Ctrl+K）",
     "close": "关闭",

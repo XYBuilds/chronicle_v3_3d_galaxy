@@ -13,7 +13,7 @@ todos:
     status: completed
   - id: p284-i18n-sync
     content: P28.4 多语言同步：Ko-fi 支持 / Tally / Discord 相关英文定稿后同步各 locale，保持 en.json 为结构 SSOT
-    status: pending
+    status: completed
   - id: p285-ssot-doc-sync
     content: P28.5 SSOT 文档同步：PRD、Design Spec、Tech Spec、README 记录支持入口、反馈渠道与社区策略；
     status: pending

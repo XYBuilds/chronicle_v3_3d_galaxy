@@ -19,6 +19,11 @@ For loading phases, search, keyboard behavior, and other **product-level** detai
 
 **The Movie Today**: the highlighted film in the middle of the cover is a **daily pick** for “**today**” (day rolls at **UTC**). Rules and failure fallbacks are in [P23.1 The Movie Today acceptance guide](docs/guides/P23.1%20The%20Movie%20Today%20验收指南.md).
 
+### Sharing & drawer names (Phase 27)
+
+- **Sharing:** when today’s pick is available, the top-right share menu lets you copy the site’s home URL (with a short confirmation) or open composer pages on common social platforms. Social cards use `og-today.png`; production builds append a daily `?v=` query to `og:image` / `twitter:image` so crawlers pick up fresh art (see [Tech Spec §1.4.9](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md)).
+- **Drawer names:** while focused on a film and the search index is loaded, crew names that resolve in the index render as underlined buttons; clicking highlights every film that person appears in—the same **person** session as the top bar’s People mode. Without an index match, names stay plain text.
+
 ---
 
 ### Browse: roaming the galaxy

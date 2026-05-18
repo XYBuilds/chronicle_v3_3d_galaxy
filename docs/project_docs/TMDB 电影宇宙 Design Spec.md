@@ -66,6 +66,8 @@
 3. **档案抽屉滑出**：右侧 **`Sheet`** 详情；**Phase 25.6** 起为**自视口右缘整幅向左滑入**、关闭时**向右滑出**（仅 **`transform`**，不透明度过渡关闭）。**Phase 26.2** 起叠放以 **`--z-hud-drawer`**（见 **§3.0.5**）为准，高于 Hover / Tooltip，低于 **Info** 模态（**`--z-hud-modal-*`**）；缓动与时长见《视觉参数总表》与 `Drawer.tsx` / `Phase 25.6` 实施报告。  
 4. **取消选中 / 回退**：时长见上，相机与 mesh 显隐由 `scene.ts` 状态机驱动。  
 
+* **演职员人名 → person 高亮（P27.3）**：当 **`meta.has_search_index === true`** 且索引已 hydrate 时，**cast / crew** 等字段中的**可映射**人名为 **`DrawerPersonNamesInline`** 内联 **`button`**（下划线 hover、`aria-label` 走 **`en.json` → `useStrings().drawer.personSearchNameAriaLabel`**）；点击调用 **`tryEnterPersonSearchFromRawName`**，进入与顶部「人」分段搜索一致的 **person select** 视觉与 store 语义（详见 Tech Spec §4.5.3）。**不可映射**时退化为逗号分隔纯文本。  
+
 * **环境景深重构**：未被选中的背景星球（无论远近）依然保持极简单色渲染，作为视觉背景，凸显主体。在视距窗口视图下等价于 §2.1 的 A 背景层。**Phase 13**：**球形邻域**内的背景 / active 影片按 mask **可见且可拾取**（`uSelectionMode = 2`），用户可点击**邻域 active** 切换 focus；与 Phase 11.6 Perlin 球拾取优先级一致。
 
 * **Timeline 与年份**：进入 focus 时，时间轴读数与焦点片 **`movie.z`** 对齐（**渐变**或瞬时与相机飞入共用 `focusDriver.progress`，见 Tech Spec §1.4.1）；**退出 focus 后 `zCurrent` 保留在 `movie.z`**，不回退到进入前宏观漫游值。
@@ -200,7 +202,7 @@ HUD 元素**不得混用参照系而不声明**。统一为下列三类之一。
 
 #### **3.0.9 信息架构与控件秩序**
 
-* **右上常驻顺序**（已定稿）：Info → Language → Fullscreen（本节篇首与 **§3.7**）。
+* **右上常驻顺序**（已定稿）：Feedback → Support → Info →（有今日片源时）Share today → Language → Fullscreen（与本节篇首 **§3** 工具条段落及 **§3.7** 一致）。
 * **搜索**：主入口；与 Drawer 同时存在时，明确主次（例如 Drawer 打开时搜索是否保持可点，以产品决策为准并回写实现）。
 * **退出 Focus**：单一主路径（`FocusExitButton` / **`STRINGS.hud.exitFocus`**）；不依赖「点空白关闭」。
 
@@ -346,6 +348,7 @@ HUD 元素**不得混用参照系而不声明**。统一为下列三类之一。
 ### **3.7 全局键盘快捷键与全屏 / 语言控件（Phase 14 · HUD ；Phase 21.2 LanguageSwitch）**
 
 * **HUD 右上工具条**（实现位置 **`frontend/src/App.tsx`**；边距与 z 以 **`index.css`** 中 **`--hud-inset-*`**、**`--z-hud-top-tools`** 等为准，见 **§3.0**）：从左到右依次为 **`FeedbackButton` → `SupportButton` → `InfoButton` →（有今日片源时）`ShareMovieTodayButton` → `LanguageSwitch` → `FullscreenButton`**。容器 `pointer-events-none`，子按钮自身 `pointer-events-auto`，避免遮挡 3D 画布的鼠标穿透。**Phase 28** 的反馈 / 支持细则见 **§3.8**。
+* **The Movie Today 分享（P27.1）**：**`ShareMovieTodayButton`**（`frontend/src/hud/ShareMovieTodayButton.tsx`）为 **`Share2`** 触发器 + **横向图标下拉**（**`role="menu"`**、`dir="ltr"`）：**复制链接**（`navigator.clipboard.writeText` 站点根 URL；成功显示短时 **toast**，文案 **`STRINGS.hud.shareTheMovieTodayLinkCopied`**）；以及 X / Reddit / Discord / Facebook / Mail / Telegram 的 **`target="_blank"`** composer 链接。标题与正文模板走 **`useStrings()`** 的 **`shareTheMovieTodayTitle` / `shareTheMovieTodayText`**。**Discord** 行 URL 见 Tech Spec §5.3（未配置合法邀请时为通用占位域名）。当前实现**未**使用 **`navigator.share`**；若未来接入 Web Share API，须同步更新本文与 PRD。
 * **全屏按钮**：**`FullscreenButton`**（`frontend/src/hud/FullscreenButton.tsx`；**`lucide-react`** Maximize / Minimize）；监听 **`fullscreenchange`** / **`webkitfullscreenchange`** 同步图标；行为与下述 **`F`** 一致（Safari 等需 **webkit** 前缀检测时以源码为准）。
 * **语言开关**：**`LanguageSwitch`**（`frontend/src/hud/LanguageSwitch.tsx`；Lucide `Languages` 图标 + 下拉）。点击展开 `role="menu"` 菜单，列出**母语标签**；当前 locale 项 `aria-checked` + 行尾 ✓；点击其它项即时切换并持久化（详见 §3 头部 SSOT 段落与 Tech Spec §1.4.8）。下拉 `<ul>` 显式 `dir="ltr"`，使阿拉伯语等 RTL 全局下勾选位置仍稳定在右侧。
 
@@ -371,7 +374,7 @@ HUD 元素**不得混用参照系而不声明**。统一为下列三类之一。
 ### **4.0 三条核心体验（验收口径）**
 
 1. **搜电影名**（含其它语言的 **`original_title`**）：关键词联想 → 点击正确项 → 进入对应影片 **focus** 态（相机飞入 + Perlin + 抽屉）。  
-2. **搜人名**（覆盖 **`cast` / `director` / `director_of_photography` / `writers` / `producers` / `music_composer`** 聚合）：点击人物 → 进入 **`person` select 会话**：**该人物参与的全部影片星球 active，其余 idle**（**active 集合由搜索结果决定**，不再受 timeline `viswindow` 条带控制；timeline 数值仍可在后台被 wheel 写入，但**不影响视觉**）。同时按 **`release_date` 升序** 用纯白细线连接星座图（**默认开**；产品 HUD **无**开关，调试用 **`window.__galaxy.constellationEnabled`**，见《视觉参数总表》§4a）。**Phase 12.7 起**连线按职位拆为**三条独立时间链**，使「演员同框」「主创班底」「制片同盟」三种叙事并行可读；各链端点沿弦内缩到 active 球壳外（避免线段切入星球 mesh），连线视觉细则与降级行为见 §4.4a。  
+2. **搜人名**（覆盖 **`cast` / `director` / `director_of_photography` / `writers` / `producers` / `music_composer`** 聚合）：点击人物 → 进入 **`person` select 会话**：**该人物参与的全部影片星球 active，其余 idle**（**active 集合由搜索结果决定**，不再受 timeline `viswindow` 条带控制；timeline 数值仍可在后台被 wheel 写入，但**不影响视觉**）。同时按 **`release_date` 升序** 用纯白细线连接星座图（**默认开**；产品 HUD **无**开关，调试用 **`window.__galaxy.constellationEnabled`**，见《视觉参数总表》§4a）。**Phase 12.7 起**连线按职位拆为**三条独立时间链**，使「演员同框」「主创班底」「制片同盟」三种叙事并行可读；各链端点沿弦内缩到 active 球壳外（避免线段切入星球 mesh），连线视觉细则与降级行为见 §4.4a。**P27.3 补充入口**：在 **focus** 且搜索索引可用时，**详情抽屉**中可映射人名同入口（见 §2.2）。  
 3. **搜 genre**（**Phase 21.3 起为 AND 多选 badge**，详见 §4.5）：在 **Genres** 分段下显示 **19 个流派** badge 网格（颜色源自 `meta.genre_palette`）；点击 1 个 badge 即进入 **`genre` select 会话**（凡 `movie.genres` 包含该 genre 的影片 **active**，其余 **idle**）；继续点击第 2 / 3 个 badge 进入 **AND 交集**；**死路 badge**（再选交集为 0）即时灰显并不可点。**不**画星座连线；同样不再受 viswindow 控制。**该分段不再是「输入联想」**。
 
 ### **4.1 布局与控件**

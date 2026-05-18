@@ -22,7 +22,7 @@ todos:
     status: completed
   - id: p276-ssot-doc-sync
     content: P27.6 SSOT 文档同步：同步 PRD、Design Spec、Tech Spec、README 与相关指南，记录分享、onboarding、人名搜索与多语言策略（支持/反馈/社区见 Phase 28）
-    status: pending
+    status: completed
 isProject: false
 ---
 
@@ -38,7 +38,7 @@ isProject: false
 
 - The Movie Today 分享。
 - OG / Twitter 卡片图 URL 按 UTC 日 `?v=` cache-bust（P27.1a，构建期注入，已落地）。
-- LocalStorage first-time onboarding。
+- LocalStorage first-time onboarding（**计划暂缓 / 未交付**，见仓库 PRD 与 Phase 27 计划 P27.2）。
 - Drawer 中人名点击进入 person search。
 - Galaxy idle 时间轴 Z 半透明与 world-Z 近裁移除（P27.4，见下节）。
 - 英文文案定稿后的多语言同步。
@@ -167,9 +167,7 @@ P27.1 / P27.3 / P27.4 可独立推进；P27.5 应等英文内容稳定后做；P
 
 - 曾用 smoothstep + margin/ramp；用户要求简化为硬边界后已删除 ramp/margin 及相关 uniform。
 - CPU 侧若使用 `THREE.MathUtils.smoothstep`，其签名为 `**(x, min, max)`**，与 GLSL `smoothstep(edge0, edge1, x)` 顺序不同；当前硬边界实现不再依赖该差异，但若日后恢复软边需对齐。
-- `vite-plugin-glsl` 会扫描 GLSL 注释：**注释内反引号
-
-```可能触发类 JS 解析错误**；idle 顶点着色器注释已改为纯标识符写法（无反引号）。
+- `vite-plugin-glsl` 会扫描 GLSL 注释：注释内若使用 Markdown 反引号包裹标识符，可能触发类 JS 解析错误；idle 顶点着色器注释已改为纯标识符写法（无反引号）。
 - **focus 会话**（`selectionPhase` 为 **selecting / selected / deselecting**）：`**uIdleMacroFadesActive = 0`**，**P26.3** 与 **P27.4** 在 idle 顶点着色器内**不应用**；idle 材质 **opaque + depthWrite**；**CPU 拾取** 不应用 idle fade 门控（`**getIdleMacroFadesActive`**）。
 
 ### 验收（P27.4）
@@ -198,13 +196,11 @@ P27.1 / P27.3 / P27.4 可独立推进；P27.5 应等英文内容稳定后做；P
 ### 实施要点
 
 - 同步 `docs/project_docs/TMDB 电影宇宙 PRD.md` 中分享、onboarding 与回访/传播相关需求（支持/反馈/社区见 Phase 28）。
-- 同步 `docs/project_docs/TMDB 电影宇宙 Design Spec.md` 中 onboarding、share、person search 点击态的交互规范。
-- 同步 `docs/project_docs/TMDB 电影宇宙 Tech Spec.md` 中 localStorage key、Web Share fallback、person search 入口、locale 同步策略。
+- 同步 `docs/project_docs/TMDB 电影宇宙 Design Spec.md` 中 share、person search 抽屉点击态与右上工具条顺序；onboarding 未交付处与 PRD 对齐。
+- 同步 `docs/project_docs/TMDB 电影宇宙 Tech Spec.md` 中 locale `localStorage`、`?lang=`、The Movie Today 分享与 OG `?v=`、详情抽屉 person 入口、Discord 环境变量等。
 
 ### 验收
 
 - 文档能解释新增轻量功能的用户入口、状态持久化、fallback 和多语言策略。
 - README / Info / locales / PRD / Design Spec / Tech Spec 对用户可见功能的描述一致。
-
-```
 

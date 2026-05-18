@@ -215,8 +215,13 @@ HUD 文案由 **多语言 JSON + Zustand store + React hook** 自管，**不**�
   * `getStrings()` 返回当前 store 的快照，供**非 React 路径**使用（`loadGalaxyGzip` 错误页文案、`scene.ts` WebGL2 必须断言、`drawerDetailsLayout`、Three.js Sprite 文案等）。
   * **`STRINGS`**（静态 EN）保留为 Storybook 与一次性模块级 fallback；新增调用点必须使用 `useStrings` / `getStrings`。
 * **Three.js 文案订阅**：[`frontend/src/three/FocusSizeReferenceRings.ts`](../../frontend/src/three/FocusSizeReferenceRings.ts) 订阅 `useLocaleStore`，locale 变更时重绘 `CanvasTexture` Sprite（`getStrings().focusVoteReference.tierLabels`）；阿拉伯语绘制时 `ctx.direction = 'rtl'`。`dispose` 必须先取消订阅再释放几何 / 纹理。
-* **HUD 右上按钮组顺序**：`App.tsx` 中固定为 **Info → Lang → Fullscreen**（`<div className="pointer-events-none fixed right-3 top-3 ..." flex gap-2>` 容器；子按钮自身 `pointer-events-auto`）。**`LanguageSwitch`** 实现见 [`frontend/src/hud/LanguageSwitch.tsx`](../../frontend/src/hud/LanguageSwitch.tsx)：Lucide `Languages` 图标 + 下拉菜单，`role="menu"` / `menuitemradio`；菜单 `<ul>` 显式 `dir="ltr"`，使 RTL 主界面下勾选 ✓ 仍位于选项右侧。
+* **HUD 右上工具条顺序**：`App.tsx` 中从左到右为 **`FeedbackButton` → `SupportButton` → `InfoButton` →（有今日片源时）`ShareMovieTodayButton` → `LanguageSwitch` → `FullscreenButton`**（容器 `pointer-events-none`，子控件 `pointer-events-auto`）。**`LanguageSwitch`** 实现见 [`frontend/src/hud/LanguageSwitch.tsx`](../../frontend/src/hud/LanguageSwitch.tsx)：Lucide `Languages` 图标 + 下拉菜单，`role="menu"` / `menuitemradio`；菜单 `<ul>` 显式 `dir="ltr"`，使 RTL 主界面下勾选 ✓ 仍位于选项右侧。
 * **控制台日志**：项目惯例保留**英文前缀**（如 `'[Search] genre AND filter'`），**不**进 `STRINGS`，避免 hook 在非 React 路径上的误用。
+
+#### **1.4.9 The Movie Today 分享与生产 OG 图 URL（P27.1 / P27.1a）**
+
+* **HUD**：**`ShareMovieTodayButton`**（[`frontend/src/hud/ShareMovieTodayButton.tsx`](../../frontend/src/hud/ShareMovieTodayButton.tsx)）在具备今日片元数据时由 `App.tsx` 挂载；**复制链接**为 `navigator.clipboard.writeText` 写入站点根 URL（失败仅 `console.error`）；成功展示短时 toast（文案键 **`hud.shareTheMovieTodayLinkCopied`**，经 **`useStrings()`**）。下拉另含 X / Reddit / Discord / Facebook / Mail / Telegram 的 **`target="_blank"`** composer URL；标题与描述经 **`useStrings()`** 模板 **`shareTheMovieTodayTitle` / `shareTheMovieTodayText`**。**Discord** 行目标 URL 与 **`VITE_DISCORD_INVITE_URL`** 见 **§5.3**。当前实现**未**调用 **`navigator.share`**。
+* **OG / Twitter 卡片图 cache-bust**：**`frontend/vite.config.ts`** 内 **`ogTodayImageCacheBustPlugin`** 在 **`transformIndexHtml`** 中将 **`https://themoviecosmos.com/data/og-today.png`** 替换为带 query 的 **`...?v=YYYY-MM-DD`**。日期 **`v`** 的解析顺序：**`process.env.VITE_OG_TODAY_V`**（须匹配 `^\d{4}-\d{2}-\d{2}$`）→ 读取 **`frontend/public/data/today.json`** 的 **`date`** → 否则 **UTC 当天**（`toISOString().slice(0,10)`）。源码 **`frontend/index.html`** 仍为无 query 的基 URL，避免手改两处日期；构建日志含 **`[og-today-image-cache-bust]`**。
 
 ### **1.5 交互拾取（Phase 8.4：active `InstancedMesh` + 世界球；Phase 12：search 多选与 mask 对齐）**
 
@@ -486,6 +491,7 @@ Python 管线的最终产物以 **`galaxy_data.json`**（及 gzip）为主；**P
 - **`viswindow` 关系**：`person` / `genre` 进入 select 会话后，**active 集合由 `selectionIds` 决定**，**与 `uZCurrent` / `uZVisWindow` 解耦**（shader 内 `uSelectionMode == 1` 时 `inFocus` 由 mask 重写）；timeline UI 可继续接收 wheel / drag 写 `zCurrent`，但视觉无反馈。
 - **focus 嵌套**：select 会话中点击 active 影片进入 focus，**两者并存**；ESC 出栈语义见 Design Spec §4.6。
 - **`selectionPersonKey`（store 一级字段）**：人名联想点击时写入命中条目的 **normalized key**（即 `searchIndex.people` 的键），供 `scene.ts` 在 RAF 中读取 **`searchIndex.people[selectionPersonKey].movie_roles`** 作为人名星座连线的分组依据；`searchMode !== 'person'` 或 `clearSearch()` 时清回 `null`。
+- **P27.3 · 详情抽屉人名入口**：**`Drawer.tsx`** 在 **`meta.has_search_index === true`** 且 **`useSearchIndexStore`** 已 hydrate 时，对 cast / crew 等 **`rawNames`** 调用 **`lookupPersonKeyForRawName`**（[`frontend/src/utils/personSearchSession.ts`](../../frontend/src/utils/personSearchSession.ts)，与 §4.5.1 **`people`** key 同 **`normalizeForSearch`** 规则）；命中则渲染可点击 **`button`**，点击 **`tryEnterPersonSearchFromRawName`** → **`enterPersonSearchSession`**，写入与「人名联想」相同的 **`searchMode: 'person'`** / **`selectionIds`** / **`selectionPersonKey`** / **`searchQuery`**，并可选 **`animateZCurrentTo`** 至所选集合最早 **`z`**。**未命中**仅 `console.warn`，UI 保持纯文本。
 
 ## **5\. 部署架构**
 
@@ -534,7 +540,7 @@ galaxy_data.json.gz  +  galaxy_search_index.json.gz
 Browser
     ├── fetch app                    →  Cloudflare Pages（生产主域 **themoviecosmos.com**；默认 **`*.pages.dev`** 可 **301** 到主域，见 `frontend/functions/_middleware.js`）
     ├── fetch galaxy_*.json.gz     →  Cloudflare R2（manifest 解析；可被 VITE_* 与 ?dataset= 覆盖）
-    └── fetch today.json / og-today.png  →  R2 或同源 `public/data/`（manifest **`today_url`**；**OG** 见 `frontend/index.html` 与 `public/_headers` 短 TTL）
+    └── fetch today.json / og-today.png  →  R2 或同源 `public/data/`（manifest **`today_url`**；**OG** 见 `frontend/index.html` + **Vite `transformIndexHtml`** 为 `og:image`/`twitter:image` 追加 **`?v=YYYY-MM-DD`**，与 **§1.4.9** 一致；`public/_headers` 短 TTL 为辅）
 ```
 
 * **P23.6 自定义域 + R2 CORS**：Bucket **AllowedOrigins** 须包含 **`https://themoviecosmos.com`**、**`https://www.themoviecosmos.com`**（若绑定）及备线 **`https://the-movie-cosmos.pages.dev`**；运维清单见 **`docs/guides/P23.6 自定义域名上线后运维清单.md`**。

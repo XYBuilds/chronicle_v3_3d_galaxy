@@ -19,7 +19,7 @@ todos:
     status: completed
   - id: p275-i18n-sync
     content: P27.5 英文 Info / README 定稿后同步多语言 HUD 文案，保持 en.json 为翻译 SSOT
-    status: cancelled
+    status: completed
   - id: p276-ssot-doc-sync
     content: P27.6 SSOT 文档同步：同步 PRD、Design Spec、Tech Spec、README 与相关指南，记录分享、onboarding、人名搜索与多语言策略（支持/反馈/社区见 Phase 28）
     status: pending

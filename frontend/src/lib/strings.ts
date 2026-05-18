@@ -70,6 +70,8 @@ export function buildStrings(localeId: LocaleId) {
         interpolate(raw.drawer.sheetDescription, { title, releaseDate }),
       sheetDescriptionEmpty: raw.drawer.sheetDescriptionEmpty,
       votesLine: (count: string) => interpolate(raw.drawer.votesLine, { count }),
+      personSearchNameAriaLabel: (name: string) =>
+        interpolate(raw.drawer.personSearchNameAriaLabel, { name }),
       sections: raw.drawer.sections,
       details: {
         missingValue: raw.drawer.details.missingValue,

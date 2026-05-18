@@ -120,6 +120,7 @@
     "sheetDescription": "{{title}}, estrenada el {{releaseDate}}.",
     "sheetDescriptionEmpty": "Ninguna película seleccionada.",
     "votesLine": "{{count}} votos",
+    "personSearchNameAriaLabel": "Buscar películas con {{name}}",
     "sections": {
       "overview": "Resumen",
       "details": "Detalles",

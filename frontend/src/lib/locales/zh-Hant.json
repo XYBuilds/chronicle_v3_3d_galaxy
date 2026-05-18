@@ -120,6 +120,7 @@
     "sheetDescription": "{{title}}，上映日期 {{releaseDate}}。",
     "sheetDescriptionEmpty": "未選擇影片。",
     "votesLine": "{{count}} 票",
+    "personSearchNameAriaLabel": "搜尋與 {{name}} 相關的影片",
     "sections": {
       "overview": "簡介",
       "details": "詳情",

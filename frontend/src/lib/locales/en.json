@@ -120,6 +120,7 @@
     "sheetDescription": "{{title}}, released {{releaseDate}}.",
     "sheetDescriptionEmpty": "No film selected.",
     "votesLine": "{{count}} votes",
+    "personSearchNameAriaLabel": "Search films featuring {{name}}",
     "sections": {
       "overview": "Overview",
       "details": "Details",

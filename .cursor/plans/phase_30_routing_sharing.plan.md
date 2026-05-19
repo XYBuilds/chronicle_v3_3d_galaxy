@@ -10,7 +10,7 @@ todos:
     status: completed
   - id: p30-route-controller
     content: 30.3 在 App 层实现 route controller，完成 URL → data-ready Zustand 状态同步与 `popstate` 处理
-    status: pending
+    status: completed
   - id: p30-action-url-sync
     content: 30.4 收敛用户动作到 URL 同步，覆盖点击、搜索、Drawer close、ESC、Focus exit、Today cover 进入 focus
     status: pending

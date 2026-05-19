@@ -27,6 +27,7 @@ import { useGalaxyDataStore } from '@/store/galaxyDataStore'
 import { useSearchIndexStore } from '@/store/searchIndexStore'
 import { useStrings } from '@/lib/strings'
 import { cn } from '@/lib/utils'
+import { useRouteController, type InitialRouteBootKind } from '@/lib/useRouteController'
 import { mountGalaxyScene } from '@/three/scene'
 
 import './App.css'
@@ -51,12 +52,28 @@ function App() {
   const indexHydrationTerminal =
     indexStatus === 'ready' || indexStatus === 'skipped' || indexStatus === 'error'
 
+  const routeReady = status === 'ready' && data !== null && indexHydrationTerminal
+
   useEffect(() => {
     void fetchGalaxyData()
   }, [fetchGalaxyData])
 
   /** P23.3 — today.json resolved + cover store seeded; scene may mount. */
   const [coverBootReady, setCoverBootReady] = useState(false)
+  /** Phase 30.3 — `movie` deep link skips standard cover boot (R4). */
+  const [initialRouteBootKind, setInitialRouteBootKind] = useState<InitialRouteBootKind>('pending')
+
+  const onInitialRouteBootKind = useCallback((kind: Exclude<InitialRouteBootKind, 'pending'>) => {
+    setInitialRouteBootKind(kind)
+  }, [])
+
+  useRouteController({
+    routeReady,
+    movies: data?.movies ?? null,
+    coverBootReady,
+    setCoverBootReady,
+    onInitialRouteBootKind,
+  })
 
   const coverMode = useCoverModeStore((s) => s.coverMode)
   const todayMovieId = useCoverModeStore((s) => s.todayMovieId)
@@ -99,10 +116,10 @@ function App() {
 
   /** P23.3 — resolve The Movie Today before mounting WebGL (deterministic id + fallback). */
   useEffect(() => {
-    if (status !== 'ready' || !data || !indexHydrationTerminal || coverBootReady) return
+    if (!routeReady || coverBootReady || initialRouteBootKind !== 'cover') return
     let cancelled = false
     void (async () => {
-      const { movieId } = await resolveTodayMovieId(data.movies)
+      const { movieId } = await resolveTodayMovieId(data!.movies)
       if (cancelled) return
       console.log('[App] today resolved → cover + scene gate', { movieId })
       useCoverModeStore.getState().setCover(movieId)
@@ -111,7 +128,7 @@ function App() {
     return () => {
       cancelled = true
     }
-  }, [status, data, indexHydrationTerminal, coverBootReady])
+  }, [routeReady, data, coverBootReady, initialRouteBootKind])
 
   useEffect(() => {
     if (phase !== 'started' || !data || !indexHydrationTerminal) return

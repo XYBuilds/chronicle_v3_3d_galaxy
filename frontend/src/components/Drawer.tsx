@@ -304,6 +304,12 @@ export function MovieDetailDrawerHud({
                   </a>
                 ) : null}
               </div>
+
+              <DrawerMovieShare
+                movieId={movie.id}
+                movieTitle={movie.title}
+                releaseYear={movieReleaseYearFromIso(movie.release_date)}
+              />
             </>
           ) : null}
         </SheetHeader>
@@ -412,12 +418,6 @@ export function MovieDetailDrawerHud({
                 </ul>
               </section>
             ) : null}
-
-            <DrawerMovieShare
-              movieId={movie.id}
-              movieTitle={movie.title}
-              releaseYear={movieReleaseYearFromIso(movie.release_date)}
-            />
           </div>
         ) : null}
       </SheetContent>

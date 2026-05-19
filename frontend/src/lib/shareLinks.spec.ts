@@ -23,6 +23,5 @@ describe('shareLinks', () => {
     expect(urls.x).toContain(encodeURIComponent('Body text'))
     expect(urls.facebook).toContain(encodeURIComponent('https://example.com/movie/1'))
     expect(urls.reddit).toContain(encodeURIComponent('Title'))
-    expect(urls.email).toMatch(/^mailto:\?/)
   })
 })

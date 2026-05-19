@@ -16,7 +16,7 @@ todos:
     status: completed
   - id: p29-sdr-fallback
     content: 29.4 定义 SDR fallback 策略，确保 HDR 关或不支持时保持当前 WebGL2+sRGB 主路径无回归
-    status: pending
+    status: completed
   - id: p29-route-contract
     content: 29.5 确定 `/`、`/movie/:id`、`/today` 的 Phase 30 路由契约和 Zustand 状态同步边界
     status: pending

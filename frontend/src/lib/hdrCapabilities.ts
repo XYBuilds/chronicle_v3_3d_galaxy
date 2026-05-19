@@ -288,7 +288,7 @@ export async function probeWebGpuExtendedToneMapping(): Promise<boolean> {
 export function scheduleWebGpuHdrProbe(
   renderer: THREE.WebGLRenderer,
   onUpdate: (report: HdrCapabilitiesReport) => void,
-  options?: { postFxBloomEnabled?: boolean },
+  options?: { postFxBloomEnabled?: boolean; onReportUpdated?: (report: HdrCapabilitiesReport) => void },
 ): void {
   if (!probeWebGpuAvailable()) return
 
@@ -299,6 +299,7 @@ export function scheduleWebGpuHdrProbe(
       postFxBloomEnabled: options?.postFxBloomEnabled,
     })
     onUpdate(report)
+    options?.onReportUpdated?.(report)
   })()
 }
 
@@ -310,7 +311,7 @@ export interface HdrCapabilitiesDebug {
 
 export function createHdrCapabilitiesDebug(
   renderer: THREE.WebGLRenderer,
-  options?: { postFxBloomEnabled?: boolean },
+  options?: { postFxBloomEnabled?: boolean; onReportUpdated?: (report: HdrCapabilitiesReport) => void },
 ): HdrCapabilitiesDebug {
   let report = buildHdrCapabilitiesReport(renderer, {
     postFxBloomEnabled: options?.postFxBloomEnabled,
@@ -318,10 +319,14 @@ export function createHdrCapabilitiesDebug(
 
   logHdrCapabilitiesProbe(report)
 
-  scheduleWebGpuHdrProbe(renderer, (updated) => {
-    report = updated
-    logHdrCapabilitiesProbe(updated)
-  }, options)
+  scheduleWebGpuHdrProbe(
+    renderer,
+    (updated) => {
+      report = updated
+      logHdrCapabilitiesProbe(updated)
+    },
+    options,
+  )
 
   return {
     get report() {
@@ -335,6 +340,7 @@ export function createHdrCapabilitiesDebug(
         postFxBloomEnabled: options?.postFxBloomEnabled,
       })
       logHdrCapabilitiesProbe(report)
+      options?.onReportUpdated?.(report)
       return report
     },
   }

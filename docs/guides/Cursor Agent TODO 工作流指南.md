@@ -10,10 +10,15 @@
 
 当一个 Agent 被分配到 plan 中明确、可完成的 TODO，或你明确要求使用该工作流时，使用本流程。探索性讨论、方案评估、只读排查、解释类任务、普通小改不需要完整执行此流程。
 
+## 决策门禁
+
+如果在 TODO 执行前或执行过程中出现任何需要用户判断的产品、技术、工作流、Git、依赖、范围、命名、数据、安全、部署或评审决策，Agent 必须先停下来询问你，再继续执行。不得自行猜测、默认选择或静默推进。
+
 ## 标准流程
 
 1. **新建任务分支**
-   - Agent 开始具体实现前，先从当前基线创建并切换到新分支。
+   - Agent 开始具体实现前，先拉取最新远端状态，切回 base 分支并快进同步：`git fetch origin`、`git switch main`、`git pull --ff-only origin main`，除非仓库默认分支被明确指定为其他名称。
+   - 必须从更新后的本地 `main` 创建任务分支；Git 图上应表现为任务分支从 `main` 分出，完成后通过 PR merge / squash merge 回到 `main`。
    - 命名格式：`prefix/p#.#-short-task-name`，其中 `prefix` 根据任务类型选择，例如 `feat`、`fix`、`docs`、`chore`、`refactor`；`p#.#` 对应 plan TODO 编号。
    - 禁止直接在 `main` / `master` 上实现任务。
 
@@ -38,6 +43,13 @@
 ./finish_todo.sh "<commit and PR message>"
 ```
 
+   - Windows 环境下，如果默认 `bash` 指向不可用的 WSL，必须显式使用 Git Bash：
+
+```powershell
+& "C:\Program Files\Git\bin\bash.exe" -lc './finish_todo.sh "<commit and PR message>"'
+```
+
+   - 不得因为本机 WSL 不可用就跳过 `finish_todo.sh`，也不得声称“已按相同步骤手动完成”来替代脚本；应改用 Git Bash 或其他可用的 Bash 兼容 shell。
    - 脚本会自动完成：`git add`、commit、push、创建 PR、等待/执行 merge、同步 `main`、删除本地任务分支。
    - 如果 GitHub 分支保护、required checks 或 required review 阻止合并，脚本会停住；Agent 应报告阻塞原因，不得绕过。
 

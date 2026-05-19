@@ -20,10 +20,15 @@ Do not use this workflow for ordinary edits, small direct changes, exploratory d
 
 Use one Agent per task and one Git branch per task. Preserve the human acceptance gate: no commit, push, PR, merge, report writing, or finish automation may happen before explicit user approval.
 
+## Decision gate
+
+If any product, technical, workflow, Git, dependency, scope, naming, data, security, deployment, or review decision is needed before or during TODO execution, stop and ask the user before continuing. Do not guess, choose a default, or proceed silently when the decision could affect implementation direction, reviewability, history, or release behavior.
+
 ## Mandatory workflow
 
 1. **Create a task branch first**
-   - Before editing task code, inspect the current branch and create a new task branch from the current base.
+   - Before editing task code, fetch the latest remote state, switch to the base branch, and fast-forward it: `git fetch origin`, `git switch main`, `git pull --ff-only origin main` unless the repository default branch is explicitly different.
+   - Create the task branch from the updated local `main`; the visual Git history must show the task branch starting from `main`, then returning through a PR merge/squash merge into `main`.
    - Use the branch naming format `prefix/p#.#-short-task-name`; choose a concise prefix such as `feat`, `fix`, `docs`, `chore`, or `refactor` based on the task type, and use the plan TODO number as `p#.#`.
    - Do not work directly on `main` or `master`.
 
@@ -46,6 +51,9 @@ Use one Agent per task and one Git branch per task. Preserve the human acceptanc
 5. **After report writing: run the finish script**
    - Invoke the repository finish script from the project root:
      `./finish_todo.sh "<commit and PR message>"`
+   - On Windows, use Git Bash explicitly if the default `bash` resolves to unavailable WSL:
+     `& "C:\\Program Files\\Git\\bin\\bash.exe" -lc './finish_todo.sh "<commit and PR message>"'`
+   - Do not skip `finish_todo.sh` or claim an equivalent manual Git/GitHub sequence merely because WSL is unavailable; use Git Bash or another working Bash-compatible shell.
    - The message must summarize the accepted task.
    - If the script fails because GitHub checks, branch protection, or required reviews are pending, stop and report the blocker instead of bypassing it.
 

@@ -7,7 +7,7 @@ todos:
     status: completed
   - id: p30-route-parser
     content: 30.2 新增轻量 URL parser/builder，覆盖 `/`、`/movie/:id`、`/today` 与 query 保留
-    status: pending
+    status: completed
   - id: p30-route-controller
     content: 30.3 在 App 层实现 route controller，完成 URL → data-ready Zustand 状态同步与 `popstate` 处理
     status: pending
@@ -94,48 +94,48 @@ flowchart TD
 
 #### 30.1.1 计划文件状态
 
-| 项 | 状态 |
-| --- | --- |
-| 计划路径 | `.cursor/plans/phase_30_routing_sharing.plan.md`（本文件） |
-| Phase 29 计划 | 全部 TODO 29.0–29.7 **completed**（见 [phase_29_release_gates_technical_decision.plan.md](./phase_29_release_gates_technical_decision.plan.md)） |
-| Phase 29 Gate | **Go** — Phase 30 深链产品化可开工（[P29.7 报告](../docs/reports/Phase%2029.7%20P29.7%20Phase%2029%20Gate%20report%20实施报告.md) §6） |
-| Phase 30 与 Phase 33 | **无依赖** — HDR production 为 No-go，不阻塞本 Phase |
+| 项                   | 状态                                                                                                                                             |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 计划路径             | `.cursor/plans/phase_30_routing_sharing.plan.md`（本文件）                                                                                       |
+| Phase 29 计划        | 全部 TODO 29.0–29.7 **completed**（见 [phase_29_release_gates_technical_decision.plan.md](./phase_29_release_gates_technical_decision.plan.md)） |
+| Phase 29 Gate        | **Go** — Phase 30 深链产品化可开工（[P29.7 报告](../docs/reports/Phase%2029.7%20P29.7%20Phase%2029%20Gate%20report%20实施报告.md) §6）           |
+| Phase 30 与 Phase 33 | **无依赖** — HDR production 为 No-go，不阻塞本 Phase                                                                                             |
 
 #### 30.1.2 Phase 29 前置检查（2026-05-19）
 
 **路由契约（spec §5 — P29.5）— 可执行，无变更**
 
-| 检查项 | 结论 | SSOT |
-| --- | --- | --- |
-| Path 集合 `/` · `/movie/:id` · `/today` | **已锁定** | `RouteKind`: `home` \| `movie` \| `today` \| `unknown` |
-| `:id` 规则 | 正整数；非法 → R1 `replaceState('/')`；不在 galaxy → R2 | spec §5.2 |
-| Query 保留 `lang` / `theme` / `timeline` | path 变更仅改 `pathname`（R5） | spec §5.3 |
-| URL ↔ store | `selectedMovieId` + `coverMode` + `todayMovieId`；B1–B9 表 | spec §5.4 |
-| cover boot 竞态 | **R4** + `pendingRoute`（movie 深链跳过 `setCover`） | spec §5.5；`App.tsx` 现仍无条件 `resolveToday` → `setCover` |
-| Today cover → focus | **R6** push `/movie/:todayId` | spec §5.7 |
-| ESC / Back / Forward | B3–B5 replace `/`；popstate 无二次 push（R7–R8） | spec §5.6 |
-| 建议模块路径 | `frontend/src/lib/routes.ts` + `useRouteController`（或 App 内 hook） | spec §5.1 |
+| 检查项                                   | 结论                                                                  | SSOT                                                        |
+| ---------------------------------------- | --------------------------------------------------------------------- | ----------------------------------------------------------- |
+| Path 集合 `/` · `/movie/:id` · `/today`  | **已锁定**                                                            | `RouteKind`: `home` \| `movie` \| `today` \| `unknown`      |
+| `:id` 规则                               | 正整数；非法 → R1 `replaceState('/')`；不在 galaxy → R2               | spec §5.2                                                   |
+| Query 保留 `lang` / `theme` / `timeline` | path 变更仅改 `pathname`（R5）                                        | spec §5.3                                                   |
+| URL ↔ store                              | `selectedMovieId` + `coverMode` + `todayMovieId`；B1–B9 表            | spec §5.4                                                   |
+| cover boot 竞态                          | **R4** + `pendingRoute`（movie 深链跳过 `setCover`）                  | spec §5.5；`App.tsx` 现仍无条件 `resolveToday` → `setCover` |
+| Today cover → focus                      | **R6** push `/movie/:todayId`                                         | spec §5.7                                                   |
+| ESC / Back / Forward                     | B3–B5 replace `/`；popstate 无二次 push（R7–R8）                      | spec §5.6                                                   |
+| 建议模块路径                             | `frontend/src/lib/routes.ts` + `useRouteController`（或 App 内 hook） | spec §5.1                                                   |
 
 **静态 rewrite（spec §6 — P29.6）— 方案已锁定，配置文件待 30.7**
 
-| 检查项 | 结论 | 备注 |
-| --- | --- | --- |
-| 生产 CF Pages 隐式 SPA | **已具备**（无顶层 `404.html` → `/movie/*` 刷新 200 + `index.html`） | 30.7 仍加显式 `_redirects` 作契约文档（W2） |
-| `/data/*` 不被 rewrite | **D8** — 实体文件优先；`_headers` 仅 cache，与 fallback 正交 | `frontend/public/_headers` 已存在 |
-| `/fonts/*` · `/assets/*` · favicon/manifest/icons | **豁免** | dist 抽样与 spec §6.3 一致 |
-| GHP 备线 | **缺口** — 无 `404.html`；30.7 须 `cp dist/index.html dist/404.html` | W3 |
-| `vercel.json` | **不存在**；未来启用见 spec §6.5 模板 | 非当前主部署 |
-| `vite preview` | **不能**作深链刷新验收 | 30.8 用 CF / `wrangler pages dev` |
+| 检查项                                            | 结论                                                                 | 备注                                        |
+| ------------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------- |
+| 生产 CF Pages 隐式 SPA                            | **已具备**（无顶层 `404.html` → `/movie/*` 刷新 200 + `index.html`） | 30.7 仍加显式 `_redirects` 作契约文档（W2） |
+| `/data/*` 不被 rewrite                            | **D8** — 实体文件优先；`_headers` 仅 cache，与 fallback 正交         | `frontend/public/_headers` 已存在           |
+| `/fonts/*` · `/assets/*` · favicon/manifest/icons | **豁免**                                                             | dist 抽样与 spec §6.3 一致                  |
+| GHP 备线                                          | **缺口** — 无 `404.html`；30.7 须 `cp dist/index.html dist/404.html` | W3                                          |
+| `vercel.json`                                     | **不存在**；未来启用见 spec §6.5 模板                                | 非当前主部署                                |
+| `vite preview`                                    | **不能**作深链刷新验收                                               | 30.8 用 CF / `wrangler pages dev`           |
 
 **仓库现状核对（30.1 执行日）— 与 Phase 29 预检一致**
 
-| 资产 | 预期（29.x） | 现状 |
-| --- | --- | --- |
-| `frontend/src/lib/routes.ts` | 30.2 新增 | **不存在** ✓ |
-| `frontend/public/_redirects` | 30.7 新增 | **不存在** ✓ |
-| `ShareMovieTodayButton` | HUD 分享根路径 `/` | **存在**于 `App.tsx` ✓ |
-| `Drawer.tsx` 分享区 | 30.5 新增 | **无** ✓ |
-| `galaxyAssetUrls` | `import.meta.env.BASE_URL` | `frontend/src/lib/galaxyAssetUrls.ts` ✓ |
+| 资产                         | 预期（29.x）               | 现状                                    |
+| ---------------------------- | -------------------------- | --------------------------------------- |
+| `frontend/src/lib/routes.ts` | 30.2 新增                  | **不存在** ✓                            |
+| `frontend/public/_redirects` | 30.7 新增                  | **不存在** ✓                            |
+| `ShareMovieTodayButton`      | HUD 分享根路径 `/`         | **存在**于 `App.tsx` ✓                  |
+| `Drawer.tsx` 分享区          | 30.5 新增                  | **无** ✓                                |
+| `galaxyAssetUrls`            | `import.meta.env.BASE_URL` | `frontend/src/lib/galaxyAssetUrls.ts` ✓ |
 
 #### 30.1.3 对后续 TODO 的实施约束（自 Phase 29 继承）
 

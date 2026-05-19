@@ -46,7 +46,8 @@
 | **HDR 最小 proof（29.3）** | `window.__hdrProbe`：同屏 linear **1.0**（SDR 参考白）vs **4.0**（HDR 候选）；WebGPU `extended` vs `standard` 对比。Storybook **Dev/HDR proof lab**。详见 Phase 29 spec **§8**。 |
 | **SDR fallback（29.4）** | 生产恒 **WebGL2 + `SRGBColorSpace`** + Bloom 关；`hdr-capable` **不**切换主路径。`window.__sdrFallback` 暴露策略；视觉标定归 Phase 32。详见 Phase 29 spec **§9**。 |
 | **Phase 33 门禁**           | 仅 Phase 29 **proof** 在 §4.4 **P0/P1** 组合上稳定满足 HDR 语义时，才进入 Phase 33 production；否则 **SDR-only** + 保留 capability 记录。                                                                                           |
-| **深链（Phase 30 前置）**   | Path：**`/`**、**`/movie/:id`**、**`/today`**；实现为轻量 parser（**无** React Router）。Focus SSOT：`selectedMovieId`；Today：`coverModeStore` + `today.json`。Query **`lang` / `theme` / `timeline`** 在 path 变更时**须保留**。  |
+| **深链契约（29.5）**        | Path：**`/`**、**`/movie/:id`**、**`/today`**；轻量 `routes.ts`（**无** React Router）。Focus SSOT：`selectedMovieId`；Cover/Today：`coverModeStore` + `today.json`（D9）。非法/未知 id → **`replaceState('/')`**；cover→focus → **`push /movie/:todayId`**；清 focus/关 Drawer → **`replace '/'`**；**保留** `lang`/`theme`/`timeline`。详见 Phase 29 spec **§5**。 |
+| **深链（Phase 30 实现）**   | 按 §5 落地 parser、route controller、Drawer 分享与静态 rewrite（Phase 30 plan）。                                                                                                                                    |
 | **静态托管**                | 当前**无** SPA fallback；深链刷新存在 **404 风险**（Phase 29 预检）。Rewrite 规则须**豁免** `/data/*`、`/fonts/*` 与静态 assets（Phase 30.7 实施）。                                                                                |
 | **分享（现状 → Phase 30）** | 现 HUD **Today** 按钮分享**站点根路径**；Drawer **无**影片深链分享。Phase 30 迁移为 **`/movie/:id`** 分享（见 Phase 30 plan）。                                                                                                     |
 

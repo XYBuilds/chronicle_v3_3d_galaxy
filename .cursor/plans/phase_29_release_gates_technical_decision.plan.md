@@ -19,7 +19,7 @@ todos:
     status: completed
   - id: p29-route-contract
     content: 29.5 确定 `/`、`/movie/:id`、`/today` 的 Phase 30 路由契约和 Zustand 状态同步边界
-    status: pending
+    status: completed
   - id: p29-static-rewrite
     content: 29.6 预检静态部署 rewrite 需求，确认深链刷新与 `/data/*` 静态资源不冲突
     status: pending

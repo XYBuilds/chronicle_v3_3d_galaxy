@@ -1,6 +1,6 @@
 # Phase 29 — 发布门槛与技术判定（Spec SSOT）
 
-> **状态**：P29.0 已建立本文档与 Tech / Design Spec 交叉引用；**§4（29.1）** 已锁定 HDR 支持矩阵；**§7（29.2）** 已锁定 HDR capability probe；**§8（29.3）** 已锁定最小 HDR proof；**§9（29.4）** 已锁定 SDR fallback 策略；§29.5–§29.7 中其余标记 **待填** 的表格与结论由后续 TODO 补全。  
+> **状态**：P29.0 已建立本文档与 Tech / Design Spec 交叉引用；**§4（29.1）** 已锁定 HDR 支持矩阵；**§7（29.2）** 已锁定 HDR capability probe；**§8（29.3）** 已锁定最小 HDR proof；**§9（29.4）** 已锁定 SDR fallback 策略；**§5（29.5）** 已锁定 Phase 30 深链路由契约与 Zustand 同步边界；§29.6–§29.7 中其余标记 **待填** 的表格与结论由后续 TODO 补全。  
 > **计划**：`.cursor/plans/phase_29_release_gates_technical_decision.plan.md`  
 > **下游**：Phase 30（路由产品化）、Phase 32（SDR 可读性）、Phase 33（HDR 生产，**条件阶段**）、Phase 34（社交预览）。
 
@@ -139,40 +139,159 @@ Phase 29 **不**交付完整深链产品化或 HDR 生产管线，而是判清�
 
 ---
 
-## 5. 深链路由契约（§29.5 — P29.0 锁定，Phase 30 实现）
+## 5. 深链路由契约（§29.5 — P29.5 已锁定，Phase 30 实现）
 
-### 5.1 Path 契约
+**负责人**：TODO 29.5 · `p29-route-contract` · 实施报告见 [`docs/reports/Phase 29.5 P29.5 深链路由契约 实施报告.md`](../reports/Phase%2029.5%20P29.5%20深链路由契约%20实施报告.md)
 
-| Path         | 语义         | 数据 ready 后行为                                                                                               |
-| :----------- | :----------- | :-------------------------------------------------------------------------------------------------------------- |
-| `/`          | Cover / Home | 与现网一致：Cover 今日星或已进入宏观浏览                                                                        |
-| `/movie/:id` | 单片深链     | `selectedMovieId = id`；打开 Drawer；Three focus 飞入                                                           |
-| `/today`     | 今日影片入口 | 解析 `todayMovieId`；进入 Today/Cover 体验；自 Cover 进入 focus 时 URL **迁移**为 `/movie/:id`（Phase 30 细则） |
+Phase 29 **不**提交 `routes.ts` 或 App 路由代码；本节为 Phase 30（`p30-route-parser` … `p30-action-url-sync`）的 **SSOT**。
 
-- `:id` 为 TMDB `Movie.id`（数字）；非法 / 不存在 ID：**不**白屏——降级为 `/` 或仅打开宏观并提示（Phase 30 选一种并写入测试矩阵）。
-- Path 前缀须尊重 `import.meta.env.BASE_URL`（GitHub Pages 子路径部署）。
+### 5.1 实现形态（D5）
 
-### 5.2 URL ↔ Store 同步
+| 项 | 约定 |
+| :--- | :--- |
+| **Router** | **不**引入 React Router |
+| **模块** | `frontend/src/lib/routes.ts`（纯函数 `parseRoute` / `build*Path`）+ `frontend/src/lib/useRouteController.ts`（或 App 内 hook） |
+| **History** | `history.pushState`（用户主动导航）、`history.replaceState`（纠错 / 与 store 对齐）、`popstate`（Back/Forward） |
+| **Base path** | 所有 path 读写均经 `import.meta.env.BASE_URL` 剥离/前缀（与 `galaxyAssetUrls.ts` 一致） |
 
-| 方向        | 规则                                                                                                                  |
-| :---------- | :-------------------------------------------------------------------------------------------------------------------- |
-| URL → state | 解析 path → 待 `galaxyData` **ready** 后写入 `selectedMovieId` / cover 相关 store                                     |
-| state → URL | 用户点击星体、搜索选中 focus、Drawer close、ESC、Focus exit、Today cover→focus 等动作更新 path（Phase 30 枚举完整表） |
-| **D7**      | 任意 `pushState` / `replaceState` **保留** `lang`、`theme`、`timeline` query                                          |
+### 5.2 Path 契约
 
-### 5.3 ESC / Back / Forward 优先级（与 Design Spec §4.6 对齐）
+| Path | `RouteKind` | 语义 | `galaxyData` + index **ready** 后 store 目标 |
+| :--- | :--- | :--- | :--- |
+| `/`（仅 path，可带 query） | `home` | Cover / 宏观首页 | `coverMode=true`，`todayMovieId=resolveToday`；`selectedMovieId=null`；**不**跳过 cover boot |
+| `/movie/:id` | `movie` | 单片深链 | `coverMode=false`；`selectedMovieId=id`（存在性校验后）；Drawer 随 focus 打开；Three `beginSelect` |
+| `/today` | `today` | 今日影片入口 | `coverMode=true`，`todayMovieId=resolveToday`（**同** `today.json` SSOT，D9）；`selectedMovieId=null` |
+| 其它 path | `unknown` | 未识别 | `replaceState` → `home`（**R1**） |
 
-1. 搜索框 blur（不改 URL path）
-2. Drawer 关闭（若 path 为 `/movie/:id`，Phase 30 定义是否退回 `/` 或保留 path）
-3. `selectedMovieId` 清空（focus 退出）
-4. `searchMode !== 'idle'` 清空 select 会话
+**`:id` 规则**：
 
-`popstate`：按历史条目恢复 path 解析结果，**禁止**与 ESC 栈冲突的双写（Phase 30 实现时单测覆盖）。
+- 类型：正整数 TMDB `Movie.id`（`Number.isInteger(id) && id > 0`）。
+- 解析失败（非数字、≤0、溢出）：**R1** `unknown` → `replaceState('/')`。
+- 合法但不在 `galaxyData.movies`：**R2** `replaceState('/')`，`selectedMovieId=null`，`console.warn('[route] movie not in galaxy', { id })`；**不**白屏、**不**开 Drawer。
 
-### 5.4 Today SSOT
+**`/today` 与 cover boot（R3）**：
 
-- 运行时：`resolveTodayMovieId` / `loadToday.ts` + manifest `today_url`。
-- `/today` **不**替代 `today.json` 为数据源；仅深链入口语义。
+- 深链 `/today`：**不**改变 `resolveTodayMovieId` 逻辑；与直达 `/` 的 today 解析**相同**。
+- 若 URL 为 `/movie/:id`：**跳过**默认「resolve today → setCover」boot，改为 **R4** 直接 `setCover skipped` + focus（见 §5.5）。
+
+### 5.3 Query 契约（D7）
+
+| Query | 参数名 | 合法值 | 读写方 |
+| :--- | :--- | :--- | :--- |
+| UI 语言 | `lang` | `en` \| `zh` \| `zh-Hant` \| `ja` \| `es` \| `fr` \| `ar` | `localeStore.setLocale` 已 `replaceState` 保留；path 变更时 **copy 全量 search** |
+| HUD 主题 | `theme` | `light` \| `dark` | `useThemeFromQuery`；path 变更时保留 |
+| 时间轴朝向 | `timeline` | `horizontal` \| `vertical` | `useTimelineOrientationFromQuery`；path 变更时保留 |
+
+**保留规则（R5）**：
+
+- `build*Path` / route controller 更新 path 时：以 `new URL(window.location.href)` 为底，**仅改 `pathname`**，**不** `searchParams.delete` 除非显式废弃某参数。
+- **允许附带**未知 query（调试、UTM）；Phase 30 **不得**因 path 同步剥离 `lang`/`theme`/`timeline`。
+- `localeStore` 改 `lang` 时继续 **replaceState** 当前 path + 新 query（与 path 路由 **共用** 同一 URL 对象）。
+
+### 5.4 URL ↔ Store 同步边界
+
+**SSOT 字段（D6）**：
+
+| Store | 字段 | 路由相关语义 |
+| :--- | :--- | :--- |
+| `galaxyInteractionStore` | `selectedMovieId` | 单片 focus + Drawer + Perlin；**唯一** movie path 写回源 |
+| `galaxyInteractionStore` | `searchMode` / `selectionIds` | person/genre select；**不**单独占 path；深链 `/movie/:id` **不清** select（若已存在则保留，Design §4.7） |
+| `coverModeStore` | `coverMode` | `true` ⇔ home/today cover 壳层 |
+| `coverModeStore` | `todayMovieId` | Cover 展示用；`exitCoverIntoFocus` 会清空 |
+| `coverModeStore` | `exitCoverPreserveOrbit` | cover→focus 一次性标志；**不写 URL** |
+
+**方向 A — URL → state（冷启动 / `popstate`）**：
+
+| 触发 | 前置 | 动作 |
+| :--- | :--- | :--- |
+| 首次 `load` | `status==='ready'` && `data` && index terminal | 读 `parseRoute(location)` → 应用 §5.2 表 |
+| `popstate` | 同上 | 同解析；`isPopstate=true` **禁止** 再 `pushState` |
+| 数据未 ready | — | 缓存 `pendingRoute`；ready 后 **一次性** apply（防 boot 覆盖，**R4**） |
+
+**方向 B — state → URL（用户 / 程序）**：
+
+| # | 用户动作 | 当前 store 变化 | URL 动作 | History |
+| :-: | :--- | :--- | :--- | :--- |
+| B1 | Three 点击 / 搜索选中单片 focus | `selectedMovieId=id` | `/movie/:id` | **push** |
+| B2 | Today cover → Enter / `exitCoverIntoFocus` | cover off + `selectedMovieId=todayId` | `/movie/:todayId` | **push**（**R6**：不得留在 `/today`） |
+| B3 | Drawer 关闭（X / Sheet） | `selectedMovieId=null` | `/` | **replace** |
+| B4 | App ESC §4.6 第 3 级（清 focus） | `selectedMovieId=null` | `/` | **replace** |
+| B5 | `FocusExitButton` | 同 B4 | `/` | **replace** |
+| B6 | 搜索 X 清 focus（§4.6 对齐） | 同 B4 | `/` | **replace** |
+| B7 | person/genre select 仅、无 focus | 无 `selectedMovieId` | **不改** path | — |
+| B8 | `clearSearch` / ESC 第 4 级 | select 清空 | **不改** path | — |
+| B9 | 程序纠错（非法 id） | 见 §5.2 R2 | `/` | **replace** |
+
+**循环守卫（R7）**：route controller 内 `syncingRef` / `lastAppliedPath`；URL→store 与 store→URL 同 tick **至多一轮**。
+
+### 5.5 App boot 与 scene 交互（预检结论）
+
+```mermaid
+sequenceDiagram
+  participant URL
+  participant App
+  participant Cover as coverModeStore
+  participant Gal as galaxyDataStore
+  participant Scene
+
+  URL->>App: parseRoute
+  App->>Gal: fetchGalaxyData
+  Gal-->>App: ready
+  alt route movie
+    App->>Cover: coverMode=false skip setCover
+    App->>App: selectedMovieId=id
+    App->>Scene: mount + beginSelect
+  else route today or home
+    App->>App: resolveTodayMovieId
+    App->>Cover: setCover(todayId)
+    App->>Scene: mount cover bootstrap
+  end
+```
+
+| 风险 | 现状（`App.tsx`） | Phase 30 要求 |
+| :--- | :--- | :--- |
+| `/movie/:id` 被 cover boot 覆盖 | `resolveToday` 总在 index ready 后 `setCover` | **R4**：`pendingRoute.kind==='movie'` 时 **不** 调用 `setCover` |
+| scene mount 时 cover | `scene.ts` 读 `coverMode` 做 bootstrap | movie 深链须 `coverMode=false` **再** mount |
+| Drawer 无 URL | 仅 `selectedMovieId` | B1–B6 收敛到 route controller |
+| 分享根路径 | `ShareMovieTodayButton` → `/` | Phase 30.5 迁至 Drawer `/movie/:id` |
+
+### 5.6 ESC / Back / Forward（Design Spec §4.6 对齐）
+
+**ESC 与 path（Cover 阶段不变）**：
+
+| 级 | Design §4.6 | URL path |
+| :-: | :--- | :--- |
+| — | Cover 下 ESC **吞掉**（`App.tsx` 现实现） | **不变**（`/` 或 `/today`） |
+| 1 | 搜索 blur | 不变 |
+| 2 | Drawer 关闭 | **B3** → `/` **replace** |
+| 3 | 清 `selectedMovieId` | **B4** → `/` **replace** |
+| 4 | `clearSearch` | 不变 |
+
+**Back / Forward**：
+
+- 浏览器后退到 `/movie/:id`：恢复 focus + Drawer（**popstate** → URL→state，**R7** 无 push）。
+- 后退到 `/today`：恢复 cover（`setCover(todayId)`，清 focus）。
+- 前进：对称。
+- ESC **replace** 到 `/` **不**压入「空 focus 的 `/movie/:id`」条目，避免 Back 回到已关闭的 drawer 态（**R8**）。
+
+### 5.7 Today SSOT（D9）
+
+- 数据源：`today.json`（`loadToday.ts` · `resolveTodayMovieId`）；`/today` path **不**嵌入日期或 id。
+- `/today` 与 `/` 在 cover 态 **等价**；差异为 **分享语义** 与 OG（Phase 34）。
+- `exitCoverIntoFocus` 后 URL **必须** B2 迁移至 `/movie/:todayId`。
+
+### 5.8 Phase 30 测试矩阵（引用）
+
+| # | 场景 | 期望 path | 期望 store |
+| :-: | :--- | :--- | :--- |
+| T1 | 刷新 `/movie/550`（存在） | 保持 | focus + drawer |
+| T2 | 刷新 `/movie/999999999` | → `/` replace | 无 focus |
+| T3 | 刷新 `/today` | 保持 | cover + todayId |
+| T4 | `/today` → Enter focus | `/movie/:todayId` push | cover off, focus on |
+| T5 | focus 后 ESC | `/` replace | selected null |
+| T6 | `?lang=zh&theme=light` + B1 | query 保留 | — |
+| T7 | `BASE_URL=/repo/` 子路径 | prefix 正确 | data URL 仍加载 |
+| T8 | Back 从 `/` 到 `/movie/id` | popstate 恢复 focus | 无二次 push |
 
 ---
 
@@ -389,6 +508,6 @@ Phase 29 **不**交付完整深链产品化或 HDR 生产管线，而是判清�
 | HDR probe 设计              | §7   | **P29.2 已锁定**（含运行时模块） |
 | HDR proof 记录              | §8   | **P29.3 已锁定**（含 `__hdrProbe` + Storybook lab） |
 | SDR fallback 说明           | §9   | **P29.4 已锁定**（含 `__sdrFallback`） |
-| Phase 30 路由契约           | §5   | **P29.0 已锁定**                |
+| Phase 30 路由契约           | §5   | **P29.5 已锁定**                |
 | Static hosting rewrite 方案 | §6   | **P29.0 预检已写**，配置待 30.7 |
 | Phase 33 go/no-go           | §10  | 待 29.7                         |

@@ -48,7 +48,7 @@
 | **Phase 33 门禁**           | 仅 Phase 29 **proof** 在 §4.4 **P0/P1** 组合上稳定满足 HDR 语义时，才进入 Phase 33 production；否则 **SDR-only** + 保留 capability 记录。                                                                                           |
 | **深链契约（29.5）**        | Path：**`/`**、**`/movie/:id`**、**`/today`**；轻量 `routes.ts`（**无** React Router）。Focus SSOT：`selectedMovieId`；Cover/Today：`coverModeStore` + `today.json`（D9）。非法/未知 id → **`replaceState('/')`**；cover→focus → **`push /movie/:todayId`**；清 focus/关 Drawer → **`replace '/'`**；**保留** `lang`/`theme`/`timeline`。详见 Phase 29 spec **§5**。 |
 | **深链（Phase 30 实现）**   | 按 §5 落地 parser、route controller、Drawer 分享与静态 rewrite（Phase 30 plan）。                                                                                                                                    |
-| **静态托管**                | 当前**无** SPA fallback；深链刷新存在 **404 风险**（Phase 29 预检）。Rewrite 规则须**豁免** `/data/*`、`/fonts/*` 与静态 assets（Phase 30.7 实施）。                                                                                |
+| **静态托管**                | CF Pages **隐式 SPA** 已覆盖主域深链刷新；**无**显式 `_redirects`。GHP 备线须 `404.html`（29.6 预检）。30.7 落地显式规则并**豁免** `/data/*`、`/fonts/*` 与 assets（D8）。                                                                                |
 | **分享（现状 → Phase 30）** | 现 HUD **Today** 按钮分享**站点根路径**；Drawer **无**影片深链分享。Phase 30 迁移为 **`/movie/:id`** 分享（见 Phase 30 plan）。                                                                                                     |
 
 ## **2\. 交互状态与视觉反馈 (Interaction States)**

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link2 } from 'lucide-react'
+import { Link2, Mail } from 'lucide-react'
 
 import {
   ShareIconDiscord,
@@ -8,7 +8,12 @@ import {
   ShareIconTelegram,
   ShareIconX,
 } from '@/hud/sharePlatformIcons'
-import { buildMovieSharePageUrl, buildSocialShareUrls } from '@/lib/shareLinks'
+import {
+  buildEmailShareUrl,
+  buildMovieSharePageUrl,
+  buildSocialShareUrls,
+  discordCommunityHref,
+} from '@/lib/shareLinks'
 import { useStrings } from '@/lib/strings'
 
 const iconActionClass =
@@ -34,6 +39,11 @@ export function DrawerMovieShare({ movieId, movieTitle, releaseYear }: DrawerMov
     () => buildSocialShareUrls(shareTitle, shareText, url),
     [shareText, shareTitle, url],
   )
+  const emailUrl = useMemo(
+    () => buildEmailShareUrl(shareTitle, shareText, url),
+    [shareText, shareTitle, url],
+  )
+  const discordUrl = useMemo(() => discordCommunityHref(), [])
 
   useEffect(() => {
     return () => {
@@ -95,15 +105,16 @@ export function DrawerMovieShare({ movieId, movieTitle, releaseYear }: DrawerMov
       >
         <ShareIconReddit />
       </a>
-      <button
-        type="button"
+      <a
+        href={discordUrl}
+        target="_blank"
+        rel="noopener noreferrer"
         className={iconActionClass}
-        aria-label={s.drawer.share.ariaCopyLink}
-        title={s.drawer.share.ariaCopyLink}
-        onClick={() => void onCopyLink()}
+        aria-label={s.drawer.share.ariaDiscord}
+        title={s.drawer.share.ariaDiscord}
       >
         <ShareIconDiscord />
-      </button>
+      </a>
       <a
         href={socialUrls.facebook}
         target="_blank"
@@ -113,6 +124,14 @@ export function DrawerMovieShare({ movieId, movieTitle, releaseYear }: DrawerMov
         title={s.drawer.share.ariaFacebook}
       >
         <ShareIconFacebook />
+      </a>
+      <a
+        href={emailUrl}
+        className={iconActionClass}
+        aria-label={s.drawer.share.ariaEmail}
+        title={s.drawer.share.ariaEmail}
+      >
+        <Mail className="size-4" strokeWidth={2} aria-hidden />
       </a>
       <a
         href={socialUrls.telegram}

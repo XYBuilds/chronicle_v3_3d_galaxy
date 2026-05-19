@@ -30,3 +30,16 @@ export function buildSocialShareUrls(shareTitle: string, shareText: string, url:
     reddit: `https://www.reddit.com/submit?url=${encodeURIComponent(url)}&title=${encodeURIComponent(shareTitle)}`,
   }
 }
+
+/** Production invite via `VITE_DISCORD_INVITE_URL`; generic fallback otherwise. */
+export function discordCommunityHref(): string {
+  const raw = import.meta.env.VITE_DISCORD_INVITE_URL
+  const t = typeof raw === 'string' ? raw.trim() : ''
+  if (t && /^https?:\/\//i.test(t)) return t
+  return 'https://discord.com/'
+}
+
+export function buildEmailShareUrl(shareTitle: string, shareText: string, url: string): string {
+  const body = `${shareText}\n\n${url}`
+  return `mailto:?subject=${encodeURIComponent(shareTitle)}&body=${encodeURIComponent(body)}`
+}

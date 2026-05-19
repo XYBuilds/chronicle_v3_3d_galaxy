@@ -27,24 +27,25 @@
 
 本节为 **Phase 26**（`.cursor/plans/phase_26_device_spatial_optimization.plan.md`）收口摘要；**条文细节**以本节前后各专节、**Tech Spec**、《视觉参数总表》及 **`docs/reports/Phase 26.*`** 为准。
 
-| 子项 | 结论（产品 / 工程） |
-|------|---------------------|
-| **P26.1 色彩** | Mac 上 idle/active **色相异常**已在 **顶点着色器**侧修复：**OKLab→线性 sRGB** 在 **gamma 编码前 clamp 到 \[0,1\]**，避免负通道在 Metal/ANGLE 上 **`pow` 未定义 → NaN** 污染混色；与「系统 HDR 内容管线」**无**归因关系。当前产品为 **常规 SDR WebGL** + **`THREE.SRGBColorSpace`**；**未**交付显示端 HDR。**原计划跨设备 HDR 矩阵**本阶段**不**纳入发布验收；工作留档见 **`docs/reports/Phase 26.1 P26.1 Mac 色彩修复与阶段收口 最终实施报告.md`**。 |
-| **P26.2 小屏 HUD** | 视口 / safe-area / **`--hud-*`** / **`--z-hud-*`** 体系统一写入 **§3.0**；设计基准约 **1600×900** 横屏，**1∶1～超宽** 与刘海内容框抽样验收。实施留档见 **`docs/reports/Phase 26.2 P26.2 HUD 视口与安全区 token 最终实施报告.md`**。 |
-| **P26.3 idle 近距 fade** | **仅 idle** 使用 **相机世界坐标—实例世界坐标** 距离驱动 **`vNearFadeAlpha`**；**focus / Cover 今日** 实例 **exempt**（与顶点 **`exemptIdleNearFade`** 语义一致）。**生产默认 `enabled = 1`**（`startDist = width = 4`、`minAlpha = 0.1` 世界单位，见 **`idleNearFade.ts`**）；**宏观**且启用时 idle 材质走 **transparent、无 depthWrite**。**focus 会话**（**`selectionPhase !== 'idle'`**）：**`uIdleMacroFadesActive = 0`**，近距分支 **不** 运行，idle **opaque**（与 **P27.4** 同门控）。**CPU active 射线拾取**在 **`inFocus` 低且近透明**时跳过求交，与视觉对齐。运行时调参：**`window.__galaxyIdleNearFade`**。留档见 **`docs/reports/Phase 26.3 P26.3 Camera-distance idle 近距渐变与拾取对齐 最终实施报告.md`**（文内关于 **P22.1 Z 近裁** 的保留表述已过时，以 Tech Spec **§1.4.5a** 为准）。 |
-| **P27.4 idle 时间轴 Z dim** | **仅 idle**。**`uIdleZFadeMode`**（**`−1` / `0` / `1`**）与 **`uIdleZFadeOutsideAlpha`**：在 **`[zCurrent, zCurrent+zVisWindow]`** 外 **单侧** 将 **`vNearFadeAlpha`** 再乘 **`outsideAlpha`**（硬边界）；与 **P26.3** **相乘**。**exempt** 同 **P26.3**。**`scene.ts`**：近距 **或** **Z-mode 非关** 时 idle **透明路径**，**且** **`selectionPhase === 'idle'`**（与 **`uIdleMacroFadesActive`** 一致；**focus** 下两 fade **不** 应用）。**Dev**：**`window.__galaxyIdleZFade`**。留档 **`docs/reports/Phase 27.4 P27.4 Galaxy idle 时间轴 Z 半透明与移除 world-Z 近裁 最终实施报告.md`**。**P22.1 world-Z 近裁已删除。** |
+| 子项                        | 结论（产品 / 工程）                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **P26.1 色彩**              | Mac 上 idle/active **色相异常**已在 **顶点着色器**侧修复：**OKLab→线性 sRGB** 在 **gamma 编码前 clamp 到 \[0,1\]**，避免负通道在 Metal/ANGLE 上 **`pow` 未定义 → NaN** 污染混色；与「系统 HDR 内容管线」**无**归因关系。当前产品为 **常规 SDR WebGL** + **`THREE.SRGBColorSpace`**；**未**交付显示端 HDR。**原计划跨设备 HDR 矩阵**本阶段**不**纳入发布验收；工作留档见 **`docs/reports/Phase 26.1 P26.1 Mac 色彩修复与阶段收口 最终实施报告.md`**。                                                                                                                                                                                                                                                                                                                                                    |
+| **P26.2 小屏 HUD**          | 视口 / safe-area / **`--hud-*`** / **`--z-hud-*`** 体系统一写入 **§3.0**；设计基准约 **1600×900** 横屏，**1∶1～超宽** 与刘海内容框抽样验收。实施留档见 **`docs/reports/Phase 26.2 P26.2 HUD 视口与安全区 token 最终实施报告.md`**。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| **P26.3 idle 近距 fade**    | **仅 idle** 使用 **相机世界坐标—实例世界坐标** 距离驱动 **`vNearFadeAlpha`**；**focus / Cover 今日** 实例 **exempt**（与顶点 **`exemptIdleNearFade`** 语义一致）。**生产默认 `enabled = 1`**（`startDist = width = 4`、`minAlpha = 0.1` 世界单位，见 **`idleNearFade.ts`**）；**宏观**且启用时 idle 材质走 **transparent、无 depthWrite**。**focus 会话**（**`selectionPhase !== 'idle'`**）：**`uIdleMacroFadesActive = 0`**，近距分支 **不** 运行，idle **opaque**（与 **P27.4** 同门控）。**CPU active 射线拾取**在 **`inFocus` 低且近透明**时跳过求交，与视觉对齐。运行时调参：**`window.__galaxyIdleNearFade`**。留档见 **`docs/reports/Phase 26.3 P26.3 Camera-distance idle 近距渐变与拾取对齐 最终实施报告.md`**（文内关于 **P22.1 Z 近裁** 的保留表述已过时，以 Tech Spec **§1.4.5a** 为准）。 |
+| **P27.4 idle 时间轴 Z dim** | **仅 idle**。**`uIdleZFadeMode`**（**`−1` / `0` / `1`**）与 **`uIdleZFadeOutsideAlpha`**：在 **`[zCurrent, zCurrent+zVisWindow]`** 外 **单侧** 将 **`vNearFadeAlpha`** 再乘 **`outsideAlpha`**（硬边界）；与 **P26.3** **相乘**。**exempt** 同 **P26.3**。**`scene.ts`**：近距 **或** **Z-mode 非关** 时 idle **透明路径**，**且** **`selectionPhase === 'idle'`**（与 **`uIdleMacroFadesActive`** 一致；**focus** 下两 fade **不** 应用）。**Dev**：**`window.__galaxyIdleZFade`**。留档 **`docs/reports/Phase 27.4 P27.4 Galaxy idle 时间轴 Z 半透明与移除 world-Z 近裁 最终实施报告.md`**。**P22.1 world-Z 近裁已删除。**                                                                                                                                                                            |
 
 ### **1.3 Phase 29 — HDR 发布门槛与深链预检（决策摘要）**
 
 本节为 **Phase 29**（`.cursor/plans/phase_29_release_gates_technical_decision.plan.md`）收口摘要；**条文 SSOT** 见 **[`Phase 29 发布门槛与技术判定 spec.md`](./Phase%2029%20发布门槛与技术判定%20spec.md)**，Tech Spec **§5.4** 为工程交叉引用。
 
-| 子项 | 结论（产品 / 工程） |
-|------|---------------------|
-| **HDR 语义** | **P26.1** 已明确当前为 **SDR WebGL** + **`SRGBColorSpace`**，**未**交付显示端 HDR。Phase 29 起：**真实 HDR** = 可证扩展亮度；**SDR 提亮、Bloom、`uLMax` 顶格**均**不是** HDR 验收。Bloom **生产默认关**（Tech Spec §1.2）。 |
-| **Phase 33 门禁** | 仅 Phase 29 **proof** 在目标 OS/浏览器/显示器组合上稳定满足 HDR 语义时，才进入 Phase 33 production；否则 **SDR-only** + 保留 capability 记录。 |
-| **深链（Phase 30 前置）** | Path：**`/`**、**`/movie/:id`**、**`/today`**；实现为轻量 parser（**无** React Router）。Focus SSOT：`selectedMovieId`；Today：`coverModeStore` + `today.json`。Query **`lang` / `theme` / `timeline`** 在 path 变更时**须保留**。 |
-| **静态托管** | 当前**无** SPA fallback；深链刷新存在 **404 风险**（Phase 29 预检）。Rewrite 规则须**豁免** `/data/*`、`/fonts/*` 与静态 assets（Phase 30.7 实施）。 |
-| **分享（现状 → Phase 30）** | 现 HUD **Today** 按钮分享**站点根路径**；Drawer **无**影片深链分享。Phase 30 迁移为 **`/movie/:id`** 分享（见 Phase 30 plan）。 |
+| 子项                        | 结论（产品 / 工程）                                                                                                                                                                                                                 |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **HDR 语义**                | **P26.1** 已明确当前为 **SDR WebGL** + **`SRGBColorSpace`**，**未**交付显示端 HDR。Phase 29 起：**真实 HDR** = 可证扩展亮度；**SDR 提亮、Bloom、`uLMax` 顶格**均**不是** HDR 验收。Bloom **生产默认关**（Tech Spec §1.2）。         |
+| **HDR 支持矩阵（29.1）**    | **P0**：Win11 HDR on + Chrome/Edge stable + **WebGPU `extended`** + HDR 屏；**P1**：macOS HDR on + Safari stable + 同 API + XDR/HDR 屏。当前 **WebGL2+sRGB** 一律 **SDR**；Bloom/提亮 **非** HDR。矩阵 SSOT：Phase 29 spec **§4**。 |
+| **Phase 33 门禁**           | 仅 Phase 29 **proof** 在 §4.4 **P0/P1** 组合上稳定满足 HDR 语义时，才进入 Phase 33 production；否则 **SDR-only** + 保留 capability 记录。                                                                                           |
+| **深链（Phase 30 前置）**   | Path：**`/`**、**`/movie/:id`**、**`/today`**；实现为轻量 parser（**无** React Router）。Focus SSOT：`selectedMovieId`；Today：`coverModeStore` + `today.json`。Query **`lang` / `theme` / `timeline`** 在 path 变更时**须保留**。  |
+| **静态托管**                | 当前**无** SPA fallback；深链刷新存在 **404 风险**（Phase 29 预检）。Rewrite 规则须**豁免** `/data/*`、`/fonts/*` 与静态 assets（Phase 30.7 实施）。                                                                                |
+| **分享（现状 → Phase 30）** | 现 HUD **Today** 按钮分享**站点根路径**；Drawer **无**影片深链分享。Phase 30 迁移为 **`/movie/:id`** 分享（见 Phase 30 plan）。                                                                                                     |
 
 ## **2\. 交互状态与视觉反馈 (Interaction States)**
 
@@ -103,24 +104,24 @@
 
 #### **3.0.1 目标设备与输入假设**
 
-| 维度 | 约定 |
-|------|------|
-| **设计基准（视口）** | **约 1600×900**（逻辑像素）**横屏**：HUD 间距、密度与 **P26.2 级回归截图** 的**首要参照**；版式与 Focus 邻域以该尺度「够用且舒服」为第一目标。**不是分辨率硬下限**——更小的横屏仍可访问；底线为 **无功能性裁切**（关键 CTA 可点、文案可读）， exhaustive 视觉 polish 优先低于设计基准。 |
-| **主用户与输入** | 桌面 / 笔记本浏览器；**鼠标指针**为主交互。 |
-| **纵横比** | 自 **1∶1（方屏）** 至 **超宽屏** 连续变化；布局须在「偏窄的横屏」与「极宽横屏」两端都可读、不重叠关键信息。 |
-| **触控** | **不做触屏专项支持**（不要求 44px 触控热区、不做拇指区假设、不验收手指遮挡）。平板 / 手机为**非目标**，仅偶然访问时不保证体验。 |
-| **刘海 / 相机 housing** | **保留 §3.0.3.2 内容框**：用 `env(safe-area-inset-*)` 与 token 取 max，以适配 **带刘海的 MacBook** 等「横屏 + 物理遮挡」场景；与「触控安全区」无绑定。 |
+| 维度                    | 约定                                                                                                                                                                                                                                                                                   |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **设计基准（视口）**    | **约 1600×900**（逻辑像素）**横屏**：HUD 间距、密度与 **P26.2 级回归截图** 的**首要参照**；版式与 Focus 邻域以该尺度「够用且舒服」为第一目标。**不是分辨率硬下限**——更小的横屏仍可访问；底线为 **无功能性裁切**（关键 CTA 可点、文案可读）， exhaustive 视觉 polish 优先低于设计基准。 |
+| **主用户与输入**        | 桌面 / 笔记本浏览器；**鼠标指针**为主交互。                                                                                                                                                                                                                                            |
+| **纵横比**              | 自 **1∶1（方屏）** 至 **超宽屏** 连续变化；布局须在「偏窄的横屏」与「极宽横屏」两端都可读、不重叠关键信息。                                                                                                                                                                            |
+| **触控**                | **不做触屏专项支持**（不要求 44px 触控热区、不做拇指区假设、不验收手指遮挡）。平板 / 手机为**非目标**，仅偶然访问时不保证体验。                                                                                                                                                        |
+| **刘海 / 相机 housing** | **保留 §3.0.3.2 内容框**：用 `env(safe-area-inset-*)` 与 token 取 max，以适配 **带刘海的 MacBook** 等「横屏 + 物理遮挡」场景；与「触控安全区」无绑定。                                                                                                                                 |
 
 以下各节在「断点、clamp、较短 `dvh`」等处均指：**以设计基准横屏为主、覆盖 1∶1～超宽的窗口缩放与浏览器 chrome**；**非**小屏手机竖屏专项。
 
 #### **3.0.2 设计目标**
 
-| 目标 | 说明 |
-|------|------|
-| **可读** | 3D 画布始终是主角；HUD 低对比、细线、少遮挡。 |
-| **可推理** | 任意控件的位置、层级、显隐都能用同一套**空间参照 + 模式**解释，而非「历史 class 堆叠」。 |
+| 目标       | 说明                                                                                                                           |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| **可读**   | 3D 画布始终是主角；HUD 低对比、细线、少遮挡。                                                                                  |
+| **可推理** | 任意控件的位置、层级、显隐都能用同一套**空间参照 + 模式**解释，而非「历史 class 堆叠」。                                       |
 | **可验收** | **设计基准**下必过；另在 **1∶1～超宽** 与 **低于基准的横屏压窗** 做抽样，验收 **无功能性裁切** 与 **刘海内容框**（§3.0.3.2）。 |
-| **可实现** | DOM 排版与画布锚点分工清晰，减少「为盖住某层临时改 z-index」。 |
+| **可实现** | DOM 排版与画布锚点分工清晰，减少「为盖住某层临时改 z-index」。                                                                 |
 
 **品牌叙述**（与仓库 branding 规则一致）：叙述性文字用 **The Movie Cosmos**；浏览器标题、封面、HUD 内品牌标识用 **the movie cosmos**。
 
@@ -152,12 +153,12 @@ HUD 元素**不得混用参照系而不声明**。统一为下列三类之一。
 
 交互状态驱动 HUD **显隐与强度**，与 **§2.1 / §2.2** 一致；本节只从**空间设计**归纳。
 
-| 模式 / 条件 | 空间设计要点 |
-|-------------|----------------|
-| **宏观漫游（idle）** | Timeline、Search、右上工具为主；Hover/Tooltip 随指针与锚点。 |
-| **Focus** | 星球邻域：`FocusLReference` 居星球左侧；`FocusExitButton` 置底居中；Timeline 只读、不驱动 `zCurrent`；Drawer 可从右侧占幅滑入。 |
-| **Cover** | 全屏品牌与遮罩优先；与漫游 HUD 互斥挂载策略以 App 实现为准。 |
-| **Drawer 打开** | Sheet 贴视口边缘滑入；须与 **§3.0.5** z 语义一致，避免误挡退出焦点等关键操作（与 **§2.2** / `Drawer.tsx` 实施为准）。 |
+| 模式 / 条件          | 空间设计要点                                                                                                                    |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| **宏观漫游（idle）** | Timeline、Search、右上工具为主；Hover/Tooltip 随指针与锚点。                                                                    |
+| **Focus**            | 星球邻域：`FocusLReference` 居星球左侧；`FocusExitButton` 置底居中；Timeline 只读、不驱动 `zCurrent`；Drawer 可从右侧占幅滑入。 |
+| **Cover**            | 全屏品牌与遮罩优先；与漫游 HUD 互斥挂载策略以 App 实现为准。                                                                    |
+| **Drawer 打开**      | Sheet 贴视口边缘滑入；须与 **§3.0.5** z 语义一致，避免误挡退出焦点等关键操作（与 **§2.2** / `Drawer.tsx` 实施为准）。           |
 
 **地盘原则**：每一模式下列出「主舞台 / 次信息 / 系统入口」，并标明是否允许与 3D 中心重叠；新增控件须先落入某一地盘，再分配 z 档位。
 
@@ -165,16 +166,16 @@ HUD 元素**不得混用参照系而不声明**。统一为下列三类之一。
 
 数值以 **`--z-hud-*`** 为准，可与下表语义序微调，但**语义序**不可颠倒。
 
-| 语义档位 | 典型内容 | 相对顺序（低 → 高；以 `index.css` 中 `--z-hud-*` 为准） |
-|----------|-----------|----------------------|
-| **Canvas** | WebGL 宿主 | 最低（DOM 下） |
-| **Cover veil / brand** | Cover 遮罩与品牌层 | `--z-hud-cover-veil` → `--z-hud-cover-brand` |
-| **Ambient HUD** | Timeline、右上工具 | `--z-hud-timeline`、`--z-hud-top-tools`（语言下拉 `--z-hud-lang-menu` 紧随其后） |
-| **Focus chrome / exit** | `FocusLReference`、`FocusExitButton` | `--z-hud-focus-chrome`、`--z-hud-focus-exit` |
-| **Hover feedback** | Hover 环、Tooltip | `--z-hud-hover-ring`、`--z-hud-tooltip` |
-| **Search** | 顶部搜索条（含展开面板） | **`--z-hud-search`** 高于 Hover / Tooltip，以便联想层压在画布反馈之上 |
-| **Drawer** | 详情 Sheet | **`--z-hud-drawer`** |
-| **Modal** | Info 对话框等 | **`--z-hud-modal-overlay`** → **`--z-hud-modal-content`** |
+| 语义档位                | 典型内容                             | 相对顺序（低 → 高；以 `index.css` 中 `--z-hud-*` 为准）                          |
+| ----------------------- | ------------------------------------ | -------------------------------------------------------------------------------- |
+| **Canvas**              | WebGL 宿主                           | 最低（DOM 下）                                                                   |
+| **Cover veil / brand**  | Cover 遮罩与品牌层                   | `--z-hud-cover-veil` → `--z-hud-cover-brand`                                     |
+| **Ambient HUD**         | Timeline、右上工具                   | `--z-hud-timeline`、`--z-hud-top-tools`（语言下拉 `--z-hud-lang-menu` 紧随其后） |
+| **Focus chrome / exit** | `FocusLReference`、`FocusExitButton` | `--z-hud-focus-chrome`、`--z-hud-focus-exit`                                     |
+| **Hover feedback**      | Hover 环、Tooltip                    | `--z-hud-hover-ring`、`--z-hud-tooltip`                                          |
+| **Search**              | 顶部搜索条（含展开面板）             | **`--z-hud-search`** 高于 Hover / Tooltip，以便联想层压在画布反馈之上            |
+| **Drawer**              | 详情 Sheet                           | **`--z-hud-drawer`**                                                             |
+| **Modal**               | Info 对话框等                        | **`--z-hud-modal-overlay`** → **`--z-hud-modal-content`**                        |
 
 **规则**：禁止为单个 PR「+10 盖过邻居」；若冲突，应调整地盘或模式而非无限堆 z。
 
@@ -182,15 +183,15 @@ HUD 元素**不得混用参照系而不声明**。统一为下列三类之一。
 
 下列 token 在 **`frontend/src/index.css`** 定义；命名与语义为本节 SSOT。
 
-| Token 语义 | 用途 | 说明 |
-|------------|------|------|
-| `--hud-inset-xs` / `--hud-inset-sm` / `--hud-inset-md` | 视口边默认 gutter（与 safe-area 取 max 前的基准） | **P26.2 产品约定**：三档统一 **1rem**，不做阶梯缩小 |
-| `--hud-gap-stack` | 纵向堆叠间距 | 如右上工具按钮组 |
-| `--hud-radius-chrome` | HUD 控件圆角 | 与 `--radius` 家族对齐或略小 |
-| `--hud-search-max-w` / `--hud-search-width` | 搜索条最大宽度与「视口 − gutter − 横向 safe-area」合成宽度 | 与 §4.1 搜索条布局一致 |
-| `--hud-drawer-max-by-planet-safe` / `--hud-drawer-max-readable` / `--hud-drawer-max-w` / `--hud-drawer-min-w` | 右侧 Drawer 宽度的上/下限 | **最大**：`min(0.28×100vw, 32rem, 右侧留白公式)` — `0.28` 略紧于「中间三分之一」纯几何，为 Focus Perlin 留出中心加权空域；**最小**：详情可读地板（如 **18rem**），极窄下可能与 max 竞合，以浏览器 min/max 解析为准 |
-| `--hud-focus-ref-center-gap-*` / `--hud-focus-ref-height-*` | Focus 评分参考条水平锚点与竖直高度 | 水平：`max(下限, 100vw/6)`；竖直：`max(下限, 100vh×0.4)` 等（以 `index.css` 为准） |
-| `--hud-focus-exit-*` | 退出 Focus 按钮相对视口中心与底部的 clamp | 与 `FocusExitButton` 中 `100dvh`、safe-area 组合一致 |
+| Token 语义                                                                                                    | 用途                                                       | 说明                                                                                                                                                                                                               |
+| ------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `--hud-inset-xs` / `--hud-inset-sm` / `--hud-inset-md`                                                        | 视口边默认 gutter（与 safe-area 取 max 前的基准）          | **P26.2 产品约定**：三档统一 **1rem**，不做阶梯缩小                                                                                                                                                                |
+| `--hud-gap-stack`                                                                                             | 纵向堆叠间距                                               | 如右上工具按钮组                                                                                                                                                                                                   |
+| `--hud-radius-chrome`                                                                                         | HUD 控件圆角                                               | 与 `--radius` 家族对齐或略小                                                                                                                                                                                       |
+| `--hud-search-max-w` / `--hud-search-width`                                                                   | 搜索条最大宽度与「视口 − gutter − 横向 safe-area」合成宽度 | 与 §4.1 搜索条布局一致                                                                                                                                                                                             |
+| `--hud-drawer-max-by-planet-safe` / `--hud-drawer-max-readable` / `--hud-drawer-max-w` / `--hud-drawer-min-w` | 右侧 Drawer 宽度的上/下限                                  | **最大**：`min(0.28×100vw, 32rem, 右侧留白公式)` — `0.28` 略紧于「中间三分之一」纯几何，为 Focus Perlin 留出中心加权空域；**最小**：详情可读地板（如 **18rem**），极窄下可能与 max 竞合，以浏览器 min/max 解析为准 |
+| `--hud-focus-ref-center-gap-*` / `--hud-focus-ref-height-*`                                                   | Focus 评分参考条水平锚点与竖直高度                         | 水平：`max(下限, 100vw/6)`；竖直：`max(下限, 100vh×0.4)` 等（以 `index.css` 为准）                                                                                                                                 |
+| `--hud-focus-exit-*`                                                                                          | 退出 Focus 按钮相对视口中心与底部的 clamp                  | 与 `FocusExitButton` 中 `100dvh`、safe-area 组合一致                                                                                                                                                               |
 
 **指针命中**：以桌面惯例即可（如 shadcn `Button` / `IconButton` 默认 padding），**不**设独立「触控最小边长」token。
 
@@ -206,11 +207,11 @@ HUD 元素**不得混用参照系而不声明**。统一为下列三类之一。
 
 #### **3.0.8 动效与过渡（空间的一部分）**
 
-| 类型 | 原则 |
-|------|------|
-| **Drawer** | 以 **§2.2** 为准：整幅位移进出场、与 duration / easing 常量一致。 |
+| 类型         | 原则                                                                                                |
+| ------------ | --------------------------------------------------------------------------------------------------- |
+| **Drawer**   | 以 **§2.2** 为准：整幅位移进出场、与 duration / easing 常量一致。                                   |
 | **模式切换** | Cover ↔ 漫游、进入 / 退出 Focus，避免同一控件无意义大跳；若必须变位，应有可感知的过渡或统一对齐边。 |
-| **微交互** | Tooltip、按钮 hover 时长短于抽屉，避免「全屏同一 easing」的拖沓感。 |
+| **微交互**   | Tooltip、按钮 hover 时长短于抽屉，避免「全屏同一 easing」的拖沓感。                                 |
 
 #### **3.0.9 信息架构与控件秩序**
 
@@ -231,12 +232,12 @@ HUD 元素**不得混用参照系而不声明**。统一为下列三类之一。
 
 #### **3.0.12 工程映射与单一事实来源**
 
-| Concern | SSOT |
-|---------|------|
-| 文案与 i18n | `frontend/src/lib/locales/en.json` + `locales.schema.spec.ts` |
-| 星球邻域几何 / Tooltip offset | `frontend/src/hud/hoverRingLayout.ts`（及本节 §3.0.3.3） |
-| Focus 动画时长 | 《视觉参数总表》+ `scene.ts` / `transitionDriver` |
-| HUD 布局与 z token | **`frontend/src/index.css`** `:root`（本节 §3.0.5–§3.0.6） |
+| Concern                       | SSOT                                                          |
+| ----------------------------- | ------------------------------------------------------------- |
+| 文案与 i18n                   | `frontend/src/lib/locales/en.json` + `locales.schema.spec.ts` |
+| 星球邻域几何 / Tooltip offset | `frontend/src/hud/hoverRingLayout.ts`（及本节 §3.0.3.3）      |
+| Focus 动画时长                | 《视觉参数总表》+ `scene.ts` / `transitionDriver`             |
+| HUD 布局与 z token            | **`frontend/src/index.css`** `:root`（本节 §3.0.5–§3.0.6）    |
 
 **反模式**：在业务组件内散落互不关联的 `z-[N]`、`top-[calc(...)]` 而无注释归属 §3.0。
 

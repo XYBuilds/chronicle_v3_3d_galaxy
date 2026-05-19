@@ -7,7 +7,7 @@ todos:
     status: completed
   - id: p29-hdr-matrix
     content: 29.1 定义 HDR 支持矩阵，锁定 OS、浏览器、显示器、API 与发布门槛组合
-    status: pending
+    status: completed
   - id: p29-hdr-probe-design
     content: 29.2 设计 HDR capability probe，明确运行时需要记录的 WebGL/WebGPU/canvas 能力与输出模式
     status: pending

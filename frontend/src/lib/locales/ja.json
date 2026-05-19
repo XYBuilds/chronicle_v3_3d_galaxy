@@ -124,7 +124,21 @@
     "sections": {
       "overview": "あらすじ",
       "details": "詳細",
-      "cast": "キャスト"
+      "cast": "キャスト",
+      "share": "共有"
+    },
+    "share": {
+      "label": "この作品を共有",
+      "linkCopied": "リンクをコピーしました",
+      "title": "{{title}} — The Movie Cosmos",
+      "text": "{{title}}（{{releaseYear}}）— The Movie Cosmos で探す",
+      "ariaCopyLink": "作品リンクをコピー",
+      "ariaX": "X で投稿…",
+      "ariaFacebook": "Facebook で共有…",
+      "ariaTelegram": "Telegram で共有…",
+      "ariaReddit": "Reddit に投稿…",
+      "ariaDiscord": "Discord コミュニティを開く…",
+      "ariaEmail": "メールで共有…"
     },
     "details": {
       "missingValue": "/",

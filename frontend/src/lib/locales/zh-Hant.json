@@ -124,7 +124,21 @@
     "sections": {
       "overview": "簡介",
       "details": "詳情",
-      "cast": "卡司"
+      "cast": "卡司",
+      "share": "分享"
+    },
+    "share": {
+      "label": "分享這部影片",
+      "linkCopied": "連結已複製",
+      "title": "{{title}} — The Movie Cosmos",
+      "text": "{{title}}（{{releaseYear}}）— 在 The Movie Cosmos 中探索",
+      "ariaCopyLink": "複製影片連結",
+      "ariaX": "在 X 發佈…",
+      "ariaFacebook": "在 Facebook 分享…",
+      "ariaTelegram": "在 Telegram 分享…",
+      "ariaReddit": "在 Reddit 提交…",
+      "ariaDiscord": "打開 Discord 社群…",
+      "ariaEmail": "透過電子郵件分享…"
     },
     "details": {
       "missingValue": "/",

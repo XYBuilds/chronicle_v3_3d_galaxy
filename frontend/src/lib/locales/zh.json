@@ -124,7 +124,21 @@
     "sections": {
       "overview": "简介",
       "details": "详情",
-      "cast": "演员"
+      "cast": "演员",
+      "share": "分享"
+    },
+    "share": {
+      "label": "分享这部影片",
+      "linkCopied": "链接已复制",
+      "title": "{{title}} — The Movie Cosmos",
+      "text": "{{title}}（{{releaseYear}}）— 在 The Movie Cosmos 中探索",
+      "ariaCopyLink": "复制影片链接",
+      "ariaX": "在 X 发帖…",
+      "ariaFacebook": "在 Facebook 分享…",
+      "ariaTelegram": "在 Telegram 分享…",
+      "ariaReddit": "在 Reddit 提交…",
+      "ariaDiscord": "打开 Discord 社区…",
+      "ariaEmail": "通过邮件分享…"
     },
     "details": {
       "missingValue": "/",

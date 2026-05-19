@@ -124,7 +124,21 @@
     "sections": {
       "overview": "Overview",
       "details": "Details",
-      "cast": "Cast"
+      "cast": "Cast",
+      "share": "Share"
+    },
+    "share": {
+      "label": "Share this film",
+      "linkCopied": "Link copied",
+      "title": "{{title}} — The Movie Cosmos",
+      "text": "{{title}} ({{releaseYear}}) in The Movie Cosmos",
+      "ariaCopyLink": "Copy film link",
+      "ariaX": "Post on X…",
+      "ariaFacebook": "Share on Facebook…",
+      "ariaTelegram": "Share in Telegram…",
+      "ariaReddit": "Submit to Reddit…",
+      "ariaDiscord": "Open Discord community…",
+      "ariaEmail": "Share by email…"
     },
     "details": {
       "missingValue": "/",

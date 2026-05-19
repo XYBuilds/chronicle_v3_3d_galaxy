@@ -73,6 +73,20 @@ export function buildStrings(localeId: LocaleId) {
       personSearchNameAriaLabel: (name: string) =>
         interpolate(raw.drawer.personSearchNameAriaLabel, { name }),
       sections: raw.drawer.sections,
+      share: {
+        label: raw.drawer.share.label,
+        linkCopied: raw.drawer.share.linkCopied,
+        title: (title: string) => interpolate(raw.drawer.share.title, { title }),
+        text: (title: string, releaseYear: string) =>
+          interpolate(raw.drawer.share.text, { title, releaseYear }),
+        ariaCopyLink: raw.drawer.share.ariaCopyLink,
+        ariaX: raw.drawer.share.ariaX,
+        ariaFacebook: raw.drawer.share.ariaFacebook,
+        ariaTelegram: raw.drawer.share.ariaTelegram,
+        ariaReddit: raw.drawer.share.ariaReddit,
+        ariaDiscord: raw.drawer.share.ariaDiscord,
+        ariaEmail: raw.drawer.share.ariaEmail,
+      },
       details: {
         missingValue: raw.drawer.details.missingValue,
         runtime: raw.drawer.details.runtime,

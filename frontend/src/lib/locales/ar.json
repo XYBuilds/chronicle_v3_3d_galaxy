@@ -124,7 +124,21 @@
     "sections": {
       "overview": "نظرة عامة",
       "details": "التفاصيل",
-      "cast": "طاقم التمثيل"
+      "cast": "طاقم التمثيل",
+      "share": "مشاركة"
+    },
+    "share": {
+      "label": "مشاركة هذا الفيلم",
+      "linkCopied": "تم نسخ الرابط",
+      "title": "{{title}} — The Movie Cosmos",
+      "text": "{{title}} ({{releaseYear}}) في The Movie Cosmos",
+      "ariaCopyLink": "نسخ رابط الفيلم",
+      "ariaX": "نشر على X…",
+      "ariaFacebook": "مشاركة على Facebook…",
+      "ariaTelegram": "مشاركة عبر Telegram…",
+      "ariaReddit": "النشر على Reddit…",
+      "ariaDiscord": "فتح مجتمع Discord…",
+      "ariaEmail": "مشاركة عبر البريد…"
     },
     "details": {
       "missingValue": "/",

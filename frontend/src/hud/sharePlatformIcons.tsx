@@ -2,7 +2,7 @@ import { cn } from '@/lib/utils'
 
 type IconProps = { className?: string }
 
-/** 18–20px HUD icons; stroke/fill uses `currentColor`. Link / mail / main share use Lucide in {@link ShareMovieTodayButton}. */
+/** 18–20px share icons; stroke/fill uses `currentColor`. Link / mail use Lucide in {@link DrawerMovieShare}. */
 
 export function ShareIconX({ className }: IconProps) {
   return (

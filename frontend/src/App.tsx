@@ -18,7 +18,6 @@ import { SupportButton } from '@/hud/SupportButton'
 import { FullscreenButton } from '@/hud/FullscreenButton'
 import { InfoButton } from '@/hud/InfoButton'
 import { LanguageSwitch } from '@/hud/LanguageSwitch'
-import { ShareMovieTodayButton } from '@/hud/ShareMovieTodayButton'
 import { isGalaxyFullscreenAvailable, toggleGalaxyFullscreen } from '@/hud/fullscreenApi'
 import { resolveTodayMovieId } from '@/data/loadToday'
 import { clearSearch, useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
@@ -350,15 +349,6 @@ function App() {
         <FeedbackButton />
         <SupportButton />
         <InfoButton />
-        {todayMovie ? (
-          <ShareMovieTodayButton
-            movieTitle={todayMovie.title}
-            releaseYear={(() => {
-              const trimmed = todayMovie.release_date?.trim() ?? ''
-              return trimmed.length >= 4 ? trimmed.slice(0, 4) : '—'
-            })()}
-          />
-        ) : null}
         <LanguageSwitch />
         <FullscreenButton />
       </div>

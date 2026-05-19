@@ -124,7 +124,21 @@
     "sections": {
       "overview": "Resumen",
       "details": "Detalles",
-      "cast": "Reparto"
+      "cast": "Reparto",
+      "share": "Compartir"
+    },
+    "share": {
+      "label": "Compartir esta película",
+      "linkCopied": "Enlace copiado",
+      "title": "{{title}} — The Movie Cosmos",
+      "text": "{{title}} ({{releaseYear}}) en The Movie Cosmos",
+      "ariaCopyLink": "Copiar enlace de la película",
+      "ariaX": "Publicar en X…",
+      "ariaFacebook": "Compartir en Facebook…",
+      "ariaTelegram": "Compartir en Telegram…",
+      "ariaReddit": "Publicar en Reddit…",
+      "ariaDiscord": "Abrir comunidad de Discord…",
+      "ariaEmail": "Compartir por correo…"
     },
     "details": {
       "missingValue": "/",

@@ -19,7 +19,7 @@ todos:
     status: completed
   - id: p30-i18n-share
     content: 30.6 同步 Drawer 分享相关 i18n 文案，保持所有 locale 与 `en.json` 同构并更新 `strings.ts`
-    status: pending
+    status: completed
   - id: p30-static-rewrite
     content: 30.7 添加静态部署 SPA rewrite 配置，确保深链刷新可用且 `/data/*`、assets、fonts 不被 rewrite
     status: pending

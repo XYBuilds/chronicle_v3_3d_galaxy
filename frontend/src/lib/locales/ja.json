@@ -66,18 +66,7 @@
     "focusSearch": "検索にフォーカス（Cmd/Ctrl+K）",
     "close": "閉じる",
     "toggleLanguage": "表示言語を選択",
-    "exitFocus": "コスモスを見る",
-    "shareTheMovieToday": "今日の1本を共有",
-    "shareTheMovieTodayTitle": "The Movie Today: {{title}}",
-    "shareTheMovieTodayText": "{{title}}（{{releaseYear}}）— The Movie Cosmos の UTC で毎日替わる1本です。",
-    "shareTheMovieTodayLinkCopied": "リンクをコピーしました",
-    "shareTheMovieTodayAriaCopyLink": "サイトのリンクをコピー",
-    "shareTheMovieTodayAriaX": "X で投稿…",
-    "shareTheMovieTodayAriaFacebook": "Facebook で共有…",
-    "shareTheMovieTodayAriaTelegram": "Telegram で共有…",
-    "shareTheMovieTodayAriaReddit": "Reddit に投稿…",
-    "shareTheMovieTodayAriaDiscord": "Discord コミュニティを開く…",
-    "shareTheMovieTodayAriaEmail": "メールで共有…"
+    "exitFocus": "コスモスを見る"
   },
   "timeline": {
     "label": "タイムライン（公開年）",

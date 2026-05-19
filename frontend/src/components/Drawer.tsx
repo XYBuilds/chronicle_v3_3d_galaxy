@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ExternalLink, Star } from 'lucide-react'
 
+import { DrawerMovieShare } from '@/components/DrawerMovieShare'
+import { movieReleaseYearFromIso } from '@/lib/shareLinks'
 import { GenreBadgesList } from '@/components/GenreBadgesList'
 import {
   buildDrawerDetailsGroups,
@@ -25,7 +27,7 @@ import { useStrings } from '@/lib/strings'
 import type { Movie } from '@/types/galaxy'
 import { cn } from '@/lib/utils'
 
-/** easeOutCubic — open ~300ms, close ~450ms (Phase 4.3). */
+/** easeOutCubic �?open ~300ms, close ~450ms (Phase 4.3). */
 const SHEET_OPEN_EASE = 'cubic-bezier(0.215, 0.61, 0.355, 1)'
 
 function formatReleaseDate(iso: string): string {
@@ -244,7 +246,7 @@ export function MovieDetailDrawerHud({
         side="right"
         showCloseButton={false}
         className={cn(
-          /* P25.6 + P26.2 — above ambient + hover + tooltip; below modal (see index.css --z-hud-*). */
+          /* P25.6 + P26.2 �?above ambient + hover + tooltip; below modal (see index.css --z-hud-*). */
           'z-[var(--z-hud-drawer)]',
           /* Full-width slide: enter from the right edge, exit back off-screen right. */
           'data-[side=right]:data-starting-style:translate-x-full data-[side=right]:data-ending-style:translate-x-full',
@@ -410,6 +412,12 @@ export function MovieDetailDrawerHud({
                 </ul>
               </section>
             ) : null}
+
+            <DrawerMovieShare
+              movieId={movie.id}
+              movieTitle={movie.title}
+              releaseYear={movieReleaseYearFromIso(movie.release_date)}
+            />
           </div>
         ) : null}
       </SheetContent>

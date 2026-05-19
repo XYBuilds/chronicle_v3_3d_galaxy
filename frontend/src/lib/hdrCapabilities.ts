@@ -105,6 +105,18 @@ export function probeWebGpuAvailable(): boolean {
   return typeof navigator !== 'undefined' && 'gpu' in navigator && navigator.gpu != null
 }
 
+/**
+ * Request a WebGPU adapter without noisy Chromium warnings on Windows
+ * (`powerPreference` is ignored there — crbug.com/369219127).
+ */
+export async function requestWebGpuAdapter(): Promise<GPUAdapter | null> {
+  if (!probeWebGpuAvailable() || !navigator.gpu) return null
+  if (detectOsFamily(navigator.userAgent) === 'windows') {
+    return navigator.gpu.requestAdapter()
+  }
+  return navigator.gpu.requestAdapter({ powerPreference: 'high-performance' })
+}
+
 export function resolveDisplayHdr(dynamicRangeHigh: boolean): HdrDisplayState {
   if (dynamicRangeHigh) return 'hdr'
   if (typeof window !== 'undefined') return 'sdr'
@@ -251,7 +263,7 @@ export async function probeWebGpuExtendedToneMapping(): Promise<boolean> {
 
   let device: GPUDevice | null = null
   try {
-    const adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' })
+    const adapter = await requestWebGpuAdapter()
     if (!adapter) return false
 
     device = await adapter.requestDevice()

@@ -4,6 +4,7 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js'
 
 import { createHdrCapabilitiesDebug, type HdrCapabilitiesDebug } from '@/lib/hdrCapabilities'
+import { createHdrProofDebug, type HdrProofDebug } from '@/lib/hdrProof'
 import { setGalaxyCameraZ } from '@/lib/galaxyCameraZBridge'
 import { getStrings } from '@/lib/strings'
 import { useCoverModeStore } from '@/store/coverModeStore'
@@ -150,10 +151,13 @@ interface SelectionPlanetTerraceDebug {
 
 /** Dev console: `window.__hdrCapabilities` — Phase 29.2 HDR capability probe (§29 spec). */
 type HdrCapabilitiesWindowDebug = HdrCapabilitiesDebug
+/** Dev console: `window.__hdrProbe` — Phase 29.3 minimal HDR proof overlay (§29 spec). */
+type HdrProofWindowDebug = HdrProofDebug
 
 declare global {
   interface Window {
     __hdrCapabilities?: HdrCapabilitiesWindowDebug
+    __hdrProbe?: HdrProofWindowDebug
     __bloom?: BloomDebugControls
     __galaxyPointScale?: GalaxyPointScaleDebug
     __galaxyColor?: GalaxyColorDebug
@@ -247,6 +251,9 @@ export function mountGalaxyScene(
 
   const hdrCapabilitiesDebug = createHdrCapabilitiesDebug(renderer)
   window.__hdrCapabilities = hdrCapabilitiesDebug
+
+  const hdrProofDebug = createHdrProofDebug()
+  window.__hdrProbe = hdrProofDebug
 
   const pr = Math.min(window.devicePixelRatio, 2)
   const galaxy = createGalaxyDualMeshes(movies, meta.genre_palette, pr, renderer.capabilities.maxTextureSize)
@@ -1411,6 +1418,10 @@ export function mountGalaxyScene(
     galaxy.dispose()
     if (window.__hdrCapabilities === hdrCapabilitiesDebug) {
       delete window.__hdrCapabilities
+    }
+    hdrProofDebug.dispose()
+    if (window.__hdrProbe === hdrProofDebug) {
+      delete window.__hdrProbe
     }
     if (window.__bloom === bloomDebug) {
       delete window.__bloom

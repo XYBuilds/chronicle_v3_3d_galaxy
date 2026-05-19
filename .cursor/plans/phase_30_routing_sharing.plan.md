@@ -22,7 +22,7 @@ todos:
     status: completed
   - id: p30-static-rewrite
     content: 30.7 添加静态部署 SPA rewrite 配置，确保深链刷新可用且 `/data/*`、assets、fonts 不被 rewrite
-    status: pending
+    status: completed
   - id: p30-tests-acceptance
     content: 30.8 补充路由、分享、locale、data/base path 测试并执行 lint/build/preview 验收
     status: pending

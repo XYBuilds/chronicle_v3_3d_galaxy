@@ -39,6 +39,10 @@ jobs:
           VITE_CF_BEACON_TOKEN: ${{ secrets.CF_WEB_ANALYTICS_BEACON_TOKEN }}
         run: npm run build -w frontend
 
+      # P30.7: GHP SPA fallback for /movie/* and /today refresh (CF deploy must not ship 404.html).
+      - name: GitHub Pages SPA fallback (404.html)
+        run: cp frontend/dist/index.html frontend/dist/404.html
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: frontend/dist

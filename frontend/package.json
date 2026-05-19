@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build && node scripts/check-dist-max-file-size.mjs",
+    "build": "tsc -b && vite build && node scripts/check-dist-max-file-size.mjs && node scripts/verify-spa-fallback-dist.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "storybook": "storybook dev -p 6006",

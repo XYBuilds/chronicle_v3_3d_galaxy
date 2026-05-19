@@ -10,7 +10,7 @@ todos:
     status: completed
   - id: p29-hdr-probe-design
     content: 29.2 设计 HDR capability probe，明确运行时需要记录的 WebGL/WebGPU/canvas 能力与输出模式
-    status: pending
+    status: completed
   - id: p29-hdr-proof
     content: 29.3 规划最小 HDR proof，定义 SDR reference white 与 HDR candidate highlight 的对比方法
     status: pending

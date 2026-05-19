@@ -4,7 +4,7 @@ overview: Phase 31 聚焦低风险但高感知的 HUD 体验补强：为 Drawer 
 todos:
   - id: p31-plan-doc-preflight
     content: 31.1 创建并维护 `.cursor/plans/phase_31_hud_polish_i18n.plan.md`，确认 Phase 30 路由/分享改动不会阻塞本阶段
-    status: pending
+    status: completed
   - id: p31-poster-state-machine
     content: 31.2 为 Drawer poster 增加 empty/loading/loaded/failed/retrying 状态机，并在切换电影时稳定重置
     status: pending
@@ -91,6 +91,47 @@ flowchart TD
 - 如果 Phase 30 已经改动 Drawer 分享区，poster 改动不得破坏 Drawer header、overview、details、cast 和 share layout。
 - 如果 Phase 30 尚未完成，Phase 31 只能依赖当前 Drawer 结构，不提前实现分享或路由逻辑。
 - 只处理 HUD 表现和文案，不把搜索语义问题扩展成数据导出任务。
+
+#### 31.1 预检结论（2026-05-20）
+
+**Phase 30 状态**：`phase_30_routing_sharing.plan.md` 全部 TODO（30.1–30.8）已在 `main` 标记 `completed`。深链 parser（`frontend/src/lib/routes.ts`）、route controller（`routeControllerSync.ts` / `routeActions.ts`）、Drawer 分享（`DrawerMovieShare`）、locale `drawer.share.*`、静态 SPA fallback（`frontend/public/_redirects` + `spaRedirects.spec.ts`）均已落地。**Phase 31 不阻塞、也不需再改路由/分享层。**
+
+**Drawer 布局与 Phase 31 边界**（`frontend/src/components/Drawer.tsx`）：
+
+| 区域                      | 位置                                             | Phase 31 可改范围            |
+| ------------------------- | ------------------------------------------------ | ---------------------------- |
+| `DrawerMovieShare`        | `SheetHeader` 内，genre/TMDB/IMDb 链接下方       | **不改**（仅 poster 状态机） |
+| `DrawerPoster`            | 可滚动 body 顶部 `AspectRatio`（`group/poster`） | **主改区**（31.2–31.3）      |
+| overview / details / cast | body 下方 sections                               | **不改**                     |
+
+分享与 poster 在 DOM 上分离：header 固定、body 独立滚动；poster loading/retry overlay 应限制在 `AspectRatio` 容器内，避免影响 header 高度或 share 图标行。
+
+**当前 `DrawerPoster` 基线**（预检快照）：
+
+- 单 boolean `failed`；`onError` 置位后回退占位。
+- 空 `posterUrl` 与加载失败共用 `str.drawer.posterPlaceholder`（`en.json` → `drawer.posterPlaceholder`）。
+- 无 `onLoad`、无 spinner、无 retry；`<img loading="lazy" decoding="async">`。
+- 切换电影：`key={\`${movie.id}|${movie.poster_url}\`}` 强制 remount——31.2 可保留 key 策略，并在组件内增加 `reloadToken` 供 retry cache-bust。
+
+**可复用资产**：
+
+- `frontend/src/components/ui/spinner.tsx`：`Loader2Icon` + `role="status"`，可供 loading/retrying（31.2）。
+- `strings.ts`：`drawer.posterAlt(title)` 已存在；新增 `drawer.poster.*` 时需同步 `strings.ts` 映射（31.5）。
+
+**搜索 placeholder 基线**（31.4 仅文案）：
+
+- `SearchBar.tsx` 按 tab 读取 `ui.searchBar.placeholderMovie` / `placeholderPerson` / `placeholderGenre`。
+- 当前 `en.json`：`Search movie titles…` / `Director / Producer / Cast …` / `Drama / Comedy / Thriller …`——与计划建议文案不一致，31.4 再改。
+
+**风险与约束（已确认可接受）**：
+
+1. **不碰** `routes.ts`、`routeControllerSync.ts`、`shareLinks.ts`、`DrawerMovieShare.tsx`。
+2. **不扩展** 搜索索引或人物多语言别名（留 Phase 35 或数据任务）。
+3. Poster retry 仅用客户端 cache-bust query，不引入图片代理/CDN。
+4. `drawer.posterPlaceholder` → `drawer.poster.placeholder` 迁移时须一次性改全 locale + `strings.ts`（31.5）。
+5. Phase 30 测试（`routes.spec.ts`、`routeActions.spec.ts`、`shareLinks.spec.ts`）与 Phase 31 poster 测试正交，31.7 只需补 Drawer/SearchBar/locale 相关用例。
+
+**结论**：Phase 30 已完成；Phase 31 可安全在 `DrawerPoster` + locale/search placeholder 范围内推进，无需等待或并行修改路由/分享。
 
 ### 31.2 Drawer poster 状态机
 

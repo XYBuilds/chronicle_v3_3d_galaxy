@@ -16,7 +16,7 @@ todos:
     status: completed
   - id: p30-drawer-share
     content: 30.5 将 Today-only HUD 分享迁移为 Drawer 当前影片分享，分享 URL 指向 `/movie/:id`
-    status: pending
+    status: completed
   - id: p30-i18n-share
     content: 30.6 同步 Drawer 分享相关 i18n 文案，保持所有 locale 与 `en.json` 同构并更新 `strings.ts`
     status: pending

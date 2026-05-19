@@ -571,7 +571,7 @@ Browser
 Phase 29 **不**在本阶段交付完整路由或 HDR 生产；条文 SSOT 为 **[`Phase 29 发布门槛与技术判定 spec.md`](./Phase%2029%20发布门槛与技术判定%20spec.md)**。本节为交叉引用摘要。
 
 * **HDR（D1–D4）**：当前生产为 **`THREE.SRGBColorSpace`** + **SDR WebGL**（§1.1）；**Bloom 默认关**（§1.2）。「真实 HDR」须可证扩展亮度，**不得**用 Bloom 或 SDR 提亮冒充。**支持矩阵（P29.1）**：P0 = Win11 HDR + Chrome/Edge + **WebGPU extended** + HDR 屏；P1 = macOS HDR + Safari + 同 API；WebGL2 主路径恒 **SDR**。详见 Phase 29 spec **§4**。capability probe、最小 proof 与 Phase 33 go/no-go 见 §7–§10。
-* **深链（D5–D9）**：Phase 30 采用**轻量 path parser**（**不**引入 React Router）。路径契约 **`/`**、**`/movie/:id`**、**`/today`**；`selectedMovieId` / `coverModeStore` 为状态 SSOT；`lang` / `theme` / `timeline` query **须保留**。ESC 栈与 Design Spec §4.6 一致。
+* **深链（D5–D9，P29.5 已锁定）**：Phase 30 采用**轻量 path parser**（**不**引入 React Router）。路径契约 **`/`**、**`/movie/:id`**、**`/today`**；`selectedMovieId` / `coverModeStore` 为状态 SSOT；`lang` / `theme` / `timeline` query **须保留**。非法/未知 id → **`replace '/'`**；cover→focus → **`push /movie/:todayId`**；清 focus/关 Drawer → **`replace '/'`**；`/movie/:id` 冷启动 **跳过** cover boot。条文见 Phase 29 spec **§5**；ESC 栈与 Design Spec §4.6 一致。
 * **静态托管（§6）**：仓库现状**无** SPA fallback rewrite；`frontend/public/_headers` 仅 cache。**深链刷新 404 风险**已在 Phase 29 预检记录；rewrite 实施归 **Phase 30.7**，须豁免 **`/data/*`**、**`/fonts/*`** 与构建 assets。
 
 ## **6\. 项目目录结构**

@@ -25,7 +25,7 @@ todos:
     status: completed
   - id: p29-gate-report
     content: 29.7 产出 Phase 29 go/no-go 结论：是否进入 Phase 33 HDR production，以及 Phase 30 的实施前置条件
-    status: pending
+    status: completed
 isProject: false
 ---
 

@@ -1,6 +1,6 @@
 # Phase 29 — 发布门槛与技术判定（Spec SSOT）
 
-> **状态**：P29.0 已建立本文档与 Tech / Design Spec 交叉引用；**§4（29.1）** 已锁定 HDR 支持矩阵；**§7（29.2）** 已锁定 HDR capability probe；**§8（29.3）** 已锁定最小 HDR proof；**§9（29.4）** 已锁定 SDR fallback 策略；**§5（29.5）** 已锁定 Phase 30 深链路由契约与 Zustand 同步边界；**§6（29.6）** 已锁定静态部署 rewrite 预检与 Phase 30.7 实施方案；§29.7 gate 结论待填。  
+> **状态**：P29.0–P29.6 已锁定；**§10（29.7）** 已输出 Phase 29 gate：**Phase 33 HDR production No-go**（P0 无 `supported`）；**Phase 30 Go**；生产仍为 WebGL2 sRGB。实施报告见 [`docs/reports/Phase 29.7 P29.7 Phase 29 Gate report 实施报告.md`](../reports/Phase%2029.7%20P29.7%20Phase%2029%20Gate%20report%20实施报告.md)。  
 > **计划**：`.cursor/plans/phase_29_release_gates_technical_decision.plan.md`  
 > **下游**：Phase 30（路由产品化）、Phase 32（SDR 可读性）、Phase 33（HDR 生产，**条件阶段**）、Phase 34（社交预览）。
 
@@ -17,7 +17,7 @@ Phase 29 **不**交付完整深链产品化或 HDR 生产管线，而是判清�
 
 - 建立 HDR 支持矩阵、capability probe 设计、最小 proof 方法与 SDR 降级策略（文档 + 可选探测代码见 29.2+）。
 - 锁定 Phase 30 路由契约与静态部署 rewrite 方案（预检结论写入 §5、§6）。
-- 输出 Phase 33 go/no-go 前置条件（§7 待 29.7 汇总）。
+- 输出 Phase 33 go/no-go 结论（§10 · 29.7 已汇总）。
 
 ### 1.2 本 Phase 不做
 
@@ -573,18 +573,62 @@ Vercel 对 `public/` / `dist` 中已存在文件 **不** 应用 catch-all。
 
 ---
 
-## 10. Phase 29 Gate report（§29.7 — 待填）
+## 10. Phase 29 Gate report（§29.7 — P29.7 已锁定）
 
-**负责人**：TODO 29.7 · `p29-gate-report`
+**负责人**：TODO 29.7 · `p29-gate-report` · 实施报告见 [`docs/reports/Phase 29.7 P29.7 Phase 29 Gate report 实施报告.md`](../reports/Phase%2029.7%20P29.7%20Phase%2029%20Gate%20report%20实施报告.md)
 
-汇总后须明确：
+### 10.1 总判定
 
-- [ ] 是否进入 **Phase 33** HDR production
-- [ ] 若不进入，probe + 技术结论如何保留（console / debug UI / 文档）
-- [ ] **Phase 30** 实施前置是否满足（§5 + §6）
-- [ ] 转入 Phase 32 / 34 / backlog 的风险项
+| 项 | 结论 |
+| :--- | :--- |
+| **Phase 29 判定任务** | **Complete** — 29.0–29.6 交付物齐全 |
+| **Phase 33 HDR production（33.5 星系接入）** | **No-go** |
+| **Phase 33 收窄路径（probe + SDR fallback + 文档）** | **Go** |
+| **Phase 30 深链产品化** | **Go**（§5 + §6 前置已满足） |
+| **当前生产渲染** | **不变** — WebGL2 + `SRGBColorSpace`；Bloom 默认关 |
 
-**Go / No-go 结论**：_TBD（29.7）_
+### 10.2 Phase 33 HDR production — No-go
+
+**依据（D4 / §4.6 / §8.3）**：
+
+- P0 **#1**（Win11 HDR on · Chrome 148 · WebGPU extended · HDR 主屏）：`webgpuExtendedToneMapping=true`，`verdict=sdr-clamped`，`meetsD1Proof=false`；`__hdrProbe` 目视 extended/standard 无亮度差；对照 YouTube HDR 同机可见 → **视频 HDR OK，WebGPU canvas extended 未呈现 D1 headroom**。
+- P0 **#2**（Edge）：未单独 proof；与 #1 同 Chromium 栈，gate **不**假设优于 #1。
+- P1 **#3**（macOS Safari）：**本轮未实测**；在补 proof 前 **不得** 升为 `supported` 或解冻 33.5。
+
+**矩阵终态**：§4.3 ★ 行均为 **`experimental`**；无 **`supported`** 行。
+
+### 10.3 probe 与技术结论保留（No-go 后）
+
+| 机制 | 说明 |
+| :--- | :--- |
+| `window.__hdrCapabilities` | 运行时矩阵行、WebGPU extended 探测、二次 `console.log` |
+| `window.__hdrProbe` | D1 受控 proof；默认隐藏，不污染主 canvas |
+| `window.__sdrFallback` | 生产 SDR 策略与 `fallbackReason` |
+| Storybook `HdrProofLab` | 非生产验收 |
+| 本文档 §4–§9 | SSOT |
+| `docs/temp/HDR 双栈路线与 Phase 29-33 讨论纪要.md` | spike / 双栈讨论上下文 |
+
+**禁止**：以 configure 成功、Bloom 或 `uLMax` 作为「已交付 HDR」宣传。
+
+### 10.4 Phase 30 前置 — Go
+
+| 前置 | 状态 |
+| :--- | :--- |
+| §5 路由契约（path / query / URL↔store / boot / ESC） | **已锁定** |
+| §6 静态 rewrite（CF 隐式 SPA + 30.7 `_redirects` / GHP `404.html`） | **方案已锁定**；配置 **待 30.7** |
+| 与 Phase 33 依赖 | **无** |
+
+### 10.5 风险分流
+
+| 目标 Phase / 队列 | 内容 |
+| :--- | :--- |
+| **Phase 30** | 深链实现、分享 URL、30.7–30.8 验收 |
+| **Phase 32** | SDR 可读性 / 运动（与 HDR gate 并行） |
+| **Phase 33（收窄）** | 33.1–33.4、33.7；**冻结 33.5** |
+| **Phase 34** | OG / 社交预览 |
+| **Backlog** | `phase_33b_webgpu_hdr_spike`（Three WebGPU + extended 与主场景隔离）；Firefox #8；macOS #3 补测 |
+
+**Go / No-go 结论（29.7）**：**Phase 33 HDR production — No-go**；**Phase 30 — Go**；**生产 HDR — 不承诺**；capability + proof **保留**。
 
 ---
 
@@ -598,4 +642,4 @@ Vercel 对 `public/` / `dist` 中已存在文件 **不** 应用 catch-all。
 | SDR fallback 说明           | §9   | **P29.4 已锁定**（含 `__sdrFallback`） |
 | Phase 30 路由契约           | §5   | **P29.5 已锁定**                |
 | Static hosting rewrite 方案 | §6   | **P29.6 已锁定**（配置待 30.7 落地） |
-| Phase 33 go/no-go           | §10  | 待 29.7                         |
+| Phase 33 go/no-go           | §10  | **P29.7 已锁定**（HDR production No-go） |

@@ -5,6 +5,7 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 
 import { createHdrCapabilitiesDebug, type HdrCapabilitiesDebug } from '@/lib/hdrCapabilities'
 import { createHdrProofDebug, type HdrProofDebug } from '@/lib/hdrProof'
+import { createSdrFallbackDebug, SDR_FALLBACK_OUTPUT_COLOR_SPACE, type SdrFallbackDebug } from '@/lib/sdrFallback'
 import { setGalaxyCameraZ } from '@/lib/galaxyCameraZBridge'
 import { getStrings } from '@/lib/strings'
 import { useCoverModeStore } from '@/store/coverModeStore'
@@ -153,11 +154,14 @@ interface SelectionPlanetTerraceDebug {
 type HdrCapabilitiesWindowDebug = HdrCapabilitiesDebug
 /** Dev console: `window.__hdrProbe` — Phase 29.3 minimal HDR proof overlay (§29 spec). */
 type HdrProofWindowDebug = HdrProofDebug
+/** Dev console: `window.__sdrFallback` — Phase 29.4 production SDR policy (§29 spec). */
+type SdrFallbackWindowDebug = SdrFallbackDebug
 
 declare global {
   interface Window {
     __hdrCapabilities?: HdrCapabilitiesWindowDebug
     __hdrProbe?: HdrProofWindowDebug
+    __sdrFallback?: SdrFallbackWindowDebug
     __bloom?: BloomDebugControls
     __galaxyPointScale?: GalaxyPointScaleDebug
     __galaxyColor?: GalaxyColorDebug
@@ -239,7 +243,7 @@ export function mountGalaxyScene(
     powerPreference: 'high-performance',
   })
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-  renderer.outputColorSpace = THREE.SRGBColorSpace
+  renderer.outputColorSpace = SDR_FALLBACK_OUTPUT_COLOR_SPACE
 
   if (!renderer.capabilities.isWebGL2) {
     renderer.dispose()
@@ -249,7 +253,14 @@ export function mountGalaxyScene(
   const gl = renderer.getContext()
   const webglLabel = gl instanceof WebGL2RenderingContext ? 'WebGL2' : 'WebGL1'
 
-  const hdrCapabilitiesDebug = createHdrCapabilitiesDebug(renderer)
+  let sdrFallbackDebug: SdrFallbackDebug
+  const hdrCapabilitiesDebug = createHdrCapabilitiesDebug(renderer, {
+    onReportUpdated: () => {
+      sdrFallbackDebug.refresh()
+    },
+  })
+  sdrFallbackDebug = createSdrFallbackDebug(renderer, () => hdrCapabilitiesDebug.report)
+  window.__sdrFallback = sdrFallbackDebug
   window.__hdrCapabilities = hdrCapabilitiesDebug
 
   const hdrProofDebug = createHdrProofDebug()
@@ -1418,6 +1429,9 @@ export function mountGalaxyScene(
     galaxy.dispose()
     if (window.__hdrCapabilities === hdrCapabilitiesDebug) {
       delete window.__hdrCapabilities
+    }
+    if (window.__sdrFallback === sdrFallbackDebug) {
+      delete window.__sdrFallback
     }
     hdrProofDebug.dispose()
     if (window.__hdrProbe === hdrProofDebug) {

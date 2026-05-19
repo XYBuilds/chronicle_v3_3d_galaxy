@@ -1,6 +1,6 @@
 # Phase 29 — 发布门槛与技术判定（Spec SSOT）
 
-> **状态**：P29.0 已建立本文档与 Tech / Design Spec 交叉引用；**§4（29.1）** 已锁定 HDR 支持矩阵；**§7（29.2）** 已锁定 HDR capability probe；**§8（29.3）** 已锁定最小 HDR proof 方法与调试入口；§29.4–§29.7 中其余标记 **待填** 的表格与结论由后续 TODO 补全。  
+> **状态**：P29.0 已建立本文档与 Tech / Design Spec 交叉引用；**§4（29.1）** 已锁定 HDR 支持矩阵；**§7（29.2）** 已锁定 HDR capability probe；**§8（29.3）** 已锁定最小 HDR proof；**§9（29.4）** 已锁定 SDR fallback 策略；§29.5–§29.7 中其余标记 **待填** 的表格与结论由后续 TODO 补全。  
 > **计划**：`.cursor/plans/phase_29_release_gates_technical_decision.plan.md`  
 > **下游**：Phase 30（路由产品化）、Phase 32（SDR 可读性）、Phase 33（HDR 生产，**条件阶段**）、Phase 34（社交预览）。
 
@@ -318,15 +318,51 @@ Phase 29 **不**交付完整深链产品化或 HDR 生产管线，而是判清�
 
 ---
 
-## 9. SDR fallback 策略（§29.4 — 策略契约）
+## 9. SDR fallback 策略（§29.4 — P29.4 已锁定）
 
-**负责人**：TODO 29.4 · `p29-sdr-fallback`
+**负责人**：TODO 29.4 · `p29-sdr-fallback` · 实施报告见 [`docs/reports/Phase 29.4 P29.4 SDR fallback 策略 实施报告.md`](../reports/Phase%2029.4%20P29.4%20SDR%20fallback%20策略%20实施报告.md)
 
-| 条件                         | 行为                                                                           |
-| :--------------------------- | :----------------------------------------------------------------------------- |
-| HDR 关 / 不支持 / 用户未启用 | 保持 **现有 SDR 主路径**（D2）；`outputColorSpace` 不变                        |
-| 禁止                         | 黑屏、色偏、过曝、**默认开启 Bloom**                                           |
-| 视觉参数                     | **不**在 Phase 29 回写 `galaxyMeshes` / `galaxyUniformDefaults`（归 Phase 32） |
+### 9.1 生产不变量（D2 / D3）
+
+| 不变量 | 值 | 锚点 |
+| :--- | :--- | :--- |
+| 星系渲染路径 | **WebGL2** 直接 `renderer.render(scene, camera)` | `scene.ts` render loop |
+| 输出色彩空间 | **`THREE.SRGBColorSpace`**（标签 `srgb`） | `SDR_FALLBACK_OUTPUT_COLOR_SPACE` · `sdrFallback.ts` |
+| Bloom | **`postFxBloomEnabled = false`**；仅 `window.__bloom.enable()` 调试 | `scene.ts` |
+| HDR proof | **独立** WebGPU 叠加层；默认 **隐藏**（`__hdrProbe.hide()`） | `hdrProof.ts` |
+| 视觉 uniform | Phase 29 **不改** `galaxyMeshes` / `galaxyUniformDefaults` | Phase 32 |
+
+开发构建在启动时 `assertSdrProductionRenderer()`；违反则 **throw**（生产仅 `console.warn`）。
+
+### 9.2 条件 → 行为（矩阵对齐）
+
+| 条件（`hdrCapabilities`） | `fallbackReason` | 生产行为 |
+| :--- | :--- | :--- |
+| 任意（默认） | `production-default` | SDR 主路径；`recommendedMode: sdr` |
+| `verdictPre: blocked`（#6–#7、#11–#12 等） | `hdr-blocked-matrix` | 同上；**禁止**自动 Bloom / `uLMax`「伪 HDR」 |
+| `verdictPre: experimental` 且非 P0/P1 | `hdr-experimental-not-shipped` | 同上；仅 lab / probe 记录 |
+| `meetsTargetMatrix` 或 `recommendedMode: hdr-capable` | `hdr-capable-awaiting-phase33` | **仍** SDR 主路径，直至 Phase 33 **go** + D1 proof |
+| `!webgl2` | `webgl2-unavailable` | 启动 **失败**（现有硬前置，非 HDR 回归） |
+
+**Phase 29 明确不做**：因 `hdr-capable` 或 WebGPU extended configure 成功而切换 `outputColorSpace`、接入 WebGPU 星系渲染器、或默认开 Bloom。
+
+### 9.3 运行时与调试
+
+| 入口 | 说明 |
+| :--- | :--- |
+| `console.log('[sdrFallback]', policy)` | 场景初始化 + WebGPU 异步 probe 完成后各一次 |
+| `window.__sdrFallback` | `policy` / `log()` / `refresh()`（复用最新 `__hdrCapabilities.report`） |
+| 模块 | `frontend/src/lib/sdrFallback.ts` |
+
+### 9.4 回归验收矩阵（29.4）
+
+| 场景 | 期望 |
+| :--- | :--- |
+| SDR 屏 / `displayHdr: sdr` | 星系正常；`fallbackReason: hdr-blocked-matrix` |
+| HDR 屏 + OS HDR on + extended probe 成功 | 星系 **仍** SDR；`hdr-capable-awaiting-phase33` |
+| `__hdrProbe.show()` 后 hide | 主 WebGL canvas **无** 色偏/黑屏/残留叠加 |
+| 未调用 `__bloom.enable()` | 无 Bloom；帧路径为 `renderer.render` |
+| 刷新页 | 上述不变量保持 |
 
 ---
 
@@ -352,7 +388,7 @@ Phase 29 **不**交付完整深链产品化或 HDR 生产管线，而是判清�
 | HDR support matrix          | §4   | **P29.1 已锁定**                |
 | HDR probe 设计              | §7   | **P29.2 已锁定**（含运行时模块） |
 | HDR proof 记录              | §8   | **P29.3 已锁定**（含 `__hdrProbe` + Storybook lab） |
-| SDR fallback 说明           | §9   | 契约已写，验收待 29.4           |
+| SDR fallback 说明           | §9   | **P29.4 已锁定**（含 `__sdrFallback`） |
 | Phase 30 路由契约           | §5   | **P29.0 已锁定**                |
 | Static hosting rewrite 方案 | §6   | **P29.0 预检已写**，配置待 30.7 |
 | Phase 33 go/no-go           | §10  | 待 29.7                         |

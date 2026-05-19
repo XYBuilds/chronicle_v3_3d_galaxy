@@ -24,7 +24,7 @@ Use one Agent per task and one Git branch per task. Preserve the human acceptanc
 
 1. **Create a task branch first**
    - Before editing task code, inspect the current branch and create a new task branch from the current base.
-   - Use the branch naming format `prefix/short-task-name`; choose a concise prefix such as `feat`, `fix`, `docs`, `chore`, or `refactor` based on the task type.
+   - Use the branch naming format `prefix/p#.#-short-task-name`; choose a concise prefix such as `feat`, `fix`, `docs`, `chore`, or `refactor` based on the task type, and use the plan TODO number as `p#.#`.
    - Do not work directly on `main` or `master`.
 
 2. **Execute the assigned TODO**

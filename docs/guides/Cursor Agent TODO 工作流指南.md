@@ -14,7 +14,7 @@
 
 1. **新建任务分支**
    - Agent 开始具体实现前，先从当前基线创建并切换到新分支。
-   - 命名格式：`prefix/short-task-name`，其中 `prefix` 根据任务类型选择，例如 `feat`、`fix`、`docs`、`chore`、`refactor`。
+   - 命名格式：`prefix/p#.#-short-task-name`，其中 `prefix` 根据任务类型选择，例如 `feat`、`fix`、`docs`、`chore`、`refactor`；`p#.#` 对应 plan TODO 编号。
    - 禁止直接在 `main` / `master` 上实现任务。
 
 2. **执行任务**

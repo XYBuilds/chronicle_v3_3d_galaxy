@@ -32,11 +32,11 @@ run() {
   "$@"
 }
 
-MESSAGE="${*:-}"
-[[ -n "$MESSAGE" ]] || {
+if (( $# == 0 )); then
   usage
   fail "A commit/PR message is required."
-}
+fi
+MESSAGE="$*"
 
 require_command git
 require_command gh
@@ -120,6 +120,10 @@ done
 run git fetch origin
 run git switch "$BASE_BRANCH"
 run git pull --ff-only origin "$BASE_BRANCH"
-run git branch -d "$CURRENT_BRANCH"
+if git show-ref --verify --quiet "refs/heads/$CURRENT_BRANCH"; then
+  run git branch -d "$CURRENT_BRANCH"
+else
+  echo "Local branch '$CURRENT_BRANCH' is already deleted."
+fi
 
 echo "Finished task branch '$CURRENT_BRANCH' into '$BASE_BRANCH'."

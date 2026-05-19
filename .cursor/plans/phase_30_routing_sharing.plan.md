@@ -13,7 +13,7 @@ todos:
     status: completed
   - id: p30-action-url-sync
     content: 30.4 收敛用户动作到 URL 同步，覆盖点击、搜索、Drawer close、ESC、Focus exit、Today cover 进入 focus
-    status: pending
+    status: completed
   - id: p30-drawer-share
     content: 30.5 将 Today-only HUD 分享迁移为 Drawer 当前影片分享，分享 URL 指向 `/movie/:id`
     status: pending

@@ -4,7 +4,7 @@ overview: Phase 30 聚焦把 Phase 29 预检过的深链能力产品化：实现
 todos:
   - id: p30-plan-doc-preflight
     content: 30.1 创建并维护 `.cursor/plans/phase_30_routing_sharing.plan.md`，确认 Phase 29 route/rewrite 前置结论可执行
-    status: pending
+    status: completed
   - id: p30-route-parser
     content: 30.2 新增轻量 URL parser/builder，覆盖 `/`、`/movie/:id`、`/today` 与 query 保留
     status: pending
@@ -92,11 +92,59 @@ flowchart TD
 
 先创建并维护计划文件：`.cursor/plans/phase_30_routing_sharing.plan.md`。
 
-执行前置检查：
+#### 30.1.1 计划文件状态
 
-- Phase 29 的 route contract 已确认 `/`、`/movie/:id`、`/today`。
-- Phase 29 的 static rewrite 方案已确认不会吞掉 `/data/*`。
-- 若 Phase 29 结论有变，先更新本 Phase 的 route/rewrite 细节再实现。
+| 项 | 状态 |
+| --- | --- |
+| 计划路径 | `.cursor/plans/phase_30_routing_sharing.plan.md`（本文件） |
+| Phase 29 计划 | 全部 TODO 29.0–29.7 **completed**（见 [phase_29_release_gates_technical_decision.plan.md](./phase_29_release_gates_technical_decision.plan.md)） |
+| Phase 29 Gate | **Go** — Phase 30 深链产品化可开工（[P29.7 报告](../docs/reports/Phase%2029.7%20P29.7%20Phase%2029%20Gate%20report%20实施报告.md) §6） |
+| Phase 30 与 Phase 33 | **无依赖** — HDR production 为 No-go，不阻塞本 Phase |
+
+#### 30.1.2 Phase 29 前置检查（2026-05-19）
+
+**路由契约（spec §5 — P29.5）— 可执行，无变更**
+
+| 检查项 | 结论 | SSOT |
+| --- | --- | --- |
+| Path 集合 `/` · `/movie/:id` · `/today` | **已锁定** | `RouteKind`: `home` \| `movie` \| `today` \| `unknown` |
+| `:id` 规则 | 正整数；非法 → R1 `replaceState('/')`；不在 galaxy → R2 | spec §5.2 |
+| Query 保留 `lang` / `theme` / `timeline` | path 变更仅改 `pathname`（R5） | spec §5.3 |
+| URL ↔ store | `selectedMovieId` + `coverMode` + `todayMovieId`；B1–B9 表 | spec §5.4 |
+| cover boot 竞态 | **R4** + `pendingRoute`（movie 深链跳过 `setCover`） | spec §5.5；`App.tsx` 现仍无条件 `resolveToday` → `setCover` |
+| Today cover → focus | **R6** push `/movie/:todayId` | spec §5.7 |
+| ESC / Back / Forward | B3–B5 replace `/`；popstate 无二次 push（R7–R8） | spec §5.6 |
+| 建议模块路径 | `frontend/src/lib/routes.ts` + `useRouteController`（或 App 内 hook） | spec §5.1 |
+
+**静态 rewrite（spec §6 — P29.6）— 方案已锁定，配置文件待 30.7**
+
+| 检查项 | 结论 | 备注 |
+| --- | --- | --- |
+| 生产 CF Pages 隐式 SPA | **已具备**（无顶层 `404.html` → `/movie/*` 刷新 200 + `index.html`） | 30.7 仍加显式 `_redirects` 作契约文档（W2） |
+| `/data/*` 不被 rewrite | **D8** — 实体文件优先；`_headers` 仅 cache，与 fallback 正交 | `frontend/public/_headers` 已存在 |
+| `/fonts/*` · `/assets/*` · favicon/manifest/icons | **豁免** | dist 抽样与 spec §6.3 一致 |
+| GHP 备线 | **缺口** — 无 `404.html`；30.7 须 `cp dist/index.html dist/404.html` | W3 |
+| `vercel.json` | **不存在**；未来启用见 spec §6.5 模板 | 非当前主部署 |
+| `vite preview` | **不能**作深链刷新验收 | 30.8 用 CF / `wrangler pages dev` |
+
+**仓库现状核对（30.1 执行日）— 与 Phase 29 预检一致**
+
+| 资产 | 预期（29.x） | 现状 |
+| --- | --- | --- |
+| `frontend/src/lib/routes.ts` | 30.2 新增 | **不存在** ✓ |
+| `frontend/public/_redirects` | 30.7 新增 | **不存在** ✓ |
+| `ShareMovieTodayButton` | HUD 分享根路径 `/` | **存在**于 `App.tsx` ✓ |
+| `Drawer.tsx` 分享区 | 30.5 新增 | **无** ✓ |
+| `galaxyAssetUrls` | `import.meta.env.BASE_URL` | `frontend/src/lib/galaxyAssetUrls.ts` ✓ |
+
+#### 30.1.3 对后续 TODO 的实施约束（自 Phase 29 继承）
+
+- **30.2–30.4**：严格实现 spec §5 的 R1–R9 与 B1–B9；`pendingRoute` 必须在 `galaxyData` ready 前缓存深链。
+- **30.5**：分享 URL 从 `origin/` 迁至 `origin + BASE_URL + '/movie/:id'`（保留 query）。
+- **30.7**：落地 `frontend/public/_redirects`（CF）+ GHP `404.html`；**不**改 `_middleware.js`（仅域名 301）。
+- **30.8**：验收矩阵引用 spec §5.8 T1–T8 与 spec §6 R1–R8。
+
+**Phase 29 结论无变更** — 30.2 起可直接按本计划与 [Phase 29 spec](../docs/project_docs/Phase%2029%20发布门槛与技术判定%20spec.md) §5–§6 实施。
 
 ### 30.2 轻量 URL parser 与 URL builder
 
@@ -198,7 +246,7 @@ flowchart TD
 
 ### 30.7 静态部署 rewrite 与 base path 验证
 
-补 SPA fallback 配置，优先针对 Vercel；如果后续部署目标还有 Cloudflare/Netlify，再追加对应配置。
+补 SPA fallback 配置，**优先 Cloudflare Pages**（当前生产）：`frontend/public/_redirects`；**GitHub Pages 备线** build 后 `cp index.html 404.html`（spec §6.4）。若未来启用 Vercel，再追加根目录 `vercel.json`（spec §6.5）。
 
 要求：
 
@@ -212,7 +260,7 @@ flowchart TD
 重点检查：
 
 - [frontend/vite.config.ts](frontend/vite.config.ts)
-- [frontend/src/data/galaxyAssetUrls.ts](frontend/src/data/galaxyAssetUrls.ts)
+- [frontend/src/lib/galaxyAssetUrls.ts](frontend/src/lib/galaxyAssetUrls.ts)
 - [frontend/src/data/loadGalaxyGzip.ts](frontend/src/data/loadGalaxyGzip.ts)
 - [frontend/src/data/loadToday.ts](frontend/src/data/loadToday.ts)
 - [frontend/public/_headers](frontend/public/_headers)

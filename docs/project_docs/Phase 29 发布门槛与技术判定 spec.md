@@ -1,6 +1,6 @@
 # Phase 29 — 发布门槛与技术判定（Spec SSOT）
 
-> **状态**：P29.0 已建立本文档与 Tech / Design Spec 交叉引用；**§4（29.1）** 已锁定 HDR 支持矩阵；**§7（29.2）** 已锁定 HDR capability probe；**§8（29.3）** 已锁定最小 HDR proof；**§9（29.4）** 已锁定 SDR fallback 策略；**§5（29.5）** 已锁定 Phase 30 深链路由契约与 Zustand 同步边界；§29.6–§29.7 中其余标记 **待填** 的表格与结论由后续 TODO 补全。  
+> **状态**：P29.0 已建立本文档与 Tech / Design Spec 交叉引用；**§4（29.1）** 已锁定 HDR 支持矩阵；**§7（29.2）** 已锁定 HDR capability probe；**§8（29.3）** 已锁定最小 HDR proof；**§9（29.4）** 已锁定 SDR fallback 策略；**§5（29.5）** 已锁定 Phase 30 深链路由契约与 Zustand 同步边界；**§6（29.6）** 已锁定静态部署 rewrite 预检与 Phase 30.7 实施方案；§29.7 gate 结论待填。  
 > **计划**：`.cursor/plans/phase_29_release_gates_technical_decision.plan.md`  
 > **下游**：Phase 30（路由产品化）、Phase 32（SDR 可读性）、Phase 33（HDR 生产，**条件阶段**）、Phase 34（社交预览）。
 
@@ -53,7 +53,7 @@ Phase 29 **不**交付完整深链产品化或 HDR 生产管线，而是判清�
 | 分享         | Today HUD 分享**站点根路径**               | `ShareMovieTodayButton.tsx`                                                                |
 | Drawer       | **无**影片深链分享区                       | `Drawer.tsx`                                                                               |
 | 静态 headers | `_headers` 设 cache，**无** SPA rewrite    | `frontend/public/_headers`                                                                 |
-| 部署 rewrite | 仓库内**无** `vercel.json` / `_redirects`  | —                                                                                          |
+| 部署 rewrite | 仓库内**无** `vercel.json` / `_redirects`；**CF Pages 隐式 SPA**（无顶层 `404.html`） | §6                                                                                         |
 | Base path    | `import.meta.env.BASE_URL`                 | `loadGalaxyData.ts` · `galaxyAssetUrls.ts`                                                 |
 
 ---
@@ -295,34 +295,122 @@ sequenceDiagram
 
 ---
 
-## 6. 静态部署 rewrite 预检（§29.6 — P29.0 基线结论）
+## 6. 静态部署 rewrite 预检（§29.6 — P29.6 已锁定）
 
-### 6.1 当前结论
+**负责人**：TODO 29.6 · `p29-static-rewrite` · 实施报告见 [`docs/reports/Phase 29.6 P29.6 静态部署 rewrite 预检 实施报告.md`](../reports/Phase%2029.6%20P29.6%20静态部署%20rewrite%20预检%20实施报告.md)
 
-| 项                | 结论                                                                                      |
-| :---------------- | :---------------------------------------------------------------------------------------- |
-| SPA fallback 配置 | **缺失**；深链刷新 `/movie/123` 在纯静态托管下**将 404**（除非平台默认 SPA 或人工补规则） |
-| 已有 `_headers`   | 仅 Cache-Control / Content-Type；**不**处理路由                                           |
-| 主部署            | Cloudflare Pages Direct Upload + R2 数据（Tech Spec §5.2）                                |
-| 备线              | GitHub Pages（`VITE_BASE_PATH` 可能非 `/`）                                               |
+Phase 29 **不**提交 rewrite 配置文件；本节为 Phase 30.7（`p30-static-rewrite`）的 **SSOT**。
 
-### 6.2 Phase 30 须落地的 rewrite 原则（**D8**）
+### 6.1 仓库与平台现状（预检清单）
 
-1. **Fallback**：`/movie/*`、`/today`（及必要时其余 app 路径）→ `index.html`（或带 `BASE_URL` 前缀的等价路径）。
-2. **排除**（必须仍返回静态实体文件）：
-   - `/data/*`（含 `galaxy_assets_manifest.json`、`today.json`、`og-today.png`）
-   - `/fonts/*`
-   - 构建产物 assets（`assets/*`）
-   - 根级 `favicon`、`manifest`、`icons`、`robots.txt`、`sitemap.xml` 等
-3. **验证**：本地 `vite preview` + 生产预览 URL 上对深链 **刷新**、**Back/Forward**、**query 保留** 做矩阵测试（Phase 30.8）。
+| 检查项 | 结论 | 证据 |
+| :--- | :--- | :--- |
+| `vercel.json` | **不存在** | 仓库根与 `frontend/` 均无 |
+| `_redirects` | **不存在** | `frontend/public/` 无；构建后 `dist/` 无 |
+| 顶层 `404.html` | **不存在** | `frontend/public/` 与 `dist/` 均无 |
+| `frontend/public/_headers` | **存在**；仅 Cache / Content-Type | `/fonts/*`、`/data/galaxy_assets_manifest.json`、`/data/today.json`、`/data/og-today.png` |
+| `frontend/functions/_middleware.js` | **存在**；**仅** `the-movie-cosmos.pages.dev` → `themoviecosmos.com` **301** | **不**参与 SPA fallback |
+| 主部署 | **Cloudflare Pages** Direct Upload（`nightly_vote_refresh.yml` / `monthly_refit.yml` · `wrangler pages deploy dist`） | Tech Spec §5.2 |
+| 备线 | **GitHub Pages**（`deploy-pages.yml` · 未设 `VITE_BASE_PATH` → `base: '/'`） | 灰度备线 |
+| `dist` 静态树（本地 build 抽样） | `index.html`、`_headers`、`assets/`、`data/`、`fonts/`、favicon/manifest/icons | 与 D8 豁免路径一致 |
 
-### 6.3 配置载体（待 Phase 30 择一）
+### 6.2 各平台深链刷新行为（预分类）
 
-- Cloudflare Pages：`_redirects` 或 Dashboard **Redirects** / `functions`（若已有 `_middleware.js` 仅管域名，不替代 SPA fallback）
-- GitHub Pages：`404.html` 复制 `index.html` 技巧或 Actions 侧文档
-- Vercel（若启用）：`vercel.json` `rewrites`
+| 平台 | 无额外配置时 `/movie/550` 刷新 | `/data/today.json` | 备注 |
+| :--- | :--- | :--- | :--- |
+| **Cloudflare Pages**（当前生产） | **200 + `index.html`**（隐式 SPA：无顶层 `404.html` 时 [官方默认](https://developers.cloudflare.com/pages/configuration/serving-pages/#single-page-application-spa-rendering)） | **200 + JSON**（`dist/data/today.json` 实体文件优先） | 生产**已具备**深链刷新能力；30.7 建议仍加**显式** `_redirects` 作契约文档 |
+| **GitHub Pages**（备线） | **404**（无 `404.html` 技巧） | **200**（文件存在时） | 30.7 **须**在 build 后复制 `index.html` → `404.html` |
+| **`vite preview`**（本地） | **404**（sirv 默认无 SPA fallback） | **200** | **不能**作为深链刷新验收环境；用 CF 预览 / 生产或 `wrangler pages dev` |
+| **Vercel**（未启用） | **404**（无 `vercel.json`） | 视部署产物而定 | 若未来启用，见 §6.5 |
 
-**P29.0 不在此提交 rewrite 文件**；仅锁定原则供 Phase 30.7 实施。
+**P29.6 风险修订（相对 P29.0）**：生产主域 **CF Pages 隐式 SPA 已覆盖** `/movie/:id`、`/today` 刷新；真正缺口在 **GitHub Pages 备线**、**显式契约文档**、以及 **子路径 `VITE_BASE_PATH` 部署**（当前 CI 未使用）。
+
+### 6.3 Rewrite 原则（**D8** — Phase 30.7 实施）
+
+1. **Fallback 目标**：无实体文件的 app path → `index.html`（HTTP **200**，非 301，避免 SEO/缓存歧义）。
+   - **必须覆盖**：`/movie/*`、`/today`、未知前端 path（与 §5.1 合法 path 集合对齐）。
+   - **不得覆盖**：已存在的静态文件（平台须 **先匹配磁盘文件**，再 fallback）。
+2. **静态豁免（D8）** — 必须返回真实字节，**禁止** fallback 为 HTML：
+   - `/data/*`（manifest、`today.json`；生产大 gzip 多在 R2，但同源小文件仍在 bundle）
+   - `/fonts/*`（`_headers` 已设 `font/woff`；误 fallback 会导致 OTS「invalid sfntVersion」，见 `vite.config.ts` Butler 插件注释）
+   - Vite **`/assets/*`**（content-hashed JS/CSS）
+   - 根级：`favicon*`、`site.webmanifest`、`icons.svg`、`apple-touch-icon.png`、`robots.txt`、`sitemap.xml`（若存在）
+3. **Query**：rewrite **只改 pathname**；`?lang=` / `?theme=` / `?timeline=` 由 CDN/浏览器原样保留（与 §5 R5 一致）。
+4. **History API**：fallback 仅服务 **整页刷新 / 外链打开**；应用内 `pushState` / `popstate` 不依赖 CDN。
+
+### 6.4 `import.meta.env.BASE_URL` 与 path routing
+
+| 项 | 约定 |
+| :--- | :--- |
+| **构建** | `vite.config.ts`：`VITE_BASE_PATH` 非空时 `base` 为 `/subpath/`（尾斜杠规范化） |
+| **数据 URL** | `loadGalaxyData.ts`、`galaxyAssetUrls.ts`、`loadSearchIndex.ts` 经 `withBase('data/…')` — **与 path 深链正交** |
+| **Phase 30 parser** | `parseRoute` / `buildPath` 的 pathname **必须** strip/add `BASE_URL` 前缀（§5.8 **T7**） |
+| **当前 CI** | CF Pages + GHP workflow **均未**注入 `VITE_BASE_PATH` → 生产为 **`base: '/'`** |
+| **子路径部署** | 若未来 GHP project site：`base=/repo-name/` 时 fallback 目标为 `/repo-name/index.html`；CF `_redirects` 规则须带相同前缀 |
+
+**结论**：`BASE_URL` **不**与 `/data/*` fetch 冲突；冲突点仅在 **手写 path** 未处理子路径前缀。
+
+### 6.5 Phase 30.7 推荐配置（择一主 + 备线）
+
+#### A. Cloudflare Pages（**主路径 — 推荐显式 + 隐式双保险**）
+
+在 `frontend/public/_redirects`（构建复制到 `dist/_redirects`）：
+
+```txt
+# Phase 30 SPA fallback (D8: static files on disk are served first)
+/movie/*  /index.html  200
+/today    /index.html  200
+```
+
+- **不必**为 `/data/*`、`/assets/*`、`/fonts/*` 写排除规则（实体文件优先）。
+- **`_middleware.js`** 保持仅域名 301；**不**用 Functions 模拟 fallback（避免与 `_redirects` 重复）。
+- 子路径部署时改为：`/repo-name/movie/*  /repo-name/index.html  200` 等。
+
+#### B. GitHub Pages（**备线 — 必须**）
+
+Build 后增加一步（可在 `deploy-pages.yml` 或 `package.json` postbuild）：
+
+```bash
+cp frontend/dist/index.html frontend/dist/404.html
+```
+
+- 使缺失 path 返回 **404 状态 + SPA shell**（GHP 惯例）。
+- **注意**：不存在的 `/data/foo.json` 也会落到 `404.html`（HTML body）— 与生产 CF 行为类似；客户端 fetch 须检查 `Content-Type` / `res.ok`（现有代码已 `res.ok` 判断）。
+
+#### C. Vercel（**未启用 — 模板**）
+
+根目录 `vercel.json`（静态优先，再 rewrite）：
+
+```json
+{
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+}
+```
+
+Vercel 对 `public/` / `dist` 中已存在文件 **不** 应用 catch-all。
+
+### 6.6 Phase 30.8 刷新验收矩阵（引用）
+
+| # | 操作 | 期望 HTTP | 期望 body |
+| :-: | :--- | :--- | :--- |
+| R1 | 刷新 `https://themoviecosmos.com/movie/550` | 200 | `index.html`（SPA） |
+| R2 | 刷新 `…/today` | 200 | `index.html` |
+| R3 | GET `…/data/today.json` | 200 | `application/json` |
+| R4 | GET `…/data/galaxy_assets_manifest.json` | 200 | JSON |
+| R5 | GET `…/fonts/butler/Butler_Regular.woff`（或实际文件名） | 200 | `font/woff` |
+| R6 | GET `…/assets/index-*.js`（构建哈希） | 200 | `application/javascript` |
+| R7 | 刷新 `…/movie/550?lang=zh&theme=light` | 200 | `index.html`；query 保留 |
+| R8 | GHP 备线 R1–R2（30.7 后） | 404 或 200 | SPA shell（`404.html` 技巧） |
+
+应用层行为（focus、Drawer、Back）见 §5.8 **T1–T8**；本矩阵仅覆盖 **CDN/静态层**。
+
+### 6.7 与 Phase 30 plan 的衔接
+
+| Phase 30 TODO | 本节前移输入 |
+| :--- | :--- |
+| **30.1** | 确认 §6.5 A+B 可执行 |
+| **30.7** | 落地 `_redirects` + GHP `404.html`；**不**改 `_middleware.js` 职责 |
+| **30.8** | 执行 §6.6 + §5.8；**禁止**仅用 `vite preview` 断言 R1–R2 |
 
 ---
 
@@ -509,5 +597,5 @@ sequenceDiagram
 | HDR proof 记录              | §8   | **P29.3 已锁定**（含 `__hdrProbe` + Storybook lab） |
 | SDR fallback 说明           | §9   | **P29.4 已锁定**（含 `__sdrFallback`） |
 | Phase 30 路由契约           | §5   | **P29.5 已锁定**                |
-| Static hosting rewrite 方案 | §6   | **P29.0 预检已写**，配置待 30.7 |
+| Static hosting rewrite 方案 | §6   | **P29.6 已锁定**（配置待 30.7 落地） |
 | Phase 33 go/no-go           | §10  | 待 29.7                         |

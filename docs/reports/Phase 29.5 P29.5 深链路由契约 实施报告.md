@@ -71,15 +71,15 @@
 | :--- | :--- |
 | cover boot 与 `/movie/:id` 竞态 | **R4** + `pendingRoute`（§5.5） |
 | `scene.ts` mount 时 cover 假设 | movie 深链须先 `coverMode=false` 再 mount |
-| 静态托管深链 404 | **29.6** rewrite（非本 TODO） |
+| 静态托管深链 404 | **29.6** 已预检；**30.7** 落地显式 `_redirects` + GHP `404.html` |
 | Sheet ESC vs App ESC 双路径 | B2/B3 均走 route controller，单写 URL |
 
-**Phase 30 可开工条件**：§5 契约 + §6 rewrite 原则（29.6 完成后更佳）。
+**Phase 30 可开工条件**：§5 契约 + §6 rewrite 方案（**29.6 已完成**）。
 
 ---
 
 ## 7. 已知后续
 
-- **29.6**：静态部署 rewrite 预检（配置载体择一）
+- **29.6**：已完成 — 见 [Phase 29.6 报告](./Phase%2029.6%20P29.6%20静态部署%20rewrite%20预检%20实施报告.md)
 - **29.7**：Gate report 汇总
 - **Phase 30**：按 §5.8 矩阵实现并验收 T1–T8

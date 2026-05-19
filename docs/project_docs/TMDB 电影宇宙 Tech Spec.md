@@ -566,6 +566,14 @@ Browser
 
 **Discord 社区 — 职责边界**：**主路径**为维护者在 **Tally 表单 thank you page** 配置的 Discord 邀请（用户完成反馈后可见）；链接失效时在 **Tally / Discord 后台** 更换即可，**通常无需发版**。应用内 **`VITE_DISCORD_INVITE_URL`** 仅服务「今日分享」下拉中的可选快捷入口，与 thank you 页策略**并行可选**，不是唯一触达方式。
 
+### **5.4 Phase 29 — 发布门槛：HDR 与深链预检（P29.0 spec）**
+
+Phase 29 **不**在本阶段交付完整路由或 HDR 生产；条文 SSOT 为 **[`Phase 29 发布门槛与技术判定 spec.md`](./Phase%2029%20发布门槛与技术判定%20spec.md)**。本节为交叉引用摘要。
+
+* **HDR（D1–D4）**：当前生产为 **`THREE.SRGBColorSpace`** + **SDR WebGL**（§1.1）；**Bloom 默认关**（§1.2）。「真实 HDR」须可证扩展亮度，**不得**用 Bloom 或 SDR 提亮冒充。支持矩阵、capability probe、最小 proof 与 Phase 33 go/no-go 见 Phase 29 spec §4、§7–§10。
+* **深链（D5–D9）**：Phase 30 采用**轻量 path parser**（**不**引入 React Router）。路径契约 **`/`**、**`/movie/:id`**、**`/today`**；`selectedMovieId` / `coverModeStore` 为状态 SSOT；`lang` / `theme` / `timeline` query **须保留**。ESC 栈与 Design Spec §4.6 一致。
+* **静态托管（§6）**：仓库现状**无** SPA fallback rewrite；`frontend/public/_headers` 仅 cache。**深链刷新 404 风险**已在 Phase 29 预检记录；rewrite 实施归 **Phase 30.7**，须豁免 **`/data/*`**、**`/fonts/*`** 与构建 assets。
+
 ## **6\. 项目目录结构**
 
 ```

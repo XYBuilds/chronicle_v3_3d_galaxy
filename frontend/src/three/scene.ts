@@ -3,6 +3,7 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js'
 
+import { createHdrCapabilitiesDebug, type HdrCapabilitiesDebug } from '@/lib/hdrCapabilities'
 import { setGalaxyCameraZ } from '@/lib/galaxyCameraZBridge'
 import { getStrings } from '@/lib/strings'
 import { useCoverModeStore } from '@/store/coverModeStore'
@@ -147,8 +148,12 @@ interface SelectionPlanetTerraceDebug {
   log: () => void
 }
 
+/** Dev console: `window.__hdrCapabilities` — Phase 29.2 HDR capability probe (§29 spec). */
+type HdrCapabilitiesWindowDebug = HdrCapabilitiesDebug
+
 declare global {
   interface Window {
+    __hdrCapabilities?: HdrCapabilitiesWindowDebug
     __bloom?: BloomDebugControls
     __galaxyPointScale?: GalaxyPointScaleDebug
     __galaxyColor?: GalaxyColorDebug
@@ -239,6 +244,9 @@ export function mountGalaxyScene(
 
   const gl = renderer.getContext()
   const webglLabel = gl instanceof WebGL2RenderingContext ? 'WebGL2' : 'WebGL1'
+
+  const hdrCapabilitiesDebug = createHdrCapabilitiesDebug(renderer)
+  window.__hdrCapabilities = hdrCapabilitiesDebug
 
   const pr = Math.min(window.devicePixelRatio, 2)
   const galaxy = createGalaxyDualMeshes(movies, meta.genre_palette, pr, renderer.capabilities.maxTextureSize)
@@ -1401,6 +1409,9 @@ export function mountGalaxyScene(
     galaxy.idle.removeFromParent()
     galaxy.active.removeFromParent()
     galaxy.dispose()
+    if (window.__hdrCapabilities === hdrCapabilitiesDebug) {
+      delete window.__hdrCapabilities
+    }
     if (window.__bloom === bloomDebug) {
       delete window.__bloom
     }

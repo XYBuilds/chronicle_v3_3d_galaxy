@@ -1,6 +1,6 @@
 # Phase 29 — 发布门槛与技术判定（Spec SSOT）
 
-> **状态**：P29.0 已建立本文档与 Tech / Design Spec 交叉引用；**§4（29.1）** 已锁定 HDR 支持矩阵；§29.2–§29.7 中其余标记 **待填** 的表格与结论由后续 TODO 补全。  
+> **状态**：P29.0 已建立本文档与 Tech / Design Spec 交叉引用；**§4（29.1）** 已锁定 HDR 支持矩阵；**§7（29.2）** 已锁定 HDR capability probe 设计与运行时模块；§29.3–§29.7 中其余标记 **待填** 的表格与结论由后续 TODO 补全。  
 > **计划**：`.cursor/plans/phase_29_release_gates_technical_decision.plan.md`  
 > **下游**：Phase 30（路由产品化）、Phase 32（SDR 可读性）、Phase 33（HDR 生产，**条件阶段**）、Phase 34（社交预览）。
 
@@ -207,24 +207,58 @@ Phase 29 **不**交付完整深链产品化或 HDR 生产管线，而是判清�
 
 ---
 
-## 7. HDR capability probe（§29.2 — 设计契约）
+## 7. HDR capability probe（§29.2 — P29.2 已锁定）
 
-**负责人**：TODO 29.2 · `p29-hdr-probe-design`
+**负责人**：TODO 29.2 · `p29-hdr-probe-design` · 实施报告见 [`docs/reports/Phase 29.2 P29.2 HDR capability probe 实施报告.md`](../reports/Phase%2029.2%20P29.2%20HDR%20capability%20probe%20实施报告.md)
 
-建议模块：`frontend/src/lib/hdrCapabilities.ts` 或 `frontend/src/three/hdrCapabilities.ts`。
+### 7.1 模块与挂载点
 
-初始化 renderer 后记录（`console.log` 符合项目状态可见性规则）：
+| 项 | 约定 |
+| :--- | :--- |
+| **模块** | `frontend/src/lib/hdrCapabilities.ts`（纯探测 + 矩阵映射；不修改 renderer 色彩语义） |
+| **挂载** | `createGalaxyScene` 在 WebGL2 硬校验通过后、`createGalaxyDualMeshes` 之前调用 `createHdrCapabilitiesDebug(renderer)` |
+| **日志** | 启动时 `console.log('[hdrCapabilities]', report)`；WebGPU extended 异步探测完成后**再 log 一次** |
+| **调试** | `window.__hdrCapabilities`：`report`、`log()`、`refreshWebGpu()` |
 
-| 字段                 | 用途                                                         |
-| :------------------- | :----------------------------------------------------------- |
-| `webgl2`             | `renderer.capabilities.isWebGL2`                             |
-| `outputColorSpace`   | 当前 Three 输出色彩空间名                                    |
-| `canvasHdrSupported` | 是否存在可用 HDR canvas / 色域 API（待 29.2 细化探测 API）   |
-| `webgpuAvailable`    | 可选 proof 路径                                              |
-| `meetsTargetMatrix`  | 对照 §4 矩阵                                                 |
-| `recommendedMode`    | `sdr` / `hdr-capable` / `hdr-active`（命名与 Phase 33 对齐） |
+### 7.2 报告字段（`HdrCapabilitiesReport`）
 
-**限制**：probe 只报告能力，**不能**替代 §29.3 像素级 proof。
+| 字段 | 来源 / 语义 |
+| :--- | :--- |
+| `webgl2` | `renderer.capabilities.isWebGL2`（生产硬前置） |
+| `outputColorSpace` | Three `renderer.outputColorSpace` 标签（当前恒为 `srgb`） |
+| `dynamicRangeHigh` | `matchMedia('(dynamic-range: high)')` |
+| `colorGamut` | `screen.colorGamut`（无则 `unknown`） |
+| `canvasHdrSupported` | `dynamicRangeHigh` **或** 宽色域（非 `srgb`）— **显示器能力提示**，非 OS HDR 开关 |
+| `webgpuAvailable` | `'gpu' in navigator` |
+| `webgpuExtendedToneMapping` | 离屏 canvas `configure({ toneMapping: { mode: 'extended' } })`；初值 `pending` / 无 API 为 `unsupported` |
+| `browser` | UA → `chrome` \| `edge` \| `safari` \| `firefox` \| `other` |
+| `os` | UA → `windows` \| `macos` \| … |
+| `osHdr` | **恒 `unknown`**（Web 平台不可可靠读取；人工验收时补记） |
+| `displayHdr` | `dynamicRangeHigh` → `hdr`，否则 `sdr` |
+| `apiPath` | 生产路径恒 `webgl2-srgb`；若 extended 探测成功，矩阵映射用 `webgpu-extended` |
+| `matrixRow` | `resolveMatrixRow()` → §4.3 行号（1–12）或 `null` |
+| `verdictPre` | `deriveVerdictPre()` → §4.1 预分类 |
+| `meetsTargetMatrix` | `matrixRow ∈ {1,2,3}` **且** `webgpuExtendedToneMapping === true` |
+| `recommendedMode` | 生产恒 `sdr`；P0/P1 候选且 extended 成功 → `hdr-capable`；未来 extended 主路径 → `hdr-active` |
+
+### 7.3 矩阵映射规则（摘要）
+
+- **SDR 屏**（`displayHdr === 'sdr'`）→ 行 **#7**，`verdictPre: blocked`，`recommendedMode: sdr`。
+- **WebGL2 + sRGB**（当前生产）→ 行 **#4 / #5**，`fallback-sdr`。
+- **WebGPU extended 成功** + HDR 屏 + Win Chrome/Edge / macOS Safari → 行 **#1–#3**，`experimental`，`meetsTargetMatrix: true`。
+- **Bloom 开**（仅调试）→ 行 **#11**，`blocked`（D3）。
+
+单元测试：`frontend/src/lib/hdrCapabilities.spec.ts`（纯函数矩阵映射）。
+
+### 7.4 限制与下游
+
+| 限制 | 说明 |
+| :--- | :--- |
+| **非 proof** | probe **不能**证明像素超过 SDR 参考白；§29.3 须独立受控 patch |
+| **OS HDR** | 浏览器不暴露；矩阵行 #6（OS HDR off）须人工记录，probe 无法自动区分 |
+| **生产输出** | Phase 29 **不**切换 `outputColorSpace` 或 WebGPU 主渲染器 |
+
+§29.3 建议调试入口：`window.__hdrProbe`（待实现）；可复用 `__hdrCapabilities.refreshWebGpu()` 做能力复测。
 
 ---
 
@@ -273,7 +307,7 @@ Phase 29 **不**交付完整深链产品化或 HDR 生产管线，而是判清�
 | 交付物                      | 章节 | 状态                            |
 | :-------------------------- | :--- | :------------------------------ |
 | HDR support matrix          | §4   | **P29.1 已锁定**                |
-| HDR probe 设计              | §7   | 待 29.2                         |
+| HDR probe 设计              | §7   | **P29.2 已锁定**（含运行时模块） |
 | HDR proof 记录              | §8   | 待 29.3                         |
 | SDR fallback 说明           | §9   | 契约已写，验收待 29.4           |
 | Phase 30 路由契约           | §5   | **P29.0 已锁定**                |

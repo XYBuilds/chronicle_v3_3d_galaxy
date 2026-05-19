@@ -41,7 +41,7 @@ If any product, technical, workflow, Git, dependency, scope, naming, data, secur
    - After completing implementation and reasonable local verification, stop immediately.
    - Report what changed, how it was verified, and any remaining risk.
    - Explicitly ask whether the task is accepted.
-   - Until the user replies with a clear acceptance phrase such as `Approved` or `通过`, do not run `finish_todo.sh`, do not commit, do not push, do not create a PR, do not merge, do not mark the plan TODO complete, and do not write the final task report.
+   - Until the user replies with a clear acceptance phrase such as `Approved` or `通过`, do not run `finish_todo.sh`, do not commit, do not push, do not create a PR, do not merge, do not mark the plan TODO complete, and do not create, update, draft, or pre-write any final report under `docs/reports/`.
 
 4. **After explicit approval only: mark the plan TODO complete and write the task report**
    - Mark the accepted TODO as complete in the relevant plan file before writing the report.

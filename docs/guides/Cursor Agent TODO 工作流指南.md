@@ -30,7 +30,7 @@
 3. **暂停并等待验收**
    - 实现完成后，Agent 必须停止。
    - Agent 需要说明：做了什么、如何验证、剩余风险。
-   - 在你明确回复 `Approved` 或 `通过` 前，Agent 不得提交、push、创建 PR、merge、标记 plan TODO 为 complete、写最终报告或调用收尾脚本。
+   - 在你明确回复 `Approved` 或 `通过` 前，Agent 不得提交、push、创建 PR、merge、标记 plan TODO 为 complete、创建/更新/草拟/预写任何 `docs/reports/` 最终报告，或调用收尾脚本。
 
 4. **验收通过后标记 TODO complete 并写报告**
    - 只有收到明确验收通过后，Agent 才能先把对应 plan TODO 标记为 complete，再在 `docs/reports/` 写本次任务报告。
@@ -100,4 +100,4 @@ gh auth login
 
 ## 人工验收原则
 
-自动化只负责“验收后的机械收尾”。是否进入提交、PR 和 merge 阶段，仍由你在对话中明确批准。
+自动化只负责“验收后的机械收尾”。是否进入标记 TODO complete、写报告、提交、PR 和 merge 阶段，仍由你在对话中明确批准。

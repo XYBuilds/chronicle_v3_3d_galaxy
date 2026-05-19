@@ -1,4 +1,4 @@
-import { buildMoviePath } from '@/lib/routes'
+import { buildMoviePath, type BuildPathOptions } from '@/lib/routes'
 
 export function movieReleaseYearFromIso(releaseDate: string): string {
   const trimmed = releaseDate.trim()
@@ -16,8 +16,9 @@ export interface SocialShareUrls {
 export function buildMovieSharePageUrl(
   movieId: number,
   loc: Pick<Location, 'origin' | 'search'> = window.location,
+  options?: BuildPathOptions,
 ): string {
-  const path = buildMoviePath(movieId, loc.search)
+  const path = buildMoviePath(movieId, loc.search, options)
   return new URL(path, loc.origin).href
 }
 

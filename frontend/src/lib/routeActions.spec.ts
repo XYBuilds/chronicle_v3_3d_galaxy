@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { pushMovieRoute, replaceHomeRoute } from './routeActions'
+import { pushMovieRoute, replaceHomeRoute, replaceRoutePath } from './routeActions'
 import { routeSyncGuard } from './routeSyncGuard'
 
 describe('routeActions', () => {
@@ -74,5 +74,27 @@ describe('routeActions', () => {
     routeSyncGuard.suppressStoreToUrl = true
     pushMovieRoute(2)
     expect(history.pushState).not.toHaveBeenCalled()
+  })
+
+  it('preserves query on pushMovieRoute (T6)', () => {
+    search = '?lang=zh&theme=light'
+    pushMovieRoute(550)
+    expect(pathname).toBe('/movie/550')
+    expect(search).toBe('?lang=zh&theme=light')
+  })
+
+  it('skips duplicate push when path unchanged (T8 guard)', () => {
+    routeSyncGuard.lastAppliedPath = '/movie/1'
+    pathname = '/movie/1'
+    pushMovieRoute(1)
+    expect(history.pushState).not.toHaveBeenCalled()
+  })
+
+  it('replaceRoutePath updates location (R1/R2)', () => {
+    replaceRoutePath('/?lang=ja')
+    expect(history.replaceState).toHaveBeenCalledOnce()
+    expect(pathname).toBe('/')
+    expect(search).toBe('?lang=ja')
+    expect(routeSyncGuard.lastAppliedPath).toBe('/?lang=ja')
   })
 })

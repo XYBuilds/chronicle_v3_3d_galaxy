@@ -25,7 +25,7 @@ todos:
     status: completed
   - id: p30-tests-acceptance
     content: 30.8 补充路由、分享、locale、data/base path 测试并执行 lint/build/preview 验收
-    status: pending
+    status: completed
 isProject: false
 ---
 

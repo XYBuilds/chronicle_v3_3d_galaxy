@@ -1,6 +1,6 @@
 # Phase 29 — 发布门槛与技术判定（Spec SSOT）
 
-> **状态**：P29.0 已建立本文档与 Tech / Design Spec 交叉引用；**§4（29.1）** 已锁定 HDR 支持矩阵；**§7（29.2）** 已锁定 HDR capability probe 设计与运行时模块；§29.3–§29.7 中其余标记 **待填** 的表格与结论由后续 TODO 补全。  
+> **状态**：P29.0 已建立本文档与 Tech / Design Spec 交叉引用；**§4（29.1）** 已锁定 HDR 支持矩阵；**§7（29.2）** 已锁定 HDR capability probe；**§8（29.3）** 已锁定最小 HDR proof 方法与调试入口；§29.4–§29.7 中其余标记 **待填** 的表格与结论由后续 TODO 补全。  
 > **计划**：`.cursor/plans/phase_29_release_gates_technical_decision.plan.md`  
 > **下游**：Phase 30（路由产品化）、Phase 32（SDR 可读性）、Phase 33（HDR 生产，**条件阶段**）、Phase 34（社交预览）。
 
@@ -258,20 +258,63 @@ Phase 29 **不**交付完整深链产品化或 HDR 生产管线，而是判清�
 | **OS HDR** | 浏览器不暴露；矩阵行 #6（OS HDR off）须人工记录，probe 无法自动区分 |
 | **生产输出** | Phase 29 **不**切换 `outputColorSpace` 或 WebGPU 主渲染器 |
 
-§29.3 建议调试入口：`window.__hdrProbe`（待实现）；可复用 `__hdrCapabilities.refreshWebGpu()` 做能力复测。
+§29.3 调试入口：`window.__hdrProbe`（已实现）；可复用 `__hdrCapabilities.refreshWebGpu()` 做能力复测。
 
 ---
 
-## 8. 最小 HDR proof（§29.3 — 方法契约）
+## 8. 最小 HDR proof（§29.3 — P29.3 已锁定）
 
-**负责人**：TODO 29.3 · `p29-hdr-proof`
+**负责人**：TODO 29.3 · `p29-hdr-proof` · 实施报告见 [`docs/reports/Phase 29.3 P29.3 最小 HDR proof 实施报告.md`](../reports/Phase%2029.3%20P29.3%20最小%20HDR%20proof%20实施报告.md)
 
-- 受控 test patch（**不**混入默认 galaxy shader）：同屏 **SDR reference white** vs **HDR candidate highlight**。
-- 调试入口建议：`window.__hdrProbe` 或 Storybook lab。
-- **通过**：HDR 开 + 支持组合下 candidate **可测/可见**地超过 SDR 参考白；**不**被同一 clamp/tone map 压成相同亮度。
-- **失败**：仅实验 flag、不可复现、或仅 SDR 变亮 → 记 `experimental` 或 `fallback-sdr`，**不**进 Phase 33 发布门槛。
+### 8.1 对比方法（D1 对齐）
 
-证据：截图、probe 日志、可选仪器/照片（待 29.3 记录）。
+| 补丁 | 线性 RGB（scRGB 风格） | 语义 |
+| :--- | :--- | :--- |
+| **左半屏 — SDR reference white** | `(1.0, 1.0, 1.0)` | 扩展空间中的参考白；在 HDR 链路上约为 SDR 100 nit 锚点 |
+| **右半屏 — HDR candidate** | `(4.0, 4.0, 4.0)` | 高于参考白的候选高光；**若**真实 HDR 输出，应可见或可读回高于左侧 |
+
+**受控载体**：离屏/叠加 WebGPU canvas（`toneMapping.mode: "extended"` vs `"standard"`），**不**修改 `galaxyMeshes` / 默认星系 shader。
+
+### 8.2 运行时入口
+
+| 入口 | 说明 |
+| :--- | :--- |
+| **`window.__hdrProbe`** | `show()` / `hide()` / `runComparison()` / `renderMode('extended' \| 'standard')` / `log()` |
+| **Storybook** | `Dev/HDR proof lab (P29.3)` — `HdrProofLab.stories.tsx` |
+| **模块** | `frontend/src/lib/hdrProof.ts` |
+
+`runComparison()` 流程：先渲染 **extended** 再 **standard**，采样左右补丁中心像素 → `interpretHdrProofComparison()` → `HdrProofReport`（含 `verdict`、`meetsD1Proof`）。
+
+### 8.3 判定（自动 + 人工）
+
+| `verdict` | 含义 | `meetsD1Proof` |
+| :--- | :--- | :--- |
+| `hdr-output-likely` | extended 下 right/left 比值 > 1.15，且 standard 下比值 < 1.12 | `true` |
+| `sdr-clamped` | extended 与 standard 均无分离 | `false` |
+| `extended-unavailable` | WebGPU extended configure 失败 | `false` |
+| `inconclusive` | 读回模糊 | `false`（须 **目视** HDR 屏确认） |
+
+**通过（D1）**：目标矩阵 ★ 行（§4.3 #1–#3）+ OS HDR on + HDR 屏下，candidate **可见**亮于 reference，且非 Bloom/`uLMax` 伪提亮。
+
+**失败**：仅实验 flag、读回与目视均无分离 → 该行 **不得** 升为 `supported`；Phase 33 **No-go**（由 29.7 汇总）。
+
+### 8.4 证据清单（29.7 gate 引用）
+
+- `console.log('[hdrProof]', report)` 全文
+- `__hdrCapabilities.report` 与矩阵行号
+- 同组合下 extended / standard 截图各 1 张
+- 人工字段：OS HDR on/off、显示器型号、浏览器版本与实验 flag
+
+### 8.5 P29.3 验收机抽样（#1，已记录）
+
+| 字段 | 值 |
+| :--- | :--- |
+| 组合 | Win11 HDR on + Chrome 148 + HDR 主屏 → **matrixRow #1** |
+| API | `webgpuExtendedToneMapping=true` |
+| 自动 proof | `verdict=sdr-clamped`，`extRatio=stdRatio=1`，`meetsD1Proof=false` |
+| 目视 patch | extended/standard、窗口/全屏均无左右亮度差 |
+| 对照 | 同机 YouTube HDR 视频可目视高光 → **视频 HDR 路径 OK**，**WebGPU canvas extended 显示 proof 未通过** |
+| 矩阵 | #1 保持 **`experimental`**，不得升为 `supported` |
 
 ---
 
@@ -308,7 +351,7 @@ Phase 29 **不**交付完整深链产品化或 HDR 生产管线，而是判清�
 | :-------------------------- | :--- | :------------------------------ |
 | HDR support matrix          | §4   | **P29.1 已锁定**                |
 | HDR probe 设计              | §7   | **P29.2 已锁定**（含运行时模块） |
-| HDR proof 记录              | §8   | 待 29.3                         |
+| HDR proof 记录              | §8   | **P29.3 已锁定**（含 `__hdrProbe` + Storybook lab） |
 | SDR fallback 说明           | §9   | 契约已写，验收待 29.4           |
 | Phase 30 路由契约           | §5   | **P29.0 已锁定**                |
 | Static hosting rewrite 方案 | §6   | **P29.0 预检已写**，配置待 30.7 |

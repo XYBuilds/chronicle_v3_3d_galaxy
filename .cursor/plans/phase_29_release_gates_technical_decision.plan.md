@@ -13,7 +13,7 @@ todos:
     status: completed
   - id: p29-hdr-proof
     content: 29.3 规划最小 HDR proof，定义 SDR reference white 与 HDR candidate highlight 的对比方法
-    status: pending
+    status: completed
   - id: p29-sdr-fallback
     content: 29.4 定义 SDR fallback 策略，确保 HDR 关或不支持时保持当前 WebGL2+sRGB 主路径无回归
     status: pending

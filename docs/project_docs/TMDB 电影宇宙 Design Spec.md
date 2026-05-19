@@ -43,6 +43,7 @@
 | **HDR 语义**                | **P26.1** 已明确当前为 **SDR WebGL** + **`SRGBColorSpace`**，**未**交付显示端 HDR。Phase 29 起：**真实 HDR** = 可证扩展亮度；**SDR 提亮、Bloom、`uLMax` 顶格**均**不是** HDR 验收。Bloom **生产默认关**（Tech Spec §1.2）。         |
 | **HDR 支持矩阵（29.1）**    | **P0**：Win11 HDR on + Chrome/Edge stable + **WebGPU `extended`** + HDR 屏；**P1**：macOS HDR on + Safari stable + 同 API + XDR/HDR 屏。当前 **WebGL2+sRGB** 一律 **SDR**；Bloom/提亮 **非** HDR。矩阵 SSOT：Phase 29 spec **§4**。 |
 | **HDR capability probe（29.2）** | 启动后 `console.log('[hdrCapabilities]', …)`；`window.__hdrCapabilities` 可复测 WebGPU extended。`recommendedMode` 生产为 **`sdr`**；P0/P1 探测成功为 **`hdr-capable`**。详见 Phase 29 spec **§7**。 |
+| **HDR 最小 proof（29.3）** | `window.__hdrProbe`：同屏 linear **1.0**（SDR 参考白）vs **4.0**（HDR 候选）；WebGPU `extended` vs `standard` 对比。Storybook **Dev/HDR proof lab**。详见 Phase 29 spec **§8**。 |
 | **Phase 33 门禁**           | 仅 Phase 29 **proof** 在 §4.4 **P0/P1** 组合上稳定满足 HDR 语义时，才进入 Phase 33 production；否则 **SDR-only** + 保留 capability 记录。                                                                                           |
 | **深链（Phase 30 前置）**   | Path：**`/`**、**`/movie/:id`**、**`/today`**；实现为轻量 parser（**无** React Router）。Focus SSOT：`selectedMovieId`；Today：`coverModeStore` + `today.json`。Query **`lang` / `theme` / `timeline`** 在 path 变更时**须保留**。  |
 | **静态托管**                | 当前**无** SPA fallback；深链刷新存在 **404 风险**（Phase 29 预检）。Rewrite 规则须**豁免** `/data/*`、`/fonts/*` 与静态 assets（Phase 30.7 实施）。                                                                                |

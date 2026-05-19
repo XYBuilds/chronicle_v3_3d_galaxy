@@ -6,15 +6,20 @@ usage() {
 Usage:
   ./finish_todo.sh "commit and PR message"
 
+  # Recommended on PowerShell / Windows to avoid quoting issues:
+  $env:FINISH_TODO_MESSAGE='commit and PR message'
+  & "C:\Program Files\Git\bin\bash.exe" -lc './finish_todo.sh'
+
 Purpose:
   Finish an approved TODO branch by committing, pushing, opening a PR, merging it,
   syncing the base branch, and deleting the local work branch.
 
 Environment overrides:
-  FINISH_TODO_BASE_BRANCH=main        Base branch to merge into.
-  FINISH_TODO_MERGE_METHOD=squash     One of: squash, merge, rebase.
-  FINISH_TODO_MERGE_TIMEOUT_SEC=1800  Wait time for auto-merge completion.
-  FINISH_TODO_MERGE_POLL_SEC=10       Poll interval while waiting for merge.
+  FINISH_TODO_MESSAGE="..."          Commit and PR message; preferred on PowerShell.
+  FINISH_TODO_BASE_BRANCH=main       Base branch to merge into.
+  FINISH_TODO_MERGE_METHOD=merge     One of: merge, squash, rebase.
+  FINISH_TODO_MERGE_TIMEOUT_SEC=1800 Wait time for auto-merge completion.
+  FINISH_TODO_MERGE_POLL_SEC=10      Poll interval while waiting for merge.
 USAGE
 }
 
@@ -32,11 +37,21 @@ run() {
   "$@"
 }
 
-if (( $# == 0 )); then
-  usage
-  fail "A commit/PR message is required."
+MESSAGE="${FINISH_TODO_MESSAGE:-}"
+if [[ -z "$MESSAGE" ]]; then
+  if (( $# == 0 )); then
+    usage
+    fail "A commit/PR message is required."
+  fi
+  MESSAGE="$*"
+elif (( $# > 0 )); then
+  echo "Using FINISH_TODO_MESSAGE; ignoring positional message arguments."
 fi
-MESSAGE="$*"
+
+if [[ -z "${MESSAGE//[[:space:]]/}" ]]; then
+  usage
+  fail "A non-empty commit/PR message is required."
+fi
 
 require_command git
 require_command gh
@@ -86,7 +101,7 @@ else
   echo "Reusing existing PR: $PR_URL"
 fi
 
-MERGE_METHOD="${FINISH_TODO_MERGE_METHOD:-squash}"
+MERGE_METHOD="${FINISH_TODO_MERGE_METHOD:-merge}"
 case "$MERGE_METHOD" in
   squash) MERGE_FLAG="--squash" ;;
   merge) MERGE_FLAG="--merge" ;;

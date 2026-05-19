@@ -18,7 +18,7 @@
 
 1. **新建任务分支**
    - Agent 开始具体实现前，先拉取最新远端状态，切回 base 分支并快进同步：`git fetch origin`、`git switch main`、`git pull --ff-only origin main`，除非仓库默认分支被明确指定为其他名称。
-   - 必须从更新后的本地 `main` 创建任务分支；Git 图上应表现为任务分支从 `main` 分出，完成后通过 PR merge / squash merge 回到 `main`。
+   - 必须从更新后的本地 `main` 创建任务分支；Git 图上应表现为任务分支从 `main` 分出，完成后通过 PR 3-way merge 回到 `main`。
    - 命名格式：`prefix/p#.#-short-task-name`，其中 `prefix` 根据任务类型选择，例如 `feat`、`fix`、`docs`、`chore`、`refactor`；`p#.#` 对应 plan TODO 编号。
    - 禁止直接在 `main` / `master` 上实现任务。
 
@@ -43,10 +43,11 @@
 ./finish_todo.sh "<commit and PR message>"
 ```
 
-   - Windows 环境下，如果默认 `bash` 指向不可用的 WSL，必须显式使用 Git Bash：
+   - Windows 环境下，如果默认 `bash` 指向不可用的 WSL，必须显式使用 Git Bash，并通过环境变量传完整标题，避免 PowerShell / `bash -lc` 引号截断：
 
 ```powershell
-& "C:\Program Files\Git\bin\bash.exe" -lc './finish_todo.sh "<commit and PR message>"'
+$env:FINISH_TODO_MESSAGE='<commit and PR message>'
+& "C:\Program Files\Git\bin\bash.exe" -lc './finish_todo.sh'
 ```
 
    - 不得因为本机 WSL 不可用就跳过 `finish_todo.sh`，也不得声称“已按相同步骤手动完成”来替代脚本；应改用 Git Bash 或其他可用的 Bash 兼容 shell。
@@ -72,14 +73,14 @@ chmod +x finish_todo.sh
 默认配置：
 
 - base branch：自动读取 GitHub 默认分支，失败时回退到 `main`
-- merge method：`squash`
+- merge method：`merge`（GitHub 3-way merge）
 - merge 行为：使用 GitHub auto-merge，尊重 required checks / required review
 
 可选环境变量：
 
 ```bash
 FINISH_TODO_BASE_BRANCH=main \
-FINISH_TODO_MERGE_METHOD=squash \
+FINISH_TODO_MERGE_METHOD=merge \
 FINISH_TODO_MERGE_TIMEOUT_SEC=1800 \
 ./finish_todo.sh "Finish accepted task"
 ```

@@ -2,6 +2,9 @@
 name: phase 29 release gates technical decision
 overview: Phase 29 聚焦发布门槛判定：确认 HDR 是否能作为当前版本的真实输出能力、明确不支持时的 SDR 降级边界，并预检 `/movie/:id`、`/today` 深链在静态部署下的实现风险。Phase 29 不负责完成分享/路由产品化实现，那些进入 Phase 30。
 todos:
+  - id: p29-spec-preflight
+    content: 29.0 spec 升级（无代码）：Phase 29 SSOT 文档与 Tech/Design Spec §5.4 / §1.3 同步；锁定深链契约与静态 rewrite 预检结论
+    status: completed
   - id: p29-hdr-matrix
     content: 29.1 定义 HDR 支持矩阵，锁定 OS、浏览器、显示器、API 与发布门槛组合
     status: pending

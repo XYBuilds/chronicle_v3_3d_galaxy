@@ -34,6 +34,18 @@
 | **P26.3 idle 近距 fade** | **仅 idle** 使用 **相机世界坐标—实例世界坐标** 距离驱动 **`vNearFadeAlpha`**；**focus / Cover 今日** 实例 **exempt**（与顶点 **`exemptIdleNearFade`** 语义一致）。**生产默认 `enabled = 1`**（`startDist = width = 4`、`minAlpha = 0.1` 世界单位，见 **`idleNearFade.ts`**）；**宏观**且启用时 idle 材质走 **transparent、无 depthWrite**。**focus 会话**（**`selectionPhase !== 'idle'`**）：**`uIdleMacroFadesActive = 0`**，近距分支 **不** 运行，idle **opaque**（与 **P27.4** 同门控）。**CPU active 射线拾取**在 **`inFocus` 低且近透明**时跳过求交，与视觉对齐。运行时调参：**`window.__galaxyIdleNearFade`**。留档见 **`docs/reports/Phase 26.3 P26.3 Camera-distance idle 近距渐变与拾取对齐 最终实施报告.md`**（文内关于 **P22.1 Z 近裁** 的保留表述已过时，以 Tech Spec **§1.4.5a** 为准）。 |
 | **P27.4 idle 时间轴 Z dim** | **仅 idle**。**`uIdleZFadeMode`**（**`−1` / `0` / `1`**）与 **`uIdleZFadeOutsideAlpha`**：在 **`[zCurrent, zCurrent+zVisWindow]`** 外 **单侧** 将 **`vNearFadeAlpha`** 再乘 **`outsideAlpha`**（硬边界）；与 **P26.3** **相乘**。**exempt** 同 **P26.3**。**`scene.ts`**：近距 **或** **Z-mode 非关** 时 idle **透明路径**，**且** **`selectionPhase === 'idle'`**（与 **`uIdleMacroFadesActive`** 一致；**focus** 下两 fade **不** 应用）。**Dev**：**`window.__galaxyIdleZFade`**。留档 **`docs/reports/Phase 27.4 P27.4 Galaxy idle 时间轴 Z 半透明与移除 world-Z 近裁 最终实施报告.md`**。**P22.1 world-Z 近裁已删除。** |
 
+### **1.3 Phase 29 — HDR 发布门槛与深链预检（决策摘要）**
+
+本节为 **Phase 29**（`.cursor/plans/phase_29_release_gates_technical_decision.plan.md`）收口摘要；**条文 SSOT** 见 **[`Phase 29 发布门槛与技术判定 spec.md`](./Phase%2029%20发布门槛与技术判定%20spec.md)**，Tech Spec **§5.4** 为工程交叉引用。
+
+| 子项 | 结论（产品 / 工程） |
+|------|---------------------|
+| **HDR 语义** | **P26.1** 已明确当前为 **SDR WebGL** + **`SRGBColorSpace`**，**未**交付显示端 HDR。Phase 29 起：**真实 HDR** = 可证扩展亮度；**SDR 提亮、Bloom、`uLMax` 顶格**均**不是** HDR 验收。Bloom **生产默认关**（Tech Spec §1.2）。 |
+| **Phase 33 门禁** | 仅 Phase 29 **proof** 在目标 OS/浏览器/显示器组合上稳定满足 HDR 语义时，才进入 Phase 33 production；否则 **SDR-only** + 保留 capability 记录。 |
+| **深链（Phase 30 前置）** | Path：**`/`**、**`/movie/:id`**、**`/today`**；实现为轻量 parser（**无** React Router）。Focus SSOT：`selectedMovieId`；Today：`coverModeStore` + `today.json`。Query **`lang` / `theme` / `timeline`** 在 path 变更时**须保留**。 |
+| **静态托管** | 当前**无** SPA fallback；深链刷新存在 **404 风险**（Phase 29 预检）。Rewrite 规则须**豁免** `/data/*`、`/fonts/*` 与静态 assets（Phase 30.7 实施）。 |
+| **分享（现状 → Phase 30）** | 现 HUD **Today** 按钮分享**站点根路径**；Drawer **无**影片深链分享。Phase 30 迁移为 **`/movie/:id`** 分享（见 Phase 30 plan）。 |
+
 ## **2\. 交互状态与视觉反馈 (Interaction States)**
 
 ### **2.1 宏观漫游状态 (Default) — Phase 8 定稿**

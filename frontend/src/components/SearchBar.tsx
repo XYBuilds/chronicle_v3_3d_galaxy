@@ -9,6 +9,7 @@ import {
   useState,
 } from 'react'
 import { GenreBadge } from '@/components/GenreBadge'
+import { getSearchBarTextPlaceholder } from '@/components/searchBarPlaceholder'
 import { buttonVariants } from '@/components/ui/button-variants'
 import { CloseButton } from '@/components/ui/close-button'
 import { HUD_GALAXY_GLASS_SURFACE_CLASSNAME } from '@/hud/hudTopToolButtonChrome'
@@ -335,12 +336,7 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
 
   const isBlocked = disabledReason !== null
 
-  const searchPlaceholder =
-    isBlocked
-      ? ui.searchBar.placeholderDisabled
-      : hudTab === 'movie'
-        ? ui.searchBar.placeholderMovie
-        : ui.searchBar.placeholderPerson
+  const searchPlaceholder = getSearchBarTextPlaceholder(isBlocked, hudTab, ui.searchBar)
 
   return (
     <div

@@ -1,21 +1,21 @@
 ---
 name: phase 32 sdr readability motion
-overview: Phase 32 聚焦 SDR 主路径的视觉可读性与选中星球动效：在不依赖 HDR、不默认开启 Bloom 的前提下，通过可验证 A/B 调参改善主场景偏暗问题，并让 focus 选中星球具备稳定、低干扰的缓慢自转。
+overview: Phase 32 聚焦 SDR 主路径的总体亮度可控性、浏览态 Z 向虚化过渡，以及选中星球动效：在不依赖 HDR、不默认开启全局 Bloom 的前提下，开放宇宙背景色 token 调试通道，优化 browsing/focus 切换时的 idleZFade 透明度渐变，并让 focus 选中星球具备稳定自转与 perlin-only selective Bloom 增强。
 todos:
   - id: p32-plan-doc-preflight
     content: 32.1 创建并维护 `.cursor/plans/phase_32_sdr_readability_motion.plan.md`，确认 Phase 29 HDR 结论不会改变本阶段 SDR 边界
     status: completed
   - id: p32-sdr-baseline-capture
-    content: 32.2 建立 SDR 可读性基线，记录当前亮度、idle fade、背景与 focus 场景的 A/B 观察样本
+    content: 32.2 建立 SDR 亮度与状态切换基线，记录当前背景色、idleZFade、browsing/focus 切换透明度和 focus 场景样本
     status: pending
-  - id: p32-lightness-sweep
-    content: 32.3 调整 rating→OKLab L 映射参数，优先验证 `uLMin`、`uLightnessRatingExponent`、`uDistanceLightnessFloor`
+  - id: p32-background-token-channel
+    content: 32.3 开放宇宙背景色 token 的运行时修改接口通道，支持开发期手调，并为后续按用户交互改变背景色预留边界
     status: pending
-  - id: p32-idle-fade-contrast
-    content: 32.4 标定 idle near fade、idle Z fade 与背景对比，避免宏观浏览偏黑或层次塌陷
+  - id: p32-idle-z-fade-transition
+    content: 32.4 优化 idleZFade 虚化规则与实现效果，确认仅 browsing 态启用，并在 browsing/focus 切换时执行透明度渐变
     status: pending
   - id: p32-sdr-runtime-toggles
-    content: 32.5 保留并整理 SDR 调试入口，确保 `window.__galaxyColor`、idle fade 调参结果可复现
+    content: 32.5 整理背景色 token 与 idleZFade 调试入口，确保调参结果可复现并可固化到默认值
     status: pending
   - id: p32-selection-rotation-axis
     content: 32.6 为选中星球定义参考平面法线自转轴，复用 `FocusSizeReferenceRings` 的 seeded quaternion
@@ -23,51 +23,64 @@ todos:
   - id: p32-selection-rotation-runtime
     content: 32.7 接入选中星球缓慢自转，切换电影时重置基准 rotation，且不改变拾取和 focus 半径
     status: pending
+  - id: p32-perlin-selective-bloom
+    content: 32.8 接入 Perlin 选中星球 selective Bloom，默认开启但仅作用于 `planet.mesh`，全局 Bloom 与 idle/active Bloom 仍默认关闭
+    status: pending
   - id: p32-tests-acceptance
-    content: 32.8 执行视觉矩阵、类型检查、lint、build 验收，记录 SDR 参数结论和剩余风险
+    content: 32.9 执行视觉矩阵、类型检查、lint、build 验收，记录背景色 token、idleZFade transition、perlin Bloom 策略和剩余风险
     status: pending
 isProject: false
 ---
 
-# Phase 32 — SDR 可读性与选中动效
+# Phase 32 — SDR 亮度可控性与选中动效
 
 ## 目标
 
-Phase 32 改善两个用户能直接感知的问题，但严格留在 SDR 主路径内：
+Phase 32 改善三个用户能直接感知的问题，但严格留在 SDR 主路径内：
 
-- **主场景 SDR 可读性**：解决普通显示器上星系偏暗、层次不够清楚的问题。
-- **选中星球生命感**：给 focus 选中星球增加稳定、缓慢、低干扰的自转。
+- **主应用总体亮度可控性**：解决部分屏幕上主场景显得太黑、背景与星体层次不清的问题；优先开放宇宙背景色 token 的运行时修改通道，而不是默认引入 HDR/全局 Bloom。
+- **浏览态 Z 向虚化过渡**：优化 idleZFade 的启用边界与表现；虚化仅在 browsing 态生效，browsing/focus 态切换时通过透明度渐变衔接，避免状态切换瞬间跳变。
+- **选中星球生命感**：给 focus 选中星球增加稳定、缓慢、低干扰的自转，并为 Perlin 单体星球默认开启 selective Bloom，增强 focus 态的发光质感。
 
-本阶段不把 SDR 提亮伪装成 HDR，也不默认开启 Bloom。HDR production 仍由 Phase 33 根据 Phase 29 结论单独处理。
+本阶段不把 SDR 提亮伪装成 HDR，也不默认开启全局 Bloom。Perlin Bloom 仅作为 `planet.mesh` 的 selective focus polish 默认启用，不让 `galaxy.idle` / `galaxy.active` 进入 Bloom。HDR production 仍由 Phase 33 根据 Phase 29 结论单独处理。
 
 ```mermaid
 flowchart TD
-  A[Phase 32] --> B[SDR readability]
-  A --> C[Selected planet motion]
-  B --> D[OKLab L remap sweep]
-  B --> E[Idle fade / background contrast]
-  D --> F[SDR default params]
-  E --> F
-  C --> G[Reference-ring plane quaternion]
-  G --> H[Stable slow rotation]
-  H --> I[No pick/focus radius changes]
+  A[Phase 32] --> B[SDR brightness control]
+  A --> C[Idle Z fade transition]
+  A --> D[Selected planet motion]
+  B --> E[Background color token channel]
+  E --> F[Runtime tuning / future interaction hook]
+  C --> G[Browsing only]
+  C --> H[Browsing-focus opacity tween]
+  F --> I[SDR default params]
+  H --> I
+  D --> J[Reference-ring plane quaternion]
+  D --> M[Perlin-only selective Bloom]
+  J --> K[Stable slow rotation]
+  M --> N[Default on when planet visible]
+  K --> L[No pick/focus radius changes]
+  N --> L
 ```
 
 ## 范围边界
 
 ### 本 Phase 要做
 
-- 建立当前 SDR 视觉基线和 A/B 对比矩阵。
-- 调整星系 OKLab lightness 映射和 idle fade 参数。
+- 建立当前 SDR 亮度、背景色和 browsing/focus 切换基线。
+- 开放宇宙背景色 token 的开发期手调通道，并保留未来按交互行为驱动背景色变化的扩展边界。
+- 优化 idleZFade 虚化规则和过渡效果：仅 browsing 态启用，browsing/focus 态切换时透明度渐变。
 - 保持 WebGL2 + `renderer.outputColorSpace = THREE.SRGBColorSpace` 主路径稳定。
 - 为选中 Perlin 星球增加缓慢自转。
+- 为 `planet.mesh` 接入 perlin-only selective Bloom，默认开启但仅在选中星球可见期间参与合成。
 - 复用 size reference plane 的稳定方向，保证自转轴与参考环视觉逻辑一致。
-- 输出最终 SDR 参数和验证记录。
+- 输出最终背景色 token、idleZFade 参数、Perlin Bloom 参数、过渡策略和验证记录。
 
 ### 本 Phase 不做
 
 - 不实现 HDR 输出链路。
-- 不默认开启 Bloom 或 composer render path。
+- 不默认开启全局 Bloom，不让 `galaxy.idle` / `galaxy.active` 进入 Bloom。
+- 不用 Bloom 解决主应用偏暗问题；主应用亮度仍由背景色 token 与 idleZFade 负责。
 - 不改 UMAP、Z 轴、数据 pipeline 或 `galaxy_data.json`。
 - 不改变 hover/click 拾取半径。
 - 不改变 focus fly-to 时长、相机轴约束或 Drawer 行为。
@@ -75,11 +88,13 @@ flowchart TD
 
 ## 关键现状
 
-- SDR 星系亮度参数在 [frontend/src/three/galaxyMeshes.ts](frontend/src/three/galaxyMeshes.ts)：`uLMin=0.2`、`uLMax=1.0`、`uHighRatingT=0.85`、`uHighTierTRangeScale=0.4`、`uLightnessRatingExponent=3.0`、`uDistanceLightnessFloor=0.5`。
-- Idle near fade 默认在 [frontend/src/three/idleNearFade.ts](frontend/src/three/idleNearFade.ts)：`enabled=1`、`startDist=20`、`width=10`、`minAlpha=0.05`。
-- Idle Z fade 默认在 [frontend/src/three/idleZFade.ts](frontend/src/three/idleZFade.ts)：`mode=-1`、`outsideAlpha=0.5`。
+- 宇宙背景在 [frontend/src/three/universeBackground.ts](frontend/src/three/universeBackground.ts)，当前需要补齐可被开发期 runtime 调参调用的背景色 token 通道。
+- Idle Z fade 默认在 [frontend/src/three/idleZFade.ts](frontend/src/three/idleZFade.ts)：`mode=-1`、`outsideAlpha=0.5`；规则已限定仅 browsing 态启用，本阶段重点验证边界并补齐 browsing/focus 切换时的透明度渐变。
+- Idle near fade 默认在 [frontend/src/three/idleNearFade.ts](frontend/src/three/idleNearFade.ts)：`enabled=1`、`startDist=20`、`width=10`、`minAlpha=0.05`；本阶段不把 near fade 作为主要提亮路径，只在与 idleZFade 叠加导致过暗时做必要校准。
+- SDR 星系亮度参数在 [frontend/src/three/galaxyMeshes.ts](frontend/src/three/galaxyMeshes.ts)：`uLMin=0.2`、`uLMax=1.0`、`uHighRatingT=0.85`、`uHighTierTRangeScale=0.4`、`uLightnessRatingExponent=3.0`、`uDistanceLightnessFloor=0.5`；本阶段不优先重做 rating→OKLab L 映射，只有背景色与 idleZFade 修正后仍无法达标时才小范围兜底调整。
 - Galaxy shader 在 [frontend/src/three/shaders/galaxyIdle.vert.glsl](frontend/src/three/shaders/galaxyIdle.vert.glsl) 与 [frontend/src/three/shaders/galaxyActive.vert.glsl](frontend/src/three/shaders/galaxyActive.vert.glsl) 中使用 OKLab L remap。
 - 选中星球由 [frontend/src/three/planet.ts](frontend/src/three/planet.ts) 的 `createSelectionPlanet()` 创建，当前没有独立自转契约。
+- 当前 Bloom 收尾态在 [frontend/src/three/scene.ts](frontend/src/three/scene.ts)：`UnrealBloomPass` 与 `window.__bloom` 保留，但全局 Bloom 默认关闭；Phase 10.3 的失败点主要来自 idle/active 小星体、透明混合和全场景后处理，本阶段只允许 `planet.mesh` 进入 selective Bloom。
 - 参考环在 [frontend/src/three/FocusSizeReferenceRings.ts](frontend/src/three/FocusSizeReferenceRings.ts)，已有 `seededRingPlaneQuaternion(movieId)`，可作为每部电影稳定的参考平面方向。
 - Scene 集成在 [frontend/src/three/scene.ts](frontend/src/three/scene.ts)，负责 selection planet、focus reference rings、render loop 和 debug tuning 入口。
 
@@ -95,60 +110,61 @@ flowchart TD
 - Phase 29 若证明 HDR 可行，也不影响本阶段先稳定 SDR fallback。
 - Phase 33 才处理 HDR active、HDR capability UI、Bloom/HDR 高光等生产链路。
 
-### 32.2 SDR 可读性基线采集
+### 32.2 SDR 亮度与状态切换基线采集
 
-先记录当前画面，不直接调参。
+先记录当前画面，不直接调参。基线要覆盖“太暗”本身，也要覆盖 idleZFade 在状态切换时是否产生突兀跳变。
 
 基线场景：
 
 - 首屏 cover 后进入 macro roam。
 - 时间轴不同年代段：早期稀疏区、中段密集区、近年高 vote 区。
 - 搜索结果高亮状态。
-- focus 进入、focus 内切换、退出 focus。
+- browsing → focus、focus → browsing、focus 内切换电影。
 - 普通 SDR 显示器、系统 HDR 开但浏览器仍 SDR 输出的组合。
 
 记录内容：
 
 - 截图或短录屏。
-- 当前 uniforms 日志。
-- `window.__galaxyColor`、`window.__galaxyIdleNearFade`、`window.__galaxyIdleZFade` 当前值。
-- 主观问题：偏黑、过曝、颜色发灰、层次丢失、密集区糊成一片。
+- 当前宇宙背景色 token / clear color / background material 参数。
+- `window.__galaxyIdleZFade`、`window.__galaxyIdleNearFade`、`window.__galaxyColor` 当前值。
+- browsing/focus 切换前后透明度变化是否瞬跳。
+- 主观问题：背景过黑、星体被背景吞掉、Z 向虚化过强、切换时透明度跳变、颜色发灰或密集区糊成一片。
 
-### 32.3 OKLab lightness remap sweep
+### 32.3 宇宙背景色 token 修改通道
 
-优先从星体自身 L 映射解决可读性，而不是先开 Bloom。
+优先从主应用整体背景亮度入手，开放可调背景色 token，而不是直接重做星体 rating→OKLab L 映射。
 
-重点参数：
+目标：
 
-- `uLMin`：提高低评分/暗星最低可见度。
-- `uLightnessRatingExponent`：降低高评分星与普通星之间过强的非线性压暗。
-- `uHighTierTRangeScale`：控制高分段压缩，避免高分星全部顶白。
-- `uDistanceLightnessFloor`：控制距离衰减下限，避免远处层次完全消失。
+- 将宇宙背景色整理为明确 token，而不是散落在渲染初始化或背景材质内部的硬编码值。
+- 暴露开发期 runtime 修改通道，支持在浏览器 console 中手动调整并立即看到效果。
+- 修改通道应能覆盖 renderer clear color、scene background、宇宙背景材质中实际参与视觉输出的背景色来源。
+- 保留未来扩展点：后续可以根据用户交互行为、浏览/focus 状态或时间段动态改变背景色。
 
 约束：
 
-- `uLMax` 默认保持 1.0，不制造超 SDR 语义。
-- 保持 OKLab hue/chroma 逻辑，不把所有类型拉成灰白。
-- 每次只改一组参数，并记录效果。
-- 调整后保留 `console.log`/assert 可见性，符合当前项目可验证生成规则。
+- 默认仍走 SDR 主路径，不引入 HDR/Bloom 作为“提亮”手段。
+- 背景 token 调整不得改变数据坐标、粒子大小、拾取半径或相机行为。
+- token 修改后需要打印当前值，方便截图、复现和回滚。
+- 如果背景色动态变化，需要明确状态来源和优先级，避免多个入口互相覆盖。
 
-### 32.4 Idle fade 与背景对比标定
+### 32.4 idleZFade 虚化规则与透明度渐变
 
-在 L remap 后再标定宏观层次。
+优化 idleZFade 的规则表达和实际视觉效果。本阶段确认“仅 browsing 态启用”这个现有边界，并补齐 browsing/focus 状态切换时的透明度渐变。
 
-涉及模块：
+规则：
 
-- [frontend/src/three/idleNearFade.ts](frontend/src/three/idleNearFade.ts)
-- [frontend/src/three/idleZFade.ts](frontend/src/three/idleZFade.ts)
-- [frontend/src/three/universeBackground.ts](frontend/src/three/universeBackground.ts)
-- [frontend/src/three/shaders/galaxyIdle.vert.glsl](frontend/src/three/shaders/galaxyIdle.vert.glsl)
+- browsing 态：idleZFade 按当前 Z 向虚化规则生效，用于保留宏观时间深度层次。
+- focus 态：idleZFade 目标强度降为 0，不继续压暗 focus 内星体和选中星球周边信息。
+- browsing → focus：idleZFade 透明度平滑退场，避免点击选中后粒子亮度瞬间跳变。
+- focus → browsing：idleZFade 透明度平滑恢复，避免退出 focus 后宏观层次突然压暗。
 
-检查点：
+实现要求：
 
-- idle near fade 不应让近处粒子低到不可见。
-- idle Z fade 不应让时间窗外信息完全消失。
-- 背景亮度不应压低星体对比，也不应变成灰雾。
-- focus session 下 `uIdleMacroFadesActive=0` 的行为保持不变。
+- 用独立 transition progress / multiplier 表示 idleZFade 的状态切换，不把状态机写死进 shader 分支。
+- transition 时长应短于 focus fly-to 的主要感知窗口，目标是“顺滑但不拖沓”。
+- 切换期间只改变 idleZFade 的视觉强度，不改变 hover/click 判定、focus 半径或相机约束。
+- 快速连续切换 browsing/focus 时，渐变应从当前可见强度继续过渡，而不是重置闪烁。
 
 ### 32.5 SDR runtime tuning 入口整理
 
@@ -156,10 +172,11 @@ flowchart TD
 
 要求：
 
-- 确认 `window.__galaxyColor` 可调整并打印当前 L/chroma/Hunt 参数。
-- 确认 `window.__galaxyIdleNearFade` 与 `window.__galaxyIdleZFade` 可用于 A/B。
-- 最终默认值写入源码常量或 uniform defaults，不依赖手动 console patch 才可用。
-- 在计划或实施报告中记录最终参数和放弃的候选值。
+- 确认背景色 token runtime 通道可调整并打印当前 token 值。
+- 确认 `window.__galaxyIdleZFade` 可用于调整 Z 向虚化参数，并能观察 browsing/focus 过渡强度。
+- `window.__galaxyIdleNearFade` 与 `window.__galaxyColor` 保留为辅助入口，但不再作为本轮“太暗”问题的主路径。
+- 最终默认值写入源码常量或 token defaults，不依赖手动 console patch 才可用。
+- 在计划或实施报告中记录最终背景色 token、idleZFade 参数、transition 时长和放弃的候选值。
 
 ### 32.6 选中星球自转轴定义
 
@@ -191,7 +208,28 @@ flowchart TD
 - Cover today、普通 movie focus、focus 内 neighbor 切换都稳定。
 - 如果 selection planet opacity 为 0 或未选中，不做无意义更新。
 
-### 32.8 验证与验收
+### 32.8 Perlin 选中星球 selective Bloom
+
+为选中 Perlin 单体星球接入 selective Bloom，作为 focus 态视觉增强。该能力默认开启，但只作用于 `planet.mesh`，不恢复 Phase 10 的全局 Bloom 默认路径。
+
+规则：
+
+- `planet.mesh`：允许进入 Bloom，默认开启。
+- `galaxy.idle`：不进入 Bloom。
+- `galaxy.active`：不进入 Bloom。
+- browsing 态、选中星球不可见或 opacity 为 0 时，不应为了 Bloom 长期切换到 composer render path。
+- focus / selecting / selected 中选中星球可见时，才启用 perlin-only Bloom 合成。
+
+要求：
+
+- 暴露独立 runtime debug 入口，例如 `window.__perlinBloom`，避免复用 `window.__bloom.enable()` 的全局语义。
+- 支持调整 `enabled`、`strength`、`radius`、`threshold`，并打印当前值。
+- Bloom 默认值应偏克制，增强星球边缘和高光质感，不制造大面积雾化光晕。
+- 不改变选中星球世界半径、拾取半径、focus neighbor 半径、相机约束或 Drawer 行为。
+- 快速切换电影、cover today 进入 focus、focus 内 neighbor 切换时，Bloom 不应残留到上一部电影或空场景。
+- 若验证发现设备性能或观感不稳定，允许保留 perlin-only 管线，但将默认值回退为关闭；该回退不得影响主线亮度与自转任务。
+
+### 32.9 验证与验收
 
 建议命令：
 
@@ -202,30 +240,40 @@ flowchart TD
 
 视觉验收矩阵：
 
-- Macro roam：稀疏区、密集区、近年高 vote 区。
+- Macro roam：稀疏区、密集区、近年高 vote 区，重点观察背景是否仍吞掉低亮星体。
+- Background token：开发期手动修改背景色后，renderer clear color、scene background、宇宙背景材质输出保持一致。
+- State transition：browsing → focus、focus → browsing、快速连续切换，idleZFade 透明度平滑变化且无闪烁。
 - Search：movie/person/genre selection mask 下的星体可读性。
-- Focus：进入、退出、邻居切换、Drawer 打开时的 planet 自转。
-- Cover today：cover 到 focus 的 planet/参考环方向稳定。
+- Focus：进入、退出、邻居切换、Drawer 打开时的 planet 自转与 perlin-only Bloom 表现。
+- Perlin Bloom：默认开启时只有 `planet.mesh` 发光；`galaxy.idle` / `galaxy.active` 不出现全局 Bloom、糊化或背景噪声。
+- Cover today：cover 到 focus 的 planet/参考环方向稳定，perlin Bloom 不残留到空场景或上一部电影。
 - 设备：普通 SDR 显示器、系统 HDR 开但 SDR 输出、不同浏览器缩放比例。
 
 ## 验收标准
 
 Phase 32 完成时应满足：
 
-- 主场景 SDR 下不再明显偏黑，低亮星仍可见，高亮星不过曝成白片。
-- 宏观 idle fade 保持时间深度层次，但不牺牲基础可读性。
-- 背景与星体对比稳定，默认仍不依赖 Bloom。
+- 主应用 SDR 下不再明显偏黑，背景不吞掉低亮星体，默认仍不依赖全局 Bloom。
+- 宇宙背景色有明确 token 和 runtime 修改通道，开发期可手调、可打印、可复现，并为后续交互驱动背景色变化保留边界。
+- idleZFade 仅在 browsing 态生效；focus 态不继续压暗 focus 视觉信息。
+- browsing/focus 态切换时 idleZFade 透明度渐变，无明显亮度瞬跳或闪烁。
+- near fade 与 OKLab L remap 不再作为本轮提亮主路径；如有兜底调整，必须记录原因和参数。
 - 选中星球缓慢自转，轴向与 size reference plane 视觉一致。
-- 切换电影、cover today、focus neighbor 切换不会出现 rotation 累积漂移。
-- 自转不改变拾取半径、focus 半径、相机约束或 Drawer 行为。
-- lint/build 通过，最终 SDR 参数有记录。
+- Perlin 选中星球 selective Bloom 默认开启，但只作用于 `planet.mesh`，不让 idle/active 主星系进入 Bloom。
+- perlin Bloom 有独立 runtime debug 入口，可开关、可调参、可打印当前值。
+- 切换电影、cover today、focus neighbor 切换不会出现 rotation 累积漂移或 Bloom 残留。
+- 自转与 perlin Bloom 不改变拾取半径、focus 半径、相机约束或 Drawer 行为。
+- lint/build 通过，最终背景色 token、idleZFade 参数、transition 策略和 perlin Bloom 策略有记录。
 
 ## Phase 32 交付物
 
 - `.cursor/plans/phase_32_sdr_readability_motion.plan.md`
-- SDR 可读性基线记录。
-- OKLab L remap 与 idle fade 默认参数更新。
+- SDR 亮度与状态切换基线记录。
+- 宇宙背景色 token runtime 修改通道。
+- idleZFade browsing/focus 透明度渐变。
 - SDR runtime tuning 入口确认。
 - 选中星球稳定自转。
+- Perlin 选中星球 selective Bloom 默认开启路径。
+- `window.__perlinBloom` runtime debug 入口。
 - 视觉验收矩阵结果。
-- 参数结论与剩余风险记录。
+- 背景色 token、idleZFade 参数、transition 策略、perlin Bloom 策略与剩余风险记录。

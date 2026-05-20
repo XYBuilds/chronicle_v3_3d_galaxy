@@ -7,7 +7,7 @@ todos:
     status: completed
   - id: p31-poster-state-machine
     content: 31.2 为 Drawer poster 增加 empty/loading/loaded/failed/retrying 状态机，并在切换电影时稳定重置
-    status: pending
+    status: completed
   - id: p31-poster-retry-ui
     content: 31.3 增加海报失败与重试 UI，区分空 poster URL、加载失败和正在重试
     status: pending

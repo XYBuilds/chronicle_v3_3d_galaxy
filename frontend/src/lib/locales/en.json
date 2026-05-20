@@ -105,7 +105,14 @@
   "drawer": {
     "fallbackTitle": "Film",
     "posterAlt": "Poster for {{title}}",
-    "posterPlaceholder": "Poster image",
+    "poster": {
+      "placeholder": "Poster image",
+      "loading": "Loading poster…",
+      "empty": "No poster available",
+      "failed": "Poster could not load",
+      "retry": "Retry",
+      "retrying": "Retrying…"
+    },
     "sheetDescription": "{{title}}, released {{releaseDate}}.",
     "sheetDescriptionEmpty": "No film selected.",
     "votesLine": "{{count}} votes",

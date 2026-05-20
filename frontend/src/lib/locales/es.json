@@ -105,7 +105,14 @@
   "drawer": {
     "fallbackTitle": "Película",
     "posterAlt": "Póster de {{title}}",
-    "posterPlaceholder": "Imagen del póster",
+    "poster": {
+      "placeholder": "Imagen del póster",
+      "loading": "Cargando póster…",
+      "empty": "No hay póster disponible",
+      "failed": "No se pudo cargar el póster",
+      "retry": "Reintentar",
+      "retrying": "Reintentando…"
+    },
     "sheetDescription": "{{title}}, estrenada el {{releaseDate}}.",
     "sheetDescriptionEmpty": "Ninguna película seleccionada.",
     "votesLine": "{{count}} votos",

@@ -105,7 +105,14 @@
   "drawer": {
     "fallbackTitle": "Film",
     "posterAlt": "Affiche de {{title}}",
-    "posterPlaceholder": "Image d’affiche",
+    "poster": {
+      "placeholder": "Image d’affiche",
+      "loading": "Chargement de l’affiche…",
+      "empty": "Aucune affiche disponible",
+      "failed": "Impossible de charger l’affiche",
+      "retry": "Réessayer",
+      "retrying": "Nouvelle tentative…"
+    },
     "sheetDescription": "{{title}}, sorti le {{releaseDate}}.",
     "sheetDescriptionEmpty": "Aucun film sélectionné.",
     "votesLine": "{{count}} votes",

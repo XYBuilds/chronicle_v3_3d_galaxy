@@ -105,7 +105,14 @@
   "drawer": {
     "fallbackTitle": "映画",
     "posterAlt": "{{title}} のポスター",
-    "posterPlaceholder": "ポスター画像",
+    "poster": {
+      "placeholder": "ポスター画像",
+      "loading": "ポスターを読み込み中…",
+      "empty": "ポスターがありません",
+      "failed": "ポスターを読み込めませんでした",
+      "retry": "再試行",
+      "retrying": "再試行中…"
+    },
     "sheetDescription": "{{title}}、公開日 {{releaseDate}}。",
     "sheetDescriptionEmpty": "映画が選択されていません。",
     "votesLine": "{{count}} 票",

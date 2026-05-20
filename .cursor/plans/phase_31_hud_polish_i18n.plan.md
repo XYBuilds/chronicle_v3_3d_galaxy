@@ -13,7 +13,7 @@ todos:
     status: completed
   - id: p31-search-placeholders
     content: 31.4 优化搜索 placeholder 文案，明确标题可用英文/原语言，人物搜索建议使用英文名
-    status: pending
+    status: completed
   - id: p31-i18n-sync
     content: 31.5 同步所有 locale JSON 与 `strings.ts` 导出，保持 `en.json` 作为结构 SSOT
     status: pending

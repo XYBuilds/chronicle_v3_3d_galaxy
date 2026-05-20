@@ -35,6 +35,11 @@ import type { LocaleStrings } from '@/lib/strings'
 import { useStrings } from '@/lib/strings'
 import type { Movie } from '@/types/galaxy'
 import { cn } from '@/lib/utils'
+import {
+  getDrawerPosterStatusMessage,
+  isDrawerPosterImageAriaHidden,
+  type PosterLoadState,
+} from '@/components/drawerPosterA11y'
 
 /** easeOutCubic �?open ~300ms, close ~450ms (Phase 4.3). */
 const SHEET_OPEN_EASE = 'cubic-bezier(0.215, 0.61, 0.355, 1)'
@@ -50,9 +55,6 @@ function formatVoteCount(n: number): string {
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`
   return `${n}`
 }
-
-/** Poster load state machine; parent `key` resets on movie change; retry button wired in 31.3. */
-type PosterLoadState = 'empty' | 'loading' | 'loaded' | 'failed' | 'retrying'
 
 function posterSrcWithReloadToken(url: string, reloadToken: number): string {
   if (reloadToken === 0) return url
@@ -112,16 +114,23 @@ function DrawerPoster({ posterUrl, title }: { posterUrl: string; title: string }
 
   const showImage = state === 'loading' || state === 'retrying' || state === 'loaded'
   const showSpinner = state === 'loading' || state === 'retrying'
-  const spinnerAriaLabel = state === 'retrying' ? str.drawer.poster.retrying : str.drawer.poster.loading
+  const statusMessage = getDrawerPosterStatusMessage(state, str.drawer.poster)
+  const imageAriaHidden = isDrawerPosterImageAriaHidden(state)
 
   return (
     <div className="absolute inset-0" data-poster-state={state} aria-busy={showSpinner || undefined}>
+      {statusMessage ? (
+        <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+          {statusMessage}
+        </span>
+      ) : null}
       {showImage ? (
         <img
           key={src}
           src={src}
           data-load-gen={loadGeneration}
-          alt={str.drawer.posterAlt(title)}
+          alt={imageAriaHidden ? '' : str.drawer.posterAlt(title)}
+          aria-hidden={imageAriaHidden || undefined}
           className={cn(
             'absolute inset-0 size-full object-cover motion-safe:transition-opacity motion-safe:duration-200',
             state === 'loaded' ? 'opacity-100' : 'opacity-0',
@@ -151,8 +160,8 @@ function DrawerPoster({ posterUrl, title }: { posterUrl: string; title: string }
         />
       ) : null}
       {showSpinner ? (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-background/20">
-          <Spinner className="size-8 text-muted-foreground" aria-label={spinnerAriaLabel} />
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-background/20" aria-hidden>
+          <Spinner className="size-8 text-muted-foreground" aria-hidden />
         </div>
       ) : null}
     </div>
@@ -232,7 +241,7 @@ function DrawerPersonNamesInline({
           <button
             type="button"
             className={cn(
-              'inline max-w-full border-0 bg-transparent p-0 text-left align-baseline font-inherit text-inherit',
+              'inline max-w-full border-0 bg-transparent p-0 text-start align-baseline font-inherit text-inherit',
               'underline-offset-2 hover:underline',
             )}
             aria-label={str.drawer.personSearchNameAriaLabel(name)}
@@ -344,14 +353,14 @@ export function MovieDetailDrawerHud({
           /* Full-width slide: enter from the right edge, exit back off-screen right. */
           'data-[side=right]:data-starting-style:translate-x-full data-[side=right]:data-ending-style:translate-x-full',
           /* Width: floor `--hud-drawer-min-w`, cap `--hud-drawer-max-w` (planet / readable / safe-area). */
-          'min-h-0 max-h-[100dvh] gap-0 overflow-hidden border-l border-border bg-popover p-0 data-[side=right]:min-w-[var(--hud-drawer-min-w)] data-[side=right]:max-w-[var(--hud-drawer-max-w)] data-[side=right]:sm:max-w-[var(--hud-drawer-max-w)]',
+          'min-h-0 max-h-[100dvh] gap-0 overflow-hidden border-s border-border bg-popover p-0 data-[side=right]:min-w-[var(--hud-drawer-min-w)] data-[side=right]:max-w-[var(--hud-drawer-max-w)] data-[side=right]:sm:max-w-[var(--hud-drawer-max-w)]',
           /* Slide only: keep full opacity (override sheet default fade). */
           'data-starting-style:opacity-100 data-ending-style:opacity-100',
           'transition-transform duration-[300ms] ease-[var(--sheet-ease)] data-ending-style:duration-[450ms]',
         )}
         style={{ ['--sheet-ease' as string]: SHEET_OPEN_EASE }}
       >
-        <SheetHeader className="relative z-20 shrink-0 gap-0 border-b border-border/70 bg-popover px-6 pb-5 pt-7 text-left shadow-[0_6px_18px_-10px_color-mix(in_oklch,var(--foreground)_10%,transparent)] sm:px-7">
+        <SheetHeader className="relative z-20 shrink-0 gap-0 border-b border-border/70 bg-popover px-6 pb-5 pt-7 text-start shadow-[0_6px_18px_-10px_color-mix(in_oklch,var(--foreground)_10%,transparent)] sm:px-7">
           <SheetTitle className="text-2xl font-bold leading-tight tracking-tight text-foreground">{title}</SheetTitle>
           <SheetDescription className="sr-only">
             {movie
@@ -426,7 +435,7 @@ export function MovieDetailDrawerHud({
             </div>
 
             {movie.tagline ? (
-              <blockquote className="border-l-2 border-border pl-4 text-sm italic leading-relaxed text-muted-foreground motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-left-2 motion-safe:duration-300">
+              <blockquote className="border-s-2 border-border ps-4 text-sm italic leading-relaxed text-muted-foreground motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-start-2 motion-safe:duration-300">
                 &ldquo;{movie.tagline}&rdquo;
               </blockquote>
             ) : null}

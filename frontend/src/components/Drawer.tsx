@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type SyntheticEvent } from 'react'
 import { ExternalLink, Star } from 'lucide-react'
 
 import { DrawerMovieShare } from '@/components/DrawerMovieShare'
@@ -11,6 +11,7 @@ import {
 } from '@/components/drawerDetailsLayout'
 import { AspectRatio } from '@/components/ui/aspect-ratio'
 import { buttonVariants } from '@/components/ui/button-variants'
+import { Spinner } from '@/components/ui/spinner'
 import {
   Sheet,
   SheetContent,
@@ -42,26 +43,88 @@ function formatVoteCount(n: number): string {
   return `${n}`
 }
 
-/** Isolated poster + error state so remounting via `key` resets without an effect. */
-function DrawerPoster({ posterUrl, title }: { posterUrl: string; title: string }) {
-  const str = useStrings()
-  const [failed, setFailed] = useState(false)
-  const trimmed = posterUrl.trim()
-  const show = Boolean(trimmed) && !failed
-  return show ? (
-    <img
-      src={trimmed}
-      alt={str.drawer.posterAlt(title)}
-      className="absolute inset-0 size-full object-cover"
-      loading="lazy"
-      decoding="async"
-      onError={() => setFailed(true)}
-    />
-  ) : (
+/** Poster load state machine; parent `key` resets on movie change; retry button wired in 31.3. */
+type PosterLoadState = 'empty' | 'loading' | 'loaded' | 'failed' | 'retrying'
+
+function posterSrcWithReloadToken(url: string, reloadToken: number): string {
+  if (reloadToken === 0) return url
+  const sep = url.includes('?') ? '&' : '?'
+  return `${url}${sep}poster_retry=${reloadToken}`
+}
+
+function DrawerPosterPlaceholder({ label }: { label: string }) {
+  return (
     <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary/20 via-accent to-secondary text-muted-foreground">
       <span className="rounded-md border border-border/60 bg-background/10 px-3 py-2 text-[0.65rem] font-bold uppercase tracking-wider backdrop-blur-sm">
-        {str.drawer.posterPlaceholder}
+        {label}
       </span>
+    </div>
+  )
+}
+
+function DrawerPoster({ posterUrl, title }: { posterUrl: string; title: string }) {
+  const str = useStrings()
+  const trimmed = posterUrl.trim()
+  const hasUrl = Boolean(trimmed)
+
+  const [reloadToken, setReloadToken] = useState(0)
+  const [state, setState] = useState<PosterLoadState>(() => (hasUrl ? 'loading' : 'empty'))
+  const loadGenerationRef = useRef(0)
+  const [loadGeneration, setLoadGeneration] = useState(0)
+
+  const src = hasUrl ? posterSrcWithReloadToken(trimmed, reloadToken) : ''
+
+  const handleLoad = (event: SyntheticEvent<HTMLImageElement>) => {
+    const gen = Number(event.currentTarget.dataset.loadGen)
+    if (gen !== loadGenerationRef.current) return
+    setState('loaded')
+  }
+
+  const handleError = (event: SyntheticEvent<HTMLImageElement>) => {
+    const gen = Number(event.currentTarget.dataset.loadGen)
+    if (gen !== loadGenerationRef.current) return
+    setState('failed')
+  }
+
+  /** Wired by 31.3 retry button. */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- 31.3
+  const handleRetry = () => {
+    if (!hasUrl) return
+    const nextGen = loadGenerationRef.current + 1
+    loadGenerationRef.current = nextGen
+    setLoadGeneration(nextGen)
+    setState('retrying')
+    setReloadToken((t) => t + 1)
+  }
+
+  const showImage = state === 'loading' || state === 'retrying' || state === 'loaded'
+  const showPlaceholder = state === 'empty' || state === 'failed'
+  const showSpinner = state === 'loading' || state === 'retrying'
+
+  return (
+    <div className="absolute inset-0" data-poster-state={state} aria-busy={showSpinner || undefined}>
+      {showImage ? (
+        <img
+          key={src}
+          src={src}
+          data-load-gen={loadGeneration}
+          alt={str.drawer.posterAlt(title)}
+          className={cn(
+            'absolute inset-0 size-full object-cover motion-safe:transition-opacity motion-safe:duration-200',
+            state === 'loaded' ? 'opacity-100' : 'opacity-0',
+          )}
+          loading="lazy"
+          decoding="async"
+          onLoad={handleLoad}
+          onError={handleError}
+        />
+      ) : null}
+      {showPlaceholder ? <DrawerPosterPlaceholder label={str.drawer.posterPlaceholder} /> : null}
+      {showSpinner ? (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-background/20" aria-hidden>
+          <Spinner className="size-8 text-muted-foreground" />
+        </div>
+      ) : null}
     </div>
   )
 }

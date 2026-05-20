@@ -4,7 +4,7 @@ overview: Phase 32 聚焦 SDR 主路径的视觉可读性与选中星球动效�
 todos:
   - id: p32-plan-doc-preflight
     content: 32.1 创建并维护 `.cursor/plans/phase_32_sdr_readability_motion.plan.md`，确认 Phase 29 HDR 结论不会改变本阶段 SDR 边界
-    status: pending
+    status: completed
   - id: p32-sdr-baseline-capture
     content: 32.2 建立 SDR 可读性基线，记录当前亮度、idle fade、背景与 focus 场景的 A/B 观察样本
     status: pending
@@ -39,6 +39,39 @@ Phase 32 改善两个用户能直接感知的问题，但严格留在 SDR 主路
 - **选中星球生命感**：给 focus 选中星球增加稳定、缓慢、低干扰的自转。
 
 本阶段不把 SDR 提亮伪装成 HDR，也不默认开启 Bloom。HDR production 仍由 Phase 33 根据 Phase 29 结论单独处理。
+
+## Phase 29 / Phase 33 边界确认（32.1 锁定）
+
+**SSOT**：[`docs/reports/Phase 29.7 P29.7 Phase 29 Gate report 实施报告.md`](../docs/reports/Phase%2029.7%20P29.7%20Phase%2029%20Gate%20report%20实施报告.md) · [`docs/project_docs/Phase 29 发布门槛与技术判定 spec.md`](../docs/project_docs/Phase%2029%20发布门槛与技术判定%20spec.md) §4–§10。
+
+| 决策 | 结论 | 对 Phase 32 的含义 |
+| :--- | :--- | :--- |
+| **Phase 32 SDR 可读性** | **Go（并行）** | 与 HDR gate **解耦**；**不依赖** Phase 33 完成或 go |
+| **Phase 33 HDR production（33.5 主路径）** | **No-go** | P0/P1 无 `supported`；D1 proof 未通过 → **不得**用本阶段 L remap / Bloom 冒充 HDR |
+| **Phase 33（收窄路径）** | **Go（条件）** | 仅 probe / proof / `renderMode` / SDR fallback 文档化；**33.5 冻结** |
+| **当前生产渲染** | **不变** | `WebGL2` + `SDR_FALLBACK_OUTPUT_COLOR_SPACE`（`THREE.SRGBColorSpace`）；`postFxBloomEnabled === false` |
+
+### Phase 32 独占 vs 移交 Phase 33
+
+| 主题 | Phase 32（本阶段） | Phase 33（条件阶段） |
+| :--- | :--- | :--- |
+| OKLab **L** remap、`uLMin`、`uLightnessRatingExponent`、`uDistanceLightnessFloor` | ✅ 调参并固化 SDR 默认 | ❌ 不得覆盖 32 标定后的 SDR fallback |
+| Idle near / Z fade、背景对比 | ✅ | ❌ |
+| `window.__galaxyColor` / idle fade 调试入口 | ✅ 整理并记录最终默认 | ❌ |
+| 选中星球缓慢自转 | ✅ | ❌ |
+| HDR 输出、`hdr-active`、`renderMode` 切换 | ❌ | ✅（仅 29.7 允许的子项） |
+| Bloom 作为默认或 HDR 替代 | ❌ **禁止** | ❌ SDR 默认仍关；仅 `hdr-active` 实验路径（若将来解冻 33.5） |
+| `window.__hdrCapabilities` / `__hdrProbe` | ❌ 不改动契约 | ✅ 产品化 / lab |
+| WebGPU extended 主场景接入 | ❌ | ❌ **冻结**（见 29.7 backlog `phase_33b_webgpu_hdr_spike`） |
+
+### 不变量（29.4 SDR fallback，32.x 不得破坏）
+
+- 生产 RAF 默认 **`renderer.render(scene, camera)`**，不依赖 `composer.render()`。
+- `hdr-capable` 探测结果 **不** 切换星系 renderer 或 `outputColorSpace`。
+- Focus 会话下 **`uIdleMacroFadesActive = 0`** 行为保持不变。
+- **不得** 改变 hover/click 拾取半径、focus 半径、相机 Z 轴约束、Drawer / 路由行为。
+
+**32.1 结论**：即使 Phase 29 日后在实验环境证明 HDR 可行，Phase 32 仍先交付 **SDR 主路径可读性与选中动效**；Phase 33 仅在独立 spike 通过后再考虑 `hdr-active`，且不得回退本阶段 SDR 默认标定。
 
 ```mermaid
 flowchart TD
@@ -81,7 +114,8 @@ flowchart TD
 - Galaxy shader 在 [frontend/src/three/shaders/galaxyIdle.vert.glsl](frontend/src/three/shaders/galaxyIdle.vert.glsl) 与 [frontend/src/three/shaders/galaxyActive.vert.glsl](frontend/src/three/shaders/galaxyActive.vert.glsl) 中使用 OKLab L remap。
 - 选中星球由 [frontend/src/three/planet.ts](frontend/src/three/planet.ts) 的 `createSelectionPlanet()` 创建，当前没有独立自转契约。
 - 参考环在 [frontend/src/three/FocusSizeReferenceRings.ts](frontend/src/three/FocusSizeReferenceRings.ts)，已有 `seededRingPlaneQuaternion(movieId)`，可作为每部电影稳定的参考平面方向。
-- Scene 集成在 [frontend/src/three/scene.ts](frontend/src/three/scene.ts)，负责 selection planet、focus reference rings、render loop 和 debug tuning 入口。
+- Scene 集成在 [frontend/src/three/scene.ts](frontend/src/three/scene.ts)，负责 selection planet、focus reference rings、render loop 和 debug tuning 入口；生产使用 `SDR_FALLBACK_OUTPUT_COLOR_SPACE`，Bloom 经 `postFxBloomEnabled` 默认关。
+- Phase 29 已落地：`frontend/src/lib/hdrCapabilities.ts`、`hdrProof.ts`、`sdrFallback.ts`（本阶段只读引用，不改 HDR 契约）。
 
 ## 工作拆分
 
@@ -89,11 +123,16 @@ flowchart TD
 
 创建并维护计划文件：`.cursor/plans/phase_32_sdr_readability_motion.plan.md`。
 
-确认边界：
+**交付（32.1）**：
 
-- Phase 32 只处理 SDR 默认体验。
-- Phase 29 若证明 HDR 可行，也不影响本阶段先稳定 SDR fallback。
-- Phase 33 才处理 HDR active、HDR capability UI、Bloom/HDR 高光等生产链路。
+- 计划文件存在且与仓库现状、Phase 29 spec / 29.7 gate、Phase 33 plan 对齐。
+- 上文 **「Phase 29 / Phase 33 边界确认（32.1 锁定）」** 表为后续 32.2–32.8 的前置约束；32.3+ 调参不得违反该表「不变量」列。
+
+**边界摘要**（详表见上文锁定节）：
+
+- Phase 32 只处理 **SDR 默认体验**（含选中星球自转）；与 29.7 **Go（并行）** 一致。
+- Phase 29 已判定 **No-go Phase 33 HDR production**；本阶段 **不等待** 33.5，也不把 L remap / Bloom 当作 HDR。
+- Phase 33（收窄）负责 probe / proof / `renderMode` / fallback 说明；**不得** 在本阶段覆盖 `galaxyMeshes` / idle fade 的 SDR 标定意图。
 
 ### 32.2 SDR 可读性基线采集
 

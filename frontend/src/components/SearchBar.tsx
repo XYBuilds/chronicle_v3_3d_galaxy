@@ -335,6 +335,13 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
 
   const isBlocked = disabledReason !== null
 
+  const searchPlaceholder =
+    isBlocked
+      ? ui.searchBar.placeholderDisabled
+      : hudTab === 'movie'
+        ? ui.searchBar.placeholderMovie
+        : ui.searchBar.placeholderPerson
+
   return (
     <div
       className={cn(
@@ -471,15 +478,10 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
                 aria-expanded={panelVisible}
                 aria-controls="galaxy-search-suggestions"
                 disabled={isBlocked}
-                placeholder={
-                  isBlocked
-                    ? ui.searchBar.placeholderDisabled
-                    : hudTab === 'movie'
-                      ? ui.searchBar.placeholderMovie
-                      : ui.searchBar.placeholderPerson
-                }
+                placeholder={searchPlaceholder}
+                aria-label={searchPlaceholder}
                 className={cn(
-                  'h-9 w-full min-w-0 rounded-lg border px-3 pr-9 text-sm text-foreground outline-none',
+                  'h-9 w-full min-w-0 rounded-lg border px-3 pe-9 text-sm text-foreground outline-none',
                   'transition-[background-color,border-color,box-shadow,color] duration-150',
                   // Light HUD (no .dark): faint glass on black canvas — idle stays quiet
                   'group-data-[state=idle]:border-white/10 group-data-[state=idle]:bg-white/[0.05] group-data-[state=idle]:shadow-none',
@@ -538,7 +540,7 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
                 <CloseButton
                   variant="ghostSm"
                   label={ui.searchBar.clear}
-                  className="absolute right-1 top-1/2 -translate-y-1/2"
+                  className="absolute end-1 top-1/2 -translate-y-1/2"
                   onClick={onClear}
                 />
               )}

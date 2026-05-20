@@ -19,7 +19,7 @@ todos:
     status: completed
   - id: p31-accessibility-rtl
     content: 31.6 验证海报状态、retry button、搜索输入在键盘、读屏和 RTL 语言下可用
-    status: pending
+    status: completed
   - id: p31-tests-acceptance
     content: 31.7 补充 locale parity 与必要组件测试，并执行 targeted test、lint、build 验收
     status: pending

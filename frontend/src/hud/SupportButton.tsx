@@ -4,6 +4,7 @@ import { buttonVariants } from '@/components/ui/button-variants'
 import { hudTopToolButtonChrome, type HudButtonStyleMode } from '@/hud/hudTopToolButtonChrome'
 import { getKofiSupportUrl } from '@/lib/kofiSupport'
 import { useStrings } from '@/lib/strings'
+import { isLocaleRtl, useLocaleStore } from '@/store/localeStore'
 import { cn } from '@/lib/utils'
 
 interface SupportButtonProps {
@@ -13,6 +14,7 @@ interface SupportButtonProps {
 /** P28.1 — HUD 右上：打开 Ko-fi / 支持页（`VITE_KOFI_URL` 或内置默认页）。 */
 export function SupportButton({ styleMode = 'default' }: SupportButtonProps) {
   const s = useStrings()
+  const labelDir = useLocaleStore((st) => (isLocaleRtl(st.locale) ? 'rtl' : 'ltr'))
   const url = getKofiSupportUrl()
 
   if (!url) return null
@@ -22,6 +24,7 @@ export function SupportButton({ styleMode = 'default' }: SupportButtonProps) {
       href={url}
       target="_blank"
       rel="noopener noreferrer"
+      dir={labelDir}
       className={cn(
         buttonVariants({ variant: 'secondary', size: 'sm' }),
         'h-10 min-h-10 shrink-0 gap-2 px-3 text-[0.8rem] whitespace-nowrap no-underline',

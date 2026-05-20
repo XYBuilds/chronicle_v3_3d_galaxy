@@ -5,6 +5,7 @@ import { srgb01FromHueAndVoteNorm, srgb01ToCss } from '@/lib/colorMath'
 import { useStrings } from '@/lib/strings'
 import { useGalaxyDataStore } from '@/store/galaxyDataStore'
 import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
+import { isLocaleRtl, useLocaleStore } from '@/store/localeStore'
 import { primaryGenreHueRad } from '@/utils/genreHue'
 import { cn } from '@/lib/utils'
 
@@ -15,6 +16,7 @@ import { cn } from '@/lib/utils'
  */
 export function FocusLReference() {
   const str = useStrings()
+  const ratingLabelDir = useLocaleStore((st) => (isLocaleRtl(st.locale) ? 'rtl' : 'ltr'))
   const selectedMovieId = useGalaxyInteractionStore((s) => s.selectedMovieId)
   const snap = useGalaxyInteractionStore((s) => s.focusLightnessSnap)
   const data = useGalaxyDataStore((s) => s.data)
@@ -47,8 +49,10 @@ export function FocusLReference() {
 
   return (
     <div
+      dir="ltr"
       className={cn(
-        'pointer-events-none fixed top-1/2 z-[var(--z-hud-focus-chrome)] flex -translate-y-1/2 flex-row items-stretch gap-4 select-none',
+        /* Spatial legend: stripe then rating label beside planet — do not mirror in document RTL. */
+        'pointer-events-none fixed top-1/2 z-[var(--z-hud-focus-chrome)] flex -translate-y-1/2 flex-row items-stretch gap-2 select-none',
         'left-[max(var(--hud-inset-xs),calc(50vw-var(--hud-focus-ref-center-gap)))] sm:left-[max(var(--hud-inset-sm),calc(50vw-var(--hud-focus-ref-center-gap)))]',
       )}
       role="img"
@@ -74,9 +78,13 @@ export function FocusLReference() {
           className="pointer-events-none absolute left-0 flex flex-row items-center"
           style={{ top: `${pointerTopPct}%`, transform: 'translateY(-50%)' }}
         >
-          <span className="inline-flex items-center gap-0.5 text-[0.72rem] font-semibold tabular-nums text-white/88">
-            {ratingStr}
+          {/* Same chip as Drawer header: Star then score; `dir` mirrors like Sheet metadata row. */}
+          <span
+            dir={ratingLabelDir}
+            className="inline-flex items-center gap-1 text-[0.72rem] font-semibold text-white/88"
+          >
             <Star className="size-3 fill-current" aria-hidden />
+            <span className="tabular-nums">{ratingStr}</span>
           </span>
         </div>
       </div>

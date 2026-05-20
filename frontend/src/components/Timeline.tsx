@@ -199,6 +199,7 @@ export function TimelineHud({
   if (orientation === 'horizontal') {
     return (
       <div
+        dir="ltr"
         className={cn(
           // Horizontal rail width: `w-[50vw]` + max-width cap; vertical track uses `h-[80vh]` (see below).
           'pointer-events-none fixed left-1/2 z-[var(--z-hud-timeline)] flex h-24 w-[50vw] max-w-[var(--hud-search-width)] -translate-x-1/2 select-none flex-col items-stretch',
@@ -290,6 +291,7 @@ export function TimelineHud({
 
   return (
     <div
+      dir="ltr"
       className={cn(
         'pointer-events-none fixed top-[8vh] z-[var(--z-hud-timeline)] flex h-[80vh] w-12 select-none flex-col overflow-visible',
         'left-[max(var(--hud-inset-sm),env(safe-area-inset-left,0px))] sm:left-[max(var(--hud-inset-md),env(safe-area-inset-left,0px))]',

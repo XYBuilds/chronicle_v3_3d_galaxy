@@ -4,7 +4,7 @@ overview: Phase 32 聚焦 SDR 主路径的视觉可读性与选中星球动效�
 todos:
   - id: p32-plan-doc-preflight
     content: 32.1 创建并维护 `.cursor/plans/phase_32_sdr_readability_motion.plan.md`，确认 Phase 29 HDR 结论不会改变本阶段 SDR 边界
-    status: pending
+    status: completed
   - id: p32-sdr-baseline-capture
     content: 32.2 建立 SDR 可读性基线，记录当前亮度、idle fade、背景与 focus 场景的 A/B 观察样本
     status: pending

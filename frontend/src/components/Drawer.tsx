@@ -36,6 +36,12 @@ import { useStrings } from '@/lib/strings'
 import type { Movie } from '@/types/galaxy'
 import { cn } from '@/lib/utils'
 import {
+  getInitialPosterLoadState,
+  isPosterLoadEventCurrent,
+  posterSrcWithReloadToken,
+  shouldShowDrawerPosterImage,
+} from '@/components/drawerPoster'
+import {
   getDrawerPosterStatusMessage,
   isDrawerPosterImageAriaHidden,
   type PosterLoadState,
@@ -54,12 +60,6 @@ function formatVoteCount(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`
   return `${n}`
-}
-
-function posterSrcWithReloadToken(url: string, reloadToken: number): string {
-  if (reloadToken === 0) return url
-  const sep = url.includes('?') ? '&' : '?'
-  return `${url}${sep}poster_retry=${reloadToken}`
 }
 
 function DrawerPosterStatusPanel({
@@ -85,7 +85,7 @@ function DrawerPoster({ posterUrl, title }: { posterUrl: string; title: string }
   const hasUrl = Boolean(trimmed)
 
   const [reloadToken, setReloadToken] = useState(0)
-  const [state, setState] = useState<PosterLoadState>(() => (hasUrl ? 'loading' : 'empty'))
+  const [state, setState] = useState<PosterLoadState>(() => getInitialPosterLoadState(posterUrl))
   const loadGenerationRef = useRef(0)
   const [loadGeneration, setLoadGeneration] = useState(0)
 
@@ -93,13 +93,13 @@ function DrawerPoster({ posterUrl, title }: { posterUrl: string; title: string }
 
   const handleLoad = (event: SyntheticEvent<HTMLImageElement>) => {
     const gen = Number(event.currentTarget.dataset.loadGen)
-    if (gen !== loadGenerationRef.current) return
+    if (!isPosterLoadEventCurrent(gen, loadGenerationRef.current)) return
     setState('loaded')
   }
 
   const handleError = (event: SyntheticEvent<HTMLImageElement>) => {
     const gen = Number(event.currentTarget.dataset.loadGen)
-    if (gen !== loadGenerationRef.current) return
+    if (!isPosterLoadEventCurrent(gen, loadGenerationRef.current)) return
     setState('failed')
   }
 
@@ -112,7 +112,7 @@ function DrawerPoster({ posterUrl, title }: { posterUrl: string; title: string }
     setReloadToken((t) => t + 1)
   }
 
-  const showImage = state === 'loading' || state === 'retrying' || state === 'loaded'
+  const showImage = shouldShowDrawerPosterImage(state)
   const showSpinner = state === 'loading' || state === 'retrying'
   const statusMessage = getDrawerPosterStatusMessage(state, str.drawer.poster)
   const imageAriaHidden = isDrawerPosterImageAriaHidden(state)

@@ -59,7 +59,7 @@ export function buildStrings(localeId: LocaleId) {
     drawer: {
       fallbackTitle: raw.drawer.fallbackTitle,
       posterAlt: (title: string) => interpolate(raw.drawer.posterAlt, { title }),
-      posterPlaceholder: raw.drawer.posterPlaceholder,
+      poster: raw.drawer.poster,
       sheetDescription: (title: string, releaseDate: string) =>
         interpolate(raw.drawer.sheetDescription, { title, releaseDate }),
       sheetDescriptionEmpty: raw.drawer.sheetDescriptionEmpty,

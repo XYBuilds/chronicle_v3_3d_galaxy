@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type SyntheticEvent } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+  type SyntheticEvent,
+} from 'react'
 import { ExternalLink, Star } from 'lucide-react'
 
 import { DrawerMovieShare } from '@/components/DrawerMovieShare'
@@ -52,12 +60,19 @@ function posterSrcWithReloadToken(url: string, reloadToken: number): string {
   return `${url}${sep}poster_retry=${reloadToken}`
 }
 
-function DrawerPosterPlaceholder({ label }: { label: string }) {
+function DrawerPosterStatusPanel({
+  message,
+  action,
+}: {
+  message: string
+  action?: ReactNode
+}) {
   return (
-    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary/20 via-accent to-secondary text-muted-foreground">
-      <span className="rounded-md border border-border/60 bg-background/10 px-3 py-2 text-[0.65rem] font-bold uppercase tracking-wider backdrop-blur-sm">
-        {label}
-      </span>
+    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gradient-to-br from-primary/20 via-accent to-secondary px-4 text-center text-muted-foreground">
+      <p className="m-0 max-w-[90%] rounded-md border border-border/60 bg-background/10 px-3 py-2 text-[0.65rem] font-bold uppercase tracking-wider backdrop-blur-sm">
+        {message}
+      </p>
+      {action}
     </div>
   )
 }
@@ -86,8 +101,6 @@ function DrawerPoster({ posterUrl, title }: { posterUrl: string; title: string }
     setState('failed')
   }
 
-  /** Wired by 31.3 retry button. */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- 31.3
   const handleRetry = () => {
     if (!hasUrl) return
     const nextGen = loadGenerationRef.current + 1
@@ -98,8 +111,8 @@ function DrawerPoster({ posterUrl, title }: { posterUrl: string; title: string }
   }
 
   const showImage = state === 'loading' || state === 'retrying' || state === 'loaded'
-  const showPlaceholder = state === 'empty' || state === 'failed'
   const showSpinner = state === 'loading' || state === 'retrying'
+  const spinnerAriaLabel = state === 'retrying' ? str.drawer.poster.retrying : str.drawer.poster.loading
 
   return (
     <div className="absolute inset-0" data-poster-state={state} aria-busy={showSpinner || undefined}>
@@ -119,10 +132,27 @@ function DrawerPoster({ posterUrl, title }: { posterUrl: string; title: string }
           onError={handleError}
         />
       ) : null}
-      {showPlaceholder ? <DrawerPosterPlaceholder label={str.drawer.posterPlaceholder} /> : null}
+      {state === 'empty' ? <DrawerPosterStatusPanel message={str.drawer.poster.empty} /> : null}
+      {state === 'failed' ? (
+        <DrawerPosterStatusPanel
+          message={str.drawer.poster.failed}
+          action={
+            <button
+              type="button"
+              className={cn(
+                buttonVariants({ variant: 'secondary', size: 'sm' }),
+                'text-[0.65rem] font-bold uppercase tracking-wider',
+              )}
+              onClick={handleRetry}
+            >
+              {str.drawer.poster.retry}
+            </button>
+          }
+        />
+      ) : null}
       {showSpinner ? (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-background/20" aria-hidden>
-          <Spinner className="size-8 text-muted-foreground" />
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-background/20">
+          <Spinner className="size-8 text-muted-foreground" aria-label={spinnerAriaLabel} />
         </div>
       ) : null}
     </div>

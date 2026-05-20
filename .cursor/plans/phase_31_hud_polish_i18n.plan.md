@@ -10,7 +10,7 @@ todos:
     status: completed
   - id: p31-poster-retry-ui
     content: 31.3 增加海报失败与重试 UI，区分空 poster URL、加载失败和正在重试
-    status: pending
+    status: completed
   - id: p31-search-placeholders
     content: 31.4 优化搜索 placeholder 文案，明确标题可用英文/原语言，人物搜索建议使用英文名
     status: pending

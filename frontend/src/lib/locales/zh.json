@@ -105,7 +105,14 @@
   "drawer": {
     "fallbackTitle": "影片",
     "posterAlt": "{{title}} 的海报",
-    "posterPlaceholder": "海报图片",
+    "poster": {
+      "placeholder": "海报图片",
+      "loading": "正在加载海报…",
+      "empty": "暂无海报",
+      "failed": "海报加载失败",
+      "retry": "重试",
+      "retrying": "正在重试…"
+    },
     "sheetDescription": "{{title}}，上映日期 {{releaseDate}}。",
     "sheetDescriptionEmpty": "未选择影片。",
     "votesLine": "{{count}} 票",

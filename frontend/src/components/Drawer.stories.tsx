@@ -54,6 +54,18 @@ export const NoPoster: Story = {
   },
 }
 
+/** Broken poster URL — failed state + Retry (Phase 31.3 acceptance). */
+export const BadPoster: Story = {
+  args: {
+    open: true,
+    onOpenChange: () => undefined,
+    movie: {
+      ...subsampleMovieKika,
+      poster_url: 'https://invalid.example/poster.jpg',
+    },
+  },
+}
+
 /** Subsample `Paradise Road` — long cast list from CSV. */
 export const LongCastList: Story = {
   args: {

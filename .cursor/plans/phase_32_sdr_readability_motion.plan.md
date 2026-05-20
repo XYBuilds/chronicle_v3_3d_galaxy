@@ -5,29 +5,26 @@ todos:
   - id: p32-plan-doc-preflight
     content: 32.1 创建并维护 `.cursor/plans/phase_32_sdr_readability_motion.plan.md`，确认 Phase 29 HDR 结论不会改变本阶段 SDR 边界
     status: completed
-  - id: p32-sdr-baseline-capture
-    content: 32.2 建立 SDR 亮度与状态切换基线，记录当前背景色、idleZFade、browsing/focus 切换透明度和 focus 场景样本
-    status: pending
   - id: p32-background-token-channel
-    content: 32.3 开放宇宙背景色 token 的运行时修改接口通道，支持开发期手调，并为后续按用户交互改变背景色预留边界
+    content: 32.2 开放宇宙背景色 token 的运行时修改接口通道，支持开发期手调，并为后续按用户交互改变背景色预留边界
     status: pending
   - id: p32-idle-z-fade-transition
-    content: 32.4 优化 idleZFade 虚化规则与实现效果，确认仅 browsing 态启用，并在 browsing/focus 切换时执行透明度渐变
+    content: 32.3 优化 idleZFade 虚化规则与实现效果，确认仅 browsing 态启用，并在 browsing/focus 切换时执行透明度渐变
     status: pending
   - id: p32-sdr-runtime-toggles
-    content: 32.5 整理背景色 token 与 idleZFade 调试入口，确保调参结果可复现并可固化到默认值
+    content: 32.4 整理背景色 token 与 idleZFade 调试入口，确保调参结果可复现并可固化到默认值
     status: pending
   - id: p32-selection-rotation-axis
-    content: 32.6 为选中星球定义参考平面法线自转轴，复用 `FocusSizeReferenceRings` 的 seeded quaternion
+    content: 32.5 为选中星球定义参考平面法线自转轴，复用 `FocusSizeReferenceRings` 的 seeded quaternion
     status: pending
   - id: p32-selection-rotation-runtime
-    content: 32.7 接入选中星球缓慢自转，切换电影时重置基准 rotation，且不改变拾取和 focus 半径
+    content: 32.6 接入选中星球缓慢自转，切换电影时重置基准 rotation，且不改变拾取和 focus 半径
     status: pending
   - id: p32-perlin-selective-bloom
-    content: 32.8 接入 Perlin 选中星球 selective Bloom，默认开启但仅作用于 `planet.mesh`，全局 Bloom 与 idle/active Bloom 仍默认关闭
+    content: 32.7 接入 Perlin 选中星球 selective Bloom，默认开启但仅作用于 `planet.mesh`，全局 Bloom 与 idle/active Bloom 仍默认关闭
     status: pending
   - id: p32-tests-acceptance
-    content: 32.9 执行视觉矩阵、类型检查、lint、build 验收，记录背景色 token、idleZFade transition、perlin Bloom 策略和剩余风险
+    content: 32.8 执行视觉矩阵、类型检查、lint、build 验收，记录背景色 token、idleZFade transition、perlin Bloom 策略和剩余风险
     status: pending
 isProject: false
 ---
@@ -67,7 +64,7 @@ flowchart TD
 
 ### 本 Phase 要做
 
-- 建立当前 SDR 亮度、背景色和 browsing/focus 切换基线。
+- 偏暗与 browsing/focus 透明度跳变视为已确认问题，不再单独安排基线采集任务。
 - 开放宇宙背景色 token 的开发期手调通道，并保留未来按交互行为驱动背景色变化的扩展边界。
 - 优化 idleZFade 虚化规则和过渡效果：仅 browsing 态启用，browsing/focus 态切换时透明度渐变。
 - 保持 WebGL2 + `renderer.outputColorSpace = THREE.SRGBColorSpace` 主路径稳定。
@@ -110,27 +107,7 @@ flowchart TD
 - Phase 29 若证明 HDR 可行，也不影响本阶段先稳定 SDR fallback。
 - Phase 33 才处理 HDR active、HDR capability UI、Bloom/HDR 高光等生产链路。
 
-### 32.2 SDR 亮度与状态切换基线采集
-
-先记录当前画面，不直接调参。基线要覆盖“太暗”本身，也要覆盖 idleZFade 在状态切换时是否产生突兀跳变。
-
-基线场景：
-
-- 首屏 cover 后进入 macro roam。
-- 时间轴不同年代段：早期稀疏区、中段密集区、近年高 vote 区。
-- 搜索结果高亮状态。
-- browsing → focus、focus → browsing、focus 内切换电影。
-- 普通 SDR 显示器、系统 HDR 开但浏览器仍 SDR 输出的组合。
-
-记录内容：
-
-- 截图或短录屏。
-- 当前宇宙背景色 token / clear color / background material 参数。
-- `window.__galaxyIdleZFade`、`window.__galaxyIdleNearFade`、`window.__galaxyColor` 当前值。
-- browsing/focus 切换前后透明度变化是否瞬跳。
-- 主观问题：背景过黑、星体被背景吞掉、Z 向虚化过强、切换时透明度跳变、颜色发灰或密集区糊成一片。
-
-### 32.3 宇宙背景色 token 修改通道
+### 32.2 宇宙背景色 token 修改通道
 
 优先从主应用整体背景亮度入手，开放可调背景色 token，而不是直接重做星体 rating→OKLab L 映射。
 
@@ -148,7 +125,7 @@ flowchart TD
 - token 修改后需要打印当前值，方便截图、复现和回滚。
 - 如果背景色动态变化，需要明确状态来源和优先级，避免多个入口互相覆盖。
 
-### 32.4 idleZFade 虚化规则与透明度渐变
+### 32.3 idleZFade 虚化规则与透明度渐变
 
 优化 idleZFade 的规则表达和实际视觉效果。本阶段确认“仅 browsing 态启用”这个现有边界，并补齐 browsing/focus 状态切换时的透明度渐变。
 
@@ -166,7 +143,7 @@ flowchart TD
 - 切换期间只改变 idleZFade 的视觉强度，不改变 hover/click 判定、focus 半径或相机约束。
 - 快速连续切换 browsing/focus 时，渐变应从当前可见强度继续过渡，而不是重置闪烁。
 
-### 32.5 SDR runtime tuning 入口整理
+### 32.4 SDR runtime tuning 入口整理
 
 保留调试入口，但把可发布参数固化到 defaults。
 
@@ -178,7 +155,7 @@ flowchart TD
 - 最终默认值写入源码常量或 token defaults，不依赖手动 console patch 才可用。
 - 在计划或实施报告中记录最终背景色 token、idleZFade 参数、transition 时长和放弃的候选值。
 
-### 32.6 选中星球自转轴定义
+### 32.5 选中星球自转轴定义
 
 为选中星球定义稳定自转轴。
 
@@ -195,7 +172,7 @@ flowchart TD
 - 不改变 selection pick radius、focus neighbor radius 或 raycast 逻辑。
 - 不改变相机轴始终平行 Z 的约束。
 
-### 32.7 选中星球自转 runtime 接入
+### 32.6 选中星球自转 runtime 接入
 
 把自转接入 render loop。
 
@@ -208,7 +185,7 @@ flowchart TD
 - Cover today、普通 movie focus、focus 内 neighbor 切换都稳定。
 - 如果 selection planet opacity 为 0 或未选中，不做无意义更新。
 
-### 32.8 Perlin 选中星球 selective Bloom
+### 32.7 Perlin 选中星球 selective Bloom
 
 为选中 Perlin 单体星球接入 selective Bloom，作为 focus 态视觉增强。该能力默认开启，但只作用于 `planet.mesh`，不恢复 Phase 10 的全局 Bloom 默认路径。
 
@@ -229,7 +206,9 @@ flowchart TD
 - 快速切换电影、cover today 进入 focus、focus 内 neighbor 切换时，Bloom 不应残留到上一部电影或空场景。
 - 若验证发现设备性能或观感不稳定，允许保留 perlin-only 管线，但将默认值回退为关闭；该回退不得影响主线亮度与自转任务。
 
-### 32.9 验证与验收
+### 32.8 验证与验收
+
+不再单独执行问题基线采集；偏暗与 browsing/focus 透明度跳变视为已确认问题。验收阶段只记录最终参数、前后对比截图/短录屏和剩余风险。
 
 建议命令：
 
@@ -268,7 +247,7 @@ Phase 32 完成时应满足：
 ## Phase 32 交付物
 
 - `.cursor/plans/phase_32_sdr_readability_motion.plan.md`
-- SDR 亮度与状态切换基线记录。
+- 最终参数与视觉对比记录。
 - 宇宙背景色 token runtime 修改通道。
 - idleZFade browsing/focus 透明度渐变。
 - SDR runtime tuning 入口确认。

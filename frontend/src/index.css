@@ -27,7 +27,7 @@
    * P23.4b — first-screen cosmos palette (Loading / Cover / HUD).
    * Universe field + muted ink for the/movie / today (see Design Spec P23.4b).
    */
-  --cosmos-universe-bg: #000000;
+  --cosmos-universe-bg: #000002;
   --cosmos-brand-muted: #f2f2f2;
   font-family: Inter, system-ui, -apple-system, Segoe UI, sans-serif;
   line-height: 1.5;

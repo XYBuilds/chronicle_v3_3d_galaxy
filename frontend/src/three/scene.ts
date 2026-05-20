@@ -34,9 +34,11 @@ import { createTransitionDriver } from './transitionDriver'
 import {
   applyUniverseBackgroundColor,
   COSMOS_UNIVERSE_BG_DEFAULT,
-  formatUniverseBgHex,
+  formatUniverseBgLogLine,
+  getActiveUniverseBgSource,
   readUniverseBgHex,
   resetUniverseBackgroundColor,
+  type UniverseBgTargets,
 } from './universeBackground'
 
 interface BloomDebugControls {
@@ -112,15 +114,17 @@ interface GalaxyIdleNearFadeDebug {
   log: () => void
 }
 
-/** Dev console: `window.__galaxyUniverseBg` — cosmos field / WebGL clear (`--cosmos-universe-bg`). */
+/** Dev console: `window.__galaxyUniverseBg` — universe bg token (css var + scene + clear). */
 interface GalaxyUniverseBgDebug {
   /** CSS hex from `--cosmos-universe-bg` (read-only). */
   get color(): string
-  /** CSS hex, `rgb()`, `hsl()`, or numeric `0x000000`. */
+  /** CSS hex, `rgb()`, `hsl()`, or numeric `0x000000`; logs css/scene/clear on apply. */
   set color(value: string | number)
   /** Same as assigning to `.color`; avoids a property named `set` (accessor clash). */
   apply(value: string | number): string
   reset(): string
+  /** Last driver: `default` | `interaction` (reserved) | `runtime`. */
+  readonly source: string
   log(): void
 }
 
@@ -265,6 +269,8 @@ export function mountGalaxyScene(
 
   const hdrProofDebug = createHdrProofDebug()
   window.__hdrProbe = hdrProofDebug
+
+  applyUniverseBackgroundColor(readUniverseBgHex(), { scene, renderer }, { source: 'default', log: false })
 
   const pr = Math.min(window.devicePixelRatio, 2)
   const galaxy = createGalaxyDualMeshes(movies, meta.genre_palette, pr, renderer.capabilities.maxTextureSize)
@@ -1006,25 +1012,25 @@ export function mountGalaxyScene(
   window.__galaxyIdleZFade = idleZFadeDebug
   idleZFadeDebug.log()
 
+  const universeBgTargets: UniverseBgTargets = { scene, renderer }
   const universeBgDebug: GalaxyUniverseBgDebug = {
     get color(): string {
       return readUniverseBgHex()
     },
     set color(value: string | number) {
-      applyUniverseBackgroundColor(value, scene)
+      applyUniverseBackgroundColor(value, universeBgTargets, { source: 'runtime' })
     },
     apply(value: string | number) {
-      return applyUniverseBackgroundColor(value, scene)
+      return applyUniverseBackgroundColor(value, universeBgTargets, { source: 'runtime' })
     },
     reset() {
-      return resetUniverseBackgroundColor(scene)
+      return resetUniverseBackgroundColor(universeBgTargets)
+    },
+    get source(): string {
+      return getActiveUniverseBgSource()
     },
     log() {
-      const bg = scene.background
-      const sceneHex = bg instanceof THREE.Color ? formatUniverseBgHex(bg) : String(bg)
-      console.log(
-        `[Galaxy] universe bg css=${readUniverseBgHex()} scene=${sceneHex} | default=${COSMOS_UNIVERSE_BG_DEFAULT} | e.g. __galaxyUniverseBg.color='#0a1628'`,
-      )
+      console.log(formatUniverseBgLogLine(universeBgTargets, getActiveUniverseBgSource()))
     },
   }
   window.__galaxyUniverseBg = universeBgDebug

@@ -16,7 +16,7 @@ todos:
     status: completed
   - id: p31-i18n-sync
     content: 31.5 同步所有 locale JSON 与 `strings.ts` 导出，保持 `en.json` 作为结构 SSOT
-    status: pending
+    status: completed
   - id: p31-accessibility-rtl
     content: 31.6 验证海报状态、retry button、搜索输入在键盘、读屏和 RTL 语言下可用
     status: pending

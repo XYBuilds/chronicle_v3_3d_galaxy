@@ -7,7 +7,7 @@ todos:
     status: completed
   - id: p32-background-token-channel
     content: 32.2 开放宇宙背景色 token 的运行时修改接口通道，支持开发期手调，并为后续按用户交互改变背景色预留边界
-    status: pending
+    status: completed
   - id: p32-idle-z-fade-transition
     content: 32.3 优化 idleZFade 虚化规则与实现效果，确认仅 browsing 态启用，并在 browsing/focus 切换时执行透明度渐变
     status: pending

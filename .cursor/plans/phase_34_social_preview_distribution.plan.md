@@ -4,7 +4,7 @@ overview: Phase 34 以 Phase 30 稳定深链为前置，规划并落地 `/today`
 todos:
   - id: p34-plan-doc-preflight
     content: 34.1 创建并维护 `.cursor/plans/phase_34_social_preview_distribution.plan.md`，确认 Phase 30 深链已稳定
-    status: pending
+    status: completed
   - id: p34-og-current-audit
     content: 34.2 审计现有 today OG 链路、HTML meta、cache-bust 与部署产物
     status: pending
@@ -87,12 +87,47 @@ flowchart TD
 
 创建并维护计划文件：`.cursor/plans/phase_34_social_preview_distribution.plan.md`。
 
-前置条件：
+#### 34.1.1 计划文件状态
 
-- `/movie/:id` 刷新可复现 focus + Drawer。
-- `/today` 刷新可进入 today 体验。
-- Drawer 分享复制出的 URL 在新 tab 可复现状态。
-- 静态 rewrite 不吞掉 `/data/*` 和 OG 图片资源。
+| 项                   | 状态                                                                                                                                                            |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 计划路径             | `.cursor/plans/phase_34_social_preview_distribution.plan.md`（本文件）                                                                                          |
+| Phase 30 计划        | 全部 TODO 30.1–30.8 **completed**（见 [phase_30_routing_sharing.plan.md](./phase_30_routing_sharing.plan.md)）                                                  |
+| Phase 30 验收报告    | [P30.8 路由分享测试与验收](../docs/reports/Phase%2030.8%20P30.8%20路由分享测试与验收%20实施报告.md) — 155/155 单测、build + `verify-spa-fallback-dist.mjs` 通过 |
+| Phase 34 与 Phase 33 | **无依赖** — HDR production 不阻塞社交预览                                                                                                                      |
+| 34.1 执行分支        | `feat/p34.1-phase30-preflight`（2026-05-21）                                                                                                                    |
+
+#### 34.1.2 Phase 30 前置检查（2026-05-21）
+
+**结论：Go — Phase 34 社交预览工作可开工。**
+
+| 前置条件                           | 结论             | 证据                                                                                                                                                                                         |
+| ---------------------------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/movie/:id` 刷新 → focus + Drawer | **满足**         | `routeControllerSync` T1：`selectedMovieId` 设置、`coverMode` false；`MovieDetailDrawer` 订阅 `selectedMovieId` 打开 Sheet；`runInitialRouteBoot` R4 深链 boot                               |
+| `/today` 刷新 → today 体验         | **满足**         | `routeControllerSync` T3：`coverMode` true、`todayMovieId` 来自 `resolveTodayMovieId`                                                                                                        |
+| Drawer 分享 URL 新 tab 可复现      | **满足（单测）** | `shareLinks.spec.ts`：`buildMovieSharePageUrl` → `/movie/:id` + query；`DrawerMovieShare` 使用同一 builder + clipboard                                                                       |
+| 静态 rewrite 不吞 `/data/*`、OG    | **满足**         | `public/_redirects` 仅 `/movie/*`、`/today`；`spaRedirects.spec.ts` 断言无 `/data/` rewrite；`public/_headers` 含 `/data/og-today.png` cache；`verify-spa-fallback-dist.mjs` build 后 **ok** |
+
+**自动化验证（34.1 执行日）**
+
+| 命令                                                                                                 | 结果                                                                     |
+| ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `vitest run` 子集：`routes` · `routeControllerSync` · `routeActions` · `shareLinks` · `spaRedirects` | **28/28** 通过                                                           |
+| `npm run build -w frontend`                                                                          | 通过；`[spa-fallback-dist] ok`；`og-today-image-cache-bust` v=2026-05-08 |
+
+**已知限制（不阻塞 34.2+）**
+
+| 项                       | 说明                                                                                                  |
+| ------------------------ | ----------------------------------------------------------------------------------------------------- |
+| 生产深链刷新手测         | P30.8 未在本机 CF preview 复验 R1–R8；契约由 `_redirects` + dist 脚本兜底                             |
+| 全路径 per-route OG meta | Phase 30 **明确不做**；静态 `index.html` 共用 OG — 34.3 再定 movie 策略                               |
+| `og-today.png` 仓库      | 构建期由 cron/`render_og_today.py` 产出；`public/data/` 可能无提交副本，dist 构建仍带 cache-bust 插件 |
+
+**对后续 TODO 的约束（自 Phase 30 继承）**
+
+- **34.2–34.4**：不得破坏 `/today` 与 `/movie/:id` 深链；OG 强化在静态 meta + `og-today.png` 链路上进行。
+- **34.5**：movie 深链 preview 默认共用静态 OG，除非明确接受动态 endpoint 成本。
+- **34.7**：`_headers` 与 `_redirects` 与 Phase 30.7 一致扩展，不新增会 rewrite `/data/*` 的规则。
 
 ### 34.2 现有 OG 链路审计
 

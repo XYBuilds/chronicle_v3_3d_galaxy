@@ -24,6 +24,7 @@ import { CONSTELLATION_SURFACE_GAP_WORLD, createConstellation } from './constell
 import { createGalaxyDualMeshes } from './galaxyMeshes'
 import { computeIdleMacroFadesBlendForPhase, IDLE_NEAR_FADE_DEFAULTS } from './idleNearFade'
 import { IDLE_Z_FADE_DEFAULTS } from './idleZFade'
+import { createPerlinSelectiveBloom, type PerlinBloomDebugControls } from './perlinSelectiveBloom'
 import {
   applyIdleNearFadeDefaults,
   applyIdleZFadeDefaults,
@@ -185,6 +186,8 @@ interface SelectionPlanetTerraceDebug {
   perlinDiffuse: number
   /** P11.4 — world-space light direction (normalized on set). */
   perlinLightDir: THREE.Vector3
+  /** P11.4 — Lambert shading on/off; off uses flat band colors only. */
+  perlinLightingEnabled: boolean
   log: () => void
 }
 
@@ -201,6 +204,7 @@ declare global {
     __hdrProbe?: HdrProofWindowDebug
     __sdrFallback?: SdrFallbackWindowDebug
     __bloom?: BloomDebugControls
+    __perlinBloom?: PerlinBloomDebugControls
     __galaxyPointScale?: GalaxyPointScaleDebug
     __galaxyColor?: GalaxyColorDebug
     __galaxyIdleNearFade?: GalaxyIdleNearFadeDebug
@@ -872,6 +876,11 @@ export function mountGalaxyScene(
   window.__bloom = bloomDebug
   bloomDebug.log()
 
+  const perlinBloom = createPerlinSelectiveBloom(renderer, scene, camera)
+  perlinBloom.assignBloomLayer(planet.mesh)
+  window.__perlinBloom = perlinBloom.debug
+  perlinBloom.debug.log()
+
   const uSizeScale = galUniforms.uSizeScale as THREE.Uniform<number>
   const uActiveSizeMul = galUniforms.uActiveSizeMul as THREE.Uniform<number>
   const uBgSizeMul = galUniforms.uBgSizeMul as THREE.Uniform<number>
@@ -1222,11 +1231,18 @@ export function mountGalaxyScene(
       v.copy(value)
       if (v.lengthSq() > 1e-12) v.normalize()
     },
+    get perlinLightingEnabled() {
+      return (planet.material.uniforms.uLightingEnabled.value as number) > 0.5
+    },
+    set perlinLightingEnabled(value: boolean) {
+      planet.material.uniforms.uLightingEnabled.value = value ? 1 : 0
+    },
     log() {
       const u = planet.material.uniforms
       const ld = u.uLightDir.value as THREE.Vector3
+      const lightingOn = (u.uLightingEnabled.value as number) > 0.5
       console.log(
-        `[Planet] uStepHeight=${(u.uStepHeight.value as number).toFixed(4)} uStepSmoothness=${(u.uStepSmoothness.value as number).toFixed(4)} uBandCount=${u.uBandCount.value} uCutCount=${u.uCutCount.value} | P11.4 uFlatShadingMix=${(u.uFlatShadingMix.value as number).toFixed(2)} uAmbient=${(u.uAmbient.value as number).toFixed(2)} uDiffuse=${(u.uDiffuse.value as number).toFixed(2)} uLightDir=(${ld.x.toFixed(2)},${ld.y.toFixed(2)},${ld.z.toFixed(2)}) uPerlinL=${(u.uPerlinL.value as number).toFixed(4)} uPerlinChroma=${(u.uPerlinChroma.value as number).toFixed(4)}`,
+        `[Planet] uStepHeight=${(u.uStepHeight.value as number).toFixed(4)} uStepSmoothness=${(u.uStepSmoothness.value as number).toFixed(4)} uBandCount=${u.uBandCount.value} uCutCount=${u.uCutCount.value} | P11.4 lightingEnabled=${lightingOn ? 1 : 0} uFlatShadingMix=${(u.uFlatShadingMix.value as number).toFixed(2)} uAmbient=${(u.uAmbient.value as number).toFixed(2)} uDiffuse=${(u.uDiffuse.value as number).toFixed(2)} uLightDir=(${ld.x.toFixed(2)},${ld.y.toFixed(2)},${ld.z.toFixed(2)}) uPerlinL=${(u.uPerlinL.value as number).toFixed(4)} uPerlinChroma=${(u.uPerlinChroma.value as number).toFixed(4)}`,
       )
     },
   }
@@ -1283,6 +1299,7 @@ export function mountGalaxyScene(
     renderer.setSize(w, h, true)
     composer.setSize(w, h)
     bloomPass.setSize(w, h)
+    perlinBloom.setSize(w, h, pr)
 
     camera.aspect = w / h
     camera.updateProjectionMatrix()
@@ -1562,7 +1579,13 @@ export function mountGalaxyScene(
     if (postFxBloomEnabled) {
       composer.render()
     } else {
-      renderer.render(scene, camera)
+      const planetAlpha = planet.material.uniforms.uAlpha.value as number
+      perlinBloom.renderFrame(renderer, scene, camera, {
+        userEnabled: perlinBloom.debug.enabled,
+        globalPostFxBloomEnabled: postFxBloomEnabled,
+        planetVisible: planet.mesh.visible,
+        planetAlpha,
+      })
     }
   }
   tick()
@@ -1601,6 +1624,10 @@ export function mountGalaxyScene(
     if (window.__bloom === bloomDebug) {
       delete window.__bloom
     }
+    if (window.__perlinBloom === perlinBloom.debug) {
+      delete window.__perlinBloom
+    }
+    perlinBloom.dispose()
     if (window.__galaxyPointScale === pointScaleDebug) {
       delete window.__galaxyPointScale
     }

@@ -15,6 +15,8 @@ uniform vec3 uMeshWorldPos;
 uniform vec3 uLightDir;
 uniform float uAmbient;
 uniform float uDiffuse;
+/** 1 = Lambert shading; 0 = flat base color (no lighting). */
+uniform float uLightingEnabled;
 uniform float uFlatShadingMix;
 
 varying float vNoise;
@@ -76,7 +78,8 @@ void main() {
   vec3 N = normalize(mix(normalize(vGeomNormalWorld), nDeriv, uFlatShadingMix));
 
   float lambert = max(dot(N, normalize(uLightDir)), 0.0);
-  vec3 lit = baseCol * (uAmbient + uDiffuse * lambert);
+  float shade = uAmbient + uDiffuse * lambert;
+  vec3 lit = mix(baseCol, baseCol * shade, step(0.5, uLightingEnabled));
 
   gl_FragColor = vec4(lit, uAlpha);
 }

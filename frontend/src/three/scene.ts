@@ -34,6 +34,11 @@ import {
 } from './sdrRuntimeTuning'
 import { attachGalaxyActiveMeshInteraction } from './interaction'
 import { createSelectionPlanet, type SelectionPlanetHandle } from './planet'
+import {
+  selectionPlanetOrientedQuaternion,
+  selectionPlanetRotationAxisForMovie,
+  selectionPlanetSpinAngleRad,
+} from './selectionPlanetRotation'
 import { computeActiveWorldRadius, getSelectionMaskPickSet, resolveSelectionWorldRadius } from './screenRadius'
 import { createFocusSizeReferenceRings } from './FocusSizeReferenceRings'
 import { computeFocusNeighborIds } from './focusNeighborMask'
@@ -463,6 +468,31 @@ export function mountGalaxyScene(
   planet.mesh.renderOrder = 2
   scene.add(planet.mesh)
 
+  /** P32.6 — slow spin about reference-ring plane normal; reset baseline on movie change. */
+  let planetSpinMovieId = -1
+  let planetSpinStartMs = 0
+  let planetSpinRevsPerSec = 0
+  const planetSpinBase = new THREE.Quaternion()
+  const planetSpinAxis = new THREE.Vector3()
+
+  const bindSelectionPlanetSpin = (movieId: number, nowMs: number) => {
+    const snap = selectionPlanetRotationAxisForMovie(movieId)
+    planetSpinMovieId = movieId
+    planetSpinBase.copy(snap.baseQuaternion)
+    planetSpinAxis.copy(snap.spinAxisWorld)
+    planetSpinRevsPerSec = snap.revsPerSec
+    planetSpinStartMs = nowMs
+  }
+
+  const applySelectionPlanetSpin = (nowMs: number) => {
+    const alpha = planet.material.uniforms.uAlpha.value as number
+    if (!planet.mesh.visible || alpha <= 0.001 || planetSpinMovieId < 0) return
+    const elapsedSec = (nowMs - planetSpinStartMs) / 1000
+    const angle = selectionPlanetSpinAngleRad(elapsedSec, planetSpinRevsPerSec)
+    selectionPlanetOrientedQuaternion(planetSpinBase, planetSpinAxis, angle, planet.mesh.quaternion)
+    planet.mesh.updateMatrixWorld(true)
+  }
+
   const sizeRings = createFocusSizeReferenceRings(movies)
   scene.add(sizeRings.group)
   let lastFocusLightSnapJson = ''
@@ -720,6 +750,7 @@ export function mountGalaxyScene(
       uLightnessRatingExponent: (gu.uLightnessRatingExponent as THREE.Uniform<number>).value,
       uChroma: (gu.uChroma as THREE.Uniform<number>).value,
     })
+    bindSelectionPlanetSpin(movie.id, performance.now())
     uFocused.value = -1
     const zSnap = useGalaxyInteractionStore.getState().zCurrent
     focusZAnimStart = zSnap
@@ -1338,6 +1369,7 @@ export function mountGalaxyScene(
           uLightnessRatingExponent: (gu.uLightnessRatingExponent as THREE.Uniform<number>).value,
           uChroma: (gu.uChroma as THREE.Uniform<number>).value,
         })
+        bindSelectionPlanetSpin(tm.id, performance.now())
         setFocusOrbitCameraPosition(camera.position, tm, 0, 0)
         applyFocusOrbitLookAt(camera, tm)
         restCam.copy(camera.position)
@@ -1458,6 +1490,7 @@ export function mountGalaxyScene(
         ; (pu.uLMax as THREE.Uniform<number>).value = uLMax.value
     }
     syncSelectionPlanetWorldScale()
+    applySelectionPlanetSpin(nowMs)
 
     const ringsPhaseActive =
       selectionPhase === 'selecting' || selectionPhase === 'selected' || selectionPhase === 'deselecting'
@@ -1474,6 +1507,7 @@ export function mountGalaxyScene(
         opacity: ringOpacity,
         uSizeScale: uSizeScale.value,
         uActiveSizeMul: uActiveSizeMul.value,
+        camera,
       })
     } else {
       ringsPivot.set(0, 0, 0)
@@ -1484,6 +1518,7 @@ export function mountGalaxyScene(
         opacity: 0,
         uSizeScale: uSizeScale.value,
         uActiveSizeMul: uActiveSizeMul.value,
+        camera,
       })
     }
 

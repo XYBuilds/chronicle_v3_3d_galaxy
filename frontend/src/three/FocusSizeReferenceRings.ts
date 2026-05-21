@@ -9,13 +9,19 @@ import { getStrings } from '@/lib/strings'
 import { useLocaleStore } from '@/store/localeStore'
 import type { Movie } from '@/types/galaxy'
 
+import {
+  REFERENCE_RING_PLANE_LOCAL_NORMAL,
+  selectionPlanetRingPlaneQuaternion,
+} from './selectionPlanetRotation'
+
 // ---------------------------------------------------------------------------
 // Size reference — tunables
 //
 // 圆环：**世界空间绝对线宽** `RING_STROKE_WORLD`（与半径 r 无关）。几何为
 // `RingGeometry(max(ε, r − stroke/2), r + stroke/2)`，`mesh.scale = 1`。
 // 标注：**Sprite** 永远朝向相机；`sprite.center = (0.5,0.5)`，**位置**为环面局部 XY 上
-// `radialDist` 处的一点（圆心即锚点）。**字号（可读大小）**只调 `LABEL_TEXT_WORLD_HEIGHT`
+// `radialDist` 处的一点（圆心即锚点）。锚点：相机左与朝向相机在环平面内 45°（(−X,−Z) 象限，随相机更新）。
+// **字号（可读大小）**只调 `LABEL_TEXT_WORLD_HEIGHT`
 //（世界单位垂直边长；与 `max(·, r*0.06)` 取大保证极小环不糊成一团）。
 // Canvas 纹理分辨率与其中 `font px` 为**内部**固定比例，仅影响栅格清晰度，不参与与世界的二次缩放博弈。
 // ---------------------------------------------------------------------------
@@ -77,7 +83,74 @@ function mulberry32(seed: number): () => number {
   }
 }
 
-/** Stable random plane orientation for reference rings (P13.5). */
+const scratchCamPos = new THREE.Vector3()
+const scratchToCam = new THREE.Vector3()
+const scratchLookAtPivot = new THREE.Vector3()
+const scratchCamRight = new THREE.Vector3()
+const scratchPlaneNormal = new THREE.Vector3()
+const scratchNearPlane = new THREE.Vector3()
+const scratchLeftPlane = new THREE.Vector3()
+const scratchAnchor = new THREE.Vector3()
+const scratchAnchorLocal = new THREE.Vector3()
+const scratchInvRingQuat = new THREE.Quaternion()
+
+function projectOntoPlane(
+  v: THREE.Vector3,
+  planeNormal: THREE.Vector3,
+  out: THREE.Vector3,
+): THREE.Vector3 {
+  const d = v.dot(planeNormal)
+  out.copy(v).addScaledVector(planeNormal, -d)
+  const lenSq = out.lengthSq()
+  if (lenSq < 1e-12) return out.set(0, 0, 0)
+  return out.multiplyScalar(1 / Math.sqrt(lenSq))
+}
+
+/**
+ * Tier label azimuth (rad) in ring local XY: 45° between camera-left and toward-camera on the ring plane ((−X,−Z) 近侧).
+ */
+export function computeTierLabelAzimuthRad(
+  pivotWorld: THREE.Vector3,
+  ringPlaneQuat: THREE.Quaternion,
+  camera: THREE.Camera,
+): number {
+  scratchPlaneNormal.copy(REFERENCE_RING_PLANE_LOCAL_NORMAL).applyQuaternion(ringPlaneQuat)
+
+  camera.getWorldPosition(scratchCamPos)
+  scratchToCam.subVectors(scratchCamPos, pivotWorld)
+  if (scratchToCam.lengthSq() < 1e-12) scratchToCam.set(0, 0, -1)
+  else scratchToCam.normalize()
+
+  scratchLookAtPivot.subVectors(pivotWorld, scratchCamPos)
+  if (scratchLookAtPivot.lengthSq() < 1e-12) scratchLookAtPivot.set(0, 0, 1)
+  else scratchLookAtPivot.normalize()
+  scratchCamRight.crossVectors(camera.up, scratchLookAtPivot)
+  if (scratchCamRight.lengthSq() < 1e-12) scratchCamRight.set(1, 0, 0)
+  else scratchCamRight.normalize()
+  scratchCamRight.negate()
+
+  projectOntoPlane(scratchToCam, scratchPlaneNormal, scratchNearPlane)
+  projectOntoPlane(scratchCamRight, scratchPlaneNormal, scratchLeftPlane)
+
+  const hasNear = scratchNearPlane.lengthSq() > 1e-10
+  const hasLeft = scratchLeftPlane.lengthSq() > 1e-10
+  if (hasNear && hasLeft) {
+    scratchAnchor.addVectors(scratchLeftPlane, scratchNearPlane).normalize()
+  } else if (hasLeft) {
+    scratchAnchor.copy(scratchLeftPlane)
+  } else if (hasNear) {
+    scratchAnchor.copy(scratchNearPlane)
+  } else {
+    scratchAnchor.set(1, 0, 0)
+    projectOntoPlane(scratchAnchor, scratchPlaneNormal, scratchAnchor)
+  }
+
+  scratchInvRingQuat.copy(ringPlaneQuat).invert()
+  scratchAnchorLocal.copy(scratchAnchor).applyQuaternion(scratchInvRingQuat)
+  return Math.atan2(scratchAnchorLocal.y, scratchAnchorLocal.x)
+}
+
+/** Stable random plane orientation for reference rings (P13.5 legacy / migration). */
 export function seededRingPlaneQuaternion(movieId: number): THREE.Quaternion {
   let s = (movieId >>> 0) ^ 0x9e3779b9
   const rnd = mulberry32(s)
@@ -177,7 +250,7 @@ export interface FocusSizeReferenceRingsHandle {
   readonly group: THREE.Group
   dispose(): void
   /**
-   * Labels: Sprite billboard (always face viewer), fixed seed azimuth per `movieId`, radial offset outside ring.
+   * Labels: Sprite billboard; anchor on ring at camera-relative (−X,−Z) 45°, radial offset outside ring.
    */
   update(params: {
     pivotWorld: THREE.Vector3
@@ -186,6 +259,7 @@ export interface FocusSizeReferenceRingsHandle {
     opacity: number
     uSizeScale: number
     uActiveSizeMul: number
+    camera: THREE.Camera
   }): void
 }
 
@@ -210,8 +284,6 @@ export function createFocusSizeReferenceRings(movies: readonly Movie[]): FocusSi
   const orient = new THREE.Quaternion()
   let lastMovieId = Number.NaN
   let lastLoggedRingDiag = Number.NaN
-  /** Fixed azimuth (rad) in ring local XY for all tiers — seeded by `movieId`. */
-  let sharedLabelAzimuth = 0
 
   const tierLabels = getStrings().focusVoteReference.tierLabels
   console.assert(
@@ -255,8 +327,9 @@ export function createFocusSizeReferenceRings(movies: readonly Movie[]): FocusSi
     opacity: number
     uSizeScale: number
     uActiveSizeMul: number
+    camera: THREE.Camera
   }) => {
-    const { pivotWorld, movieId, voteCount, opacity, uSizeScale, uActiveSizeMul } = params
+    const { pivotWorld, movieId, voteCount, opacity, uSizeScale, uActiveSizeMul, camera } = params
     const op = THREE.MathUtils.clamp(opacity, 0, 1)
     if (op < 0.002) {
       group.visible = false
@@ -268,10 +341,8 @@ export function createFocusSizeReferenceRings(movies: readonly Movie[]): FocusSi
     if (movieId !== lastMovieId) {
       lastMovieId = movieId
       lastLoggedRingDiag = Number.NaN
-      orient.copy(seededRingPlaneQuaternion(movieId))
+      orient.copy(selectionPlanetRingPlaneQuaternion(movieId))
       lastRingR.fill(-1)
-      const rnd = mulberry32((movieId >>> 0) ^ 0x85ebca6b)
-      sharedLabelAzimuth = rnd() * Math.PI * 2
     }
     group.quaternion.copy(orient)
 
@@ -282,7 +353,7 @@ export function createFocusSizeReferenceRings(movies: readonly Movie[]): FocusSi
       console.log('[P13.5] size ring radii (world)', { movieId, voteCount, uSizeScale, uActiveSizeMul, radii: [...radii] })
     }
 
-    const th = sharedLabelAzimuth
+    const th = computeTierLabelAzimuthRad(pivotWorld, orient, camera)
     const cosT = Math.cos(th)
     const sinT = Math.sin(th)
 

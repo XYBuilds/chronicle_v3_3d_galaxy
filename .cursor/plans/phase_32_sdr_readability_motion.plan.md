@@ -19,7 +19,7 @@ todos:
     status: completed
   - id: p32-selection-rotation-runtime
     content: 32.6 接入选中星球缓慢自转，切换电影时重置基准 rotation，且不改变拾取和 focus 半径
-    status: pending
+    status: completed
   - id: p32-perlin-selective-bloom
     content: 32.7 接入 Perlin 选中星球 selective Bloom，默认开启但仅作用于 `planet.mesh`，全局 Bloom 与 idle/active Bloom 仍默认关闭
     status: pending

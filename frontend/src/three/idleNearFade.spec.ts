@@ -1,7 +1,21 @@
 import { describe, expect, it } from 'vitest'
 import * as THREE from 'three'
 
-import { computeIdleNearFadeAlpha, IDLE_NEAR_FADE_DEFAULTS } from './idleNearFade'
+import { applyMacroFadeBlend, computeIdleNearFadeAlpha, IDLE_NEAR_FADE_DEFAULTS } from './idleNearFade'
+
+describe('applyMacroFadeBlend', () => {
+  it('returns 1 when blend is 0', () => {
+    expect(applyMacroFadeBlend(0.2, 0)).toBe(1)
+  })
+
+  it('returns faded alpha when blend is 1', () => {
+    expect(applyMacroFadeBlend(0.2, 1)).toBeCloseTo(0.2, 5)
+  })
+
+  it('lerps toward 1 for partial blend', () => {
+    expect(applyMacroFadeBlend(0.2, 0.5)).toBeCloseTo(0.6, 5)
+  })
+})
 
 describe('computeIdleNearFadeAlpha', () => {
   const cam = new THREE.Vector3(0, 0, 0)

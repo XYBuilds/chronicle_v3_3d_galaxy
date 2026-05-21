@@ -152,13 +152,13 @@ flowchart TD
 
 #### 涉及文件（实施时）
 
-| 文件 | 变更 |
-| --- | --- |
-| `galaxyMeshes.ts` | 注册 `uIdleMacroFadesBlend`（或重命名并迁移 `uIdleMacroFadesActive`） |
-| `galaxyIdle.vert.glsl` | near + Z 段乘以 blend；blend≈0 时跳过 |
-| `scene.ts` | RAF 中由 `focusDriver.progress` 写 blend；`selecting`/`deselecting`/`idle`/`selected` 分支 |
-| `screenRadius.ts` / `interaction.ts` | pick gate 使用 blend |
-| `idleZFade.ts` / `idleNearFade.ts` | 可选：导出 `applyMacroFadeBlend(alpha, blend)` 供 CPU 镜像 |
+| 文件                                 | 变更                                                                                       |
+| ------------------------------------ | ------------------------------------------------------------------------------------------ |
+| `galaxyMeshes.ts`                    | 注册 `uIdleMacroFadesBlend`（或重命名并迁移 `uIdleMacroFadesActive`）                      |
+| `galaxyIdle.vert.glsl`               | near + Z 段乘以 blend；blend≈0 时跳过                                                      |
+| `scene.ts`                           | RAF 中由 `focusDriver.progress` 写 blend；`selecting`/`deselecting`/`idle`/`selected` 分支 |
+| `screenRadius.ts` / `interaction.ts` | pick gate 使用 blend                                                                       |
+| `idleZFade.ts` / `idleNearFade.ts`   | 可选：导出 `applyMacroFadeBlend(alpha, blend)` 供 CPU 镜像                                 |
 
 ### 32.4 SDR runtime tuning 入口整理
 

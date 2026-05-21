@@ -354,7 +354,8 @@ export function mountGalaxyScene(
   const uZCamDistUniform = galUniforms.uZCamDistance as THREE.Uniform<number>
   const uHoveredInstanceId = galUniforms.uHoveredInstanceId as THREE.Uniform<number>
   const uCameraWorldPosGal = galUniforms.uCameraWorldPos as THREE.Uniform<THREE.Vector3>
-  const uIdleMacroFadesActive = galUniforms.uIdleMacroFadesActive as THREE.Uniform<number>
+  const uIdleMacroFadesBlend = galUniforms.uIdleMacroFadesBlend as THREE.Uniform<number>
+  let idleMacroFadesBlendCurrent = 1
   const uCoverModeGal = galUniforms.uCoverMode as THREE.Uniform<number>
   const uCoverTodayInstanceIdGal = galUniforms.uCoverTodayInstanceId as THREE.Uniform<number>
   const uCoverActiveSizeBoostGal = galUniforms.uCoverActiveSizeBoost as THREE.Uniform<number>
@@ -1187,7 +1188,7 @@ export function mountGalaxyScene(
     movies,
     activeMaterial: galaxy.activeMaterial,
     selectionPlanet: planet,
-    getIdleMacroFadesActive: () => selectionPhase === 'idle',
+    getIdleMacroFadesBlend: () => idleMacroFadesBlendCurrent,
   })
 
   /** P23.3 — align timeline + orbit pivot with “The Movie Today”; Perlin sphere + same standoff as focus orbit. */
@@ -1271,9 +1272,21 @@ export function mountGalaxyScene(
     const idleMat = galaxy.idleMaterial
     const idleNearFadeOn = (galUniforms.uIdleNearFadeEnabled as THREE.Uniform<number>).value > 0.5
     const idleZFadeOn = Math.abs((galUniforms.uIdleZFadeMode as THREE.Uniform<number>).value) > 0.5
-    const macroIdleForIdleFades = selectionPhase === 'idle'
-    uIdleMacroFadesActive.value = macroIdleForIdleFades ? 1 : 0
-    const idleAlphaFadeOn = (idleNearFadeOn || idleZFadeOn) && macroIdleForIdleFades
+    let macroFadeBlend = 1
+    if (selectionPhase === 'idle') {
+      macroFadeBlend = 1
+    } else if (selectionPhase === 'selected') {
+      macroFadeBlend = 0
+    } else if (selectionPhase === 'selecting') {
+      macroFadeBlend = selectingEnteredFromMacro ? 1 - focusDriver.progress : 0
+    } else if (selectionPhase === 'deselecting') {
+      macroFadeBlend = focusDriver.progress
+    } else {
+      macroFadeBlend = 0
+    }
+    idleMacroFadesBlendCurrent = macroFadeBlend
+    uIdleMacroFadesBlend.value = macroFadeBlend
+    const idleAlphaFadeOn = (idleNearFadeOn || idleZFadeOn) && macroFadeBlend > 1e-6
     if (idleMat.transparent !== idleAlphaFadeOn || idleMat.depthWrite !== !idleAlphaFadeOn) {
       idleMat.transparent = idleAlphaFadeOn
       idleMat.depthWrite = !idleAlphaFadeOn

@@ -14,7 +14,7 @@ export const IDLE_NEAR_FADE_DEFAULTS = {
   /** World units: `smoothstep` width from `startDist` to full opacity. */
   width: 10.0,
   /** Lower clamp on idle alpha when inside the fade band. */
-  minAlpha: 0.05,
+  minAlpha: 0.1,
 } as const
 
 /**

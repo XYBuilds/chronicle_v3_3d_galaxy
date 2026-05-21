@@ -7,7 +7,7 @@ todos:
     status: completed
   - id: p34-og-current-audit
     content: 34.2 审计现有 today OG 链路、HTML meta、cache-bust 与部署产物
-    status: pending
+    status: completed
   - id: p34-social-strategy
     content: 34.3 决定 `/today` 与 `/movie/:id` 的 OG 策略：共用静态图、有限集合生成或动态 endpoint
     status: pending
@@ -131,20 +131,85 @@ flowchart TD
 
 ### 34.2 现有 OG 链路审计
 
-审计范围：
+**执行分支**：`feat/p34.2-og-current-audit`（2026-05-21）  
+**状态**：**completed**（2026-05-21 验收通过）。
 
-- [scripts/cron/render_og_today.py](scripts/cron/render_og_today.py)
-- `frontend/public/data/today.json`
-- `frontend/public/data/og-today.png`
-- HTML `og:image`、`twitter:image`、title、description meta。
-- 构建或 cron 中是否调用 `render_og_today.py`。
-- CDN/cache-control/cache-bust 行为。
+#### 34.2.1 审计范围与证据
 
-输出：
+| 审计项       | 路径 / 机制                                                  | 结论                                                                                                                                                                         |
+| ------------ | ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| OG 渲染脚本  | `scripts/cron/render_og_today.py`                            | **健全**：1200×630 PNG；读 `today.json` + `galaxy_data.json`；原子写入；poster 拉取失败保留前日 PNG                                                                          |
+| Cron 调用    | `nightly_vote_refresh.py` L508–511；`monthly_refit.py` L835+ | **已集成**：在 `write_today_json_after_galaxy_export` 之后调用 `render_og_today_after_galaxy_export`；失败仅 WARN                                                            |
+| R2 上传      | `upload_galaxy_r2.py`                                        | **已集成**：`og-today.png` → `galaxy/og-today.png`，`Cache-Control: public, max-age=300, must-revalidate`；manifest `og_today_url` 带 `?v=<utc-date>`；prune **不删** OG PNG |
+| 本地产物     | `frontend/public/data/og-today.png`                          | **gitignore**，不入仓；本机存在副本 ≈179 KB（2026-05-09 生成），与 `today.json` 日期 **2026-05-08** 一致                                                                     |
+| HTML meta 源 | `frontend/index.html`                                        | 全站 **单一** `index.html`；无按路由分 meta                                                                                                                                  |
+| Cache-bust   | `frontend/vite.config.ts` `ogTodayImageCacheBustPlugin`      | 构建期把 `og:image` / `twitter:image` 基 URL 替换为 `?v=YYYY-MM-DD`（优先 `today.json.date`，其次 `VITE_OG_TODAY_V`，否则 UTC 当天）                                         |
+| Pages 缓存头 | `frontend/public/_headers` `/data/og-today.png`              | `max-age=300, must-revalidate`                                                                                                                                               |
+| SPA rewrite  | `frontend/public/_redirects`                                 | 仅 `/movie/*`、`/today` → `index.html`；**无** `/data/*` rewrite                                                                                                             |
+| CI 顺序      | `nightly_vote_refresh.yml`                                   | nightly Python → R2 upload → **`npm run build`**（此时 `today.json` + `og-today.png` 已写出）→ Pages deploy                                                                  |
+| 灰度 GHP     | `deploy-pages.yml`（`push main`）                            | **不跑** `render_og_today`；依赖仓库/构建机上是否已有 `public/data/og-today.png`（通常无，仅靠历史 artifact 或手动生成）                                                     |
 
-- 当前 `/today` 预览是否正确。
-- 当前 `/movie/:id` 是否只能得到通用 preview。
-- 哪些资源需要随 today 每日更新。
+**构建验证（34.2 执行日）**
+
+| 命令                                            | 结果                                                                                       |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `python scripts/cron/render_og_today.py --help` | 正常；默认 I/O 路径与文档一致                                                              |
+| `npm run build -w frontend`                     | 通过；`[og-today-image-cache-bust] v=2026-05-08`；`[spa-fallback-dist] ok`                 |
+| `today.json` ↔ `galaxy_data.json`               | `movie_id=301334`（*Una*）在 galaxy 中存在                                                 |
+| `dist/index.html` meta                          | `og:image` / `twitter:image` → `https://themoviecosmos.com/data/og-today.png?v=2026-05-08` |
+
+#### 34.2.2 `/today` 社交预览是否正确？
+
+| 维度                         | 现状                                                                                                             | 评价                                                                             |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| **预览图**                   | 各路径 crawler 均读同一 `index.html` → 指向当日 `og-today.png`（卡面含 `today's pick · YYYY-MM-DD`、片名、海报） | **图语义正确**（展示当日 pick），但 **所有 URL 共用同一张图**                    |
+| **og:title / twitter:title** | 固定 `The Movie Cosmos`                                                                                          | **未体现** “The Movie Today” 或当日片名                                          |
+| **og:description**           | 固定品牌 + “Today's pick refreshes every UTC midnight”                                                           | 部分 today 语义，**非**当日电影标题                                              |
+| **og:url**                   | 固定 `https://themoviecosmos.com/`                                                                               | **错误/弱化**：分享 `/today` 时 canonical 仍指向 apex，非 `/today`               |
+| **cache-bust**               | meta 图 URL `?v=` 与 `today.json.date` 对齐（构建时）                                                            | **机制正确**；需保证 nightly **先**写 `today.json`+PNG **再** build（CI 已满足） |
+| **CDN 陈旧图**               | PNG 300s TTL + meta `?v=` 日更                                                                                   | 风险可控；跨日仍依赖 nightly + 重建 index                                        |
+
+**结论（/today）**：**部分正确** — 大图是当日 pick，但 **title/description/url 未路由化**；34.4 应强化 today 语义（至少 `og:url`→`/today`、title/description 与 UTC 日期/片名一致）。
+
+#### 34.2.3 `/movie/:id` 是否只能得到通用 preview？
+
+| 维度                   | 现状                                                    | 评价                                                                                         |
+| ---------------------- | ------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| HTML                   | `/movie/:id` SPA fallback → **同一份** `index.html`     | 无 per-id meta                                                                               |
+| og:image               | 仍为 **`og-today.png`（当日 pick 卡片）**               | **非通用品牌图，也非所分享电影** — 分享深链时预览图可能显示 **另一部** 当日电影              |
+| og:title / description | 与首页相同                                              | **通用品牌文案**，不声称具体电影（符合 34.5「共用静态 OG」文案边界，但 **图** 与文案不一致） |
+| 客户端                 | `frontend/src` **无** `document.title` / 动态 meta 注入 | 爬虫不执行 JS → 无补救                                                                       |
+
+**结论（/movie/:id）**：**不是**「纯品牌通用 preview」，而是 **品牌 title + 当日 Today 卡片图**；对电影深链 **语义误导风险高**。34.3/34.5 需明确：改为共用 **品牌级** 静态 OG 图，或接受有限集合/动态 endpoint。
+
+#### 34.2.4 需随 today 每日更新的资源
+
+| 资源                                         | 更新触发                              | 消费者                                                               |
+| -------------------------------------------- | ------------------------------------- | -------------------------------------------------------------------- |
+| `frontend/public/data/today.json`            | `pick_movie_today` / nightly          | 应用 runtime、`render_og_today`、**Vite cache-bust 读 date**         |
+| `frontend/public/data/og-today.png`          | `render_og_today_after_galaxy_export` | `og:image` 直连 Pages `/data/og-today.png`；R2 `galaxy/og-today.png` |
+| **构建产物** `dist/index.html` 内 `?v=`      | nightly 流水线内 `npm run build`      | 社交平台对 **HTML** 的 scrape（固定 URL 换 query）                   |
+| `galaxy_assets_manifest.json` `og_today_url` | R2 upload                             | 运行时 manifest 消费者（非 crawler 主路径）                          |
+
+**不同步风险（已观测）**
+
+- 仓库内 `today.json` **date=2026-05-08**，`galaxy_assets_manifest.json` 中 `og_today_url` / `today_url` 为 **2026-05-10**（上次 R2 上传快照，**非**当前 `today.json`）— 仅影响 manifest 引用，**不**影响 `index.html` meta（构建读 `today.json`）。
+- `push main` 的 `deploy-pages.yml` **不**再生 OG；若 CF 主部署亦未跑 nightly，线上可能缺新 PNG 或 meta `?v=` 与图不一致。
+
+#### 34.2.5 对 34.3+ 的建议输入（非决策，供策略 TODO）
+
+1. **`/today`**：保留现有 Pillow 链路；34.4 补 **路由级 meta**（`og:url`、`og:title`、description 与 `today.json` 对齐）。
+2. **`/movie/:id`**：当前 **图** 不适合作为 movie 深链 preview；首版优先 **共用品牌静态 OG 图**（与 34.5 文案一致），或文档化「preview 显示 Today pick」为已知限制直至动态/有限集合方案。
+3. **34.7**：已具备 PNG 短 TTL + meta `?v=`；需写清 R2 vs Pages 双源、nightly-only 重建 index、GHP 灰度路径缺口。
+
+#### 34.2.6 审计命令留档
+
+```bash
+python scripts/cron/render_og_today.py --help
+npm run build -w frontend
+# dist meta（PowerShell）
+Select-String -Path frontend/dist/index.html -Pattern "og:|twitter:"
+```
 
 ### 34.3 社交预览策略决策
 

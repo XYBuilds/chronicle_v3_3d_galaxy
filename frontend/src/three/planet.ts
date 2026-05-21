@@ -7,6 +7,7 @@ import { genreHueForGenreName, hueFromGenreColor, primaryGenreHueRad } from '@/u
 
 import perlinFragmentShader from './shaders/perlin.frag.glsl'
 import perlinVertexShader from './shaders/perlin.vert.glsl'
+import { selectionPlanetBaseQuaternion } from './selectionPlanetRotation'
 
 const PHI = (1 + Math.sqrt(5)) / 2
 
@@ -379,6 +380,8 @@ export function createSelectionPlanet(): SelectionPlanetHandle {
     mesh.position.set(movie.x, movie.y, movie.z)
     uMeshWorldPos.copy(mesh.position)
     mesh.scale.setScalar(worldRadius)
+    // P32.5 — visual baseline aligned with FocusSizeReferenceRings plane (spin applied in 32.6).
+    mesh.quaternion.copy(selectionPlanetBaseQuaternion(movie.id))
     mesh.updateMatrixWorld(true)
 
     recomputeNoiseAndThresholds(movie.id)

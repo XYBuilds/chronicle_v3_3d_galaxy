@@ -16,7 +16,7 @@ todos:
     status: completed
   - id: p32-selection-rotation-axis
     content: 32.5 为选中星球定义参考平面法线自转轴，复用 `FocusSizeReferenceRings` 的 seeded quaternion
-    status: pending
+    status: completed
   - id: p32-selection-rotation-runtime
     content: 32.6 接入选中星球缓慢自转，切换电影时重置基准 rotation，且不改变拾取和 focus 半径
     status: pending
@@ -174,13 +174,13 @@ flowchart TD
 
 #### 32.4 实施备忘（shipped defaults + console）
 
-| 通道 | SSOT | 发布默认 | Dev 入口 |
-| --- | --- | --- | --- |
-| 宇宙背景 | `universeBackground.ts` `COSMOS_UNIVERSE_BG_DEFAULT` | `#000002` | `__galaxyUniverseBg`（`.color` / `.reset` / `.log`） |
-| idle 近距 | `idleNearFade.ts` `IDLE_NEAR_FADE_DEFAULTS` | enabled=1, start=20, width=10, minA=0.1 | `__galaxyIdleNearFade` + `.reset()` |
-| idle Z | `idleZFade.ts` `IDLE_Z_FADE_DEFAULTS` | mode=-1, outsideA=0.5 | `__galaxyIdleZFade` + `.reset()` |
-| 宏观虚化 blend | `scene.ts` + `focusDriver` | browsing=1, focus=0, 过渡 `FOCUS_SELECT_MS`/`FOCUS_DESELECT_MS` | `__galaxyIdleMacroFade`（只读 blend/phase/progress） |
-| 汇总 | `sdrRuntimeTuning.ts` `SDR_RUNTIME_DEFAULTS` | 上表聚合 | `__sdrTuning.log()` / `__sdrTuning.resetAll()` |
+| 通道           | SSOT                                                 | 发布默认                                                        | Dev 入口                                             |
+| -------------- | ---------------------------------------------------- | --------------------------------------------------------------- | ---------------------------------------------------- |
+| 宇宙背景       | `universeBackground.ts` `COSMOS_UNIVERSE_BG_DEFAULT` | `#000002`                                                       | `__galaxyUniverseBg`（`.color` / `.reset` / `.log`） |
+| idle 近距      | `idleNearFade.ts` `IDLE_NEAR_FADE_DEFAULTS`          | enabled=1, start=20, width=10, minA=0.1                         | `__galaxyIdleNearFade` + `.reset()`                  |
+| idle Z         | `idleZFade.ts` `IDLE_Z_FADE_DEFAULTS`                | mode=-1, outsideA=0.5                                           | `__galaxyIdleZFade` + `.reset()`                     |
+| 宏观虚化 blend | `scene.ts` + `focusDriver`                           | browsing=1, focus=0, 过渡 `FOCUS_SELECT_MS`/`FOCUS_DESELECT_MS` | `__galaxyIdleMacroFade`（只读 blend/phase/progress） |
+| 汇总           | `sdrRuntimeTuning.ts` `SDR_RUNTIME_DEFAULTS`         | 上表聚合                                                        | `__sdrTuning.log()` / `__sdrTuning.resetAll()`       |
 
 **Console 示例：**
 

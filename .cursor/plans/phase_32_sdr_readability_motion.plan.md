@@ -10,7 +10,7 @@ todos:
     status: completed
   - id: p32-idle-z-fade-transition
     content: 32.3 idleZFade + idleNearFade 共用宏观虚化渐变，接入 focusDriver 状态切换过渡，browsing/focus 切换时平滑进退场
-    status: pending
+    status: completed
   - id: p32-sdr-runtime-toggles
     content: 32.4 整理背景色 token 与 idle 宏观虚化（Z + near）调试入口，确保调参结果可复现并可固化到默认值
     status: pending

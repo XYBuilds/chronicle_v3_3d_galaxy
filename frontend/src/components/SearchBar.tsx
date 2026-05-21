@@ -97,6 +97,14 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
 
   /** P21.3 — Genre tab AND multi-select (badges); orthogonal to movie/person query text. */
   const [selectedGenres, setSelectedGenres] = useState<string[]>([])
+  const [prevSearchModeForGenres, setPrevSearchModeForGenres] = useState(searchMode)
+  if (searchMode !== prevSearchModeForGenres) {
+    const prev = prevSearchModeForGenres
+    setPrevSearchModeForGenres(searchMode)
+    if (prev === 'genre' && searchMode === 'idle' && selectedGenres.length > 0) {
+      setSelectedGenres([])
+    }
+  }
 
   const [debouncedQuery, setDebouncedQuery] = useState(searchQuery)
   useEffect(() => {
@@ -172,13 +180,7 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
   /** Genre ↔ store: layout-only so ESC (`clearSearch`) cannot race a late `useEffect` re-applying `searchMode: 'genre'`. */
   const prevSearchModeRef = useRef(searchMode)
   useLayoutEffect(() => {
-    const prev = prevSearchModeRef.current
     prevSearchModeRef.current = searchMode
-
-    if (prev === 'genre' && searchMode === 'idle') {
-      setSelectedGenres([])
-      return
-    }
 
     if (hudTab !== 'genre') return
 
@@ -203,12 +205,6 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
       searchQuery: selectedGenres.join(' + '),
     })
   }, [searchMode, hudTab, selectedGenres, currentIntersection, movieById])
-
-  useEffect(() => {
-    if (hudTab !== 'genre') {
-      setSelectedGenres([])
-    }
-  }, [hudTab])
 
   const resultRows = useMemo((): ResultRow[] => {
     const q = deferredQuery

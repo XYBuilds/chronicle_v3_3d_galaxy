@@ -23,14 +23,9 @@ function syncFullscreenState(): boolean {
 /** HUD 右上角全屏切换（最靠右，Info 在其左侧）；图标随 fullscreenchange / webkitfullscreenchange 同步。 */
 export function FullscreenButton({ styleMode = 'default' }: FullscreenButtonProps) {
   const s = useStrings()
-  const [supported, setSupported] = useState(() =>
-    typeof document !== 'undefined' ? isGalaxyFullscreenAvailable() : false,
-  )
+  const supported =
+    typeof document !== 'undefined' && isGalaxyFullscreenAvailable()
   const [isFullscreen, setIsFullscreen] = useState(syncFullscreenState)
-
-  useEffect(() => {
-    setSupported(isGalaxyFullscreenAvailable())
-  }, [])
 
   useEffect(() => {
     const onChange = () => setIsFullscreen(syncFullscreenState())

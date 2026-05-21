@@ -297,6 +297,7 @@ export function mountGalaxyScene(
   const gl = renderer.getContext()
   const webglLabel = gl instanceof WebGL2RenderingContext ? 'WebGL2' : 'WebGL1'
 
+  // eslint-disable-next-line prefer-const -- hdr callback must close over sdr after both are constructed
   let sdrFallbackDebug: SdrFallbackDebug
   const hdrCapabilitiesDebug = createHdrCapabilitiesDebug(renderer, {
     onReportUpdated: () => {

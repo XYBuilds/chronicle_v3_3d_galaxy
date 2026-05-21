@@ -152,7 +152,7 @@ export function computeTierLabelAzimuthRad(
 
 /** Stable random plane orientation for reference rings (P13.5 legacy / migration). */
 export function seededRingPlaneQuaternion(movieId: number): THREE.Quaternion {
-  let s = (movieId >>> 0) ^ 0x9e3779b9
+  const s = (movieId >>> 0) ^ 0x9e3779b9
   const rnd = mulberry32(s)
   const yaw = rnd() * Math.PI * 2
   const roll = rnd() * Math.PI * 2

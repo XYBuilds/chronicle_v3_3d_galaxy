@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { MovieDetailDrawer } from '@/components/Drawer'
 import { SearchBar } from '@/components/SearchBar'
@@ -82,10 +82,11 @@ function App() {
   }, [data, todayMovieId])
 
   /** P23.4 — keep cover shell mounted through opacity fade after exitCoverIntoFocus. */
-  const [coverBrandMounted, setCoverBrandMounted] = useState(false)
-  useLayoutEffect(() => {
-    if (coverMode) setCoverBrandMounted(true)
-  }, [coverMode])
+  const [coverBrandEverShown, setCoverBrandEverShown] = useState(false)
+  if (coverMode && !coverBrandEverShown) {
+    setCoverBrandEverShown(true)
+  }
+  const coverBrandMounted = coverMode || coverBrandEverShown
 
   type AppLoadPhase =
     | 'galaxy-loading'
@@ -328,7 +329,7 @@ function App() {
               if (ev.propertyName !== 'opacity') return
               if (ev.target !== ev.currentTarget) return
               if (!useCoverModeStore.getState().coverMode) {
-                setCoverBrandMounted(false)
+                setCoverBrandEverShown(false)
               }
             }}
           >

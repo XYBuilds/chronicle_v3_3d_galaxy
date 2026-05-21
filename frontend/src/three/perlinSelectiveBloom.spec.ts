@@ -8,8 +8,9 @@ import {
 describe('perlinSelectiveBloom', () => {
   it('exports conservative shipped defaults', () => {
     expect(PERLIN_BLOOM_DEFAULTS.enabled).toBe(true)
-    expect(PERLIN_BLOOM_DEFAULTS.strength).toBeLessThan(0.95)
-    expect(PERLIN_BLOOM_DEFAULTS.threshold).toBeGreaterThan(0.5)
+    expect(PERLIN_BLOOM_DEFAULTS.strength).toBeLessThan(0.1)
+    expect(PERLIN_BLOOM_DEFAULTS.radius).toBeGreaterThan(0)
+    expect(PERLIN_BLOOM_DEFAULTS.threshold).toBe(0)
   })
 
   it('shouldCompositePerlinBloom requires visible planet and user enable', () => {

@@ -30,7 +30,7 @@ export function normalizeAppBasePath(base: string = import.meta.env.BASE_URL): s
 /** Strip deploy base prefix so `/repo/movie/1` → `/movie/1`. */
 export function stripAppBasePath(pathname: string, basePath?: string): string {
   const base = normalizeAppBasePath(basePath)
-  let path = pathname.startsWith('/') ? pathname : `/${pathname}`
+  const path = pathname.startsWith('/') ? pathname : `/${pathname}`
 
   if (base === '/') {
     return path || '/'

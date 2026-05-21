@@ -25,7 +25,7 @@ todos:
     status: completed
   - id: p32-tests-acceptance
     content: 32.8 执行视觉矩阵、类型检查、lint、build 验收，记录背景色 token、idle 宏观虚化 blend 过渡、perlin Bloom 策略和剩余风险
-    status: pending
+    status: completed
 isProject: false
 ---
 
@@ -45,25 +45,25 @@ Phase 32 改善三个用户能直接感知的问题，但严格留在 SDR 主路
 
 **SSOT**：[`docs/reports/Phase 29.7 P29.7 Phase 29 Gate report 实施报告.md`](../docs/reports/Phase%2029.7%20P29.7%20Phase%2029%20Gate%20report%20实施报告.md) · [`docs/project_docs/Phase 29 发布门槛与技术判定 spec.md`](../docs/project_docs/Phase%2029%20发布门槛与技术判定%20spec.md) §4–§10。
 
-| 决策 | 结论 | 对 Phase 32 的含义 |
-| :--- | :--- | :--- |
-| **Phase 32 SDR 可读性** | **Go（并行）** | 与 HDR gate **解耦**；**不依赖** Phase 33 完成或 go |
-| **Phase 33 HDR production（33.5 主路径）** | **No-go** | P0/P1 无 `supported`；D1 proof 未通过 → **不得**用本阶段 L remap / Bloom 冒充 HDR |
-| **Phase 33（收窄路径）** | **Go（条件）** | 仅 probe / proof / `renderMode` / SDR fallback 文档化；**33.5 冻结** |
-| **当前生产渲染** | **不变** | `WebGL2` + `SDR_FALLBACK_OUTPUT_COLOR_SPACE`（`THREE.SRGBColorSpace`）；`postFxBloomEnabled === false` |
+| 决策                                       | 结论           | 对 Phase 32 的含义                                                                                     |
+| :----------------------------------------- | :------------- | :----------------------------------------------------------------------------------------------------- |
+| **Phase 32 SDR 可读性**                    | **Go（并行）** | 与 HDR gate **解耦**；**不依赖** Phase 33 完成或 go                                                    |
+| **Phase 33 HDR production（33.5 主路径）** | **No-go**      | P0/P1 无 `supported`；D1 proof 未通过 → **不得**用本阶段 L remap / Bloom 冒充 HDR                      |
+| **Phase 33（收窄路径）**                   | **Go（条件）** | 仅 probe / proof / `renderMode` / SDR fallback 文档化；**33.5 冻结**                                   |
+| **当前生产渲染**                           | **不变**       | `WebGL2` + `SDR_FALLBACK_OUTPUT_COLOR_SPACE`（`THREE.SRGBColorSpace`）；`postFxBloomEnabled === false` |
 
 ### Phase 32 独占 vs 移交 Phase 33
 
-| 主题 | Phase 32（本阶段） | Phase 33（条件阶段） |
-| :--- | :--- | :--- |
-| OKLab **L** remap、`uLMin`、`uLightnessRatingExponent`、`uDistanceLightnessFloor` | ✅ 调参并固化 SDR 默认 | ❌ 不得覆盖 32 标定后的 SDR fallback |
-| Idle near / Z fade、背景对比 | ✅ | ❌ |
-| `window.__galaxyColor` / idle fade 调试入口 | ✅ 整理并记录最终默认 | ❌ |
-| 选中星球缓慢自转 | ✅ | ❌ |
-| HDR 输出、`hdr-active`、`renderMode` 切换 | ❌ | ✅（仅 29.7 允许的子项） |
-| Bloom 作为默认或 HDR 替代 | ❌ **禁止** | ❌ SDR 默认仍关；仅 `hdr-active` 实验路径（若将来解冻 33.5） |
-| `window.__hdrCapabilities` / `__hdrProbe` | ❌ 不改动契约 | ✅ 产品化 / lab |
-| WebGPU extended 主场景接入 | ❌ | ❌ **冻结**（见 29.7 backlog `phase_33b_webgpu_hdr_spike`） |
+| 主题                                                                              | Phase 32（本阶段）    | Phase 33（条件阶段）                                        |
+| :-------------------------------------------------------------------------------- | :-------------------- | :---------------------------------------------------------- |
+| OKLab **L** remap、`uLMin`、`uLightnessRatingExponent`、`uDistanceLightnessFloor` | ✅ 调参并固化 SDR 默认 | ❌ 不得覆盖 32 标定后的 SDR fallback                         |
+| Idle near / Z fade、背景对比                                                      | ✅                     | ❌                                                           |
+| `window.__galaxyColor` / idle fade 调试入口                                       | ✅ 整理并记录最终默认  | ❌                                                           |
+| 选中星球缓慢自转                                                                  | ✅                     | ❌                                                           |
+| HDR 输出、`hdr-active`、`renderMode` 切换                                         | ❌                     | ✅（仅 29.7 允许的子项）                                     |
+| Bloom 作为默认或 HDR 替代                                                         | ❌ **禁止**            | ❌ SDR 默认仍关；仅 `hdr-active` 实验路径（若将来解冻 33.5） |
+| `window.__hdrCapabilities` / `__hdrProbe`                                         | ❌ 不改动契约          | ✅ 产品化 / lab                                              |
+| WebGPU extended 主场景接入                                                        | ❌                     | ❌ **冻结**（见 29.7 backlog `phase_33b_webgpu_hdr_spike`）  |
 
 ### 不变量（29.4 SDR fallback，32.x 不得破坏）
 

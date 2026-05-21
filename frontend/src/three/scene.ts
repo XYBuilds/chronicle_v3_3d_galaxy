@@ -22,7 +22,7 @@ import {
 } from './camera'
 import { CONSTELLATION_SURFACE_GAP_WORLD, createConstellation } from './constellation'
 import { createGalaxyDualMeshes } from './galaxyMeshes'
-import { IDLE_NEAR_FADE_DEFAULTS } from './idleNearFade'
+import { computeIdleMacroFadesBlendForPhase, IDLE_NEAR_FADE_DEFAULTS } from './idleNearFade'
 import { IDLE_Z_FADE_DEFAULTS } from './idleZFade'
 import { attachGalaxyActiveMeshInteraction } from './interaction'
 import { createSelectionPlanet, type SelectionPlanetHandle } from './planet'
@@ -466,6 +466,15 @@ export function mountGalaxyScene(
   let focusZAnimStart = 0
   let focusZAnimTarget = 0
 
+  /** P32.3 — shared macro-fade blend; mirrors focusDriver (selecting: 1→0, deselecting: 0→1). */
+  const computeIdleMacroFadesBlend = () =>
+    computeIdleMacroFadesBlendForPhase(selectionPhase, focusDriver.progress, selectingEnteredFromMacro)
+
+  const syncIdleMacroFadesBlend = (blend: number) => {
+    idleMacroFadesBlendCurrent = blend
+    uIdleMacroFadesBlend.value = blend
+  }
+
   /** Same XY/Z as idle macro tick (`zCurrent − zCamDistance` + clamp); used for `restCam` when leaving cover orbit. */
   const snapshotMacroBrowseRestCam = (out: THREE.Vector3) => {
     const st = useGalaxyInteractionStore.getState()
@@ -542,6 +551,7 @@ export function mountGalaxyScene(
       uFocusTargetInstanceId.value = pendingSelectInstanceIndex
       uFocusCameraBlend.value = p
       uFocusActiveDimBlend.value = selectingEnteredFromMacro ? p : 1
+      syncIdleMacroFadesBlend(computeIdleMacroFadesBlend())
       if (!focusDriver.active) {
         selectionPhase = 'selected'
         uFocused.value = pendingSelectInstanceIndex
@@ -570,6 +580,7 @@ export function mountGalaxyScene(
       uFocusTargetInstanceId.value = pendingSelectInstanceIndex
       uFocusCameraBlend.value = p
       uFocusActiveDimBlend.value = p
+      syncIdleMacroFadesBlend(computeIdleMacroFadesBlend())
       if (!focusDriver.active) {
         selectionPhase = 'idle'
         uFocusTargetInstanceId.value = -1
@@ -1272,21 +1283,14 @@ export function mountGalaxyScene(
     const idleMat = galaxy.idleMaterial
     const idleNearFadeOn = (galUniforms.uIdleNearFadeEnabled as THREE.Uniform<number>).value > 0.5
     const idleZFadeOn = Math.abs((galUniforms.uIdleZFadeMode as THREE.Uniform<number>).value) > 0.5
-    let macroFadeBlend = 1
-    if (selectionPhase === 'idle') {
-      macroFadeBlend = 1
-    } else if (selectionPhase === 'selected') {
-      macroFadeBlend = 0
-    } else if (selectionPhase === 'selecting') {
-      macroFadeBlend = selectingEnteredFromMacro ? 1 - focusDriver.progress : 0
-    } else if (selectionPhase === 'deselecting') {
-      macroFadeBlend = focusDriver.progress
-    } else {
-      macroFadeBlend = 0
+    const macroFadeBlend = computeIdleMacroFadesBlend()
+    if (selectionPhase === 'idle' || selectionPhase === 'selected') {
+      syncIdleMacroFadesBlend(macroFadeBlend)
     }
-    idleMacroFadesBlendCurrent = macroFadeBlend
-    uIdleMacroFadesBlend.value = macroFadeBlend
-    const idleAlphaFadeOn = (idleNearFadeOn || idleZFadeOn) && macroFadeBlend > 1e-6
+    const inMacroFadeTransition =
+      (selectionPhase === 'selecting' && selectingEnteredFromMacro) || selectionPhase === 'deselecting'
+    const idleAlphaFadeOn =
+      (idleNearFadeOn || idleZFadeOn) && (macroFadeBlend > 1e-6 || inMacroFadeTransition)
     if (idleMat.transparent !== idleAlphaFadeOn || idleMat.depthWrite !== !idleAlphaFadeOn) {
       idleMat.transparent = idleAlphaFadeOn
       idleMat.depthWrite = !idleAlphaFadeOn

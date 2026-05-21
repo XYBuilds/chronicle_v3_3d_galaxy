@@ -21,6 +21,25 @@ export const IDLE_NEAR_FADE_DEFAULTS = {
  * Mirrors `galaxyIdle.vert.glsl` `smoothstep` + `mix` for near-distance fade.
  * When `enabled < 0.5` or `exempt`, returns `1` (no fade / full pick weight).
  */
+export type IdleMacroFadeSelectionPhase = 'idle' | 'selecting' | 'selected' | 'deselecting'
+
+/**
+ * P32.3 — CPU mirror of `scene.ts` macro-fade blend vs `focusDriver.progress` (1 = full near/Z fade).
+ * Selecting: progress 0→1 ⇒ blend 1→0. Deselecting: progress 1→0 ⇒ blend 0→1.
+ */
+export function computeIdleMacroFadesBlendForPhase(
+  phase: IdleMacroFadeSelectionPhase,
+  focusProgress: number,
+  selectingEnteredFromMacro: boolean,
+): number {
+  const p = THREE.MathUtils.clamp(focusProgress, 0, 1)
+  if (phase === 'idle') return 1
+  if (phase === 'selected') return 0
+  if (phase === 'selecting') return selectingEnteredFromMacro ? 1 - p : 0
+  if (phase === 'deselecting') return 1 - p
+  return 0
+}
+
 /**
  * P32.3 — Blend macro-fade alpha toward 1 (no dim) as `blend` → 0. Mirrors `galaxyIdle.vert.glsl` `mix(1.0, fadedAlpha, blend)`.
  */

@@ -10,7 +10,7 @@ todos:
     status: completed
   - id: p32-idle-z-fade-transition
     content: 32.3 idleZFade + idleNearFade 共用宏观虚化渐变，接入 focusDriver 状态切换过渡，browsing/focus 切换时平滑进退场
-    status: pending
+    status: completed
   - id: p32-sdr-runtime-toggles
     content: 32.4 整理背景色 token 与 idle 宏观虚化（Z + near）调试入口，确保调参结果可复现并可固化到默认值
     status: pending
@@ -152,13 +152,13 @@ flowchart TD
 
 #### 涉及文件（实施时）
 
-| 文件 | 变更 |
-| --- | --- |
-| `galaxyMeshes.ts` | 注册 `uIdleMacroFadesBlend`（或重命名并迁移 `uIdleMacroFadesActive`） |
-| `galaxyIdle.vert.glsl` | near + Z 段乘以 blend；blend≈0 时跳过 |
-| `scene.ts` | RAF 中由 `focusDriver.progress` 写 blend；`selecting`/`deselecting`/`idle`/`selected` 分支 |
-| `screenRadius.ts` / `interaction.ts` | pick gate 使用 blend |
-| `idleZFade.ts` / `idleNearFade.ts` | 可选：导出 `applyMacroFadeBlend(alpha, blend)` 供 CPU 镜像 |
+| 文件                                 | 变更                                                                                       |
+| ------------------------------------ | ------------------------------------------------------------------------------------------ |
+| `galaxyMeshes.ts`                    | 注册 `uIdleMacroFadesBlend`（或重命名并迁移 `uIdleMacroFadesActive`）                      |
+| `galaxyIdle.vert.glsl`               | near + Z 段乘以 blend；blend≈0 时跳过                                                      |
+| `scene.ts`                           | RAF 中由 `focusDriver.progress` 写 blend；`selecting`/`deselecting`/`idle`/`selected` 分支 |
+| `screenRadius.ts` / `interaction.ts` | pick gate 使用 blend                                                                       |
+| `idleZFade.ts` / `idleNearFade.ts`   | 可选：导出 `applyMacroFadeBlend(alpha, blend)` 供 CPU 镜像                                 |
 
 ### 32.4 SDR runtime tuning 入口整理
 

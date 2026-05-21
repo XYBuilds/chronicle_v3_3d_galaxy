@@ -4,7 +4,7 @@ import * as THREE from 'three'
  * P26.3 — Camera-distance idle near fade: star alpha ramps from `minAlpha` to 1 by camera–star world distance.
  * **Shipped default:** `IDLE_NEAR_FADE_DEFAULTS.enabled === 1` (fade + idle transparent path on at boot in macro).
  * Set `enabled` to `0` here or at runtime via `window.__galaxyIdleNearFade.enabled = 0` to restore opaque idle + no pick gate.
- * **Focus session** (`selectionPhase !== 'idle'`): `uIdleMacroFadesActive = 0` disables the shader branch regardless of `enabled`.
+ * **Focus session**: `uIdleMacroFadesBlend = 0` disables the shader branch regardless of `enabled`; browsing/focus transitions blend 0…1 via `focusDriver`.
  */
 export const IDLE_NEAR_FADE_DEFAULTS = {
   /** > 0.5 enables shader + idle transparent path + CPU pick gate. */
@@ -14,13 +14,40 @@ export const IDLE_NEAR_FADE_DEFAULTS = {
   /** World units: `smoothstep` width from `startDist` to full opacity. */
   width: 10.0,
   /** Lower clamp on idle alpha when inside the fade band. */
-  minAlpha: 0.05,
+  minAlpha: 0.1,
 } as const
 
 /**
  * Mirrors `galaxyIdle.vert.glsl` `smoothstep` + `mix` for near-distance fade.
  * When `enabled < 0.5` or `exempt`, returns `1` (no fade / full pick weight).
  */
+export type IdleMacroFadeSelectionPhase = 'idle' | 'selecting' | 'selected' | 'deselecting'
+
+/**
+ * P32.3 — CPU mirror of `scene.ts` macro-fade blend vs `focusDriver.progress` (1 = full near/Z fade).
+ * Selecting: progress 0→1 ⇒ blend 1→0. Deselecting: progress 1→0 ⇒ blend 0→1.
+ */
+export function computeIdleMacroFadesBlendForPhase(
+  phase: IdleMacroFadeSelectionPhase,
+  focusProgress: number,
+  selectingEnteredFromMacro: boolean,
+): number {
+  const p = THREE.MathUtils.clamp(focusProgress, 0, 1)
+  if (phase === 'idle') return 1
+  if (phase === 'selected') return 0
+  if (phase === 'selecting') return selectingEnteredFromMacro ? 1 - p : 0
+  if (phase === 'deselecting') return 1 - p
+  return 0
+}
+
+/**
+ * P32.3 — Blend macro-fade alpha toward 1 (no dim) as `blend` → 0. Mirrors `galaxyIdle.vert.glsl` `mix(1.0, fadedAlpha, blend)`.
+ */
+export function applyMacroFadeBlend(fadedAlpha: number, blend: number): number {
+  const b = THREE.MathUtils.clamp(blend, 0, 1)
+  return THREE.MathUtils.lerp(1, fadedAlpha, b)
+}
+
 export function computeIdleNearFadeAlpha(
   cameraWorld: THREE.Vector3,
   starX: number,

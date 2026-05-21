@@ -149,8 +149,8 @@ function makeSharedUniforms(
       uIdleNearFadeMinAlpha: { value: IDLE_NEAR_FADE_DEFAULTS.minAlpha },
       uIdleZFadeMode: { value: IDLE_Z_FADE_DEFAULTS.mode },
       uIdleZFadeOutsideAlpha: { value: IDLE_Z_FADE_DEFAULTS.outsideAlpha },
-      /** 1 = macro idle: P26.3 + P27.4 idle fades apply; 0 = focus session (scene.ts RAF). */
-      uIdleMacroFadesActive: { value: 1 },
+      /** P32.3 — 0…1 macro-fade blend for P26.3 + P27.4 (scene.ts RAF + focusDriver). */
+      uIdleMacroFadesBlend: { value: 1 },
       /** P23.3 — cover mode: draw only today instance; matched with `uCoverTodayInstanceId`. */
       uCoverMode: { value: 0 },
       uCoverTodayInstanceId: { value: -1 },

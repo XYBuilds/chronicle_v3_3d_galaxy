@@ -32,8 +32,8 @@ uniform float uIdleNearFadeMinAlpha;
 /** P27 — mode 1: aZ > zHi dim; -1: aZ < uZCurrent dim; 0: off. outsideAlpha in (0,1]. */
 uniform float uIdleZFadeMode;
 uniform float uIdleZFadeOutsideAlpha;
-/** 1 = apply P26.3 near + P27.4 Z idle fades; 0 = focus session (selecting/selected/deselecting), fades off. */
-uniform float uIdleMacroFadesActive;
+/** P32.3 — 0…1 macro browse blend for P26.3 near + P27.4 Z idle fades (1 = full strength, 0 = off). */
+uniform float uIdleMacroFadesBlend;
 uniform float uCoverMode;
 uniform float uCoverTodayInstanceId;
 uniform float uCoverActiveSizeBoost;
@@ -99,7 +99,8 @@ void main() {
   }
 
   float nearFadeAlpha = 1.0;
-  if (uIdleMacroFadesActive > 0.5) {
+  if (uIdleMacroFadesBlend > 1e-6) {
+    float macroFadeAlpha = 1.0;
     if (uIdleNearFadeEnabled > 0.5 && !exemptIdleNearFade) {
       float distCam = distance(uCameraWorldPos, starWorld);
       float wFade = max(uIdleNearFadeWidth, 1e-6);
@@ -108,16 +109,17 @@ void main() {
         uIdleNearFadeStartDist + wFade,
         distCam
       );
-      nearFadeAlpha = mix(uIdleNearFadeMinAlpha, 1.0, tFade);
+      macroFadeAlpha = mix(uIdleNearFadeMinAlpha, 1.0, tFade);
     }
     if (abs(uIdleZFadeMode) > 0.5 && !exemptIdleNearFade) {
       float zA = clamp(uIdleZFadeOutsideAlpha, 0.0, 1.0);
       if (uIdleZFadeMode > 0.5 && aZ > zHi) {
-        nearFadeAlpha *= zA;
+        macroFadeAlpha *= zA;
       } else if (uIdleZFadeMode < -0.5 && aZ < uZCurrent) {
-        nearFadeAlpha *= zA;
+        macroFadeAlpha *= zA;
       }
     }
+    nearFadeAlpha = mix(1.0, macroFadeAlpha, uIdleMacroFadesBlend);
   }
   vNearFadeAlpha = nearFadeAlpha;
 

@@ -1525,7 +1525,6 @@ export function mountGalaxyScene(
         opacity: ringOpacity,
         uSizeScale: uSizeScale.value,
         uActiveSizeMul: uActiveSizeMul.value,
-        camera,
       })
     } else {
       ringsPivot.set(0, 0, 0)
@@ -1536,7 +1535,6 @@ export function mountGalaxyScene(
         opacity: 0,
         uSizeScale: uSizeScale.value,
         uActiveSizeMul: uActiveSizeMul.value,
-        camera,
       })
     }
 

@@ -1,27 +1,34 @@
 import { describe, expect, it } from 'vitest'
 import * as THREE from 'three'
 
-import { GALAXY_CAMERA_EULER } from './camera'
-import { computeTierLabelAzimuthRad } from './FocusSizeReferenceRings'
+import {
+  TIER_LABEL_ANCHOR_WORLD_NEG_X,
+  TIER_LABEL_ANCHOR_WORLD_NEG_Z,
+  computeTierLabelAzimuthRad,
+} from './FocusSizeReferenceRings'
 import { selectionPlanetRingPlaneQuaternion } from './selectionPlanetRotation'
 
 describe('computeTierLabelAzimuthRad', () => {
-  it('default focus camera: label anchor in world −X / −Z quadrant at ~45°', () => {
-    const pivot = new THREE.Vector3(10, 20, 1990)
-    const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000)
-    camera.rotation.copy(GALAXY_CAMERA_EULER)
-    camera.position.set(pivot.x, pivot.y, pivot.z - 1)
-    camera.updateMatrixWorld(true)
-
+  it('anchor is world (−X,−Z) 45° projected onto ring plane (independent of camera)', () => {
     const ringQuat = selectionPlanetRingPlaneQuaternion(424_786)
-    const th = computeTierLabelAzimuthRad(pivot, ringQuat, camera)
+    const th = computeTierLabelAzimuthRad(ringQuat)
 
     const anchorLocal = new THREE.Vector3(Math.cos(th), Math.sin(th), 0)
     const anchorWorld = anchorLocal.clone().applyQuaternion(ringQuat)
 
-    expect(anchorWorld.x).toBeLessThan(-0.2)
-    expect(anchorWorld.z).toBeLessThan(-0.2)
-    const xzAngle = Math.atan2(-anchorWorld.z, anchorWorld.x)
-    expect(xzAngle).toBeCloseTo((3 * Math.PI) / 4, 1)
+    const expected = new THREE.Vector3()
+      .addVectors(TIER_LABEL_ANCHOR_WORLD_NEG_X, TIER_LABEL_ANCHOR_WORLD_NEG_Z)
+      .normalize()
+    const planeNormal = new THREE.Vector3(0, 0, 1).applyQuaternion(ringQuat)
+    const project = (v: THREE.Vector3, out: THREE.Vector3) => {
+      const d = v.dot(planeNormal)
+      out.copy(v).addScaledVector(planeNormal, -d)
+      return out.normalize()
+    }
+    project(expected, expected)
+
+    expect(anchorWorld.dot(expected)).toBeCloseTo(1, 3)
+    expect(anchorWorld.x).toBeLessThan(0)
+    expect(anchorWorld.z).toBeLessThan(0)
   })
 })

@@ -66,7 +66,7 @@
     "focusSearch": "Focus recherche (Cmd/Ctrl+K)",
     "close": "Fermer",
     "toggleLanguage": "Choisir la langue de l’interface",
-    "exitFocus": "Voir le cosmos"
+    "exitFocus": "Retour au cosmos"
   },
   "timeline": {
     "label": "Chronologie (année de sortie)",

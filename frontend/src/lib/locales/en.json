@@ -66,7 +66,7 @@
     "focusSearch": "Focus search (Cmd/Ctrl+K)",
     "close": "Close",
     "toggleLanguage": "Choose interface language",
-    "exitFocus": "View cosmos"
+    "exitFocus": "Back to cosmos"
   },
   "timeline": {
     "label": "Timeline (release year)",

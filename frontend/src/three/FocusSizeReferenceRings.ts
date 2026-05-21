@@ -20,7 +20,7 @@ import {
 // 圆环：**世界空间绝对线宽** `RING_STROKE_WORLD`（与半径 r 无关）。几何为
 // `RingGeometry(max(ε, r − stroke/2), r + stroke/2)`，`mesh.scale = 1`。
 // 标注：**Sprite** 永远朝向相机；`sprite.center = (0.5,0.5)`，**位置**为环面局部 XY 上
-// `radialDist` 处的一点（圆心即锚点）。锚点：相机左与朝向相机在环平面内 45°（(−X,−Z) 象限，随相机更新）。
+// `radialDist` 处的一点（圆心即锚点）。锚点：世界 (−X,−Z) 45° 投影到环平面（不随相机 orbit 移动）。
 // **字号（可读大小）**只调 `LABEL_TEXT_WORLD_HEIGHT`
 //（世界单位垂直边长；与 `max(·, r*0.06)` 取大保证极小环不糊成一团）。
 // Canvas 纹理分辨率与其中 `font px` 为**内部**固定比例，仅影响栅格清晰度，不参与与世界的二次缩放博弈。
@@ -83,13 +83,15 @@ function mulberry32(seed: number): () => number {
   }
 }
 
-const scratchCamPos = new THREE.Vector3()
-const scratchToCam = new THREE.Vector3()
-const scratchLookAtPivot = new THREE.Vector3()
-const scratchCamRight = new THREE.Vector3()
+/** World −X leg of tier-label anchor (45° with {@link TIER_LABEL_ANCHOR_WORLD_NEG_Z}). */
+export const TIER_LABEL_ANCHOR_WORLD_NEG_X = new THREE.Vector3(-1, 0, 0)
+
+/** World −Z leg of tier-label anchor (45° with {@link TIER_LABEL_ANCHOR_WORLD_NEG_X}). */
+export const TIER_LABEL_ANCHOR_WORLD_NEG_Z = new THREE.Vector3(0, 0, -1)
+
 const scratchPlaneNormal = new THREE.Vector3()
-const scratchNearPlane = new THREE.Vector3()
-const scratchLeftPlane = new THREE.Vector3()
+const scratchNegXPlane = new THREE.Vector3()
+const scratchNegZPlane = new THREE.Vector3()
 const scratchAnchor = new THREE.Vector3()
 const scratchAnchorLocal = new THREE.Vector3()
 const scratchInvRingQuat = new THREE.Quaternion()
@@ -107,41 +109,24 @@ function projectOntoPlane(
 }
 
 /**
- * Tier label azimuth (rad) in ring local XY: 45° between camera-left and toward-camera on the ring plane ((−X,−Z) 近侧).
+ * Tier label azimuth (rad) in ring local XY: fixed world (−X,−Z) 45° projected onto the ring plane.
  */
-export function computeTierLabelAzimuthRad(
-  pivotWorld: THREE.Vector3,
-  ringPlaneQuat: THREE.Quaternion,
-  camera: THREE.Camera,
-): number {
+export function computeTierLabelAzimuthRad(ringPlaneQuat: THREE.Quaternion): number {
   scratchPlaneNormal.copy(REFERENCE_RING_PLANE_LOCAL_NORMAL).applyQuaternion(ringPlaneQuat)
 
-  camera.getWorldPosition(scratchCamPos)
-  scratchToCam.subVectors(scratchCamPos, pivotWorld)
-  if (scratchToCam.lengthSq() < 1e-12) scratchToCam.set(0, 0, -1)
-  else scratchToCam.normalize()
+  projectOntoPlane(TIER_LABEL_ANCHOR_WORLD_NEG_X, scratchPlaneNormal, scratchNegXPlane)
+  projectOntoPlane(TIER_LABEL_ANCHOR_WORLD_NEG_Z, scratchPlaneNormal, scratchNegZPlane)
 
-  scratchLookAtPivot.subVectors(pivotWorld, scratchCamPos)
-  if (scratchLookAtPivot.lengthSq() < 1e-12) scratchLookAtPivot.set(0, 0, 1)
-  else scratchLookAtPivot.normalize()
-  scratchCamRight.crossVectors(camera.up, scratchLookAtPivot)
-  if (scratchCamRight.lengthSq() < 1e-12) scratchCamRight.set(1, 0, 0)
-  else scratchCamRight.normalize()
-  scratchCamRight.negate()
-
-  projectOntoPlane(scratchToCam, scratchPlaneNormal, scratchNearPlane)
-  projectOntoPlane(scratchCamRight, scratchPlaneNormal, scratchLeftPlane)
-
-  const hasNear = scratchNearPlane.lengthSq() > 1e-10
-  const hasLeft = scratchLeftPlane.lengthSq() > 1e-10
-  if (hasNear && hasLeft) {
-    scratchAnchor.addVectors(scratchLeftPlane, scratchNearPlane).normalize()
-  } else if (hasLeft) {
-    scratchAnchor.copy(scratchLeftPlane)
-  } else if (hasNear) {
-    scratchAnchor.copy(scratchNearPlane)
+  const hasNegX = scratchNegXPlane.lengthSq() > 1e-10
+  const hasNegZ = scratchNegZPlane.lengthSq() > 1e-10
+  if (hasNegX && hasNegZ) {
+    scratchAnchor.addVectors(scratchNegXPlane, scratchNegZPlane).normalize()
+  } else if (hasNegX) {
+    scratchAnchor.copy(scratchNegXPlane)
+  } else if (hasNegZ) {
+    scratchAnchor.copy(scratchNegZPlane)
   } else {
-    scratchAnchor.set(1, 0, 0)
+    scratchAnchor.copy(TIER_LABEL_ANCHOR_WORLD_NEG_X)
     projectOntoPlane(scratchAnchor, scratchPlaneNormal, scratchAnchor)
   }
 
@@ -250,7 +235,7 @@ export interface FocusSizeReferenceRingsHandle {
   readonly group: THREE.Group
   dispose(): void
   /**
-   * Labels: Sprite billboard; anchor on ring at camera-relative (−X,−Z) 45°, radial offset outside ring.
+   * Labels: Sprite billboard; anchor on ring at fixed world (−X,−Z) 45°, radial offset outside ring.
    */
   update(params: {
     pivotWorld: THREE.Vector3
@@ -259,7 +244,6 @@ export interface FocusSizeReferenceRingsHandle {
     opacity: number
     uSizeScale: number
     uActiveSizeMul: number
-    camera: THREE.Camera
   }): void
 }
 
@@ -327,9 +311,8 @@ export function createFocusSizeReferenceRings(movies: readonly Movie[]): FocusSi
     opacity: number
     uSizeScale: number
     uActiveSizeMul: number
-    camera: THREE.Camera
   }) => {
-    const { pivotWorld, movieId, voteCount, opacity, uSizeScale, uActiveSizeMul, camera } = params
+    const { pivotWorld, movieId, voteCount, opacity, uSizeScale, uActiveSizeMul } = params
     const op = THREE.MathUtils.clamp(opacity, 0, 1)
     if (op < 0.002) {
       group.visible = false
@@ -353,7 +336,7 @@ export function createFocusSizeReferenceRings(movies: readonly Movie[]): FocusSi
       console.log('[P13.5] size ring radii (world)', { movieId, voteCount, uSizeScale, uActiveSizeMul, radii: [...radii] })
     }
 
-    const th = computeTierLabelAzimuthRad(pivotWorld, orient, camera)
+    const th = computeTierLabelAzimuthRad(orient)
     const cosT = Math.cos(th)
     const sinT = Math.sin(th)
 

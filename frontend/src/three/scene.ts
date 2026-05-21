@@ -24,6 +24,14 @@ import { CONSTELLATION_SURFACE_GAP_WORLD, createConstellation } from './constell
 import { createGalaxyDualMeshes } from './galaxyMeshes'
 import { computeIdleMacroFadesBlendForPhase, IDLE_NEAR_FADE_DEFAULTS } from './idleNearFade'
 import { IDLE_Z_FADE_DEFAULTS } from './idleZFade'
+import {
+  applyIdleNearFadeDefaults,
+  applyIdleZFadeDefaults,
+  FOCUS_DESELECT_MS,
+  FOCUS_SELECT_MS,
+  formatSdrRuntimeTuningLog,
+  SDR_RUNTIME_DEFAULTS,
+} from './sdrRuntimeTuning'
 import { attachGalaxyActiveMeshInteraction } from './interaction'
 import { createSelectionPlanet, type SelectionPlanetHandle } from './planet'
 import { computeActiveWorldRadius, getSelectionMaskPickSet, resolveSelectionWorldRadius } from './screenRadius'
@@ -111,6 +119,8 @@ interface GalaxyIdleNearFadeDebug {
   startDist: number
   width: number
   minAlpha: number
+  /** Restore `IDLE_NEAR_FADE_DEFAULTS` to GPU uniforms. */
+  reset(): void
   log: () => void
 }
 
@@ -134,7 +144,26 @@ interface GalaxyIdleZFadeDebug {
   mode: number
   /** Alpha multiplier on the dimmed side (0…1). */
   outsideAlpha: number
+  /** Restore `IDLE_Z_FADE_DEFAULTS` to GPU uniforms. */
+  reset(): void
   log: () => void
+}
+
+/** Dev console: `window.__galaxyIdleMacroFade` — P32.3 shared near+Z blend vs `focusDriver`. */
+interface GalaxyIdleMacroFadeDebug {
+  /** Current `uIdleMacroFadesBlend` (0 = focus, 1 = macro browse). */
+  readonly blend: number
+  readonly selectionPhase: string
+  readonly focusProgress: number
+  readonly selectingEnteredFromMacro: boolean
+  log(): void
+}
+
+/** Dev console: `window.__sdrTuning` — Phase 32.4 SDR brightness path (bg + idle macro fades). */
+interface SdrRuntimeTuningDebug {
+  readonly defaults: typeof SDR_RUNTIME_DEFAULTS
+  log(): void
+  resetAll(): void
 }
 
 /** Dev console: `window.__planetTerrace` — Perlin focus sphere terrace + P11.4 lighting uniforms. */
@@ -171,7 +200,9 @@ declare global {
     __galaxyColor?: GalaxyColorDebug
     __galaxyIdleNearFade?: GalaxyIdleNearFadeDebug
     __galaxyIdleZFade?: GalaxyIdleZFadeDebug
+    __galaxyIdleMacroFade?: GalaxyIdleMacroFadeDebug
     __galaxyUniverseBg?: GalaxyUniverseBgDebug
+    __sdrTuning?: SdrRuntimeTuningDebug
     __galaxyInteraction?: GalaxyInteractionDebug
     __planetTerrace?: SelectionPlanetTerraceDebug
   }
@@ -208,8 +239,8 @@ function xyCenter(meta: Pick<Meta, 'xy_range'>): { cx: number; cy: number } {
  * Black fullscreen scene: WebGL2 renderer, perspective camera at XY center,
  * macro Z from Phase 5.1.5 (`zCurrent - zCamDistance`), facing +Z (axis-parallel).
  */
-const SELECT_MS = 700
-const DESELECT_MS = 450
+const SELECT_MS = FOCUS_SELECT_MS
+const DESELECT_MS = FOCUS_DESELECT_MS
 /** P16.2 — person/genre suggestion zCurrent drift matches focus enter easing (Design Spec §4.4). */
 const Z_CURRENT_ANIM_MS = 700
 
@@ -945,8 +976,8 @@ export function mountGalaxyScene(
       )
     },
   }
+  /** Auxiliary OKLCH star-body tuning — not the Phase 32 SDR brightness primary path (`__sdrTuning` / `__galaxyUniverseBg`). */
   window.__galaxyColor = galaxyColorDebug
-  galaxyColorDebug.log()
 
   const uIdleNearFadeEnabled = galUniforms.uIdleNearFadeEnabled as THREE.Uniform<number>
   const uIdleNearFadeStartDist = galUniforms.uIdleNearFadeStartDist as THREE.Uniform<number>
@@ -978,14 +1009,22 @@ export function mountGalaxyScene(
     set minAlpha(value: number) {
       uIdleNearFadeMinAlpha.value = THREE.MathUtils.clamp(value, 0, 1)
     },
+    reset() {
+      applyIdleNearFadeDefaults({
+        uIdleNearFadeEnabled,
+        uIdleNearFadeStartDist,
+        uIdleNearFadeWidth,
+        uIdleNearFadeMinAlpha,
+      })
+      this.log()
+    },
     log() {
       console.log(
-        `[Galaxy] P26.3 idle near-fade enabled=${uIdleNearFadeEnabled.value > 0.5 ? 'on' : 'off'} | uIdleNearFadeStartDist=${uIdleNearFadeStartDist.value.toFixed(3)} uIdleNearFadeWidth=${uIdleNearFadeWidth.value.toFixed(3)} uIdleNearFadeMinAlpha=${uIdleNearFadeMinAlpha.value.toFixed(3)} | defaults from idleNearFade.ts: start=${IDLE_NEAR_FADE_DEFAULTS.startDist} width=${IDLE_NEAR_FADE_DEFAULTS.width} minA=${IDLE_NEAR_FADE_DEFAULTS.minAlpha}`,
+        `[Galaxy] P26.3 idle near-fade enabled=${uIdleNearFadeEnabled.value > 0.5 ? 'on' : 'off'} | uIdleNearFadeStartDist=${uIdleNearFadeStartDist.value.toFixed(3)} uIdleNearFadeWidth=${uIdleNearFadeWidth.value.toFixed(3)} uIdleNearFadeMinAlpha=${uIdleNearFadeMinAlpha.value.toFixed(3)} | defaults from idleNearFade.ts: start=${IDLE_NEAR_FADE_DEFAULTS.startDist} width=${IDLE_NEAR_FADE_DEFAULTS.width} minA=${IDLE_NEAR_FADE_DEFAULTS.minAlpha} | reset: __galaxyIdleNearFade.reset()`,
       )
     },
   }
   window.__galaxyIdleNearFade = idleNearFadeDebug
-  idleNearFadeDebug.log()
 
   const uIdleZFadeMode = galUniforms.uIdleZFadeMode as THREE.Uniform<number>
   const uIdleZFadeOutsideAlpha = galUniforms.uIdleZFadeOutsideAlpha as THREE.Uniform<number>
@@ -1004,6 +1043,10 @@ export function mountGalaxyScene(
     set outsideAlpha(value: number) {
       uIdleZFadeOutsideAlpha.value = THREE.MathUtils.clamp(value, 0, 1)
     },
+    reset() {
+      applyIdleZFadeDefaults({ uIdleZFadeMode, uIdleZFadeOutsideAlpha })
+      this.log()
+    },
     log() {
       const m = uIdleZFadeMode.value
       const label = m > 0.5 ? 'future (aZ > zHi)' : m < -0.5 ? 'past (aZ < zCurrent)' : 'off'
@@ -1017,12 +1060,33 @@ export function mountGalaxyScene(
           ' | defaults idleZFade.ts: mode=' +
           IDLE_Z_FADE_DEFAULTS.mode +
           ' outsideAlpha=' +
-          IDLE_Z_FADE_DEFAULTS.outsideAlpha,
+          IDLE_Z_FADE_DEFAULTS.outsideAlpha +
+          ' | reset: __galaxyIdleZFade.reset()',
       )
     },
   }
   window.__galaxyIdleZFade = idleZFadeDebug
-  idleZFadeDebug.log()
+
+  const idleMacroFadeDebug: GalaxyIdleMacroFadeDebug = {
+    get blend() {
+      return idleMacroFadesBlendCurrent
+    },
+    get selectionPhase() {
+      return selectionPhase
+    },
+    get focusProgress() {
+      return focusDriver.progress
+    },
+    get selectingEnteredFromMacro() {
+      return selectingEnteredFromMacro
+    },
+    log() {
+      console.log(
+        `[Galaxy] P32.3 macro-fade blend=${idleMacroFadesBlendCurrent.toFixed(4)} phase=${selectionPhase} focusProgress=${focusDriver.progress.toFixed(4)} selectingFromMacro=${selectingEnteredFromMacro} | uIdleMacroFadesBlend syncs SELECT_MS=${SELECT_MS} DESELECT_MS=${DESELECT_MS}`,
+      )
+    },
+  }
+  window.__galaxyIdleMacroFade = idleMacroFadeDebug
 
   const universeBgTargets: UniverseBgTargets = { scene, renderer }
   const universeBgDebug: GalaxyUniverseBgDebug = {
@@ -1046,7 +1110,46 @@ export function mountGalaxyScene(
     },
   }
   window.__galaxyUniverseBg = universeBgDebug
-  universeBgDebug.log()
+
+  const sdrTuningDebug: SdrRuntimeTuningDebug = {
+    get defaults() {
+      return SDR_RUNTIME_DEFAULTS
+    },
+    log() {
+      console.log(
+        formatSdrRuntimeTuningLog({
+          universeBgHex: readUniverseBgHex(),
+          universeBgSource: getActiveUniverseBgSource(),
+          idleNearFade: {
+            enabled: uIdleNearFadeEnabled.value,
+            startDist: uIdleNearFadeStartDist.value,
+            width: uIdleNearFadeWidth.value,
+            minAlpha: uIdleNearFadeMinAlpha.value,
+          },
+          idleZFade: {
+            mode: uIdleZFadeMode.value,
+            outsideAlpha: uIdleZFadeOutsideAlpha.value,
+          },
+          macroFadeBlend: idleMacroFadesBlendCurrent,
+          selectionPhase,
+          focusProgress: focusDriver.progress,
+        }),
+      )
+      universeBgDebug.log()
+      idleNearFadeDebug.log()
+      idleZFadeDebug.log()
+      idleMacroFadeDebug.log()
+    },
+    resetAll() {
+      universeBgDebug.reset()
+      idleNearFadeDebug.reset()
+      idleZFadeDebug.reset()
+      console.log('[Galaxy] SDR runtime tuning reset to shipped defaults (macro-fade blend unchanged; toggle focus to observe transition)')
+      this.log()
+    },
+  }
+  window.__sdrTuning = sdrTuningDebug
+  sdrTuningDebug.log()
 
   const planetTerraceDebug: SelectionPlanetTerraceDebug = {
     get stepHeight() {
@@ -1477,6 +1580,12 @@ export function mountGalaxyScene(
     }
     if (window.__galaxyUniverseBg === universeBgDebug) {
       delete window.__galaxyUniverseBg
+    }
+    if (window.__galaxyIdleMacroFade === idleMacroFadeDebug) {
+      delete window.__galaxyIdleMacroFade
+    }
+    if (window.__sdrTuning === sdrTuningDebug) {
+      delete window.__sdrTuning
     }
     if (window.__galaxyInteraction === interactionDebug) {
       delete window.__galaxyInteraction

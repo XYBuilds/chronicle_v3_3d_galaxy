@@ -13,7 +13,7 @@ todos:
     status: completed
   - id: p32-sdr-runtime-toggles
     content: 32.4 整理背景色 token 与 idle 宏观虚化（Z + near）调试入口，确保调参结果可复现并可固化到默认值
-    status: pending
+    status: completed
   - id: p32-selection-rotation-axis
     content: 32.5 为选中星球定义参考平面法线自转轴，复用 `FocusSizeReferenceRings` 的 seeded quaternion
     status: pending
@@ -171,6 +171,27 @@ flowchart TD
 - `window.__galaxyColor` 保留为辅助入口，但不再作为本轮“太暗”问题的主路径。
 - 最终默认值写入源码常量或 token defaults，不依赖手动 console patch 才可用。
 - 在计划或实施报告中记录最终背景色 token、idleZFade / idleNearFade 参数、macro-fade blend 与 `SELECT_MS`/`DESELECT_MS` 对齐方式及放弃的候选值。
+
+#### 32.4 实施备忘（shipped defaults + console）
+
+| 通道 | SSOT | 发布默认 | Dev 入口 |
+| --- | --- | --- | --- |
+| 宇宙背景 | `universeBackground.ts` `COSMOS_UNIVERSE_BG_DEFAULT` | `#000002` | `__galaxyUniverseBg`（`.color` / `.reset` / `.log`） |
+| idle 近距 | `idleNearFade.ts` `IDLE_NEAR_FADE_DEFAULTS` | enabled=1, start=20, width=10, minA=0.1 | `__galaxyIdleNearFade` + `.reset()` |
+| idle Z | `idleZFade.ts` `IDLE_Z_FADE_DEFAULTS` | mode=-1, outsideA=0.5 | `__galaxyIdleZFade` + `.reset()` |
+| 宏观虚化 blend | `scene.ts` + `focusDriver` | browsing=1, focus=0, 过渡 `FOCUS_SELECT_MS`/`FOCUS_DESELECT_MS` | `__galaxyIdleMacroFade`（只读 blend/phase/progress） |
+| 汇总 | `sdrRuntimeTuning.ts` `SDR_RUNTIME_DEFAULTS` | 上表聚合 | `__sdrTuning.log()` / `__sdrTuning.resetAll()` |
+
+**Console 示例：**
+
+```js
+__sdrTuning.log()              // 一行汇总 + 分项 log
+__sdrTuning.resetAll()         // 背景 + near + Z 恢复 SSOT（blend 随 focus 状态变化）
+__galaxyIdleMacroFade.blend    // browsing→focus 时 1→0，与相机同帧
+__galaxyColor.log()            // 辅助 OKLCH，非 SDR 提亮主路径
+```
+
+**放弃候选：** 纯黑背景 `#000000`（32.2 验收后改为 `#000002`）；`minAlpha=0.05`（32.3 验收后改为 `0.1`）；启动时自动 `__galaxyColor.log()`（32.4 改为仅 `__sdrTuning.log()`）。
 
 ### 32.5 选中星球自转轴定义
 

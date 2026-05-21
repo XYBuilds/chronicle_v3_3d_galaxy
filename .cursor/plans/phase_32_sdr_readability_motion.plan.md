@@ -22,7 +22,7 @@ todos:
     status: completed
   - id: p32-perlin-selective-bloom
     content: 32.7 接入 Perlin 选中星球 selective Bloom，默认开启但仅作用于 `planet.mesh`，全局 Bloom 与 idle/active Bloom 仍默认关闭
-    status: pending
+    status: completed
   - id: p32-tests-acceptance
     content: 32.8 执行视觉矩阵、类型检查、lint、build 验收，记录背景色 token、idle 宏观虚化 blend 过渡、perlin Bloom 策略和剩余风险
     status: pending

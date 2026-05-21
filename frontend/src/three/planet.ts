@@ -14,6 +14,9 @@ const PHI = (1 + Math.sqrt(5)) / 2
 /** Shader-side max genre bands (weights + thresholds + colors). */
 export const PLANET_MAX_BANDS = 8
 
+/** P11.4 / P32 — Perlin sphere Lambert shading on by default (`uLightingEnabled`). */
+export const PERLIN_LIGHTING_ENABLED_DEFAULT = true
+
 /** xmur3 string hash → 32-bit seed (deterministic). */
 function xmur3(str: string): () => number {
   let h = 1779033703 ^ str.length
@@ -213,7 +216,8 @@ export function createSelectionPlanet(): SelectionPlanetHandle {
       uHuntApplyMask: { value: 7 },
       uMeshWorldPos: { value: uMeshWorldPos },
       uLightDir: { value: uLightDir },
-      /** P11.4 定稿：`lit = baseCol × (uAmbient + uDiffuse × lambert)` */
+      /** P11.4 定稿：`lit = baseCol × (uAmbient + uDiffuse × lambert)` when `uLightingEnabled` > 0.5. */
+      uLightingEnabled: { value: PERLIN_LIGHTING_ENABLED_DEFAULT ? 1 : 0 },
       uAmbient: { value: 0.95 },
       uDiffuse: { value: 0.55 },
       /** 导数法线与几何法线混合；1 = 纯屏幕导数法线。 */

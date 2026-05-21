@@ -52,8 +52,8 @@ function bandCountsLrm(N: number, proportions: number[]): number[] {
   )
   const parts = proportions.map((p) => p * N)
   const n = parts.map((p) => Math.floor(p))
-  let sum = n.reduce((a, b) => a + b, 0)
-  let rem = N - sum
+  const sum = n.reduce((a, b) => a + b, 0)
+  const rem = N - sum
   const order = [...Array(K).keys()].sort(
     (a, b) => parts[b]! - Math.floor(parts[b]!) - (parts[a]! - Math.floor(parts[a]!)),
   )

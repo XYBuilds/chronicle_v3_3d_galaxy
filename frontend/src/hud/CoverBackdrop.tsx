@@ -27,17 +27,14 @@ export function CoverBackdrop({ todayFocusAriaLabel, showTodayFocusTrap }: Cover
   const brandTypeSizeClass = 'font-butler text-[120px] tracking-[-0.02em] sm:text-[180px] lg:text-[240px]'
   const brandLineHeightClass = 'leading-[0.6]'
 
-  const [entrySettled, setEntrySettled] = useState(() => prefersReducedMotion())
+  const reducedMotion = prefersReducedMotion()
+  const [entrySettled, setEntrySettled] = useState(reducedMotion)
 
   useEffect(() => {
-    if (prefersReducedMotion()) {
-      setEntrySettled(true)
-      return
-    }
-    setEntrySettled(false)
+    if (reducedMotion) return
     const t = window.setTimeout(() => setEntrySettled(true), 1000)
     return () => window.clearTimeout(t)
-  }, [])
+  }, [reducedMotion])
 
   useEffect(() => {
     if (entrySettled) {

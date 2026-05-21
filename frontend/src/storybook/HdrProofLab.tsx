@@ -33,8 +33,10 @@ export function HdrProofLab() {
   }, [])
 
   useEffect(() => {
-    void render('extended')
-  }, [render])
+    const canvas = canvasRef.current
+    if (!canvas) return
+    void renderHdrProofFrame('extended', canvas)
+  }, [])
 
   return (
     <div className="flex flex-col gap-3 text-sm text-neutral-200">

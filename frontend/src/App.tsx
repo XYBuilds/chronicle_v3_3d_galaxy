@@ -345,7 +345,10 @@ function App() {
       ) : null}
       <HoverRing />
       <MovieTooltip />
-      <div className="pointer-events-none fixed z-[var(--z-hud-top-tools)] flex items-center gap-[var(--hud-gap-stack)] right-[max(var(--hud-inset-sm),env(safe-area-inset-right,0px))] top-[max(var(--hud-inset-sm),env(safe-area-inset-top,0px))] sm:right-[max(var(--hud-inset-md),env(safe-area-inset-right,0px))] sm:top-[max(var(--hud-inset-md),env(safe-area-inset-top,0px))]">
+      <div
+        dir="ltr"
+        className="pointer-events-none fixed z-[var(--z-hud-top-tools)] flex items-center gap-[var(--hud-gap-stack)] right-[max(var(--hud-inset-sm),env(safe-area-inset-right,0px))] top-[max(var(--hud-inset-sm),env(safe-area-inset-top,0px))] sm:right-[max(var(--hud-inset-md),env(safe-area-inset-right,0px))] sm:top-[max(var(--hud-inset-md),env(safe-area-inset-top,0px))]"
+      >
         <FeedbackButton />
         <SupportButton />
         <InfoButton />

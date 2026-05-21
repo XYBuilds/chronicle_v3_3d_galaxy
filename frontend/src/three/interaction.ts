@@ -72,12 +72,12 @@ export function attachGalaxyActiveMeshInteraction(options: {
   /** P11.6 — focus 态优先用 `lastRadius` 包围球 vs active 射线球取最近命中；GPU 位移顶点不可靠故不用 mesh raycast。 */
   selectionPlanet?: SelectionPlanetHandle
   /**
-   * When false, idle P26.3 / P27.4 alpha pick gate is skipped (matches `uIdleMacroFadesActive` in focus session).
-   * Default: always true (macro-only callers).
+   * 0…1 macro-fade blend for idle P26.3 / P27.4 pick gate (matches `uIdleMacroFadesBlend`).
+   * Default: always 1 (macro-only callers).
    */
-  getIdleMacroFadesActive?: () => boolean
+  getIdleMacroFadesBlend?: () => number
 }): () => void {
-  const { camera, domElement, activeMesh, movies, activeMaterial, selectionPlanet, getIdleMacroFadesActive } = options
+  const { camera, domElement, activeMesh, movies, activeMaterial, selectionPlanet, getIdleMacroFadesBlend } = options
   const maskPickFromState = () => {
     const s = useGalaxyInteractionStore.getState()
     return getSelectionMaskPickSet(s.selectedMovieId, s.focusNeighborIds, s.searchMode, s.selectionIds)
@@ -147,7 +147,7 @@ export function attachGalaxyActiveMeshInteraction(options: {
     const covIdx =
       cov.coverMode && cov.todayMovieId !== null ? movies.findIndex((m) => m.id === cov.todayMovieId) : null
     const covBoost = (activeMaterial.uniforms.uCoverActiveSizeBoost as THREE.Uniform<number>).value
-    const macroFades = getIdleMacroFadesActive?.() !== false
+    const macroFadeBlend = getIdleMacroFadesBlend?.() ?? 1
     return {
       ray,
       movies,
@@ -159,7 +159,7 @@ export function attachGalaxyActiveMeshInteraction(options: {
       cameraWorldPos: _pickCameraWorldPos,
       idleNearFadeExemptMovieId:
         cov.coverMode && cov.todayMovieId !== null ? cov.todayMovieId : st.selectedMovieId,
-      idleMacroFadesActive: macroFades,
+      idleMacroFadesBlend: macroFadeBlend,
       coverTodayInstanceIndex: cov.coverMode && covIdx !== null && covIdx >= 0 ? covIdx : null,
       coverActiveSizeBoost: cov.coverMode ? covBoost : 1,
       coverTodayWorldPickRadius:

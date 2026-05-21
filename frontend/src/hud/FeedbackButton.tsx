@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { hudTopToolButtonChrome, type HudButtonStyleMode } from '@/hud/hudTopToolButtonChrome'
 import { ensureTallyEmbedScript, getTallyFeedbackFormId, refreshTallyEmbeds } from '@/lib/tallyFeedback'
 import { useStrings } from '@/lib/strings'
+import { isLocaleRtl, useLocaleStore } from '@/store/localeStore'
 import { cn } from '@/lib/utils'
 
 interface FeedbackButtonProps {
@@ -14,6 +15,7 @@ interface FeedbackButtonProps {
 /** P28.2 — HUD 右上工具条最左：打开 Tally 反馈弹层（图标 + 文案，`data-tally-open` + embed.js）。 */
 export function FeedbackButton({ styleMode = 'default' }: FeedbackButtonProps) {
   const s = useStrings()
+  const labelDir = useLocaleStore((st) => (isLocaleRtl(st.locale) ? 'rtl' : 'ltr'))
   const formId = getTallyFeedbackFormId()
 
   useEffect(() => {
@@ -39,6 +41,7 @@ export function FeedbackButton({ styleMode = 'default' }: FeedbackButtonProps) {
       type="button"
       variant="secondary"
       size="sm"
+      dir={labelDir}
       className={cn(
         'h-10 min-h-10 shrink-0 gap-2 px-3 text-[0.8rem] whitespace-nowrap',
         hudTopToolButtonChrome(styleMode),

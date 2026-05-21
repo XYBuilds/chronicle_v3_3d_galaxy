@@ -71,10 +71,9 @@ export function DrawerMovieShare({ movieId, movieTitle, releaseYear }: DrawerMov
 
   return (
     <div
-      dir="ltr"
       role="group"
       aria-label={s.drawer.share.label}
-      className="mt-4 flex flex-wrap items-center gap-2"
+      className="mt-4 flex w-full flex-wrap items-center justify-start gap-2"
     >
       <button
         type="button"

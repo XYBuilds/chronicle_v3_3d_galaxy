@@ -9,11 +9,16 @@ import {
 
 const STORAGE_KEY = 'tmc.locale'
 
+/** True when UI uses right-to-left document direction (Arabic). */
+export function isLocaleRtl(locale: LocaleId): boolean {
+  return locale === 'ar'
+}
+
 /** Sets `<html lang>` and `dir` for RTL (Arabic). */
 export function syncHtmlLangDir(locale: LocaleId): void {
   if (typeof document === 'undefined') return
   document.documentElement.lang = localeToHtmlLang(locale)
-  document.documentElement.dir = locale === 'ar' ? 'rtl' : 'ltr'
+  document.documentElement.dir = isLocaleRtl(locale) ? 'rtl' : 'ltr'
 }
 
 /** Query → localStorage → navigator.language → default (plan P21.2). */

@@ -203,7 +203,7 @@ export function createSelectionPlanet(): SelectionPlanetHandle {
   const uHueArray = new Float32Array(PLANET_MAX_BANDS)
   const uMeshWorldPos = new THREE.Vector3()
   /** P11.4 定稿：世界空间主光方向（归一化）。调试用 `window.__planetTerrace.perlinLightDir`。 */
-  const uLightDir = new THREE.Vector3(0.5, 0.5, -0.1).normalize()
+  const uLightDir = new THREE.Vector3(0.7, 0.7, -0.14).normalize()
 
   const material = new THREE.ShaderMaterial({
     uniforms: {
@@ -218,8 +218,8 @@ export function createSelectionPlanet(): SelectionPlanetHandle {
       uLightDir: { value: uLightDir },
       /** P11.4 定稿：`lit = baseCol × (uAmbient + uDiffuse × lambert)` when `uLightingEnabled` > 0.5. */
       uLightingEnabled: { value: PERLIN_LIGHTING_ENABLED_DEFAULT ? 1 : 0 },
-      uAmbient: { value: 0.95 },
-      uDiffuse: { value: 0.55 },
+      uAmbient: { value: 0.8 },
+      uDiffuse: { value: 0.4 },
       /** 导数法线与几何法线混合；1 = 纯屏幕导数法线。 */
       uFlatShadingMix: { value: 0.8 },
       uAlpha: { value: 0 },

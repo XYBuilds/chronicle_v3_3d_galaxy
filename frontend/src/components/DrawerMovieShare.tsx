@@ -15,6 +15,7 @@ import {
   discordCommunityHref,
 } from '@/lib/shareLinks'
 import { useStrings } from '@/lib/strings'
+import { useLocaleStore } from '@/store/localeStore'
 
 const iconActionClass =
   'flex size-8 shrink-0 items-center justify-center rounded-md text-foreground/90 hover:bg-muted focus-visible:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
@@ -28,12 +29,13 @@ export interface DrawerMovieShareProps {
 /** P30.5 ? Drawer header share icons; deep link `/movie/:id` with platform intents. */
 export function DrawerMovieShare({ movieId, movieTitle, releaseYear }: DrawerMovieShareProps) {
   const s = useStrings()
+  const locale = useLocaleStore((state) => state.locale)
   const [linkCopied, setLinkCopied] = useState(false)
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const shareTitle = s.drawer.share.title(movieTitle)
   const shareText = s.drawer.share.text(movieTitle, releaseYear)
-  const url = useMemo(() => buildMovieSharePageUrl(movieId), [movieId])
+  const url = useMemo(() => buildMovieSharePageUrl(movieId, locale), [movieId, locale])
 
   const socialUrls = useMemo(
     () => buildSocialShareUrls(shareTitle, shareText, url),

@@ -19,7 +19,7 @@ todos:
     status: completed
   - id: p34-frontend-share-lang
     content: 34.6 分享 URL 显式带 ?lang=；index.html 弃用静态 og-today；og:image 指向 Worker /og/* URL
-    status: pending
+    status: completed
   - id: p34-tmdb-compliance
     content: 34.7 TMDB 合规：站点 attribution 文案；可选 OG 图底栏；poster 域名白名单；核对 API Terms
     status: pending
@@ -256,8 +256,8 @@ Drawer 分享 URL（`buildMovieSharePageUrl`）已指向 `/movie/:id`，但 **he
 
 - [x] 从 `nightly_vote_refresh` / `monthly_refit` 移除 `render_og_today_after_galaxy_export`（34.3）
 - [x] `upload_galaxy_r2` 停止上传 / manifest `og_today_url`（34.3）
-- [x] 停止将 `og-today.png` 作为生产 SSOT（CI artifact 已剔除；Pages meta 待 34.6）
-- [ ] 评估移除 `ogTodayImageCacheBustPlugin` + `index.html` 对 `/data/og-today.png` 依赖（34.6）
+- [x] 停止将 `og-today.png` 作为生产 SSOT（CI artifact 已剔除；Pages apex meta 已切 Worker brand，34.6）
+- [x] 移除 `ogTodayImageCacheBustPlugin` + `index.html` 对 `/data/og-today.png` 依赖（34.6）
 - [x] Worker HTML 注入修正 `/movie/*`、`/today` 的 `og:url` / `og:title` / `og:image`（34.5）
 - [x] KV bulk：`meta:G`、`today`、`movie:*`（34.3 脚本 + 指南；生产 full sync 待 Operator）
 
@@ -362,6 +362,18 @@ Cache-Control: public, max-age=31536000, s-maxage=31536000, immutable
 - [frontend/src/lib/shareLinks.ts](frontend/src/lib/shareLinks.ts) + [DrawerMovieShare.tsx](frontend/src/components/DrawerMovieShare.tsx)：`buildMovieSharePageUrl` 从 `localeStore` **显式** `?lang=`；`useMemo` 依赖 `locale`。
 - [frontend/index.html](frontend/index.html)：移除对 `/data/og-today.png` 的依赖；默认 `og:image` 可指向品牌或占位 Worker URL（最终由 34.5 注入覆盖 `/movie`、`/today`）。
 - 评估 **移除** `ogTodayImageCacheBustPlugin`（`v` 由 Worker URL 承担）；若保留 apex `/` 静态页，单独约定 apex `og:image`（品牌 `/og/brand.png`）。
+
+#### 34.6 实施（2026-05-22，已验收）
+
+| 交付 | 说明 |
+| ---- | ---- |
+| `shareLinks.ts` | `buildMovieSharePageUrl(movieId, lang, …)` 用 `URLSearchParams.set('lang', lang)`，保留其它 query |
+| `DrawerMovieShare.tsx` | `useLocaleStore` → `locale`；`useMemo` 依赖 `[movieId, locale]` |
+| `index.html` | `og:image` / `twitter:image` → `/og/brand.png?v=og-brand-og-v1`；描述与 Worker 短句对齐 |
+| `vite.config.ts` | 移除 `ogTodayImageCacheBustPlugin` 与 `VITE_OG_TODAY_V` / `today.json` 构建期改写 |
+| `_headers` | 删除 `/data/og-today.png` 短 TTL 规则 |
+
+**Go/No-Go：Go** — 可进入 **34.7** TMDB 合规。
 
 ### 34.7 TMDB 合规
 

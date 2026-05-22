@@ -1,3 +1,4 @@
+import type { LocaleId } from '@/lib/locales'
 import { buildMoviePath, type BuildPathOptions } from '@/lib/routes'
 
 export function movieReleaseYearFromIso(releaseDate: string): string {
@@ -12,13 +13,17 @@ export interface SocialShareUrls {
   reddit: string
 }
 
-/** Absolute share URL for `/movie/:id` (includes deploy base path and current query). */
+/** Absolute share URL for `/movie/:id` with explicit `?lang=` (SPA locale; not used in OG `v`). */
 export function buildMovieSharePageUrl(
   movieId: number,
+  lang: LocaleId,
   loc: Pick<Location, 'origin' | 'search'> = window.location,
   options?: BuildPathOptions,
 ): string {
-  const path = buildMoviePath(movieId, loc.search, options)
+  const params = new URLSearchParams(loc.search)
+  params.set('lang', lang)
+  const search = `?${params.toString()}`
+  const path = buildMoviePath(movieId, search, options)
   return new URL(path, loc.origin).href
 }
 

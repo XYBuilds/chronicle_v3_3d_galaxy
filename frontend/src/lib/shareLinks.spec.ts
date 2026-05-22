@@ -12,14 +12,24 @@ describe('shareLinks', () => {
     vi.unstubAllGlobals()
   })
 
-  it('buildMovieSharePageUrl points at /movie/:id with query preserved', () => {
+  it('buildMovieSharePageUrl sets explicit lang and preserves other query params', () => {
     const loc = {
       origin: 'https://example.com',
-      search: '?lang=zh&theme=dark',
+      search: '?lang=en&theme=dark',
     } as Location
 
-    const href = buildMovieSharePageUrl(42, loc)
+    const href = buildMovieSharePageUrl(42, 'zh', loc)
+    const u = new URL(href)
+    expect(u.pathname).toBe('/movie/42')
+    expect(u.searchParams.get('lang')).toBe('zh')
+    expect(u.searchParams.get('theme')).toBe('dark')
     expect(href).toBe(`https://example.com${buildMoviePath(42, '?lang=zh&theme=dark')}`)
+  })
+
+  it('buildMovieSharePageUrl adds lang when location search is empty', () => {
+    const loc = { origin: 'https://example.com', search: '' } as Location
+    const href = buildMovieSharePageUrl(1, 'ja', loc)
+    expect(href).toBe('https://example.com/movie/1?lang=ja')
   })
 
   it('buildSocialShareUrls encodes platform intents', () => {
@@ -34,8 +44,8 @@ describe('shareLinks', () => {
       origin: 'https://example.com',
       search: '',
     } as Location
-    const href = buildMovieSharePageUrl(7, loc, { basePath: '/chronicle/' })
-    expect(href).toBe('https://example.com/chronicle/movie/7')
+    const href = buildMovieSharePageUrl(7, 'en', loc, { basePath: '/chronicle/' })
+    expect(href).toBe('https://example.com/chronicle/movie/7?lang=en')
   })
 
   it('buildEmailShareUrl includes subject and body with page URL', () => {

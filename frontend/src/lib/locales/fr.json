@@ -58,6 +58,12 @@
     "genreMultiMatches": "résultats",
     "genreMultiRemove": "Retirer"
   },
+  "attribution": {
+    "regionLabel": "Attribution des données TMDB",
+    "logoAlt": "TMDB",
+    "notice": "Ce site utilise TMDB et les API TMDB, mais n’est pas approuvé, certifié ou autrement validé par TMDB.",
+    "learnMore": "Logos et attribution"
+  },
   "hud": {
     "openInfo": "Ouvrir le panneau d’informations (contenu provisoire)",
     "openFeedback": "Feedback",
@@ -76,6 +82,7 @@
   "info": {
     "modalTitle": "The Movie Cosmos",
     "modalSubtitle": "Généré à partir de la base de données cinématographique TMDB — une galaxie de films que vous pouvez parcourir.",
+    "tmdbSectionHeading": "TMDB",
     "sections": [
       {
         "heading": "Aperçu",
@@ -87,7 +94,11 @@
       },
       {
         "heading": "Données et matériel",
-        "body": "Les fiches films viennent de TMDB (The Movie Database). The Movie Cosmos n’est pas un produit officiel TMDB. Nous construisons notre galaxie hors ligne à partir de données publiques (souvent un instantané gratuit sur Kaggle). Pour une réutilisation commerciale, lisez vous-même les conditions TMDB, IMDb et Kaggle. L’affichage respecte les règles d’attribution TMDB ; mentions légales et tiers dans le fichier NOTICE du dépôt GitHub.\n\nUtilisez un navigateur récent avec accélération matérielle. La première visite télécharge un gros paquet compressé ; navigateurs très anciens ou réseaux verrouillés peuvent empêcher l’ouverture."
+        "body": "Nous construisons notre galaxie hors ligne à partir de données publiques (souvent un instantané gratuit sur Kaggle). Pour une réutilisation commerciale, lisez vous-même les conditions TMDB, IMDb et Kaggle. Mentions légales et tiers dans le [NOTICE](https://github.com/XYBuilds/chronicle_v3_3d_galaxy/blob/main/NOTICE) du dépôt GitHub.\n\nUtilisez un navigateur récent avec accélération matérielle. La première visite télécharge un gros paquet compressé ; navigateurs très anciens ou réseaux verrouillés peuvent empêcher l’ouverture."
+      },
+      {
+        "heading": "TMDB",
+        "body": "Métadonnées et affiches proviennent de TMDB. Voir les [conditions d’utilisation de l’API TMDB](https://www.themoviedb.org/documentation/api/terms-of-use)."
       },
       {
         "heading": "Confidentialité",

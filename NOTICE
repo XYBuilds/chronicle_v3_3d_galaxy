@@ -20,9 +20,10 @@ Third-party data — TMDB, IMDb, Kaggle (NOT relicensed as Apache-2.0)
 ================================================================================
 
 Film metadata in this project is derived from public TMDB-related exports.
-This product uses the TMDB API / TMDB dataset but is not endorsed or
-certified by TMDB. Follow TMDB attribution rules:
+This website uses TMDB and the TMDB APIs but is not endorsed, certified,
+or otherwise approved by TMDB. Follow TMDB logo and attribution rules:
   https://www.themoviedb.org/about/logos-attribution
+  https://www.themoviedb.org/documentation/api/terms-of-use
 
 Upstream bulk snapshot commonly used in the pipeline (maintainer Kaggle
 handle: alanvourch):

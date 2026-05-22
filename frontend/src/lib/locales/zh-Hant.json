@@ -58,6 +58,12 @@
     "genreMultiMatches": "部",
     "genreMultiRemove": "移除"
   },
+  "attribution": {
+    "regionLabel": "TMDB 資料署名",
+    "logoAlt": "TMDB",
+    "notice": "本網站使用 TMDB 及 TMDB API，但未經 TMDB 認可、認證或批准。",
+    "learnMore": "Logo 與署名說明"
+  },
   "hud": {
     "openInfo": "開啟資訊面板（暫用內容）",
     "openFeedback": "回饋",
@@ -76,6 +82,7 @@
   "info": {
     "modalTitle": "The Movie Cosmos",
     "modalSubtitle": "基於 TMDB 電影資料庫生成的，一片可穿梭的電影星系",
+    "tmdbSectionHeading": "TMDB",
     "sections": [
       {
         "heading": "概覽",
@@ -87,7 +94,11 @@
       },
       {
         "heading": "資料與裝置",
-        "body": "影片資訊來自 TMDB（The Movie Database）。The Movie Cosmos 不是 TMDB 官方出品。星系資料由公開的影片清單離線整理（常見起點是 Kaggle 上的 TMDB 日更快照）。若要商用或再分發原始資料，請自行閱讀 TMDB、IMDb、Kaggle 條款。畫面展示遵守 TMDB 署名；更多法律與第三方說明見 GitHub 倉庫的 NOTICE。\n\n請使用較新瀏覽器並開啟硬體加速。首次造訪會下載較大的壓縮檔；過舊瀏覽器或受限網路可能無法開啟。"
+        "body": "星系資料由公開的影片清單離線整理（常見起點是 Kaggle 上的 TMDB 日更快照）。若要商用或再分發原始資料，請自行閱讀 TMDB、IMDb、Kaggle 條款。法律與第三方說明見 GitHub 倉庫 [NOTICE](https://github.com/XYBuilds/chronicle_v3_3d_galaxy/blob/main/NOTICE)。\n\n請使用較新瀏覽器並開啟硬體加速。首次造訪會下載較大的壓縮檔；過舊瀏覽器或受限網路可能無法開啟。"
+      },
+      {
+        "heading": "TMDB",
+        "body": "影片元資料與海報圖像來自 TMDB。請參閱 [TMDB API 使用條款](https://www.themoviedb.org/documentation/api/terms-of-use)。"
       },
       {
         "heading": "隱私",

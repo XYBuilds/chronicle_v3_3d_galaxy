@@ -58,6 +58,12 @@
     "genreMultiMatches": "matches",
     "genreMultiRemove": "Remove"
   },
+  "attribution": {
+    "regionLabel": "TMDB data attribution",
+    "logoAlt": "TMDB",
+    "notice": "This website uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB.",
+    "learnMore": "Logos & attribution"
+  },
   "hud": {
     "openInfo": "Open info panel",
     "openFeedback": "Feedback",
@@ -76,6 +82,7 @@
   "info": {
     "modalTitle": "The Movie Cosmos",
     "modalSubtitle": "Built from the TMDB movie database — a starfield of films you can move through.",
+    "tmdbSectionHeading": "TMDB",
     "sections": [
       {
         "heading": "Overview",
@@ -87,7 +94,11 @@
       },
       {
         "heading": "Data & device",
-        "body": "Film facts come from TMDB (The Movie Database). The Movie Cosmos is not an official TMDB product. We build our offline galaxy from public movie listings (often starting from a free Kaggle snapshot). If you reuse raw data commercially, read TMDB, IMDb, and Kaggle terms yourself. On-screen use follows TMDB credits; legal and third-party notes are in the GitHub repo NOTICE.\n\nUse a recent browser with hardware acceleration. The first visit downloads a large compressed pack—very old browsers or locked-down networks may not open it."
+        "body": "We build our offline galaxy from public movie listings (often starting from a free Kaggle snapshot). If you reuse raw data commercially, read TMDB, IMDb, and Kaggle terms yourself. Legal and third-party notes are in the GitHub repo [NOTICE](https://github.com/XYBuilds/chronicle_v3_3d_galaxy/blob/main/NOTICE).\n\nUse a recent browser with hardware acceleration. The first visit downloads a large compressed pack—very old browsers or locked-down networks may not open it."
+      },
+      {
+        "heading": "TMDB",
+        "body": "Film metadata and poster images are sourced from TMDB. See [TMDB API Terms of Use](https://www.themoviedb.org/documentation/api/terms-of-use) for API conditions."
       },
       {
         "heading": "Privacy",

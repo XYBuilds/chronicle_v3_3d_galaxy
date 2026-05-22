@@ -58,6 +58,12 @@
     "genreMultiMatches": "件",
     "genreMultiRemove": "削除"
   },
+  "attribution": {
+    "regionLabel": "TMDB データの帰属表示",
+    "logoAlt": "TMDB",
+    "notice": "本サイトは TMDB および TMDB API を使用していますが、TMDB による承認・認証・その他の承認は受けていません。",
+    "learnMore": "ロゴと帰属表示"
+  },
   "hud": {
     "openInfo": "情報パネルを開く（プレースホルダー）",
     "openFeedback": "フィードバック",
@@ -76,6 +82,7 @@
   "info": {
     "modalTitle": "The Movie Cosmos",
     "modalSubtitle": "TMDB の映画データベースに基づいて生成された、歩き回れる映画の銀河。",
+    "tmdbSectionHeading": "TMDB",
     "sections": [
       {
         "heading": "概要",
@@ -87,7 +94,11 @@
       },
       {
         "heading": "データと環境",
-        "body": "作品情報は TMDB（The Movie Database）由来です。The Movie Cosmos は TMDB の公式製品ではありません。銀河データは公開の映画情報からオフラインで作られます（多くは Kaggle の TMDB 日次スナップショットが起点）。商用再利用の前に TMDB・IMDb・Kaggle の条件を自分で確認してください。画面上のクレジットは TMDB の帰属表示に従います。法的・第三者の注記は GitHub リポジトリの NOTICE を参照してください。\n\n新しめのブラウザとハードウェア加速をオンにしてください。初回は大きな圧縮パックを落とします。かなり古いブラウザや制限の強いネットでは開けないことがあります。"
+        "body": "銀河データは公開の映画情報からオフラインで作られます（多くは Kaggle の TMDB 日次スナップショットが起点）。商用再利用の前に TMDB・IMDb・Kaggle の条件を自分で確認してください。法的・第三者の注記は GitHub リポジトリの [NOTICE](https://github.com/XYBuilds/chronicle_v3_3d_galaxy/blob/main/NOTICE) を参照してください。\n\n新しめのブラウザとハードウェア加速をオンにしてください。初回は大きな圧縮パックを落とします。かなり古いブラウザや制限の強いネットでは開けないことがあります。"
+      },
+      {
+        "heading": "TMDB",
+        "body": "作品メタデータとポスター画像は TMDB 由来です。[TMDB API 利用規約](https://www.themoviedb.org/documentation/api/terms-of-use)をご確認ください。"
       },
       {
         "heading": "プライバシー",

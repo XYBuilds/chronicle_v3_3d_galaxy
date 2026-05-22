@@ -17,6 +17,7 @@ import { FeedbackButton } from '@/hud/FeedbackButton'
 import { SupportButton } from '@/hud/SupportButton'
 import { FullscreenButton } from '@/hud/FullscreenButton'
 import { InfoButton } from '@/hud/InfoButton'
+import { TmdbAttribution } from '@/hud/TmdbAttribution'
 import { LanguageSwitch } from '@/hud/LanguageSwitch'
 import { isGalaxyFullscreenAvailable, toggleGalaxyFullscreen } from '@/hud/fullscreenApi'
 import { resolveTodayMovieId } from '@/data/loadToday'
@@ -56,6 +57,11 @@ function App() {
   useEffect(() => {
     void fetchGalaxyData()
   }, [fetchGalaxyData])
+
+  /** P34.7 — React HUD footer replaces static index.html attribution. */
+  useEffect(() => {
+    document.getElementById('tmdb-attribution-static')?.remove()
+  }, [])
 
   /** P23.3 — today.json resolved + cover store seeded; scene may mount. */
   const [coverBootReady, setCoverBootReady] = useState(false)
@@ -346,6 +352,9 @@ function App() {
       ) : null}
       <HoverRing />
       <MovieTooltip />
+      <TmdbAttribution
+        className="pointer-events-none fixed z-[var(--z-hud-attribution)] bottom-[max(var(--hud-inset-sm),env(safe-area-inset-bottom,0px))] right-[max(var(--hud-inset-sm),env(safe-area-inset-right,0px))] sm:bottom-[max(var(--hud-inset-md),env(safe-area-inset-bottom,0px))] sm:right-[max(var(--hud-inset-md),env(safe-area-inset-right,0px))] [&_a]:pointer-events-auto"
+      />
       <div
         dir="ltr"
         className="pointer-events-none fixed z-[var(--z-hud-top-tools)] flex items-center gap-[var(--hud-gap-stack)] right-[max(var(--hud-inset-sm),env(safe-area-inset-right,0px))] top-[max(var(--hud-inset-sm),env(safe-area-inset-top,0px))] sm:right-[max(var(--hud-inset-md),env(safe-area-inset-right,0px))] sm:top-[max(var(--hud-inset-md),env(safe-area-inset-top,0px))]"

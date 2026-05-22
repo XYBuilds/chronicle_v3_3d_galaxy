@@ -58,6 +58,12 @@
     "genreMultiMatches": "نتائج",
     "genreMultiRemove": "إزالة"
   },
+  "attribution": {
+    "regionLabel": "نسب بيانات TMDB",
+    "logoAlt": "TMDB",
+    "notice": "يستخدم هذا الموقع TMDB وواجهات TMDB البرمجية، لكنه غير مُؤيَّد أو معتمد أو مُوافَق عليه من قِبل TMDB.",
+    "learnMore": "الشعارات والنسب"
+  },
   "hud": {
     "openInfo": "فتح لوحة المعلومات (محتوى مؤقت)",
     "openFeedback": "ملاحظات",
@@ -76,6 +82,7 @@
   "info": {
     "modalTitle": "The Movie Cosmos",
     "modalSubtitle": "مُنشأ من قاعدة بيانات أفلام TMDB — مجرة أفلام يمكنك التجوّل فيها.",
+    "tmdbSectionHeading": "TMDB",
     "sections": [
       {
         "heading": "نظرة عامة",
@@ -87,7 +94,11 @@
       },
       {
         "heading": "البيانات والجهاز",
-        "body": "معلومات الأفلام من TMDB (The Movie Database). The Movie Cosmos ليس منتجًا رسميًا من TMDB. نُجهّز مجرة بلا اتصال من قوائم أفلام عامة (غالبًا لقطة مجانية على Kaggle). إن أعدت استخدام الجداول تجاريًا فاقرأ شروط TMDB وIMDb وKaggle بنفسك. العرض يتبع قواعد نسب TMDB؛ الإشعارات القانونية وملفات الطرف الثالث في ملف NOTICE داخل مستودع GitHub.\n\nاستخدم متصفحًا حديثًا مع تسريع العتاد. الزيارة الأولى تنزّل حزمة مضغوطة كبيرة؛ قد لا يعمل المتصفح القديم جدًا أو الشبكات المقيّدة."
+        "body": "نُجهّز مجرة بلا اتصال من قوائم أفلام عامة (غالبًا لقطة مجانية على Kaggle). إن أعدت استخدام الجداول تجاريًا فاقرأ شروط TMDB وIMDb وKaggle بنفسك. الإشعارات القانونية وملفات الطرف الثالث في [NOTICE](https://github.com/XYBuilds/chronicle_v3_3d_galaxy/blob/main/NOTICE) داخل مستودع GitHub.\n\nاستخدم متصفحًا حديثًا مع تسريع العتاد. الزيارة الأولى تنزّل حزمة مضغوطة كبيرة؛ قد لا يعمل المتصفح القديم جدًا أو الشبكات المقيّدة."
+      },
+      {
+        "heading": "TMDB",
+        "body": "البيانات الوصفية والملصقات من TMDB. راجع [شروط استخدام API لـ TMDB](https://www.themoviedb.org/documentation/api/terms-of-use)."
       },
       {
         "heading": "الخصوصية",

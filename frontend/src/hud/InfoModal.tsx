@@ -6,6 +6,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { TmdbAttribution } from '@/hud/TmdbAttribution'
 import { useStrings } from '@/lib/strings'
 import { cn } from '@/lib/utils'
 
@@ -127,7 +128,29 @@ export function InfoModal({ open, onOpenChange }: InfoModalProps) {
           )}
         >
           {s.info.sections.map((block, i) => (
-            <Section key={`${block.heading}-${i}`} title={block.heading} body={block.body} />
+            <div key={`${block.heading}-${i}`}>
+              {block.heading === s.info.tmdbSectionHeading ? (
+                <section className="space-y-3">
+                  <h3 className="text-[0.65rem] font-bold uppercase tracking-wider text-muted-foreground">
+                    {block.heading}
+                  </h3>
+                  <TmdbAttribution variant="info" />
+                  {block.body.trim() ? (
+                    <div className="space-y-2.5 text-sm leading-relaxed text-foreground/90">
+                      {block.body
+                        .split(/\n\s*\n/)
+                        .map((p) => p.trim())
+                        .filter(Boolean)
+                        .map((para, j) => (
+                          <p key={j}>{renderParagraph(para)}</p>
+                        ))}
+                    </div>
+                  ) : null}
+                </section>
+              ) : (
+                <Section title={block.heading} body={block.body} />
+              )}
+            </div>
           ))}
         </div>
       </DialogContent>

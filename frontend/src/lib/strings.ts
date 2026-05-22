@@ -45,6 +45,7 @@ export function buildStrings(localeId: LocaleId) {
     error: raw.error,
     searchBar: raw.searchBar,
     hud: raw.hud,
+    attribution: raw.attribution,
     timeline: {
       ...raw.timeline,
       axisDescription: (minYear: number, maxYear: number, focusYear: number) =>

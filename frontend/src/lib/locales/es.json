@@ -58,6 +58,12 @@
     "genreMultiMatches": "coincidencias",
     "genreMultiRemove": "Quitar"
   },
+  "attribution": {
+    "regionLabel": "Atribución de datos TMDB",
+    "logoAlt": "TMDB",
+    "notice": "Este sitio web utiliza TMDB y las API de TMDB, pero no está respaldado, certificado ni aprobado por TMDB.",
+    "learnMore": "Logos y atribución"
+  },
   "hud": {
     "openInfo": "Abrir panel de información (contenido provisional)",
     "openFeedback": "Feedback",
@@ -76,6 +82,7 @@
   "info": {
     "modalTitle": "The Movie Cosmos",
     "modalSubtitle": "Generada a partir de la base de datos de películas TMDB: una galaxia cinematográfica por la que puedes moverte.",
+    "tmdbSectionHeading": "TMDB",
     "sections": [
       {
         "heading": "Resumen",
@@ -87,7 +94,11 @@
       },
       {
         "heading": "Datos y tu equipo",
-        "body": "Los datos de películas vienen de TMDB (The Movie Database). The Movie Cosmos no es un producto oficial de TMDB. Armamos la galaxia offline a partir de listados públicos (a menudo un snapshot gratuito en Kaggle). Si reutilizas tablas en negocio, lee las condiciones de TMDB, IMDb y Kaggle. Los créditos en pantalla siguen las reglas de atribución de TMDB; avisos legales y de terceros en el NOTICE del repositorio en GitHub.\n\nUsa un navegador reciente con aceleración por hardware. La primera visita descarga un paquete grande comprimido; navegadores muy viejos o redes bloqueadas pueden impedir que abra."
+        "body": "Armamos la galaxia offline a partir de listados públicos (a menudo un snapshot gratuito en Kaggle). Si reutilizas tablas en negocio, lee las condiciones de TMDB, IMDb y Kaggle. Avisos legales y de terceros en el [NOTICE](https://github.com/XYBuilds/chronicle_v3_3d_galaxy/blob/main/NOTICE) del repositorio en GitHub.\n\nUsa un navegador reciente con aceleración por hardware. La primera visita descarga un paquete grande comprimido; navegadores muy viejos o redes bloqueadas pueden impedir que abra."
+      },
+      {
+        "heading": "TMDB",
+        "body": "Metadatos y pósters provienen de TMDB. Consulta los [Términos de uso de la API de TMDB](https://www.themoviedb.org/documentation/api/terms-of-use)."
       },
       {
         "heading": "Privacidad",

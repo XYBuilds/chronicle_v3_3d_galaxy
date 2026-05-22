@@ -4,7 +4,7 @@ overview: Phase 34 在 Phase 30 深链稳定后，用同 zone Cloudflare Worker�
 todos:
   - id: p34-plan-preflight
     content: 34.1 维护本计划并确认 Phase 30 深链前置（/movie/:id、/today、Drawer 分享、_redirects 不吞 /data）
-    status: pending
+    status: completed
   - id: p34-og-baseline-audit
     content: 34.2 审计现有静态 OG 链路（render_og_today、index.html meta、vite cache-bust）作为切换基线
     status: pending
@@ -69,23 +69,23 @@ flowchart TD
 
 ## 策略 SSOT（已决策，34.2 审计仅作基线输入）
 
-| 维度 | 决策 |
-| ---- | ---- |
-| 架构 | **独立 repo** Cloudflare Worker；**同 zone** `themoviecosmos.com` |
-| 画图 | **方案 A**：Worker 内 **JS 画布**（port `render_og_today` 版式：海报左、片名、genre 色条、品牌 footer） |
-| 索引 | **Cloudflare KV**：`movie:{id}`、`today`、`meta:G` |
-| 缓存 | `v = {G}-{M}`；PNG `Cache-Control: public, max-age=31536000, immutable`（**仅**当 URL 含正确 `v`） |
-| 海报拉取 | fetch 时将 `w780` → **`w342`**；失败 → **占位图**（`placeholderFlag` 进入 `M`） |
-| 多语言 | **OG 图与 meta 简介不随 HUD locale**；分享链接 **带 `?lang=`** 只影响 SPA / intent 文案 |
-| Movie `og:title` | `{片名} ({年份}) — The Movie Cosmos` |
-| Movie `og:description` | **不设** overview（必要时仅固定极短品牌句） |
-| 图上文字 | **要片名**（与 title 一致） |
-| `og:url` | 与分享链接一致：`/movie/:id` 或 `/today`（可含 query，不含 lang 进 PNG `v`） |
-| 无效 / 非 galaxy id | Worker **品牌模板** |
-| Today | **并入** `/og/today.png`；**停** cron PNG |
-| Drawer 分享 UI | **不改** 平台 intent 结构；仅修正 **URL 带 lang** |
-| 平台验收 | **X、Facebook、Telegram、Discord** 各抽 `/movie` + `/today` |
-| 合规 | 站点 attribution + 条款核对；**不写**「个人项目/成功率免责」类表述 |
+| 维度                   | 决策                                                                                                    |
+| ---------------------- | ------------------------------------------------------------------------------------------------------- |
+| 架构                   | **独立 repo** Cloudflare Worker；**同 zone** `themoviecosmos.com`                                       |
+| 画图                   | **方案 A**：Worker 内 **JS 画布**（port `render_og_today` 版式：海报左、片名、genre 色条、品牌 footer） |
+| 索引                   | **Cloudflare KV**：`movie:{id}`、`today`、`meta:G`                                                      |
+| 缓存                   | `v = {G}-{M}`；PNG `Cache-Control: public, max-age=31536000, immutable`（**仅**当 URL 含正确 `v`）      |
+| 海报拉取               | fetch 时将 `w780` → **`w342`**；失败 → **占位图**（`placeholderFlag` 进入 `M`）                         |
+| 多语言                 | **OG 图与 meta 简介不随 HUD locale**；分享链接 **带 `?lang=`** 只影响 SPA / intent 文案                 |
+| Movie `og:title`       | `{片名} ({年份}) — The Movie Cosmos`                                                                    |
+| Movie `og:description` | **不设** overview（必要时仅固定极短品牌句）                                                             |
+| 图上文字               | **要片名**（与 title 一致）                                                                             |
+| `og:url`               | 与分享链接一致：`/movie/:id` 或 `/today`（可含 query，不含 lang 进 PNG `v`）                            |
+| 无效 / 非 galaxy id    | Worker **品牌模板**                                                                                     |
+| Today                  | **并入** `/og/today.png`；**停** cron PNG                                                               |
+| Drawer 分享 UI         | **不改** 平台 intent 结构；仅修正 **URL 带 lang**                                                       |
+| 平台验收               | **X、Facebook、Telegram、Discord** 各抽 `/movie` + `/today`                                             |
+| 合规                   | 站点 attribution + 条款核对；**不写**「个人项目/成功率免责」类表述                                      |
 
 ### 内容身份：`G` 与 `M`
 
@@ -96,14 +96,14 @@ flowchart TD
 
 ### 拒绝 / Backlog
 
-| 项 | 说明 |
-| -- | ---- |
-| 静态双 shell + `og-share.png` | 不采用 |
-| 60k 预生成 PNG / R2 图库 | 不采用 |
-| Vercel Edge / 独立 Serverless 栈 | 不采用 |
-| OG 图内 HUD 多语言 / 每片 overview 翻译 | 不采用（需另开数据管线） |
-| Reddit / Email 全平台矩阵 | 本 Phase 不强制 |
-| nightly 预热 Top-N、海报 Cache API、Container+Pillow | 先不做（最简 MVP） |
+| 项                                                   | 说明                     |
+| ---------------------------------------------------- | ------------------------ |
+| 静态双 shell + `og-share.png`                        | 不采用                   |
+| 60k 预生成 PNG / R2 图库                             | 不采用                   |
+| Vercel Edge / 独立 Serverless 栈                     | 不采用                   |
+| OG 图内 HUD 多语言 / 每片 overview 翻译              | 不采用（需另开数据管线） |
+| Reddit / Email 全平台矩阵                            | 本 Phase 不强制          |
+| nightly 预热 Top-N、海报 Cache API、Container+Pillow | 先不做（最简 MVP）       |
 
 ## 范围边界
 
@@ -135,14 +135,39 @@ flowchart TD
 
 ### 34.1 计划与 Phase 30 前置
 
-| 检查项 | 期望 |
-| ------ | ---- |
-| `/movie/:id` 刷新 | focus + Drawer |
-| `/today` 刷新 | today 体验 |
-| Drawer 分享 URL | `/movie/:id`（本 Phase 加 `?lang=`） |
-| `_redirects` | 不吞 `/og/*`、assets、fonts、`/data/*`（galaxy 数据） |
+| 检查项            | 期望                                                  |
+| ----------------- | ----------------------------------------------------- |
+| `/movie/:id` 刷新 | focus + Drawer                                        |
+| `/today` 刷新     | today 体验                                            |
+| Drawer 分享 URL   | `/movie/:id`（本 Phase 加 `?lang=`）                  |
+| `_redirects`      | 不吞 `/og/*`、assets、fonts、`/data/*`（galaxy 数据） |
 
 交付：本计划文件；Go/No-Go 记入 34.1 实施报告（验收后）。
+
+#### 34.1 前置检查实施（2026-05-22）
+
+| 检查项 | 期望 | 证据 | 结果 |
+| ------ | ---- | ---- | ---- |
+| `/movie/:id` 刷新 | focus + Drawer | `routeControllerSync.spec.ts` T1/T2 + `runInitialRouteBoot`；`Drawer.tsx` 在 `selectedMovieId` 有效时打开 | **Pass** |
+| `/today` 刷新 | today 体验 | `routeControllerSync.spec.ts` T3；`parseLogicalPath('/today')` | **Pass** |
+| Drawer 分享 URL | `/movie/:id` | `DrawerMovieShare` → `buildMovieSharePageUrl`；`shareLinks.spec.ts` | **Pass**（`?lang=` 留待 **34.6**） |
+| `_redirects` | 不吞 `/og/*`、assets、fonts、`/data/*` | `frontend/public/_redirects` 仅 `/movie/*`、`/today`；`spaRedirects.spec.ts`（含 `/og/` 负向断言） | **Pass** |
+| Phase 30 计划 | 深链 TODO 全部完成 | `phase_30_routing_sharing.plan.md` todos `completed` | **Pass** |
+
+**Go/No-Go：Go** — Phase 30 深链契约满足，可进入 34.2 静态 OG 基线审计。
+
+**已知缺口（不阻塞 34.2）**
+
+- 分享 URL 尚未显式附加 `?lang=`（34.6）。
+- `/og/*` 尚无 Worker 路由；当前 Pages `_redirects` 未误 rewrite，34.5 需在 CF dashboard 将 `/og/*` 先于 SPA 绑定 Worker。
+- 生产 `/movie/:id` 刷新仍依赖 `verify-spa-fallback-dist.mjs` 与 dist `_redirects` 拷贝（build 链路已覆盖）。
+
+**本地验证（34.1）**
+
+```text
+cd frontend && npx vitest run src/lib/routeControllerSync.spec.ts src/lib/spaRedirects.spec.ts src/lib/shareLinks.spec.ts src/lib/routes.spec.ts
+→ 4 files, 22 tests passed
+```
 
 ### 34.2 现有 OG 基线审计
 
@@ -162,10 +187,10 @@ flowchart TD
 
 **KV 约定**
 
-| Key | 值 |
-| --- | --- |
-| `meta:G` | `data_version` 字符串 |
-| `today` | `{ "date": "YYYY-MM-DD", "movie_id": number }` |
+| Key          | 值                                                               |
+| ------------ | ---------------------------------------------------------------- |
+| `meta:G`     | `data_version` 字符串                                            |
+| `today`      | `{ "date": "YYYY-MM-DD", "movie_id": number }`                   |
 | `movie:{id}` | `{ title, release_date, genres, poster_url }`（OG 所需最小字段） |
 
 **主仓脚本**（新建或扩展现有 export 后步骤）：
@@ -185,11 +210,11 @@ flowchart TD
 
 **路由**
 
-| 路径 | 行为 |
-| ---- | ---- |
+| 路径                    | 行为                                                                                                            |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------- |
 | `GET /og/movie/:id.png` | 查 KV → 画片名+海报卡；query `v` 须与算出的 `G-M` 一致（不一致可 302 到 canonical `v` 或仍画但靠 URL 隔离缓存） |
-| `GET /og/today.png` | KV `today` + `movie:{id}`；overline 含 date |
-| `GET /og/brand.png` | 无 id / KV miss → 品牌模板；`v=og-brand-{layoutVersion}` |
+| `GET /og/today.png`     | KV `today` + `movie:{id}`；overline 含 date                                                                     |
+| `GET /og/brand.png`     | 无 id / KV miss → 品牌模板；`v=og-brand-{layoutVersion}`                                                        |
 
 **响应头（canonical URL）**
 
@@ -208,10 +233,10 @@ Cache-Control: public, max-age=31536000, s-maxage=31536000, immutable
 
 **原则**：**不**做 UA 黑名单；凡 `GET /movie/*`、`GET /today`（Accept text/html）返回 **同一份** SPA `index.html` 模板 + **替换/注入** head meta。
 
-| 路由 | `og:title` | `og:image` | `og:url` |
-| ---- | ---------- | ---------- | -------- |
+| 路由         | `og:title`                         | `og:image`                                               | `og:url`                                                                          |
+| ------------ | ---------------------------------- | -------------------------------------------------------- | --------------------------------------------------------------------------------- |
 | `/movie/:id` | `{片名} ({年}) — The Movie Cosmos` | `https://themoviecosmos.com/og/movie/{id}.png?v={G}-{M}` | `https://themoviecosmos.com/movie/{id}` + 保留分享 query（**lang 不进 image v**） |
-| `/today` | The Movie Today 语义 + 当日片名 | `/og/today.png?v=…` | `https://themoviecosmos.com/today` |
+| `/today`     | The Movie Today 语义 + 当日片名    | `/og/today.png?v=…`                                      | `https://themoviecosmos.com/today`                                                |
 
 - **无** `og:description` overview（可选极短固定句）。
 - Worker 路由顺序：**先于** Pages SPA fallback（`_routes.json` / dashboard routes）。
@@ -232,12 +257,12 @@ Cache-Control: public, max-age=31536000, s-maxage=31536000, immutable
 
 ### 34.8 分享平台验证
 
-| 平台 | 工具 |
-| ---- | ---- |
-| X | Card Validator |
+| 平台     | 工具             |
+| -------- | ---------------- |
+| X        | Card Validator   |
 | Facebook | Sharing Debugger |
-| Telegram | 贴链接预览 |
-| Discord | 贴链接预览 |
+| Telegram | 贴链接预览       |
+| Discord  | 贴链接预览       |
 
 每条链路至少：
 
@@ -280,11 +305,11 @@ npm test && npx wrangler deploy --dry-run
 
 ## 部署与回滚
 
-| 组件 | 生产 |
-| ---- | ---- |
-| Pages | 现有 `themoviecosmos.com` SPA |
+| 组件   | 生产                                          |
+| ------ | --------------------------------------------- |
+| Pages  | 现有 `themoviecosmos.com` SPA                 |
 | Worker | 同 zone；routes `/og/*`、`/movie/*`、`/today` |
-| KV | `OG_INDEX` namespace；nightly sync 自 CI |
+| KV     | `OG_INDEX` namespace；nightly sync 自 CI      |
 
 **回滚**：Worker 路由解绑 → 恢复 index 静态 meta + 可选临时恢复 `render_og_today`（文档化，非默认）。
 
@@ -301,13 +326,13 @@ npm test && npx wrangler deploy --dry-run
 
 ## 风险（已知）
 
-| 风险 | 缓解 |
-| ---- | ---- |
+| 风险                      | 缓解                                  |
+| ------------------------- | ------------------------------------- |
 | Worker 冷启动 + 画 PNG 慢 | w342；immutable 边缘缓存；仅首 URL 慢 |
-| Facebook 缓存旧 URL | 新 `v`；Sharing Debugger 重抓 |
-| KV bulk 写入超时/限额 | 分批 put；月更全量 vs 日更 today |
-| JS 版式与 Pillow 漂移 | `layoutVersion` + 视觉抽样 |
-| 平台偶发无预览 | 34.8 记录；不阻塞合并 |
+| Facebook 缓存旧 URL       | 新 `v`；Sharing Debugger 重抓         |
+| KV bulk 写入超时/限额     | 分批 put；月更全量 vs 日更 today      |
+| JS 版式与 Pillow 漂移     | `layoutVersion` + 视觉抽样            |
+| 平台偶发无预览            | 34.8 记录；不阻塞合并                 |
 
 ## 与 Phase 35+ 关系
 

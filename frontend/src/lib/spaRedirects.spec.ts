@@ -17,5 +17,7 @@ describe('SPA _redirects (P30.7 / §6.3)', () => {
     expect(raw).not.toMatch(/\/data\//)
     expect(raw).not.toMatch(/\/fonts\//)
     expect(raw).not.toMatch(/\/assets\//)
+    // P34.1: Worker /og/* must not be SPA-rewritten here (served by Worker in 34.5)
+    expect(raw).not.toMatch(/\/og\//)
   })
 })

@@ -62,18 +62,10 @@ def _today_url(*, public_base: str, prefix: str, date_q: str) -> str:
     return f"{base_path}/today.json?v={date_q}"
 
 
-def _og_today_url(*, public_base: str, prefix: str, date_q: str) -> str:
-    p = prefix.strip().strip("/")
-    base_path = f"{public_base}/{p}" if p else public_base
-    return f"{base_path}/og-today.png?v={date_q}"
-
-
 # Versioned object keys (same path overwritten only when data_version changes in practice;
 # clients bust via manifest + ?v= on URLs). Long cache at R2/CDN edge + browser.
 R2_VERSIONED_GZIP_CACHE_CONTROL = "public, max-age=31536000, immutable"
 R2_TODAY_JSON_CACHE_CONTROL = "public, max-age=3600, must-revalidate"
-# P23.5 OG card: short TTL so social-media re-fetch picks up the new picture once per day.
-R2_OG_TODAY_PNG_CACHE_CONTROL = "public, max-age=300, must-revalidate"
 
 
 def _upload_one(
@@ -104,8 +96,6 @@ def _upload_one(
 
 
 def _maybe_prune(public_data: Path, *, manifest_path: Path) -> None:
-    # NOTE: ``og-today.png`` is intentionally **kept** in the Pages bundle so the static
-    # ``og:image`` meta in ``frontend/index.html`` resolves directly from the Pages origin.
     to_remove = [
         public_data / "galaxy_data.json",
         public_data / "galaxy_data.json.gz",
@@ -134,7 +124,6 @@ def main(argv: list[str] | None = None) -> int:
     gal_gz = public_data / "galaxy_data.json.gz"
     idx_gz = public_data / "galaxy_search_index.json.gz"
     today_json = public_data / "today.json"
-    og_today_png = public_data / "og-today.png"
     manifest_path = public_data / "galaxy_assets_manifest.json"
 
     env = _required_env()
@@ -213,7 +202,6 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     today_key = f"{prefix}/today.json" if prefix else "today.json"
-    og_today_key = f"{prefix}/og-today.png" if prefix else "og-today.png"
     today_date_q = quote(datetime.now(timezone.utc).date().isoformat(), safe="")
     if today_json.is_file():
         try:
@@ -233,18 +221,6 @@ def main(argv: list[str] | None = None) -> int:
     else:
         print(f"[R2] skip today.json: file not found at {today_json}", flush=True)
 
-    if og_today_png.is_file():
-        _upload_one(
-            client,
-            bucket,
-            og_today_key,
-            og_today_png,
-            "image/png",
-            cache_control=R2_OG_TODAY_PNG_CACHE_CONTROL,
-        )
-    else:
-        print(f"[R2] skip og-today.png: file not found at {og_today_png}", flush=True)
-
     gal_url, idx_url = _object_urls(public_base=public_base, prefix=prefix, version_q=version_q)
     exported_at = datetime.now(timezone.utc).isoformat()
     r2_object_keys: dict[str, str] = {"galaxy_data": gal_key, "galaxy_search_index": idx_key}
@@ -258,9 +234,6 @@ def main(argv: list[str] | None = None) -> int:
     if today_json.is_file():
         manifest["today_url"] = _today_url(public_base=public_base, prefix=prefix, date_q=today_date_q)
         r2_object_keys["today"] = today_key
-    if og_today_png.is_file():
-        manifest["og_today_url"] = _og_today_url(public_base=public_base, prefix=prefix, date_q=today_date_q)
-        r2_object_keys["og_today"] = og_today_key
     rid = os.environ.get("GITHUB_RUN_ID", "").strip()
     if rid:
         manifest["github_run_id"] = rid

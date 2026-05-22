@@ -131,6 +131,10 @@ jobs:
           MONTHLY_ANCHOR_MODE: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.anchor_mode) || 'soft' }}
           MONTHLY_ANCHOR_SOFT_FAIL_MAX: "50"
           DIM_DRIFT_FORCE_SKIP: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.force_skip_dim_check || false }}
+          # P34.3: OG index KV sync (full: meta:G + today + all movie:{id}); skip if any unset
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          OG_INDEX_KV_NAMESPACE_ID: ${{ secrets.OG_INDEX_KV_NAMESPACE_ID }}
+          OG_INDEX_KV_API_TOKEN: ${{ secrets.OG_INDEX_KV_API_TOKEN }}
         run: |
           set -euo pipefail
           python scripts/cron/monthly_refit.py

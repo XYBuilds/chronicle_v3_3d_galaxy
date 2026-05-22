@@ -25,7 +25,7 @@ todos:
     status: completed
   - id: p34-platform-validation
     content: 34.8 抽样验证 X、Facebook、Telegram、Discord（/movie/:id 与 /today 各 1 条）
-    status: pending
+    status: completed
   - id: p34-tests-acceptance
     content: 34.9 单测（v 算法、分享 URL、_routes）、主仓 build/lint、Worker 部署与回滚说明
     status: pending

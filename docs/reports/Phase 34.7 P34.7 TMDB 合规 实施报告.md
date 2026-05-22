@@ -80,7 +80,7 @@ cd themoviecosmos-og-worker && npm test
 | Worker 生产 | 子仓 PR 合并后需 `npm run deploy` 方生效 OG 底栏 |
 | Drawer 遮挡 | 右下角署名在选片时不可见；About 弹窗 TMDB 节仍完整 |
 | 商用 | 若未来 monetize，需评估 TMDB Commercial Agreement（见指南人工项） |
-| **34.8** | 四平台分享预览抽样 |
+| **34.8** | 四平台分享预览抽样（见 `Phase 34.8 … 实施报告.md`） |
 | **34.9** | 全量单测 / 回滚文档 |
 
-**建议下一任务**：**34.8** 平台验证矩阵。
+**建议下一任务**：**34.9** 测试与验收。

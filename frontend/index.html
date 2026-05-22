@@ -17,28 +17,26 @@
     content="The Movie Cosmos renders ~60,000 TMDB films as an explorable 2.5D particle galaxy."
   />
 
-  <!-- P23.5 Open Graph / Twitter card. Today's pick refreshes every UTC midnight via nightly cron. -->
-  <!-- Build (vite) appends ?v=YYYY-MM-DD to og/twitter image URLs from public/data/today.json when present. -->
-  <!-- P23.6: absolute og:* / twitter:image URLs use production custom domain (canonical apex). -->
+  <!-- P34: apex `/` static meta; `/movie/*` and `/today` overridden by OG Worker HTML injection. -->
   <meta property="og:title" content="The Movie Cosmos" />
   <meta
     property="og:description"
-    content="A 2.5D galaxy of ~60,000 films from TMDB. Today's pick refreshes every UTC midnight."
+    content="A 2.5D galaxy of ~60,000 films from TMDB. Explore release history as depth in The Movie Cosmos."
   />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://themoviecosmos.com/" />
-  <meta property="og:image" content="https://themoviecosmos.com/data/og-today.png" />
+  <meta property="og:image" content="https://themoviecosmos.com/og/brand.png?v=og-brand-og-v1" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
   <meta property="og:image:type" content="image/png" />
-  <meta property="og:image:alt" content="Today's pick from The Movie Cosmos" />
+  <meta property="og:image:alt" content="The Movie Cosmos" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="The Movie Cosmos" />
   <meta
     name="twitter:description"
-    content="A 2.5D galaxy of ~60,000 films from TMDB. Today's pick refreshes every UTC midnight."
+    content="A 2.5D galaxy of ~60,000 films from TMDB. Explore release history as depth in The Movie Cosmos."
   />
-  <meta name="twitter:image" content="https://themoviecosmos.com/data/og-today.png" />
+  <meta name="twitter:image" content="https://themoviecosmos.com/og/brand.png?v=og-brand-og-v1" />
 </head>
 
 <body>

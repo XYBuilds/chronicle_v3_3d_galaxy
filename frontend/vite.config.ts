@@ -1,4 +1,3 @@
-import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
@@ -7,46 +6,6 @@ import { defineConfig, loadEnv, type Plugin } from 'vite'
 import glsl from 'vite-plugin-glsl'
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
-
-const OG_TODAY_IMAGE_BASE = 'https://themoviecosmos.com/data/og-today.png'
-
-/** P23.5+: append `?v=YYYY-MM-DD` to og/twitter image URLs so crawlers see a new URL when the pick changes. */
-function readOgTodayCacheBustDate(): string {
-  const fromEnv = process.env.VITE_OG_TODAY_V?.trim()
-  if (fromEnv && /^\d{4}-\d{2}-\d{2}$/.test(fromEnv)) {
-    return fromEnv
-  }
-  const todayPath = path.resolve(dirname, 'public/data/today.json')
-  try {
-    const raw = fs.readFileSync(todayPath, 'utf-8')
-    const j = JSON.parse(raw) as { date?: unknown }
-    if (typeof j.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(j.date)) {
-      return j.date
-    }
-  } catch {
-    // missing or invalid (e.g. local dev without cron-exported data)
-  }
-  return new Date().toISOString().slice(0, 10)
-}
-
-function ogTodayImageCacheBustPlugin(): Plugin {
-  return {
-    name: 'og-today-image-cache-bust',
-    enforce: 'pre',
-    transformIndexHtml(html) {
-      if (!html.includes(OG_TODAY_IMAGE_BASE)) {
-        console.warn(
-          '[og-today-image-cache-bust] index.html missing expected og/twitter image base URL; skip rewrite',
-        )
-        return html
-      }
-      const v = readOgTodayCacheBustDate()
-      const withQuery = `${OG_TODAY_IMAGE_BASE}?v=${encodeURIComponent(v)}`
-      console.log(`[og-today-image-cache-bust] og:image cache bust v=${v}`)
-      return html.replaceAll(OG_TODAY_IMAGE_BASE, withQuery)
-    },
-  }
-}
 
 /** P20.5: inject Cloudflare Web Analytics only when `VITE_CF_BEACON_TOKEN` is set at build time. */
 function cfWebAnalyticsPlugin(): Plugin {
@@ -99,7 +58,6 @@ export default defineConfig(({ mode }) => {
     base,
     plugins: [
       butlerPublicFontsBasePlugin(base),
-      ogTodayImageCacheBustPlugin(),
       react(),
       tailwindcss(),
       glsl(),

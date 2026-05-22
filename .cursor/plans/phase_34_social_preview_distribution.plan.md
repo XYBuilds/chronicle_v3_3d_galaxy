@@ -28,7 +28,7 @@ todos:
     status: completed
   - id: p34-tests-acceptance
     content: 34.9 单测（v 算法、分享 URL、_routes）、主仓 build/lint、Worker 部署与回滚说明
-    status: pending
+    status: completed
 isProject: false
 ---
 

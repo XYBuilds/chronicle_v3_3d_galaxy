@@ -7,7 +7,7 @@ todos:
     status: completed
   - id: p34-og-baseline-audit
     content: 34.2 审计现有静态 OG 链路（render_og_today、index.html meta、vite cache-bust）作为切换基线
-    status: pending
+    status: completed
   - id: p34-kv-index-pipeline
     content: 34.3 构建 og_index 写入 KV（movie:{id}、today、meta:G）；nightly 同步；一刀切移除 render_og_today / og-today.png 发布
     status: pending
@@ -146,13 +146,13 @@ flowchart TD
 
 #### 34.1 前置检查实施（2026-05-22）
 
-| 检查项 | 期望 | 证据 | 结果 |
-| ------ | ---- | ---- | ---- |
-| `/movie/:id` 刷新 | focus + Drawer | `routeControllerSync.spec.ts` T1/T2 + `runInitialRouteBoot`；`Drawer.tsx` 在 `selectedMovieId` 有效时打开 | **Pass** |
-| `/today` 刷新 | today 体验 | `routeControllerSync.spec.ts` T3；`parseLogicalPath('/today')` | **Pass** |
-| Drawer 分享 URL | `/movie/:id` | `DrawerMovieShare` → `buildMovieSharePageUrl`；`shareLinks.spec.ts` | **Pass**（`?lang=` 留待 **34.6**） |
-| `_redirects` | 不吞 `/og/*`、assets、fonts、`/data/*` | `frontend/public/_redirects` 仅 `/movie/*`、`/today`；`spaRedirects.spec.ts`（含 `/og/` 负向断言） | **Pass** |
-| Phase 30 计划 | 深链 TODO 全部完成 | `phase_30_routing_sharing.plan.md` todos `completed` | **Pass** |
+| 检查项            | 期望                                   | 证据                                                                                                      | 结果                               |
+| ----------------- | -------------------------------------- | --------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| `/movie/:id` 刷新 | focus + Drawer                         | `routeControllerSync.spec.ts` T1/T2 + `runInitialRouteBoot`；`Drawer.tsx` 在 `selectedMovieId` 有效时打开 | **Pass**                           |
+| `/today` 刷新     | today 体验                             | `routeControllerSync.spec.ts` T3；`parseLogicalPath('/today')`                                            | **Pass**                           |
+| Drawer 分享 URL   | `/movie/:id`                           | `DrawerMovieShare` → `buildMovieSharePageUrl`；`shareLinks.spec.ts`                                       | **Pass**（`?lang=` 留待 **34.6**） |
+| `_redirects`      | 不吞 `/og/*`、assets、fonts、`/data/*` | `frontend/public/_redirects` 仅 `/movie/*`、`/today`；`spaRedirects.spec.ts`（含 `/og/` 负向断言）        | **Pass**                           |
+| Phase 30 计划     | 深链 TODO 全部完成                     | `phase_30_routing_sharing.plan.md` todos `completed`                                                      | **Pass**                           |
 
 **Go/No-Go：Go** — Phase 30 深链契约满足，可进入 34.2 静态 OG 基线审计。
 
@@ -182,6 +182,86 @@ cd frontend && npx vitest run src/lib/routeControllerSync.spec.ts src/lib/spaRed
 
 - `/today` vs `/movie/:id` 当前 crawler 所见 title/image/url
 - 每日更新资源清单 → 映射为 **KV keys + Worker `v`**
+
+#### 34.2 基线审计实施（2026-05-22）
+
+**范围**：只读审计；未改管线代码。分支 `chore/p34.2-og-baseline-audit`。实施报告待验收后写入 `docs/reports/`。
+
+##### A. 管线与产物（当前 SSOT）
+
+| 环节         | 文件 / 行为                                                     | 说明                                                                                                                                                           |
+| ------------ | --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 选片         | `pick_movie_today.py` → `frontend/public/data/today.json`       | 字段：`date`（UTC ISO）、`movie_id`、`selected_at`、`selection_strategy`、`min_vote_count`                                                                     |
+| 画图         | `render_og_today.py` → `frontend/public/data/og-today.png`      | 1200×630 PNG；读 `today.json` + `galaxy_data.json` 中该片；原子写入；海报失败 **不覆盖** 旧 PNG                                                                |
+| 调用链       | `nightly_vote_refresh.py` L508–511、`monthly_refit.py` L834–837 | 顺序：`write_today_json_after_galaxy_export` → `render_og_today_after_galaxy_export`；失败仅 WARN                                                              |
+| R2           | `upload_galaxy_r2.py` L236–246、L261–263                        | 若存在则上传 `{prefix}/og-today.png`，`Cache-Control: public, max-age=300, must-revalidate`；manifest 写 `og_today_url` = `{base}/og-today.png?v={today.date}` |
+| Pages bundle | `_maybe_prune` **保留** `og-today.png`（L107–108 注释）         | 与 `index.html` 中 `og:image` 直连 Pages 同源                                                                                                                  |
+| 入仓         | `.gitignore` L43–45                                             | `og-today.png` / `.tmp` **不入 git**；CI artifact 仍打包                                                                                                       |
+| CI artifact  | `nightly_vote_refresh.yml` / `monthly_refit.yml` L83、L162      | 含 `og-today.png`；其后 `npm run build -w frontend` 再 Pages deploy                                                                                            |
+
+**`render_og_today` 消费的 galaxy 字段**（单卡，无 per-route）：`title`、`genres`、`release_date`、`poster_url`（导出为 `https://image.tmdb.org/t/p/w780/...`，见 `export_galaxy_json.py` `POSTER_BASE`）。版式常量：`layoutVersion` 尚未存在（Phase 34 拟 `og-v1`）。
+
+**本地抽样**（仓库内 `today.json`）：`date=2026-05-08`，`movie_id=301334`（审计日构建日志与 dist 一致）。
+
+##### B. 静态 HTML meta + Vite cache-bust
+
+| 项                           | 源 `index.html`                                | 生产构建 `dist/index.html`（本次 `npm run build -w frontend`） |
+| ---------------------------- | ---------------------------------------------- | -------------------------------------------------------------- |
+| `og:title` / `twitter:title` | `The Movie Cosmos`                             | 同左                                                           |
+| `og:description`             | 全站 galaxy 简介 + “Today's pick refreshes…”   | 同左                                                           |
+| `og:url`                     | `https://themoviecosmos.com/`                  | 同左（**apex `/`**，非深链路径）                               |
+| `og:image` / `twitter:image` | `https://themoviecosmos.com/data/og-today.png` | `.../og-today.png?v=2026-05-08`（来自 `today.json.date`）      |
+| `og:image:alt`               | Today's pick…                                  | 同左                                                           |
+
+**`ogTodayImageCacheBustPlugin`**（`frontend/vite.config.ts`）：`readOgTodayCacheBustDate()` 优先级 `VITE_OG_TODAY_V` → `public/data/today.json.date` → UTC 当天；`replaceAll` 基 URL `OG_TODAY_IMAGE_BASE`。**仅**改写 `index.html` 内两处 image URL；**不**改 `og:url` / title。
+
+**`frontend/public/_headers`**：`/data/og-today.png` → `max-age=300, must-revalidate`（与 R2 短 TTL 一致，利于日更 re-scrape）。
+
+##### C. 爬虫视角：`/` vs `/today` vs `/movie/:id`（切换前缺陷）
+
+Pages SPA：凡未命中静态文件的路径均回 **同一份** `index.html`（含上述 meta）。**无** UA 分流、**无** 按路径注入。
+
+| 分享 / 抓取 URL                         | 爬虫所见 `og:title` | 爬虫所见 `og:url`             | 爬虫所见 `og:image`          | 与页面内容一致性                        |
+| --------------------------------------- | ------------------- | ----------------------------- | ---------------------------- | --------------------------------------- |
+| `https://themoviecosmos.com/`           | The Movie Cosmos    | `https://themoviecosmos.com/` | 当日 `og-today.png?v={date}` | 与 today 卡一致（预期）                 |
+| `https://themoviecosmos.com/today`      | **同上（全站）**    | **同上（apex `/`）**          | **同上（today 图）**         | SPA 为 today；**`og:url` 错误**         |
+| `https://themoviecosmos.com/movie/{id}` | **同上（全站）**    | **同上（apex `/`）**          | **同上（today 另一部片）**   | **严重错位**：预览图/标题均非被分享影片 |
+
+Drawer 分享 URL（`buildMovieSharePageUrl`）已指向 `/movie/:id`，但 **head meta 仍全站 today** → Phase 34 核心动机。
+
+**`?lang=`**：分享 URL **未** 附加（34.6）；对当前静态 meta **无影响**（meta 无 locale 变体）。
+
+##### D. 每日 / 版本化资源 → Phase 34 KV + Worker `v` 映射
+
+| 当前资源 / 行为                       | 更新节奏                             | 34.3+ 目标                                                 |
+| ------------------------------------- | ------------------------------------ | ---------------------------------------------------------- |
+| `galaxy_data.json` → `meta.version`   | 导出（nightly 票选 / monthly refit） | KV `meta:G`                                                |
+| `today.json`                          | nightly（+ monthly 后重写）          | KV `today`：`{ date, movie_id }`                           |
+| 全量 `movies[]` OG 字段               | 随 export                            | KV `movie:{id}`：`title, release_date, genres, poster_url` |
+| `og-today.png` + R2 `og_today_url`    | nightly                              | **移除**；改为 `GET /og/today.png?v={G}-{M}`               |
+| —                                     | —                                    | `GET /og/movie/{id}.png?v={G}-{M}`（per-id）               |
+| `index.html` `?v=YYYY-MM-DD`          | 每次 frontend build                  | **移除** 或 apex 仅品牌图；`v` 由 Worker URL 承担          |
+| `_headers` / R2 短 TTL on PNG         | 日更                                 | Worker PNG `immutable` + URL 含 `G-M`                      |
+| `render_og_today_after_galaxy_export` | nightly + monthly                    | **删除调用**（34.3 一刀切）                                |
+| manifest `og_today_url`               | nightly                              | 删除或改为 Worker canonical URL                            |
+
+**`v` 对照（目标 SSOT，本审计仅记录现状）**
+
+| 现状                                             | 目标（计划 § 内容身份）                                                                                                   |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| HTML image query：`?v=2026-05-08`（仅 UTC 日期） | `?v={G}-{M}`，`G=meta.version`，`M=hash8(layoutVersion, id, title, release_date, genres[0], poster_url, placeholderFlag)` |
+| 全路由共用一张 today 图                          | `/movie/:id` → 该片图；`/today` → today 图；miss → `/og/brand.png`                                                        |
+
+##### E. 34.3+ 切换检查清单（自本基线导出）
+
+- [ ] 从 `nightly_vote_refresh` / `monthly_refit` 移除 `render_og_today_after_galaxy_export`
+- [ ] `upload_galaxy_r2` 停止上传 / manifest `og_today_url`（或改 Worker URL）
+- [ ] 停止将 `og-today.png` 作为生产 SSOT（Pages bundle / artifact 可逐步剔除）
+- [ ] 评估移除 `ogTodayImageCacheBustPlugin` + `index.html` 对 `/data/og-today.png` 依赖（34.6）
+- [ ] Worker HTML 注入修正 `/movie/*`、`/today` 的 `og:url` / `og:title` / `og:image`（34.5）
+- [ ] KV bulk：`meta:G`、`today`、`movie:*`（34.3）
+
+**Go/No-Go：Go** — 基线清晰，可进入 34.3（KV 索引）与 Worker 子 repo 并行准备。
 
 ### 34.3 KV 索引与管线切换
 

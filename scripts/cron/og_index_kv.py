@@ -73,19 +73,25 @@ def chunk_entries(entries: list[tuple[str, str]], batch_size: int) -> Iterator[l
         yield [{"key": k, "value": v} for k, v in part]
 
 
-def _required_kv_env() -> dict[str, str] | None:
-    keys = (
-        "CLOUDFLARE_ACCOUNT_ID",
-        "CLOUDFLARE_API_TOKEN",
-        "OG_INDEX_KV_NAMESPACE_ID",
+def _kv_api_token() -> str:
+    """Prefer dedicated KV token; fall back to shared Cloudflare API token."""
+    return (
+        os.environ.get("OG_INDEX_KV_API_TOKEN", "").strip()
+        or os.environ.get("CLOUDFLARE_API_TOKEN", "").strip()
     )
-    out: dict[str, str] = {}
-    for k in keys:
-        v = os.environ.get(k, "").strip()
-        if not v:
-            return None
-        out[k] = v
-    return out
+
+
+def _required_kv_env() -> dict[str, str] | None:
+    account_id = os.environ.get("CLOUDFLARE_ACCOUNT_ID", "").strip()
+    namespace_id = os.environ.get("OG_INDEX_KV_NAMESPACE_ID", "").strip()
+    api_token = _kv_api_token()
+    if not account_id or not namespace_id or not api_token:
+        return None
+    return {
+        "CLOUDFLARE_ACCOUNT_ID": account_id,
+        "CLOUDFLARE_API_TOKEN": api_token,
+        "OG_INDEX_KV_NAMESPACE_ID": namespace_id,
+    }
 
 
 def kv_bulk_put(

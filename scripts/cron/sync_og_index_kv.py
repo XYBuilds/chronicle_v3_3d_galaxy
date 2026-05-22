@@ -6,7 +6,8 @@ Scopes:
   - ``full`` (monthly / one-time): ``meta:G`` + ``today`` + all ``movie:{id}``
 
 Required env (all or none — otherwise skip with exit 0):
-  CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN, OG_INDEX_KV_NAMESPACE_ID
+  CLOUDFLARE_ACCOUNT_ID, OG_INDEX_KV_NAMESPACE_ID, and either OG_INDEX_KV_API_TOKEN
+  or CLOUDFLARE_API_TOKEN (KV sync prefers the dedicated token when set).
 
 Optional:
   OG_INDEX_SYNC_SCOPE — default CLI scope when ``--scope`` omitted
@@ -50,8 +51,8 @@ def sync_og_index_after_galaxy_export(
     env = _required_kv_env()
     if env is None:
         print(
-            "[og_index_kv] skip: set CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN, "
-            "OG_INDEX_KV_NAMESPACE_ID to enable KV sync",
+            "[og_index_kv] skip: set CLOUDFLARE_ACCOUNT_ID, OG_INDEX_KV_NAMESPACE_ID, "
+            "and OG_INDEX_KV_API_TOKEN (or CLOUDFLARE_API_TOKEN) to enable KV sync",
             flush=True,
         )
         return None
@@ -80,6 +81,12 @@ def sync_og_index_after_galaxy_export(
 
 
 def main(argv: list[str] | None = None) -> int:
+    env_path = _REPO_ROOT / ".env"
+    if env_path.is_file():
+        from dotenv import load_dotenv
+
+        load_dotenv(env_path)
+
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument(
         "--public-data-dir",
@@ -103,8 +110,8 @@ def main(argv: list[str] | None = None) -> int:
 
     if _required_kv_env() is None:
         print(
-            "[og_index_kv] skip: set CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN, "
-            "OG_INDEX_KV_NAMESPACE_ID",
+            "[og_index_kv] skip: set CLOUDFLARE_ACCOUNT_ID, OG_INDEX_KV_NAMESPACE_ID, "
+            "and OG_INDEX_KV_API_TOKEN (or CLOUDFLARE_API_TOKEN)",
             flush=True,
         )
         return 0

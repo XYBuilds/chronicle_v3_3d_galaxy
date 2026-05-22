@@ -13,7 +13,7 @@ todos:
     status: completed
   - id: p34-worker-og-repo
     content: 34.4 独立 repo Worker：JS 画布 /og/movie|today|brand.png、v=G-M、w342 海报、占位与品牌 fallback
-    status: pending
+    status: completed
   - id: p34-worker-html-routes
     content: 34.5 同 zone 绑定：/movie/* 与 /today HTML head 注入（无 UA 分流）；/og/* 出图；与 Pages SPA 共存
     status: pending
@@ -286,16 +286,29 @@ Drawer 分享 URL（`buildMovieSharePageUrl`）已指向 `/movie/:id`，但 **he
 
 #### 34.3 实施（2026-05-22，已验收）
 
-| 交付 | 说明 |
-| ---- | ---- |
-| `og_index_kv.py` / `sync_og_index_kv.py` | KV 构建 + bulk PUT；`OG_INDEX_KV_API_TOKEN` 优先 |
-| nightly / monthly | `daily` / `full` 挂钩；PR #235 → `main` |
-| R2 / CI | 移除 `og-today.png` 上传与 artifact |
-| 文档 | `docs/guides/P34.3 OG Index KV 上线操作指南.md`；`docs/reports/Phase 34.3 … 实施报告.md` |
+| 交付                                     | 说明                                                                                     |
+| ---------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `og_index_kv.py` / `sync_og_index_kv.py` | KV 构建 + bulk PUT；`OG_INDEX_KV_API_TOKEN` 优先                                         |
+| nightly / monthly                        | `daily` / `full` 挂钩；PR #235 → `main`                                                  |
+| R2 / CI                                  | 移除 `og-today.png` 上传与 artifact                                                      |
+| 文档                                     | `docs/guides/P34.3 OG Index KV 上线操作指南.md`；`docs/reports/Phase 34.3 … 实施报告.md` |
 
 **Go/No-Go：Go** — 可进入 **34.4** Worker PNG（需 Operator 按指南完成 KV namespace + 首次 `--scope full`）。
 
 ### 34.4 OG Worker 子 repo（PNG）
+
+#### 34.4 实施（2026-05-22，已验收）
+
+| 交付 | 说明 |
+|------|------|
+| 子仓 | https://github.com/XYBuilds/themoviecosmos-og-worker（Public）；已 `npm run deploy` |
+| 路由 | `GET /og/movie/:id.png`、`/og/today.png`、`/og/brand.png`；canonical `v` 302 |
+| 渲染 | Satori `standalone` + Resvg wasm（`vendors/*.wasm?module`）；正文字体暂用 Butler（Inter 可变字体在 Workers 上不可用） |
+| KV | `OG_INDEX`；`.env` SSOT + `sync-wrangler` / `deploy.ps1` |
+| 生产 | `themoviecosmos.com/og/*` 路由已绑；curl brand/today/movie **200/302** OK |
+| 主仓文档 | `docs/guides/P34.4 OG Worker PNG 部署说明.md` |
+
+**Go/No-Go：Go** — 可进入 **34.5** HTML meta 注入。
 
 **仓库**：独立 git repo（与主仓通过文档约定版本；部署同一 CF account）。
 

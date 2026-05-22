@@ -16,7 +16,7 @@ todos:
     status: completed
   - id: p34-worker-html-routes
     content: 34.5 同 zone 绑定：/movie/* 与 /today HTML head 注入（无 UA 分流）；/og/* 出图；与 Pages SPA 共存
-    status: pending
+    status: completed
   - id: p34-frontend-share-lang
     content: 34.6 分享 URL 显式带 ?lang=；index.html 弃用静态 og-today；og:image 指向 Worker /og/* URL
     status: pending
@@ -258,7 +258,7 @@ Drawer 分享 URL（`buildMovieSharePageUrl`）已指向 `/movie/:id`，但 **he
 - [x] `upload_galaxy_r2` 停止上传 / manifest `og_today_url`（34.3）
 - [x] 停止将 `og-today.png` 作为生产 SSOT（CI artifact 已剔除；Pages meta 待 34.6）
 - [ ] 评估移除 `ogTodayImageCacheBustPlugin` + `index.html` 对 `/data/og-today.png` 依赖（34.6）
-- [ ] Worker HTML 注入修正 `/movie/*`、`/today` 的 `og:url` / `og:title` / `og:image`（34.5）
+- [x] Worker HTML 注入修正 `/movie/*`、`/today` 的 `og:url` / `og:title` / `og:image`（34.5）
 - [x] KV bulk：`meta:G`、`today`、`movie:*`（34.3 脚本 + 指南；生产 full sync 待 Operator）
 
 **Go/No-Go：Go** — 基线清晰，可进入 34.3（KV 索引）与 Worker 子 repo 并行准备。
@@ -299,16 +299,27 @@ Drawer 分享 URL（`buildMovieSharePageUrl`）已指向 `/movie/:id`，但 **he
 
 #### 34.4 实施（2026-05-22，已验收）
 
-| 交付 | 说明 |
-|------|------|
-| 子仓 | https://github.com/XYBuilds/themoviecosmos-og-worker（Public）；已 `npm run deploy` |
-| 路由 | `GET /og/movie/:id.png`、`/og/today.png`、`/og/brand.png`；canonical `v` 302 |
-| 渲染 | Satori `standalone` + Resvg wasm（`vendors/*.wasm?module`）；正文字体暂用 Butler（Inter 可变字体在 Workers 上不可用） |
-| KV | `OG_INDEX`；`.env` SSOT + `sync-wrangler` / `deploy.ps1` |
-| 生产 | `themoviecosmos.com/og/*` 路由已绑；curl brand/today/movie **200/302** OK |
-| 主仓文档 | `docs/guides/P34.4 OG Worker PNG 部署说明.md` |
+| 交付     | 说明                                                                                                                  |
+| -------- | --------------------------------------------------------------------------------------------------------------------- |
+| 子仓     | https://github.com/XYBuilds/themoviecosmos-og-worker（Public）；已 `npm run deploy`                                   |
+| 路由     | `GET /og/movie/:id.png`、`/og/today.png`、`/og/brand.png`；canonical `v` 302                                          |
+| 渲染     | Satori `standalone` + Resvg wasm（`vendors/*.wasm?module`）；正文字体暂用 Butler（Inter 可变字体在 Workers 上不可用） |
+| KV       | `OG_INDEX`；`.env` SSOT + `sync-wrangler` / `deploy.ps1`                                                              |
+| 生产     | `themoviecosmos.com/og/*` 路由已绑；curl brand/today/movie **200/302** OK                                             |
+| 主仓文档 | `docs/guides/P34.4 OG Worker PNG 部署说明.md`                                                                         |
 
 **Go/No-Go：Go** — 可进入 **34.5** HTML meta 注入。
+
+#### 34.5 实施（2026-05-22，已验收）
+
+| 交付     | 说明                                                                                         |
+| -------- | -------------------------------------------------------------------------------------------- |
+| 子仓     | `src/html.ts` + `index.ts`：`/movie/*`、`/today*` HTML 注入；`fetch index.html` + meta 替换   |
+| 路由     | Dashboard：`movie/*`、`today*`（保留 `og/*`）；`wrangler.toml` `run_worker_first`           |
+| 生产     | `curl`：`/movie/301334`、`/today/`、`?lang=zh` 的 `og:url` / `og:image` 符合 SSOT          |
+| 主仓文档 | `docs/guides/P34.5 OG Worker HTML meta 部署说明.md`；报告 `docs/reports/Phase 34.5 …`      |
+
+**Go/No-Go：Go** — 可进入 **34.6** 主仓 `index.html` / 分享 `?lang=`。
 
 **仓库**：独立 git repo（与主仓通过文档约定版本；部署同一 CF account）。
 

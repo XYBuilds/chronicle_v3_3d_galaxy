@@ -10,7 +10,7 @@ todos:
     status: completed
   - id: p34-kv-index-pipeline
     content: 34.3 构建 og_index 写入 KV（movie:{id}、today、meta:G）；nightly 同步；一刀切移除 render_og_today / og-today.png 发布
-    status: pending
+    status: completed
   - id: p34-worker-og-repo
     content: 34.4 独立 repo Worker：JS 画布 /og/movie|today|brand.png、v=G-M、w342 海报、占位与品牌 fallback
     status: pending
@@ -254,12 +254,12 @@ Drawer 分享 URL（`buildMovieSharePageUrl`）已指向 `/movie/:id`，但 **he
 
 ##### E. 34.3+ 切换检查清单（自本基线导出）
 
-- [ ] 从 `nightly_vote_refresh` / `monthly_refit` 移除 `render_og_today_after_galaxy_export`
-- [ ] `upload_galaxy_r2` 停止上传 / manifest `og_today_url`（或改 Worker URL）
-- [ ] 停止将 `og-today.png` 作为生产 SSOT（Pages bundle / artifact 可逐步剔除）
+- [x] 从 `nightly_vote_refresh` / `monthly_refit` 移除 `render_og_today_after_galaxy_export`（34.3）
+- [x] `upload_galaxy_r2` 停止上传 / manifest `og_today_url`（34.3）
+- [x] 停止将 `og-today.png` 作为生产 SSOT（CI artifact 已剔除；Pages meta 待 34.6）
 - [ ] 评估移除 `ogTodayImageCacheBustPlugin` + `index.html` 对 `/data/og-today.png` 依赖（34.6）
 - [ ] Worker HTML 注入修正 `/movie/*`、`/today` 的 `og:url` / `og:title` / `og:image`（34.5）
-- [ ] KV bulk：`meta:G`、`today`、`movie:*`（34.3）
+- [x] KV bulk：`meta:G`、`today`、`movie:*`（34.3 脚本 + 指南；生产 full sync 待 Operator）
 
 **Go/No-Go：Go** — 基线清晰，可进入 34.3（KV 索引）与 Worker 子 repo 并行准备。
 
@@ -283,6 +283,17 @@ Drawer 分享 URL（`buildMovieSharePageUrl`）已指向 `/movie/:id`，但 **he
 - `nightly_vote_refresh` / `monthly_refit` 中 **删除** `render_og_today_after_galaxy_export`（或等价调用）。
 - R2 upload **不再** 依赖 `og-today.png`（若 manifest 有 `og_today_url` 改为 Worker URL 或删除该字段）。
 - [frontend/public/data/og-today.png](frontend/public/data/og-today.png) 不再作为生产 SSOT。
+
+#### 34.3 实施（2026-05-22，已验收）
+
+| 交付 | 说明 |
+| ---- | ---- |
+| `og_index_kv.py` / `sync_og_index_kv.py` | KV 构建 + bulk PUT；`OG_INDEX_KV_API_TOKEN` 优先 |
+| nightly / monthly | `daily` / `full` 挂钩；PR #235 → `main` |
+| R2 / CI | 移除 `og-today.png` 上传与 artifact |
+| 文档 | `docs/guides/P34.3 OG Index KV 上线操作指南.md`；`docs/reports/Phase 34.3 … 实施报告.md` |
+
+**Go/No-Go：Go** — 可进入 **34.4** Worker PNG（需 Operator 按指南完成 KV namespace + 首次 `--scope full`）。
 
 ### 34.4 OG Worker 子 repo（PNG）
 

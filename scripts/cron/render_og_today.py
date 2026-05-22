@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """P23.5: Render today's social-share OG card (1200x630 PNG) with Pillow.
 
+Phase 34.3: nightly/monthly no longer invoke ``render_og_today_after_galaxy_export``; OG images
+move to Cloudflare Worker ``/og/*``. This module is kept for rollback and local preview only.
+
 Inputs (typical nightly use):
     - ``frontend/public/data/galaxy_data.json`` — galaxy export (the source of movie metadata)
     - ``frontend/public/data/today.json`` — output of ``pick_movie_today.py``

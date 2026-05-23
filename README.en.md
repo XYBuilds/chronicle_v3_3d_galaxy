@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/readme/title.svg" alt="the movie cosmos" width="688" />
+  <img src="docs/assets/readme/title.svg" alt="the movie cosmos" width="400" height="160" />
 </p>
 
 The Movie Cosmos weaves roughly sixty thousand TMDB films into a walkable starfield: alike in plot, genres, and languages gather on the plane; release history stacks along depth.

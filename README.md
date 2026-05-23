@@ -1,14 +1,7 @@
 
-
-
-
 <p align="center">
-  <img src="docs/assets/readme/title.svg" alt="the movie cosmos" width="688" />
+  <img src="docs/assets/readme/title.svg" alt="the movie cosmos" width="400" height="160" />
 </p>
-
-
-
-
 
 The Movie Cosmos 把近六万部 TMDB 影片织成一片可走进的星海：在平面上按剧情、类型与语言相近而聚拢，沿纵深按上映年代排列。
 

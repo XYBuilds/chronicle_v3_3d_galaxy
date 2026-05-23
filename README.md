@@ -13,6 +13,15 @@ The Movie Cosmos 把近六万部 TMDB 影片织成一片可走进的星海：在
 
 **English readme:** [README.en.md](README.en.md)
 
+![浏览态漫游并切换到聚焦态](docs/assets/readme/browse-to-focus.gif)
+
+浏览态漫游星团，并切换到聚焦态
+
+![聚焦态高清示例：《2001 太空漫游》](docs/assets/readme/focus-demo.gif)
+
+聚焦态高清示例：《2001 太空漫游》
+
+
 <p align="center">
   <a href="https://discord.gg/SkhMZ34CvC" title="加入 Discord 社区"><img height="32" src="https://cdn.simpleicons.org/discord/5865F2" alt="Discord 社区" /></a>
   &nbsp;
@@ -27,7 +36,6 @@ The Movie Cosmos 把近六万部 TMDB 影片织成一片可走进的星海：在
 ## 目录
 
 - [目录](#目录)
-- [视觉呈现](#视觉呈现)
 - [概念与灵感](#概念与灵感)
   - [创作背景](#创作背景)
   - [艺术体验](#艺术体验)
@@ -59,20 +67,6 @@ The Movie Cosmos 把近六万部 TMDB 影片织成一片可走进的星海：在
   - [文档索引（实现 SSOT）](#文档索引实现-ssot)
 - [数据与致谢](#数据与致谢)
 - [许可证与再利用](#许可证与再利用)
-
-## 视觉呈现
-
-![浏览态漫游并切换到聚焦态](docs/assets/readme/browse-to-focus.gif)
-
-浏览态漫游星团，并切换到聚焦态
-
-![聚焦态高清示例：《2001 太空漫游》](docs/assets/readme/focus-demo.gif)
-
-聚焦态高清示例：《2001 太空漫游》
-
-完整交互请访问 [themoviecosmos.com](https://themoviecosmos.com/)。
-
----
 
 ## 概念与灵感
 

@@ -12,6 +12,15 @@ The Movie Cosmos weaves roughly sixty thousand TMDB films into a walkable starfi
 
 **简体中文 readme:** [README.md](README.md)
 
+![Browse the starfield and transition to focus](docs/assets/readme/browse-to-focus.gif)
+
+Browse the starfield, then transition to focus
+
+![Focus state in high fidelity: *2001: A Space Odyssey*](docs/assets/readme/focus-demo.gif)
+
+Focus state in high fidelity: *2001: A Space Odyssey*
+
+
 <p align="center">
   <a href="https://discord.gg/SkhMZ34CvC" title="Join the Discord community"><img height="32" src="https://cdn.simpleicons.org/discord/5865F2" alt="Discord community" /></a>
   &nbsp;
@@ -26,7 +35,6 @@ The Movie Cosmos weaves roughly sixty thousand TMDB films into a walkable starfi
 ## Table of contents
 
 - [Table of contents](#table-of-contents)
-- [Visual presentation](#visual-presentation)
 - [Concept \& inspiration](#concept--inspiration)
   - [Creative background](#creative-background)
   - [Artistic experience](#artistic-experience)
@@ -58,20 +66,6 @@ The Movie Cosmos weaves roughly sixty thousand TMDB films into a walkable starfi
   - [Documentation index (implementation SSOT)](#documentation-index-implementation-ssot)
 - [Data \& credits](#data--credits)
 - [License \& reuse](#license--reuse)
-
-## Visual presentation
-
-![Browse the starfield and transition to focus](docs/assets/readme/browse-to-focus.gif)
-
-Browse the starfield, then transition to focus
-
-![Focus state in high fidelity: *2001: A Space Odyssey*](docs/assets/readme/focus-demo.gif)
-
-Focus state in high fidelity: *2001: A Space Odyssey*
-
-For the full interaction, visit [themoviecosmos.com](https://themoviecosmos.com/).
-
----
 
 ## Concept & inspiration
 

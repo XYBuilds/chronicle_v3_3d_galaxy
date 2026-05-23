@@ -1,4 +1,6 @@
-# The Movie Cosmos
+<p align="center">
+  <img src="docs/assets/readme/title.svg" alt="the movie cosmos" width="688" />
+</p>
 
 The Movie Cosmos weaves roughly sixty thousand TMDB films into a walkable starfield: alike in plot, genres, and languages gather on the plane; release history stacks along depth.
 
@@ -16,6 +18,7 @@ The Movie Cosmos weaves roughly sixty thousand TMDB films into a walkable starfi
 - [Concept & inspiration](#concept--inspiration)
   - [Creative background](#creative-background)
   - [Artistic experience](#artistic-experience)
+  - [AI Transparency](#ai-transparency)
 - [Interaction guide](#interaction-guide)
   - [Getting started](#getting-started)
   - [Browse](#browse)
@@ -44,7 +47,9 @@ The Movie Cosmos weaves roughly sixty thousand TMDB films into a walkable starfi
 
 ## Visual presentation
 
-> Demo screenshots / GIF — coming soon
+![Focus state: archive drawer and high-fidelity star](docs/assets/readme/demo.gif)
+
+Focus state: archive drawer and high-fidelity star (example: *2001: A Space Odyssey*)
 
 For the full interaction, visit [themoviecosmos.com](https://themoviecosmos.com/).
 
@@ -63,6 +68,10 @@ Treat the work as three layered journeys (aligned with [PRD](docs/project_docs/T
 - Macro time travel: scroll or use the timeline along the Z axis (release year)—from sparse early cinema into dense modern clusters.
 - Deep-space discovery: within an era or genre nebula, read size, brightness, and hue to hunt—blockbusters that blaze, small but bright gems, or huge yet dim cautionary stars.
 - Archive inspection: hover for a one-line radar ping; click to dock on a star and open the archive—from cosmic scale down to poster, tagline, and credits.
+
+### AI Transparency
+
+This section discloses how the work was made. The Movie Cosmos was co-developed by its human author and AI: the author led direction, project management, design, and application logic; AI contributed hands-on implementation and technical advisory.
 
 ## Interaction guide
 

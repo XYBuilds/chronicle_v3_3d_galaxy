@@ -61,9 +61,13 @@ The Movie Cosmos weaves roughly sixty thousand TMDB films into a walkable starfi
 
 ## Visual presentation
 
-![Focus state: archive drawer and high-fidelity star](docs/assets/readme/demo.gif)
+![Browse the starfield and transition to focus](docs/assets/readme/browse-to-focus.gif)
 
-Focus state: archive drawer and high-fidelity star (example: *2001: A Space Odyssey*)
+Browse the starfield, then transition to focus
+
+![Focus state in high fidelity: *2001: A Space Odyssey*](docs/assets/readme/focus-demo.gif)
+
+Focus state in high fidelity: *2001: A Space Odyssey*
 
 For the full interaction, visit [themoviecosmos.com](https://themoviecosmos.com/).
 

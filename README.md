@@ -62,9 +62,13 @@ The Movie Cosmos 把近六万部 TMDB 影片织成一片可走进的星海：在
 
 ## 视觉呈现
 
-![聚焦态：档案抽屉与高模星球](docs/assets/readme/demo.gif)
+![浏览态漫游并切换到聚焦态](docs/assets/readme/browse-to-focus.gif)
 
-聚焦态：档案抽屉与高模星球（示例：《2001 太空漫游》）
+浏览态漫游星团，并切换到聚焦态
+
+![聚焦态高清示例：《2001 太空漫游》](docs/assets/readme/focus-demo.gif)
+
+聚焦态高清示例：《2001 太空漫游》
 
 完整交互请访问 [themoviecosmos.com](https://themoviecosmos.com/)。
 

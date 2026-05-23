@@ -4,7 +4,7 @@ import * as THREE from 'three'
 export const COSMOS_UNIVERSE_BG_VAR = '--cosmos-universe-bg'
 
 /** Phase 32.2 — SSOT default for universe field background (SDR main path). */
-export const COSMOS_UNIVERSE_BG_DEFAULT = '#000002'
+export const COSMOS_UNIVERSE_BG_DEFAULT = '#000103'
 
 /** Named token bundle for HUD, canvas host, and WebGL targets. */
 export const UNIVERSE_BG_TOKEN = {

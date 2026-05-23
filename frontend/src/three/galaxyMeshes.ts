@@ -100,7 +100,7 @@ function makeSharedUniforms(
       uSizeScale: { value: DEFAULT_GALAXY_U_SIZE_SCALE },
       uActiveSizeMul: { value: DEFAULT_GALAXY_U_ACTIVE_SIZE_MUL },
       uBgSizeMul: { value: 0.002 },
-      uLMin: { value: 0.2 },
+      uLMin: { value: 0.3 },
       uLMax: { value: 1.0 },
       uHighRatingT: { value: 0.85 },
       uHighTierTRangeScale: { value: 0.4 },

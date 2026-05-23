@@ -69,7 +69,7 @@ const meta = {
     zVisWindow: 1,
     uActiveSizeMul: DEFAULT_GALAXY_U_ACTIVE_SIZE_MUL,
     uBgSizeMul: 0.001,
-    uLMin: 0.2,
+    uLMin: 0.3,
     uLMax: 1.0,
     uHighRatingT: 0.85,
     uHighTierTRangeScale: 0.4,

@@ -10,7 +10,7 @@ import {
 } from '@/lib/colorMath'
 
 const defaultSnap: GalaxyLightnessUniforms = {
-  uLMin: 0.2,
+  uLMin: 0.3,
   uLMax: 1.0,
   uHighRatingT: 0.85,
   uHighTierTRangeScale: 0.35,

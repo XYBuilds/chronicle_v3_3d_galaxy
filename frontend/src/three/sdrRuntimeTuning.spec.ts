@@ -42,7 +42,7 @@ describe('sdrRuntimeTuning', () => {
 
   it('formatSdrRuntimeTuningLog includes key fields', () => {
     const line = formatSdrRuntimeTuningLog({
-      universeBgHex: '#000002',
+      universeBgHex: '#000103',
       universeBgSource: 'default',
       idleNearFade: { enabled: 1, startDist: 20, width: 10, minAlpha: 0.1 },
       idleZFade: { mode: -1, outsideAlpha: 0.5 },

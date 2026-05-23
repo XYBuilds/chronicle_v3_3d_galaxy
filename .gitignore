@@ -48,6 +48,8 @@ frontend/public/data/og-today.png.tmp
 # Local scratch (e.g. P25.4 cast eval temp .gz)
 # ============================================================
 .tmp/
+# README assembly slices (temporary; do not commit)
+docs/temp/readme-parts/
 
 # ============================================================
 # IDE / OS

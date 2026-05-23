@@ -2,6 +2,8 @@
   <img src="docs/assets/readme/title.svg" alt="the movie cosmos" width="400" height="160" />
 </p>
 
+---
+
 The Movie Cosmos weaves roughly sixty thousand TMDB films into a walkable starfield: alike in plot, genres, and languages gather on the plane; release history stacks along depth.
 
 > Drift through the spacetime of cinema
@@ -14,8 +16,9 @@ The Movie Cosmos weaves roughly sixty thousand TMDB films into a walkable starfi
 
 ## Table of contents
 
+- [Table of contents](#table-of-contents)
 - [Visual presentation](#visual-presentation)
-- [Concept & inspiration](#concept--inspiration)
+- [Concept \& inspiration](#concept--inspiration)
   - [Creative background](#creative-background)
   - [Artistic experience](#artistic-experience)
   - [AI Transparency](#ai-transparency)
@@ -25,25 +28,28 @@ The Movie Cosmos weaves roughly sixty thousand TMDB films into a walkable starfi
   - [Focus](#focus)
   - [Search](#search)
   - [Share](#share)
-- [Browser & environment](#browser--environment)
-- [Privacy & analytics (brief)](#privacy--analytics-brief)
-- [Participate & support](#participate--support)
+- [Browser \& environment](#browser--environment)
+- [Privacy \& analytics (brief)](#privacy--analytics-brief)
+- [Participate \& support](#participate--support)
 - [Technical perspective](#technical-perspective)
-  - [Creative coding & visual rendering](#creative-coding--visual-rendering)
-  - [Core framework & build tooling](#core-framework--build-tooling)
+  - [Creative coding \& visual rendering](#creative-coding--visual-rendering)
+  - [Core framework \& build tooling](#core-framework--build-tooling)
 - [Behind the scenes](#behind-the-scenes)
-  - [Performance & frame rate](#performance--frame-rate)
-  - [Mathematics & coordinates: from CSV to star map](#mathematics--coordinates-from-csv-to-star-map)
+  - [Performance \& frame rate](#performance--frame-rate)
+  - [Mathematics \& coordinates: from CSV to star map](#mathematics--coordinates-from-csv-to-star-map)
+    - [Plane (X/Y) — content similarity, not time](#plane-xy--content-similarity-not-time)
+    - [Depth (Z) — release date, excluded from embedding](#depth-z--release-date-excluded-from-embedding)
+    - [Size \& brightness — popularity vs. score (precomputed at export)](#size--brightness--popularity-vs-score-precomputed-at-export)
 - [For developers](#for-developers)
-  - [Stack & data flow](#stack--data-flow)
-  - [Repository structure & layout](#repository-structure--layout)
+  - [Stack \& data flow](#stack--data-flow)
+  - [Repository structure \& layout](#repository-structure--layout)
   - [Clone and run locally (frontend)](#clone-and-run-locally-frontend)
   - [Local data (Python pipeline)](#local-data-python-pipeline)
   - [Environment variables](#environment-variables)
-  - [CI & static deployment](#ci--static-deployment)
+  - [CI \& static deployment](#ci--static-deployment)
   - [Documentation index (implementation SSOT)](#documentation-index-implementation-ssot)
-- [Data & credits](#data--credits)
-- [License & reuse](#license--reuse)
+- [Data \& credits](#data--credits)
+- [License \& reuse](#license--reuse)
 
 ## Visual presentation
 
@@ -87,30 +93,30 @@ This section discloses how the work was made. The Movie Cosmos was co-developed 
 In macro view you move through a near-planar starfield along release year (Z). Each star reads as follows; gestures are in the second table.
 
 
-| Visual | Meaning |
-| -------- | -------------------------------------------------------------------------------------------- |
+| Visual             | Meaning                                                                                                                                                                                           |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Plane position** | Multilingual tagline + overview semantics, genres (default golden-ratio \(1/\varphi\) rank weights), and `original_language` after dimensionality reduction: culturally similar films sit closer. |
-| **Depth position** | Release date as decimal year; never fed to UMAP, so the map is not stretched into a timeline. |
-| **Size** | Mostly `vote_count` (log-scaled): more raters → larger particles, with head compression so giants do not blot out the field. |
-| **Brightness** | Mostly TMDB `vote_average` (0–10): higher score → brighter look, decoupled from size. |
-| **Hue** | Primary genre `genres[0]`; the pipeline may emit `genre_hue` for GPU tinting. |
+| **Depth position** | Release date as decimal year; never fed to UMAP, so the map is not stretched into a timeline.                                                                                                     |
+| **Size**           | Mostly `vote_count` (log-scaled): more raters → larger particles, with head compression so giants do not blot out the field.                                                                      |
+| **Brightness**     | Mostly TMDB `vote_average` (0–10): higher score → brighter look, decoupled from size.                                                                                                             |
+| **Hue**            | Primary genre `genres[0]`; the pipeline may emit `genre_hue` for GPU tinting.                                                                                                                     |
 
 
 Field-level detail: [TMDB feature engineering & 3D mapping table](docs/project_docs/TMDB%20数据特征工程与%203D%20映射总表.md).
 
 
-| Input / action | Feedback | Notes |
-| --------------------------------------- | ------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Load complete (standard home)** | Cover stage: light brand overlay (~1s entry animation; respects reduced motion); WebGL is mounted and you can drag to observe the highlighted The Movie Today planet. Search, timeline, and detail drawer stay hidden. | Deep link `/movie/:id` with a valid id skips cover and opens focus directly (see Focus). |
-| **On cover: click the center planet / Perlin sphere, or press Enter / Space** | Leave cover and focus today’s film (side archive drawer, orbit camera); URL becomes `/movie/:id`. Keyboard users can Tab to a transparent center control (visible focus ring). | The Movie Today picks from `today.json` by UTC calendar day; stale feed, fetch failure, or missing id falls back to a random title from the top 1,000 by vote count (no blocking error). See [P23.1 acceptance guide](docs/guides/P23.1%20The%20Movie%20Today%20验收指南.md). |
-| **Visit `/today` in the address bar** | Same as home: resolve today’s film, show Cover, then enter focus as above. | Share previews for “today” links are handled by the OG Worker (see Share). |
-| **Canvas drag** (primary button) | Macro: truck / pedestal pan (locked orientation). Focus orbit: yaw / pitch around the current pivot. | Small movement counts as a click pick; larger motion is treated as camera navigation. |
-| **Mouse wheel** (Space not held) | Move `zCurrent` along the time axis (clamped to dataset `z_range`); camera follows `zCurrent - zCamDistance`. | Wheel does not advance the timeline in focus orbit or Cover “today” orbit; Ctrl+wheel is left to the browser zoom. |
-| **Timeline** (left vertical rail / bottom horizontal bar) | Drag, tick click, or arrow / Home / End keys update `zCurrent` and the on-screen era window. | When a film is selected (`selectedMovieId`), the track shows bridge Z only and cannot change `zCurrent`. |
-| **Space + wheel** | Dolly toward the cursor on the plane `z = zCurrent` (adjusts `zCamDistance` and XY). | Releasing Space restores the default standoff; Space in a text field types normally and does not arm dolly. |
-| **Hover a star** | Tooltip: title + primary genre (`genres[0]`), anchored at the planet’s screen projection; camera unchanged. | Ray hit on the visible active sphere; focus mode adds neighborhood and Perlin treatment (see Focus). |
-| **F** | Toggle browser fullscreen | Same as the top-right fullscreen control; ignored while typing in search or other inputs |
-| **`?lang=` / language menu** | Seven HUD UI locales; URL param → localStorage → browser language → default English | TMDB record fields (titles, overviews, credits) stay in source language |
+| Input / action                                                                | Feedback                                                                                                                                                                                                               | Notes                                                                                                                                                                                                                                                                         |
+| ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Load complete (standard home)**                                             | Cover stage: light brand overlay (~1s entry animation; respects reduced motion); WebGL is mounted and you can drag to observe the highlighted The Movie Today planet. Search, timeline, and detail drawer stay hidden. | Deep link `/movie/:id` with a valid id skips cover and opens focus directly (see Focus).                                                                                                                                                                                      |
+| **On cover: click the center planet / Perlin sphere, or press Enter / Space** | Leave cover and focus today’s film (side archive drawer, orbit camera); URL becomes `/movie/:id`. Keyboard users can Tab to a transparent center control (visible focus ring).                                         | The Movie Today picks from `today.json` by UTC calendar day; stale feed, fetch failure, or missing id falls back to a random title from the top 1,000 by vote count (no blocking error). See [P23.1 acceptance guide](docs/guides/P23.1%20The%20Movie%20Today%20验收指南.md). |
+| **Visit `/today` in the address bar**                                         | Same as home: resolve today’s film, show Cover, then enter focus as above.                                                                                                                                             | Share previews for “today” links are handled by the OG Worker (see Share).                                                                                                                                                                                                    |
+| **Canvas drag** (primary button)                                              | Macro: truck / pedestal pan (locked orientation). Focus orbit: yaw / pitch around the current pivot.                                                                                                                   | Small movement counts as a click pick; larger motion is treated as camera navigation.                                                                                                                                                                                         |
+| **Mouse wheel** (Space not held)                                              | Move `zCurrent` along the time axis (clamped to dataset `z_range`); camera follows `zCurrent - zCamDistance`.                                                                                                          | Wheel does not advance the timeline in focus orbit or Cover “today” orbit; Ctrl+wheel is left to the browser zoom.                                                                                                                                                            |
+| **Timeline** (left vertical rail / bottom horizontal bar)                     | Drag, tick click, or arrow / Home / End keys update `zCurrent` and the on-screen era window.                                                                                                                           | When a film is selected (`selectedMovieId`), the track shows bridge Z only and cannot change `zCurrent`.                                                                                                                                                                      |
+| **Space + wheel**                                                             | Dolly toward the cursor on the plane `z = zCurrent` (adjusts `zCamDistance` and XY).                                                                                                                                   | Releasing Space restores the default standoff; Space in a text field types normally and does not arm dolly.                                                                                                                                                                   |
+| **Hover a star**                                                              | Tooltip: title + primary genre (`genres[0]`), anchored at the planet’s screen projection; camera unchanged.                                                                                                            | Ray hit on the visible active sphere; focus mode adds neighborhood and Perlin treatment (see Focus).                                                                                                                                                                          |
+| **F**                                                                         | Toggle browser fullscreen                                                                                                                                                                                              | Same as the top-right fullscreen control; ignored while typing in search or other inputs                                                                                                                                                                                      |
+| **`?lang=` / language menu**                                                  | Seven HUD UI locales; URL param → localStorage → browser language → default English                                                                                                                                    | TMDB record fields (titles, overviews, credits) stay in source language                                                                                                                                                                                                       |
 
 
 ### Focus
@@ -118,27 +124,27 @@ Field-level detail: [TMDB feature engineering & 3D mapping table](docs/project_d
 Click a film planet in the timeline band or from search; the camera flies in and the archive drawer opens on the right. In focus, a Perlin high-detail sphere replaces that instance’s macro particle.
 
 
-| Input / action | Feedback | Notes |
-| ------------------------------ | --------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| **Click** a film planet in the timeline band | Enter focus: camera flies in; archive drawer opens (poster, overview, cast/crew, TMDB/IMDb links) | That instance’s scale goes to zero on both `InstancedMesh` layers; a Perlin high-detail sphere is the main visual. See [planet state machine spec](docs/project_docs/星球状态机%20spec.md). |
-| **Drag** the canvas while in focus | Orbit camera around the focus and its spherical neighborhood | Different from macro roam pan semantics |
-| **Click** another active planet in the neighborhood | Switch focus to that film (drawer updates) | Neighborhood is a spherical mask (`uSelectionMode = 2`), not the vis-window strip alone |
-| **Clickable cast/crew names** in the drawer (search index loaded) | Highlight all films that person worked on | Same effect as top-bar Person search; plain text if the index is unavailable |
-| **Exit focus**, **ESC** (stack order) | Return to macro roam; closing the drawer clears `selectedMovieId` | HUD exit focus also works; clicking empty canvas does not exit |
+| Input / action                                                    | Feedback                                                                                          | Notes                                                                                                                                                                                       |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Click** a film planet in the timeline band                      | Enter focus: camera flies in; archive drawer opens (poster, overview, cast/crew, TMDB/IMDb links) | That instance’s scale goes to zero on both `InstancedMesh` layers; a Perlin high-detail sphere is the main visual. See [planet state machine spec](docs/project_docs/星球状态机%20spec.md). |
+| **Drag** the canvas while in focus                                | Orbit camera around the focus and its spherical neighborhood                                      | Different from macro roam pan semantics                                                                                                                                                     |
+| **Click** another active planet in the neighborhood               | Switch focus to that film (drawer updates)                                                        | Neighborhood is a spherical mask (`uSelectionMode = 2`), not the vis-window strip alone                                                                                                     |
+| **Clickable cast/crew names** in the drawer (search index loaded) | Highlight all films that person worked on                                                         | Same effect as top-bar Person search; plain text if the index is unavailable                                                                                                                |
+| **Exit focus**, **ESC** (stack order)                             | Return to macro roam; closing the drawer clears `selectedMovieId`                                 | HUD exit focus also works; clicking empty canvas does not exit                                                                                                                              |
 
 
 Macro field mapping lives in the [feature → render table](docs/project_docs/TMDB%20数据特征工程与%203D%20映射总表.md) and Browse above. In focus, the sphere reads as follows.
 
 
-| Visual | Meaning |
-| --------------- | ------------------------------------------------- |
-| **Perlin band boundaries** | Simplex noise partitions the sphere; up to eight declared genre bands |
-| **Band order and width** | Genres ordered by TMDB vote counts; earlier genres get wider bands, then \(1/\varphi\) geometric taper (same rhythm as macro genre weights) |
-| **Hue** | Each band uses its genre palette color; primary genre prefers exported `genre_hue` |
-| **Brightness** | Still driven mainly by TMDB average rating (same L mapping as macro) |
-| **Terraced relief** | Slight stepped ridges between bands for readable silhouettes |
-| **Concentric reference rings** | World-space rings mark `vote_count` tiers—how “large” this film is in the cosmos |
-| **Side lightness bar** | `FocusLReference`: vertical spectrum + pointer for this film’s rating on the brightness scale |
+| Visual                         | Meaning                                                                                                                                     |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Perlin band boundaries**     | Simplex noise partitions the sphere; up to eight declared genre bands                                                                       |
+| **Band order and width**       | Genres ordered by TMDB vote counts; earlier genres get wider bands, then \(1/\varphi\) geometric taper (same rhythm as macro genre weights) |
+| **Hue**                        | Each band uses its genre palette color; primary genre prefers exported `genre_hue`                                                          |
+| **Brightness**                 | Still driven mainly by TMDB average rating (same L mapping as macro)                                                                        |
+| **Terraced relief**            | Slight stepped ridges between bands for readable silhouettes                                                                                |
+| **Concentric reference rings** | World-space rings mark `vote_count` tiers—how “large” this film is in the cosmos                                                            |
+| **Side lightness bar**         | `FocusLReference`: vertical spectrum + pointer for this film’s rating on the brightness scale                                               |
 
 
 Tunable parameters and shader contracts: [visual parameters table](docs/project_docs/视觉参数总表.md), [Tech Spec §1.1](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md) (focus Perlin sphere).
@@ -148,19 +154,19 @@ Tunable parameters and shader contracts: [visual parameters table](docs/project_
 Top search works in macro roam and in focus; picking a film enters focus (see Focus).
 
 
-| Input / action | Feedback | Notes |
-| ------------- | -------------------------------------------------------------------------------- | ---------------------------------------------- |
-| **Top search · Movie** | Match titles from the index; choosing a row enters focus on that film (`selectedMovieId`). | Requires loaded `search_index`; Cmd/Ctrl+K focuses the search field. |
-| **Top search · Person** | Highlight the person’s film set (`selectionIds`); constellation lines (cast / crew / producers); timeline eases to the earliest release year in the set. | Cast/crew names in the drawer can start the same session (P27.3). |
-| **Top search · Genre** | AND multiple genre badges; intersection writes `selectionIds` and highlights matches. | No text field; clearing all badges ends the genre session. |
-| **ESC** | Stack unwind: blur search → exit focus if any (keep person/genre highlight) → clear search session. | Search × clears search and focus in one action. Cover / info dialog have their own ESC handling (see Browse). |
+| Input / action          | Feedback                                                                                                                                                 | Notes                                                                                                         |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| **Top search · Movie**  | Match titles from the index; choosing a row enters focus on that film (`selectedMovieId`).                                                               | Requires loaded `search_index`; Cmd/Ctrl+K focuses the search field.                                          |
+| **Top search · Person** | Highlight the person’s film set (`selectionIds`); constellation lines (cast / crew / producers); timeline eases to the earliest release year in the set. | Cast/crew names in the drawer can start the same session (P27.3).                                             |
+| **Top search · Genre**  | AND multiple genre badges; intersection writes `selectionIds` and highlights matches.                                                                    | No text field; clearing all badges ends the genre session.                                                    |
+| **ESC**                 | Stack unwind: blur search → exit focus if any (keep person/genre highlight) → clear search session.                                                      | Search × clears search and focus in one action. Cover / info dialog have their own ESC handling (see Browse). |
 
 
 ### Share
 
 
-| Input / action | Feedback | Notes |
-| -------------- | ------------------------------------------------------ | ------------------------- |
+| Input / action                   | Feedback                                                                                                 | Notes                                                                                  |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
 | Drawer header **share icon row** | Copy a link to this film; or open X, Reddit, Discord, email, Telegram, Facebook, and similar share flows | Requires focus on a film first; controls live in the drawer header, not the cover menu |
 
 
@@ -173,11 +179,11 @@ The home page and “today’s star” also have shareable URLs: the site root i
 Use a recent desktop or mobile browser with hardware acceleration enabled.
 
 
-| Capability | Requirement |
-| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **WebGL 2** | The galaxy renderer requires WebGL2 (dual `InstancedMesh`, `gl_InstanceID`, etc.); older browsers cannot mount the canvas |
+| Capability         | Requirement                                                                                                                                                                                                                                                             |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WebGL 2**        | The galaxy renderer requires WebGL2 (dual `InstancedMesh`, `gl_InstanceID`, etc.); older browsers cannot mount the canvas                                                                                                                                               |
 | **Streaming gzip** | Bundles are decompressed with `DecompressionStream`; unsupported browsers fail load with an upgrade hint (typical floor: Safari 16.4+, Chrome 80+, Firefox 113+ — see [MDN: DecompressionStream](https://developer.mozilla.org/en-US/docs/Web/API/DecompressionStream)) |
-| **Fullscreen API** | Standard or WebKit-prefixed fullscreen must be available; otherwise the fullscreen control is hidden |
+| **Fullscreen API** | Standard or WebKit-prefixed fullscreen must be available; otherwise the fullscreen control is hidden                                                                                                                                                                    |
 
 
 **Loading and errors:** On entry, a full-screen overlay tracks download → decompress → parse JSON → search index (the cosmos may still load if the index is missing or fails, but search is degraded). If galaxy data cannot be fetched, a “Could not load galaxy data” screen offers retry, reload, and optional raw error / developer hints (local dev: run the Python pipeline to generate `galaxy_data` first).
@@ -202,12 +208,12 @@ Use a recent desktop or mobile browser with hardware acceleration enabled.
 ## Participate & support
 
 
-| Entry | Description |
-| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Feedback (Tally)** | HUD Feedback opens a hosted form modal (`data-tally-open` + Tally `embed.js`). When env is unset, default form id `pbRpey`; set `VITE_TALLY_FEEDBACK_FORM_ID` to `''` / `0` / `false` to hide the button. Submissions are processed by Tally; do not submit passwords or highly sensitive data. |
-| **Support (Ko-fi)** | Support opens Ko-fi or a deployer-configured support URL in a new tab. Unset `VITE_KOFI_URL` → default `https://ko-fi.com/xybuilds`; empty / `0` / `false` or invalid URL hides the button. |
-| **Discord** | Primary path: invite link on the Tally thank-you page (update in Tally / Discord; usually no redeploy). Optional: build var `VITE_DISCORD_INVITE_URL` points the `DrawerMovieShare` Discord composer in the focus drawer at your invite; otherwise falls back to generic [discord.com](https://discord.com/). The community is not an official TMDB channel. |
-| **GitHub** | Features, bugs, and contributions: [Issues](https://github.com/XYBuilds/chronicle_v3_3d_galaxy/issues) on this repo. |
+| Entry                | Description                                                                                                                                                                                                                                                                                                                                                  |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Feedback (Tally)** | HUD Feedback opens a hosted form modal (`data-tally-open` + Tally `embed.js`). When env is unset, default form id `pbRpey`; set `VITE_TALLY_FEEDBACK_FORM_ID` to `''` / `0` / `false` to hide the button. Submissions are processed by Tally; do not submit passwords or highly sensitive data.                                                              |
+| **Support (Ko-fi)**  | Support opens Ko-fi or a deployer-configured support URL in a new tab. Unset `VITE_KOFI_URL` → default `https://ko-fi.com/xybuilds`; empty / `0` / `false` or invalid URL hides the button.                                                                                                                                                                  |
+| **Discord**          | Primary path: invite link on the Tally thank-you page (update in Tally / Discord; usually no redeploy). Optional: build var `VITE_DISCORD_INVITE_URL` points the `DrawerMovieShare` Discord composer in the focus drawer at your invite; otherwise falls back to generic [discord.com](https://discord.com/). The community is not an official TMDB channel. |
+| **GitHub**           | Features, bugs, and contributions: [Issues](https://github.com/XYBuilds/chronicle_v3_3d_galaxy/issues) on this repo.                                                                                                                                                                                                                                         |
 
 
 See [Tech Spec §5.3](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md) and [`.env.example`](.env.example) for env semantics.
@@ -376,11 +382,11 @@ The `build` script runs dist size checks and SPA fallback verification.
 A full offline experience needs your own TMDB CSV and pipeline output under `frontend/public/data/`. Do not open the full `data/raw/TMDB_all_movies.csv` in chat or the editor; use [`data/subsample/TMDB_all_movies_random20.csv`](data/subsample/TMDB_all_movies_random20.csv) for schema and [`data/README.md`](data/README.md) for commands.
 
 
-| Scenario | Command (repo root, Python 3.11+ venv active) |
-| -------------------------------------------- | ------------------------------------------------------------------------------------ |
-| **Smoke (20-row subsample, auto Phase 1+2)** | `python scripts/run_pipeline.py --input data/subsample/TMDB_all_movies_random20.csv` |
-| **Clean only (Phase 1)** | `python scripts/run_pipeline.py --input <your.csv> --phase-1-only` |
-| **Full Phase 1+2 (monthly refit alignment: add `--densmap`)** | GPU/CPU examples in [`data/README.md`](data/README.md) |
+| Scenario                                                      | Command (repo root, Python 3.11+ venv active)                                        |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| **Smoke (20-row subsample, auto Phase 1+2)**                  | `python scripts/run_pipeline.py --input data/subsample/TMDB_all_movies_random20.csv` |
+| **Clean only (Phase 1)**                                      | `python scripts/run_pipeline.py --input <your.csv> --phase-1-only`                   |
+| **Full Phase 1+2 (monthly refit alignment: add `--densmap`)** | GPU/CPU examples in [`data/README.md`](data/README.md)                               |
 
 
 Install CPU dependencies (CI parity):
@@ -398,31 +404,31 @@ Copy [`.env.example`](.env.example) to `.env` at the repo root (gitignored). Nev
 Backend / CI (GitHub Secrets or local cron)
 
 
-| Variable | Role |
-| ------------------------------------------------------------------------------------------ | ---------------------------------------------------------- |
-| `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` | P18+ import and nightly/monthly cron |
-| `KAGGLE_USERNAME` / `KAGGLE_KEY` | Nightly vote refresh |
-| `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_PUBLIC_BASE_URL` | All five required to upload; otherwise `upload_galaxy_r2.py` skips (exit 0) |
-| `R2_KEY_PREFIX` | Object key prefix, default `galaxy` |
-| `R2_GALAXY_PRUNE_AFTER_UPLOAD` | `1` removes large gzip from `frontend/public/data/` after upload, keeps manifest |
-| `CLOUDFLARE_ACCOUNT_ID` / `CLOUDFLARE_API_TOKEN` | wrangler `pages deploy` |
-| `CLOUDFLARE_PAGES_PROJECT_NAME` | Pages project (Secret) |
-| `CF_WEB_ANALYTICS_BEACON_TOKEN` | Injected at build as `VITE_CF_BEACON_TOKEN` (optional) |
-| `OG_INDEX_KV_*` | P34.3 OG index KV sync (optional in cron) |
-| `GALAXY_EMBED_BUNDLE_URL` | HTTPS zip URL for monthly embedding bundle (Secret) |
+| Variable                                                                                       | Role                                                                             |
+| ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY`                                                   | P18+ import and nightly/monthly cron                                             |
+| `KAGGLE_USERNAME` / `KAGGLE_KEY`                                                               | Nightly vote refresh                                                             |
+| `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_PUBLIC_BASE_URL` | All five required to upload; otherwise `upload_galaxy_r2.py` skips (exit 0)      |
+| `R2_KEY_PREFIX`                                                                                | Object key prefix, default `galaxy`                                              |
+| `R2_GALAXY_PRUNE_AFTER_UPLOAD`                                                                 | `1` removes large gzip from `frontend/public/data/` after upload, keeps manifest |
+| `CLOUDFLARE_ACCOUNT_ID` / `CLOUDFLARE_API_TOKEN`                                               | wrangler `pages deploy`                                                          |
+| `CLOUDFLARE_PAGES_PROJECT_NAME`                                                                | Pages project (Secret)                                                           |
+| `CF_WEB_ANALYTICS_BEACON_TOKEN`                                                                | Injected at build as `VITE_CF_BEACON_TOKEN` (optional)                           |
+| `OG_INDEX_KV_*`                                                                                | P34.3 OG index KV sync (optional in cron)                                        |
+| `GALAXY_EMBED_BUNDLE_URL`                                                                      | HTTPS zip URL for monthly embedding bundle (Secret)                              |
 
 
 Frontend (Vite, build-time) — types in [`frontend/src/vite-env.d.ts`](frontend/src/vite-env.d.ts); resolution in [`frontend/src/lib/galaxyAssetUrls.ts`](frontend/src/lib/galaxyAssetUrls.ts).
 
 
-| Variable | Role |
-| ----------------------------------- | ---------------------------------------- |
-| `VITE_GALAXY_DATA_GZIP_URL` | Optional override for galaxy gzip URL |
-| `VITE_GALAXY_SEARCH_INDEX_GZIP_URL` | Optional override for search index gzip URL |
-| `VITE_TODAY_JSON_URL` | Optional override for The Movie Today `today.json` |
-| `VITE_KOFI_URL` | Ko-fi support link; empty / `0` / `false` hides the button |
-| `VITE_TALLY_FEEDBACK_FORM_ID` | Tally feedback form; empty hides the button |
-| `VITE_DISCORD_INVITE_URL` | Optional Discord invite for share links |
+| Variable                            | Role                                                       |
+| ----------------------------------- | ---------------------------------------------------------- |
+| `VITE_GALAXY_DATA_GZIP_URL`         | Optional override for galaxy gzip URL                      |
+| `VITE_GALAXY_SEARCH_INDEX_GZIP_URL` | Optional override for search index gzip URL                |
+| `VITE_TODAY_JSON_URL`               | Optional override for The Movie Today `today.json`         |
+| `VITE_KOFI_URL`                     | Ko-fi support link; empty / `0` / `false` hides the button |
+| `VITE_TALLY_FEEDBACK_FORM_ID`       | Tally feedback form; empty hides the button                |
+| `VITE_DISCORD_INVITE_URL`           | Optional Discord invite for share links                    |
 
 
 Without `VITE_*` data URLs: use `galaxy_assets_manifest.json` R2 URLs first, then bundled `public/data/` paths.
@@ -432,11 +438,11 @@ Without `VITE_*` data URLs: use `galaxy_assets_manifest.json` R2 URLs first, the
 Production path: GitHub Actions → Cloudflare R2 + Cloudflare Pages
 
 
-| Workflow | Trigger | Summary |
-| ------------------------------------------------------------------------ | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`nightly_vote_refresh.yml`](.github/workflows/nightly_vote_refresh.yml) | Daily 20:00 UTC; `workflow_dispatch` | `scripts/cron/nightly_vote_refresh.py` → `upload_galaxy_r2.py` → `npm run build -w frontend` → `wrangler pages deploy` (`workingDirectory: frontend`) |
-| [`monthly_refit.yml`](.github/workflows/monthly_refit.yml) | 1st of month 20:00 UTC; manual `anchor_mode` | Restore/download embedding bundle → `monthly_refit.py` → same R2 + Pages chain; 210 min timeout |
-| [`deploy-pages.yml`](.github/workflows/deploy-pages.yml) | `main` push or manual | Gray release: GitHub Pages of `frontend/dist` (with `404.html` SPA fallback); not long-term prod, retire after CF validation |
+| Workflow                                                                 | Trigger                                      | Summary                                                                                                                                               |
+| ------------------------------------------------------------------------ | -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`nightly_vote_refresh.yml`](.github/workflows/nightly_vote_refresh.yml) | Daily 20:00 UTC; `workflow_dispatch`         | `scripts/cron/nightly_vote_refresh.py` → `upload_galaxy_r2.py` → `npm run build -w frontend` → `wrangler pages deploy` (`workingDirectory: frontend`) |
+| [`monthly_refit.yml`](.github/workflows/monthly_refit.yml)               | 1st of month 20:00 UTC; manual `anchor_mode` | Restore/download embedding bundle → `monthly_refit.py` → same R2 + Pages chain; 210 min timeout                                                       |
+| [`deploy-pages.yml`](.github/workflows/deploy-pages.yml)                 | `main` push or manual                        | Gray release: GitHub Pages of `frontend/dist` (with `404.html` SPA fallback); not long-term prod, retire after CF validation                          |
 
 
 Shared rules:
@@ -452,15 +458,15 @@ Gray fallback: GitHub Pages
 ### Documentation index (implementation SSOT)
 
 
-| Document | Contents |
-| -------------------------------------------------------------------------------- | ------------------ |
-| [TMDB 电影宇宙 PRD.md](docs/project_docs/TMDB%20电影宇宙%20PRD.md) | Vision, journeys, scope |
-| [TMDB 电影宇宙 Tech Spec.md](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md) | Architecture, load stages, rendering & camera |
-| [TMDB 电影宇宙 Design Spec.md](docs/project_docs/TMDB%20电影宇宙%20Design%20Spec.md) | Visual and interaction rules |
-| [TMDB 电影宇宙 Data Pipeline.md](docs/project_docs/TMDB%20电影宇宙%20Data%20Pipeline.md) | Data flow, features, export & automation SSOT |
-| [TMDB 数据特征工程与 3D 映射总表.md](docs/project_docs/TMDB%20数据特征工程与%203D%20映射总表.md) | Feature → rendering mapping |
-| [星球状态机 spec.md](docs/project_docs/星球状态机%20spec.md) | Selection / focus state machine |
-| [视觉参数总表.md](docs/project_docs/视觉参数总表.md) | Shader and visual parameters |
+| Document                                                                                         | Contents                                      |
+| ------------------------------------------------------------------------------------------------ | --------------------------------------------- |
+| [TMDB 电影宇宙 PRD.md](docs/project_docs/TMDB%20电影宇宙%20PRD.md)                               | Vision, journeys, scope                       |
+| [TMDB 电影宇宙 Tech Spec.md](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md)                 | Architecture, load stages, rendering & camera |
+| [TMDB 电影宇宙 Design Spec.md](docs/project_docs/TMDB%20电影宇宙%20Design%20Spec.md)             | Visual and interaction rules                  |
+| [TMDB 电影宇宙 Data Pipeline.md](docs/project_docs/TMDB%20电影宇宙%20Data%20Pipeline.md)         | Data flow, features, export & automation SSOT |
+| [TMDB 数据特征工程与 3D 映射总表.md](docs/project_docs/TMDB%20数据特征工程与%203D%20映射总表.md) | Feature → rendering mapping                   |
+| [星球状态机 spec.md](docs/project_docs/星球状态机%20spec.md)                                     | Selection / focus state machine               |
+| [视觉参数总表.md](docs/project_docs/视觉参数总表.md)                                             | Shader and visual parameters                  |
 
 
 ## Data & credits
@@ -474,9 +480,9 @@ Full third-party data, font, and redistribution notes live in the repository roo
 ## License & reuse
 
 
-| Scope | License | Notes |
-| ----------------------------------------------------------------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **This repository’s source code** (`frontend/src/`, `scripts/`, etc.) | [Apache License 2.0](LICENSE) | Commercial use and modification allowed; redistribution must preserve copyright notices and the [NOTICE](NOTICE) file. Apache-2.0 already requires NOTICE; maintainers prefer visible credit to The Movie Cosmos linking [themoviecosmos.com](https://themoviecosmos.com/) (wording in NOTICE). |
-| **Markdown under `docs/`** (`project_docs/`, `reports/`, `guides/`, etc.) | [CC BY 4.0](docs/LICENSE) | Share and adapt documentation text with attribution, a license link, and indication of changes. Code blocks embedded in those files, when used as software, remain under Apache-2.0. |
-| **TMDB / IMDb data and trademarks** | Their respective terms | Not granted by Apache-2.0; you remain responsible for TMDB and IMDb compliance when processing or republishing datasets (see above and NOTICE). |
-| **Bundled fonts** (`assets/fonts/`) | Per-font licenses | Inter (`Inter.ttf`): © Rasmus Andersson and the Inter Project Authors, [SIL Open Font License 1.1](assets/fonts/Inter-OFL.txt); used for OG card body text, among other uses. Butler (`Butler-Medium.ttf`, `Butler-Bold.ttf`): © Fabian De Smet; [official site](https://www.fabiandesmet.com/portfolio/butler-font/) states free personal and commercial use (confirm current terms); used for OG brand lines and cover identity type. HUD WOFFs are built from these TTFs—see [assets/fonts/README.md](assets/fonts/README.md). |
+| Scope                                                                     | License                       | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| ------------------------------------------------------------------------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **This repository’s source code** (`frontend/src/`, `scripts/`, etc.)     | [Apache License 2.0](LICENSE) | Commercial use and modification allowed; redistribution must preserve copyright notices and the [NOTICE](NOTICE) file. Apache-2.0 already requires NOTICE; maintainers prefer visible credit to The Movie Cosmos linking [themoviecosmos.com](https://themoviecosmos.com/) (wording in NOTICE).                                                                                                                                                                                                                                   |
+| **Markdown under `docs/`** (`project_docs/`, `reports/`, `guides/`, etc.) | [CC BY 4.0](docs/LICENSE)     | Share and adapt documentation text with attribution, a license link, and indication of changes. Code blocks embedded in those files, when used as software, remain under Apache-2.0.                                                                                                                                                                                                                                                                                                                                              |
+| **TMDB / IMDb data and trademarks**                                       | Their respective terms        | Not granted by Apache-2.0; you remain responsible for TMDB and IMDb compliance when processing or republishing datasets (see above and NOTICE).                                                                                                                                                                                                                                                                                                                                                                                   |
+| **Bundled fonts** (`assets/fonts/`)                                       | Per-font licenses             | Inter (`Inter.ttf`): © Rasmus Andersson and the Inter Project Authors, [SIL Open Font License 1.1](assets/fonts/Inter-OFL.txt); used for OG card body text, among other uses. Butler (`Butler-Medium.ttf`, `Butler-Bold.ttf`): © Fabian De Smet; [official site](https://www.fabiandesmet.com/portfolio/butler-font/) states free personal and commercial use (confirm current terms); used for OG brand lines and cover identity type. HUD WOFFs are built from these TTFs—see [assets/fonts/README.md](assets/fonts/README.md). |

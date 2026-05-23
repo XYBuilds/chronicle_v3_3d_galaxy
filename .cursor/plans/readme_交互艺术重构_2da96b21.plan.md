@@ -3,38 +3,38 @@ name: README 交互艺术重构
 overview: 按《Interactive Art README Template》重组 [README.md](README.md) 与 [README.en.md](README.en.md)：前半以观赏者向的叙事与交互表为主，后半保留并精炼当前级详度的开发/部署附录；中英结构对齐，并修正与当前代码不一致的分享/OG 描述。
 todos:
   - id: slice-01-hero-concept
-    content: "读 PRD §1–2、映射总表 skim、en.json info.sections → 写 docs/temp/readme-parts/01-hero-concept.{zh,en}.md（标题/Slogan/在线链/视觉占位/概念/艺术体验/宏观看视觉简表）"
-    status: pending
+    content: 读 PRD §1–2、映射总表 skim、en.json info.sections → 写 docs/temp/readme-parts/01-hero-concept.{zh,en}.md（标题/Slogan/在线链/视觉占位/概念/艺术体验/宏观看视觉简表）
+    status: completed
   - id: slice-02-boot-cover
-    content: "读 Loading、loadGalaxyData、loadGalaxyGzip、galaxyAssetUrls、coverModeStore、CoverBackdrop、loadToday、routes、useRouteController → 写 02-boot-cover.{zh,en}.md（交互表：加载/Cover/Today 行 + 简短「初次上手」段）"
-    status: pending
+    content: 读 Loading、loadGalaxyData、loadGalaxyGzip、galaxyAssetUrls、coverModeStore、CoverBackdrop、loadToday、routes、useRouteController → 写 02-boot-cover.{zh,en}.md（交互表：加载/Cover/Today 行 + 简短「初次上手」段）
+    status: completed
   - id: slice-03-roam-search
-    content: "读 scene、Timeline、interaction/camera store、SearchBar、search index 消费与星座绘制 → 写 03-roam-search.{zh,en}.md（交互表：拖拽/滚轮/Space/悬停/搜索/ESC 行）"
-    status: pending
+    content: 读 scene、Timeline、interaction/camera store、SearchBar、search index 消费与星座绘制 → 写 03-roam-search.{zh,en}.md（交互表：拖拽/滚轮/Space/悬停/搜索/ESC 行）
+    status: completed
   - id: slice-04-focus-share-og
-    content: "读 Drawer、DrawerMovieShare、shareLinks、planet/shaders、星球状态机 spec、index.html、indexOgMeta.spec、可选 og-worker → 写 04-focus-share-og.{zh,en}.md（交互表 focus/分享行 + 聚焦视觉简表 + OG/深链 1 段）"
-    status: pending
+    content: 读 Drawer、DrawerMovieShare、shareLinks、planet/shaders、星球状态机 spec、index.html、indexOgMeta.spec、可选 og-worker → 写 04-focus-share-og.{zh,en}.md（交互表 focus/分享行 + 聚焦视觉简表 + OG/深链 1 段）
+    status: completed
   - id: slice-05-hud-meta
-    content: "读 en.json loading/error、LanguageSwitch、kofiSupport、tallyFeedback、Support/Feedback、Fullscreen、vite beacon、TmdbAttribution → 写 05-hud-meta.{zh,en}.md（浏览器/隐私/支持/Roadmap/参与支持）"
-    status: pending
+    content: 读 en.json loading/error、LanguageSwitch、kofiSupport、tallyFeedback、Support/Feedback、Fullscreen、vite beacon、TmdbAttribution → 写 05-hud-meta.{zh,en}.md（浏览器/隐私/支持/Roadmap/参与支持）
+    status: completed
   - id: slice-06-tech-behind
-    content: "读 galaxyMeshes/shaders、run_pipeline、umap_projection、export_galaxy_json、Data Pipeline skim → 写 06-tech-behind.{zh,en}.md（技术视界 + 幕后故事/数学）"
-    status: pending
+    content: 读 galaxyMeshes/shaders、run_pipeline、umap_projection、export_galaxy_json、Data Pipeline skim → 写 06-tech-behind.{zh,en}.md（技术视界 + 幕后故事/数学）
+    status: completed
   - id: slice-07-dev-deploy
-    content: "读 workflows 三件套、upload_galaxy_r2、.env.example、vite-env.d.ts、package.json、data/README → 写 07-dev-deploy.{zh,en}.md（面向开发者全文：mermaid/树/命令/env/CI/文档索引）"
-    status: pending
+    content: 读 workflows 三件套、upload_galaxy_r2、.env.example、vite-env.d.ts、package.json、data/README → 写 07-dev-deploy.{zh,en}.md（面向开发者全文：mermaid/树/命令/env/CI/文档索引）
+    status: completed
   - id: slice-08-legal
-    content: "读 NOTICE、LICENSE、docs/LICENSE、assets/fonts/README → 写 08-legal.{zh,en}.md（数据与致谢 + 许可表）"
-    status: pending
+    content: 读 NOTICE、LICENSE、docs/LICENSE、assets/fonts/README → 写 08-legal.{zh,en}.md（数据与致谢 + 许可表）
+    status: completed
   - id: check-slices-conflicts
-    content: "读 docs/temp/readme-parts/*.zh.md 与 *.en.md 全文 + 本计划「章节归属」表 → 产出冲突报告并直接修 slice：去重/消歧/统一术语；未清零冲突不得 assemble"
-    status: pending
+    content: 读 docs/temp/readme-parts/*.zh.md 与 *.en.md 全文 + 本计划「章节归属」表 → 产出冲突报告并直接修 slice：去重/消歧/统一术语；未清零冲突不得 assemble
+    status: completed
   - id: assemble-readmes
-    content: "读 parts/*.zh|en + 本计划结构表 → 按序拼接 README.md / README.en.md；统一 H2 编号与互链；删 docs/temp/readme-parts（或保留至 PR 合并后）"
-    status: pending
+    content: 读 parts/*.zh|en + 本计划结构表 → 按序拼接 README.md / README.en.md；统一 H2 编号与互链；删 docs/temp/readme-parts（或保留至 PR 合并后）
+    status: completed
   - id: verify-readmes
-    content: "验：中英同构（表行数/H2）；rg 过时词；抽查每表行对应 slice 内引用的组件/文件；品牌命名"
-    status: pending
+    content: 验：中英同构（表行数/H2）；rg 过时词；抽查每表行对应 slice 内引用的组件/文件；品牌命名
+    status: completed
 isProject: false
 ---
 
@@ -57,11 +57,11 @@ isProject: false
 
 ## 为何采用「读 xx → 写 xx」单 TODO
 
-| 模式 | 问题 | 本计划做法 |
-|------|------|------------|
-| 读、写拆成 12 个 TODO | 后写 Agent 拿不到前读 Agent 的 context，仍要重读代码或瞎写 | 每个 slice TODO **读完即写** 对应段落 |
-| 一个 Agent 写整份 README | context 易爆（全库 + 双语文档） | 8 个 slice Agent + **1 冲突检查** + 1 组装 + 1 验收 |
-| 每 TODO 只写中文、最后再译 | 翻译 Agent 无代码上下文，易漏改 OG/分享 | 每 slice **同时产出 `.zh.md` + `.en.md`**（英文为专业翻译，事实以该 slice 已读代码为准） |
+| 模式                       | 问题                                                       | 本计划做法                                                                               |
+| -------------------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| 读、写拆成 12 个 TODO      | 后写 Agent 拿不到前读 Agent 的 context，仍要重读代码或瞎写 | 每个 slice TODO **读完即写** 对应段落                                                    |
+| 一个 Agent 写整份 README   | context 易爆（全库 + 双语文档）                            | 8 个 slice Agent + **1 冲突检查** + 1 组装 + 1 验收                                      |
+| 每 TODO 只写中文、最后再译 | 翻译 Agent 无代码上下文，易漏改 OG/分享                    | 每 slice **同时产出 `.zh.md` + `.en.md`**（英文为专业翻译，事实以该 slice 已读代码为准） |
 
 **你可手动**：每个 TODO 新开 Chat/Agent 并粘贴该 TODO 的 `content` + 本计划「分节必读」表中对应行。  
 **我可自动**：并行派发 `slice-01`…`08` → `check-slices-conflicts` → `assemble-readmes` → `verify-readmes`。
@@ -123,16 +123,16 @@ flowchart LR
 
 ## Slice 章节归属（防重叠；冲突检查对照用）
 
-| 仅允许出现在 slice | 章节 / 内容 |
-| ------------------ | ----------- |
-| `01` | `#` 标题、Slogan、在线体验、互链、视觉占位、概念与灵感、艺术体验、**宏观看**视觉简表 |
-| `02` | 交互表行：加载阶段、Cover、The Movie Today、初次上手短段 |
-| `03` | 交互表行：拖拽、滚轮/时间轴、Space+滚轮、悬停、搜索三模式、ESC |
-| `04` | 交互表行：单击 focus、邻域切换、抽屉人名、DrawerMovieShare；**聚焦态**视觉简表；OG/深链 **1 段**（勿在 `05` 重复） |
-| `05` | 浏览器要求、隐私/Analytics、Ko-fi/Tally/Discord、Roadmap、参与支持 |
-| `06` | 技术视界、幕后故事（性能 + UMAP/数学） |
-| `07` | 面向开发者（mermaid、目录树、npm/Python、env、CI、文档索引） |
-| `08` | 数据与致谢、许可表 |
+| 仅允许出现在 slice | 章节 / 内容                                                                                                        |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| `01`               | `#` 标题、Slogan、在线体验、互链、视觉占位、概念与灵感、艺术体验、**宏观看**视觉简表                               |
+| `02`               | 交互表行：加载阶段、Cover、The Movie Today、初次上手短段                                                           |
+| `03`               | 交互表行：拖拽、滚轮/时间轴、Space+滚轮、悬停、搜索三模式、ESC                                                     |
+| `04`               | 交互表行：单击 focus、邻域切换、抽屉人名、DrawerMovieShare；**聚焦态**视觉简表；OG/深链 **1 段**（勿在 `05` 重复） |
+| `05`               | 浏览器要求、隐私/Analytics、Ko-fi/Tally/Discord、Roadmap、参与支持                                                 |
+| `06`               | 技术视界、幕后故事（性能 + UMAP/数学）                                                                             |
+| `07`               | 面向开发者（mermaid、目录树、npm/Python、env、CI、文档索引）                                                       |
+| `08`               | 数据与致谢、许可表                                                                                                 |
 
 **易冲突边界（检查重点）**：`01` 宏观看 vs `04` 聚焦视觉；`04` OG vs `05` 隐私；`06` 管线一句 vs `07` 管线详述（06 只保留「读者向」一句，命令与 CI 只在 `07`）。
 
@@ -167,19 +167,19 @@ flowchart LR
 
 ## 分节必读代码清单（按 slice 索引）
 
-| Slice TODO | 必读（至少） | 写出文件 |
-| ---------- | ------------ | -------- |
-| `slice-01-hero-concept` | [PRD](docs/project_docs/TMDB%20电影宇宙%20PRD.md) §1–2；[映射总表](docs/project_docs/TMDB%20数据特征工程与%203D%20映射总表.md)；`frontend/src/lib/locales/en.json` `info` | `01-hero-concept.{zh,en}.md` |
-| `slice-02-boot-cover` | `Loading.tsx`，`utils/loadGalaxyData.ts`，`data/loadGalaxyGzip.ts`，`lib/galaxyAssetUrls.ts`，`store/coverModeStore.ts`，`data/loadToday.ts`，`hud/CoverBackdrop.tsx`，`lib/routes.ts`，`useRouteController.ts` | `02-boot-cover.{zh,en}.md` |
-| `slice-03-roam-search` | `three/scene.ts`，`components/Timeline.tsx`，`store/` 内 wheel/Space/zCurrent，`components/SearchBar.tsx`，search 高亮/星座入口 | `03-roam-search.{zh,en}.md` |
-| `slice-04-focus-share-og` | `Drawer.tsx`，`DrawerMovieShare.tsx`，`lib/shareLinks.ts`，`three/planet.ts`，[星球状态机 spec](docs/project_docs/星球状态机%20spec.md)，`frontend/index.html`，`lib/indexOgMeta.spec.ts`，可选 `themoviecosmos-og-worker` | `04-focus-share-og.{zh,en}.md` |
-| `slice-05-hud-meta` | `locales/en.json` loading/error，`LanguageSwitch`，`kofiSupport.ts`，`tallyFeedback.ts`，`FeedbackButton`/`SupportButton`，`vite.config.ts`，`TmdbAttribution` | `05-hud-meta.{zh,en}.md` |
-| `slice-06-tech-behind` | `three/galaxyMeshes.ts`，shaders；`scripts/run_pipeline.py`，`umap_projection.py`，`export_galaxy_json.py`；Data Pipeline skim | `06-tech-behind.{zh,en}.md` |
-| `slice-07-dev-deploy` | `.github/workflows/nightly_vote_refresh.yml`，`monthly_refit.yml`，`deploy-pages.yml`，`scripts/cron/upload_galaxy_r2.py`，`.env.example`，`vite-env.d.ts`，`package.json`，`data/README.md` | `07-dev-deploy.{zh,en}.md` |
-| `slice-08-legal` | `NOTICE`，`LICENSE`，`docs/LICENSE`，`assets/fonts/README.md` | `08-legal.{zh,en}.md` |
-| `check-slices-conflicts` | 全部 `readme-parts/*.{zh,en}.md`；本计划「章节归属」「交互指南表」 | `CONFLICT-REPORT.md`（可选）+ **就地修** slice |
-| `assemble-readmes` | 冲突清零后的 `readme-parts/*` + 本计划「建议的新文档结构」表 | 根目录 `README.md`，`README.en.md` |
-| `verify-readmes` | 组装后的双 README +  spot-check 原 slice 内 `readme-facts` | 修正遗漏；grep 过时词 |
+| Slice TODO                | 必读（至少）                                                                                                                                                                                                               | 写出文件                                       |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| `slice-01-hero-concept`   | [PRD](docs/project_docs/TMDB%20电影宇宙%20PRD.md) §1–2；[映射总表](docs/project_docs/TMDB%20数据特征工程与%203D%20映射总表.md)；`frontend/src/lib/locales/en.json` `info`                                                  | `01-hero-concept.{zh,en}.md`                   |
+| `slice-02-boot-cover`     | `Loading.tsx`，`utils/loadGalaxyData.ts`，`data/loadGalaxyGzip.ts`，`lib/galaxyAssetUrls.ts`，`store/coverModeStore.ts`，`data/loadToday.ts`，`hud/CoverBackdrop.tsx`，`lib/routes.ts`，`useRouteController.ts`            | `02-boot-cover.{zh,en}.md`                     |
+| `slice-03-roam-search`    | `three/scene.ts`，`components/Timeline.tsx`，`store/` 内 wheel/Space/zCurrent，`components/SearchBar.tsx`，search 高亮/星座入口                                                                                            | `03-roam-search.{zh,en}.md`                    |
+| `slice-04-focus-share-og` | `Drawer.tsx`，`DrawerMovieShare.tsx`，`lib/shareLinks.ts`，`three/planet.ts`，[星球状态机 spec](docs/project_docs/星球状态机%20spec.md)，`frontend/index.html`，`lib/indexOgMeta.spec.ts`，可选 `themoviecosmos-og-worker` | `04-focus-share-og.{zh,en}.md`                 |
+| `slice-05-hud-meta`       | `locales/en.json` loading/error，`LanguageSwitch`，`kofiSupport.ts`，`tallyFeedback.ts`，`FeedbackButton`/`SupportButton`，`vite.config.ts`，`TmdbAttribution`                                                             | `05-hud-meta.{zh,en}.md`                       |
+| `slice-06-tech-behind`    | `three/galaxyMeshes.ts`，shaders；`scripts/run_pipeline.py`，`umap_projection.py`，`export_galaxy_json.py`；Data Pipeline skim                                                                                             | `06-tech-behind.{zh,en}.md`                    |
+| `slice-07-dev-deploy`     | `.github/workflows/nightly_vote_refresh.yml`，`monthly_refit.yml`，`deploy-pages.yml`，`scripts/cron/upload_galaxy_r2.py`，`.env.example`，`vite-env.d.ts`，`package.json`，`data/README.md`                               | `07-dev-deploy.{zh,en}.md`                     |
+| `slice-08-legal`          | `NOTICE`，`LICENSE`，`docs/LICENSE`，`assets/fonts/README.md`                                                                                                                                                              | `08-legal.{zh,en}.md`                          |
+| `check-slices-conflicts`  | 全部 `readme-parts/*.{zh,en}.md`；本计划「章节归属」「交互指南表」                                                                                                                                                         | `CONFLICT-REPORT.md`（可选）+ **就地修** slice |
+| `assemble-readmes`        | 冲突清零后的 `readme-parts/*` + 本计划「建议的新文档结构」表                                                                                                                                                               | 根目录 `README.md`，`README.en.md`             |
+| `verify-readmes`          | 组装后的双 README +  spot-check 原 slice 内 `readme-facts`                                                                                                                                                                 | 修正遗漏；grep 过时词                          |
 
 **Agent 提示词模板（复制到子 Agent）**：
 

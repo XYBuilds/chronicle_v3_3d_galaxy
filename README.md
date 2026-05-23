@@ -13,6 +13,12 @@ The Movie Cosmos 把近六万部 TMDB 影片织成一片可走进的星海：在
 
 **English readme:** [README.en.md](README.en.md) 
 
+
+- 💬 [Discord 社区](https://discord.gg/SkhMZ34CvC)
+- ☕ [Ko-fi 打赏](https://ko-fi.com/xybuilds)
+- 🐙 [GitHub Issue](https://github.com/XYBuilds/chronicle_v3_3d_galaxy/issues)
+- 📝 Tally 反馈 — 应用内右上角 Feedback
+
 ---
 
 ## 目录
@@ -31,7 +37,6 @@ The Movie Cosmos 把近六万部 TMDB 影片织成一片可走进的星海：在
   - [分享](#分享)
 - [浏览器与环境](#浏览器与环境)
 - [隐私与统计（简述）](#隐私与统计简述)
-- [参与与支持](#参与与支持)
 - [技术视界](#技术视界)
   - [创意编程与视觉渲染](#创意编程与视觉渲染)
   - [基础框架与构建工具](#基础框架与构建工具)
@@ -207,19 +212,6 @@ The Movie Cosmos 想打破传统图表式的「看电影数据」：把 TMDB 档
 - 配置与验收见 [P20.5 Cloudflare Web Analytics 接入操作指南](docs/guides/P20.5%20Cloudflare%20Web%20Analytics%20%E6%8E%A5%E5%85%A5%E6%93%8D%E4%BD%9C%E6%8C%87%E5%8D%97.md)。广告拦截 / 隐私类扩展可能拦截上报请求，不影响星系与 HUD 的正常使用。
 
 ---
-
-## 参与与支持
-
-
-| 入口              | 说明                                                                                                                                                                                                                                                                                                                  |
-| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **反馈（Tally）** | HUD 右上 Feedback 打开托管表单弹层（`data-tally-open` + Tally `embed.js`）。未设置 env 时使用默认表单 id `pbRpey`；将 `VITE_TALLY_FEEDBACK_FORM_ID` 设为 `''` / `0` / `false` 可隐藏按钮。提交数据由 Tally 处理；请勿填写密码或高度敏感信息。                                                                         |
-| **支持（Ko-fi）** | Support 在新标签页打开 Ko-fi 或部署方配置的支持页。未设置 `VITE_KOFI_URL` 时使用默认 `https://ko-fi.com/xybuilds`；空 / `0` / `false` 或非法 URL 时隐藏按钮。                                                                                                                                                         |
-| **Discord**       | 主路径： 维护者在 Tally 表单 thank-you 页配置的社区邀请（在 Tally / Discord 后台更新链接即可，一般无需发版）。可选： 构建变量 `VITE_DISCORD_INVITE_URL` 可让聚焦抽屉 `DrawerMovieShare` 分享行中的 Discord composer 指向你的邀请；未配置时回退为通用 [discord.com](https://discord.com/) 占位。社区非 TMDB 官方渠道。 |
-| **GitHub**        | 功能建议、缺陷与贡献请使用本仓库 [Issues](https://github.com/XYBuilds/chronicle_v3_3d_galaxy/issues)。                                                                                                                                                                                                                |
-
-
-环境变量语义详见 [Tech Spec §5.3](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md) 与 `[.env.example](.env.example)`。
 
 ## 技术视界
 

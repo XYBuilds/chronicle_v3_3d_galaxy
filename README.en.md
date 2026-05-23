@@ -10,7 +10,12 @@ The Movie Cosmos weaves roughly sixty thousand TMDB films into a walkable starfi
 
 **Live experience:** [themoviecosmos.com](https://themoviecosmos.com/)
 
-**中文 readme:** [README.md](README.md)
+**简体中文 readme:** [README.md](README.md) 
+
+- 💬 [Discord community](https://discord.gg/SkhMZ34CvC)
+- ☕ [Ko-fi tip](https://ko-fi.com/xybuilds)
+- 🐙 [GitHub Issues](https://github.com/XYBuilds/chronicle_v3_3d_galaxy/issues)
+- 📝 Tally feedback — in-app Feedback top-right
 
 ---
 
@@ -30,7 +35,6 @@ The Movie Cosmos weaves roughly sixty thousand TMDB films into a walkable starfi
   - [Share](#share)
 - [Browser \& environment](#browser--environment)
 - [Privacy \& analytics (brief)](#privacy--analytics-brief)
-- [Participate \& support](#participate--support)
 - [Technical perspective](#technical-perspective)
   - [Creative coding \& visual rendering](#creative-coding--visual-rendering)
   - [Core framework \& build tooling](#core-framework--build-tooling)
@@ -204,19 +208,6 @@ Use a recent desktop or mobile browser with hardware acceleration enabled.
 - Setup and verification: [P20.5 Cloudflare Web Analytics runbook](docs/guides/P20.5%20Cloudflare%20Web%20Analytics%20%E6%8E%A5%E5%85%A5%E6%93%8D%E4%BD%9C%E6%8C%87%E5%8D%97.md). Ad blockers / privacy extensions may block beacon requests; they do not break galaxy or HUD functionality.
 
 ---
-
-## Participate & support
-
-
-| Entry                | Description                                                                                                                                                                                                                                                                                                                                                  |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Feedback (Tally)** | HUD Feedback opens a hosted form modal (`data-tally-open` + Tally `embed.js`). When env is unset, default form id `pbRpey`; set `VITE_TALLY_FEEDBACK_FORM_ID` to `''` / `0` / `false` to hide the button. Submissions are processed by Tally; do not submit passwords or highly sensitive data.                                                              |
-| **Support (Ko-fi)**  | Support opens Ko-fi or a deployer-configured support URL in a new tab. Unset `VITE_KOFI_URL` → default `https://ko-fi.com/xybuilds`; empty / `0` / `false` or invalid URL hides the button.                                                                                                                                                                  |
-| **Discord**          | Primary path: invite link on the Tally thank-you page (update in Tally / Discord; usually no redeploy). Optional: build var `VITE_DISCORD_INVITE_URL` points the `DrawerMovieShare` Discord composer in the focus drawer at your invite; otherwise falls back to generic [discord.com](https://discord.com/). The community is not an official TMDB channel. |
-| **GitHub**           | Features, bugs, and contributions: [Issues](https://github.com/XYBuilds/chronicle_v3_3d_galaxy/issues) on this repo.                                                                                                                                                                                                                                         |
-
-
-See [Tech Spec §5.3](docs/project_docs/TMDB%20电影宇宙%20Tech%20Spec.md) and [`.env.example`](.env.example) for env semantics.
 
 ## Technical perspective
 

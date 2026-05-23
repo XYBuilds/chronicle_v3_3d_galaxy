@@ -72,14 +72,40 @@ Worker（34.4）`v={G}-{M}` 与 PNG 渲染不在本报告范围；索引仅支�
 
 ## 6. 验证
 
+### 6.1 本地 / 合并前
+
 | 项 | 结果 |
 | :--- | :--- |
 | `python -m unittest tests.test_og_index_kv -v` | 7 passed |
 | `python -m unittest discover tests` | 45 passed（含既有用例） |
 | `sync_og_index_kv.py` 无 env | `skip` exit 0 |
-| 用户验收 | **通过**（2026-05-22） |
+| 代码评审与用户验收 | **通过**（2026-05-22） |
 
-**生产侧待 Operator 完成**（见 P34.3 指南）：创建 KV namespace、配置 `OG_INDEX_KV_NAMESPACE_ID` + `OG_INDEX_KV_API_TOKEN`、首次 `--scope full`、确认 nightly 日志 `keys_written=2`。
+### 6.2 生产 nightly CI（2026-05-23）
+
+**Workflow**：`P18.4 Nightly vote refresh` · GitHub Actions run [**26326185343**](https://github.com/XYBuilds/chronicle_v3_3d_galaxy/actions/runs/26326185343)（本地日志包 `logs/Github Workflow/logs_70434624038`）· job **refresh** · **成功**。
+
+| 步骤 | 证据 | 结果 |
+| :--- | :--- | :--- |
+| Secrets 注入 | `OG_INDEX_KV_NAMESPACE_ID`、`OG_INDEX_KV_API_TOKEN` 已传入 job env | **Pass** |
+| Export + KV `daily` | `[og_index_kv] scope=daily data_version='2026.05.23.daily.52' movies_in_galaxy=59429 today_date='2026-05-23'` | **Pass** |
+| KV bulk | `bulk put keys=2 batches=1` → `batch 1/1 ok keys=2` → `done keys_written=2` | **Pass** |
+| 无静态 OG | 全程无 `render_og_today` / `og-today.png` 日志 | **Pass** |
+| R2 上传 | `version='2026.05.23.daily.52'`；上传 `galaxy_data.json.gz`、`galaxy_search_index.json.gz`、`today.json`；**无** `og-today.png` / `og_today_url` | **Pass** |
+| R2 prune | 大 gzip 已从 Pages bundle 剔除 | **Pass** |
+| Artifact | `galaxy-export-26326185343` 上传成功（prune 后仅余 manifest 等小文件，**不含** `og-today.png`） | **Pass** |
+| Frontend build | `built in 620ms` | **Pass** |
+| Pages deploy | `Deployment complete!` · `Wrangler Action completed` | **Pass** |
+
+**当日 KV 写入内容（daily）**：
+
+- `meta:G` = `2026.05.23.daily.52`
+- `today` = `date=2026-05-23`（与 export 同日；`movie_id` 见当日 `today.json`）
+
+**Operator 侧（非本 run 阻塞项）**：
+
+- 若尚未执行过本地/手动 **`--scope full`**，`movie:{id}` 依赖此前全量灌库或 **monthly** `scope=full`；本 nightly 仅刷新 `meta:G` + `today`（符合 34.3 设计）。
+- 社交预览端到端仍待 **34.4** Worker + **34.5** meta 注入；当前站点 `index.html` 仍可能指向静态 `og-today`（**34.6**）。
 
 ---
 
@@ -87,10 +113,11 @@ Worker（34.4）`v={G}-{M}` 与 PNG 渲染不在本报告范围；索引仅支�
 
 | 风险 / 缺口 | 缓解 / 归属 |
 | :--- | :--- |
-| KV 未配置时 nightly 仅 WARN skip | 34.4 上线前必须完成指南 §5 全量 sync |
+| ~~KV nightly skip~~ | **已关闭**（2026-05-23 run 26326185343：`keys_written=2`） |
+| `movie:*` 仅 monthly / 手动 `full` | 确认曾跑通全量 sync；月更或 TMDB 大变更后重跑 `--scope full` |
 | Worker 未部署时社交预览仍用静态 meta | **34.4** PNG + **34.5** HTML 注入 |
-| `movie:*` 仅 monthly 全量；日更片元变更延迟 | 可接受；TMDB 字段变更频率低；紧急可手动 `full` |
+| `movie:*` 日更不同步片元字段 | 可接受；紧急可手动 `full` |
 | bulk 限流 / 超时 | 分批 1000；失败重跑 `--scope full` |
 | 平台缓存旧 `og-today` URL | **34.6** + **34.8** 抽样 |
 
-**建议下一任务**：**34.4** 独立 Worker repo（JS 画布 `/og/movie|today|brand.png`），绑定同一 `OG_INDEX` KV。
+**建议下一任务**：**34.4** 独立 Worker repo（JS 画布 `/og/movie|today|brand.png`），绑定同一 `OG_INDEX` KV；生产 KV `daily` 已验证，可并行开发 Worker。

@@ -259,7 +259,7 @@ Drawer 分享 URL（`buildMovieSharePageUrl`）已指向 `/movie/:id`，但 **he
 - [x] 停止将 `og-today.png` 作为生产 SSOT（CI artifact 已剔除；Pages meta 待 34.6）
 - [ ] 评估移除 `ogTodayImageCacheBustPlugin` + `index.html` 对 `/data/og-today.png` 依赖（34.6）
 - [x] Worker HTML 注入修正 `/movie/*`、`/today` 的 `og:url` / `og:title` / `og:image`（34.5）
-- [x] KV bulk：`meta:G`、`today`、`movie:*`（34.3 脚本 + 指南；生产 full sync 待 Operator）
+- [x] KV bulk：`meta:G`、`today`、`movie:*`（34.3 脚本 + 指南；nightly `daily` 生产验证 run 26326185343；`movie:*` 全量靠 local/monthly `full`）
 
 **Go/No-Go：Go** — 基线清晰，可进入 34.3（KV 索引）与 Worker 子 repo 并行准备。
 

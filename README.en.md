@@ -10,12 +10,16 @@ The Movie Cosmos weaves roughly sixty thousand TMDB films into a walkable starfi
 
 **Live experience:** [themoviecosmos.com](https://themoviecosmos.com/)
 
-**简体中文 readme:** [README.md](README.md) 
+**简体中文 readme:** [README.md](README.md)
 
-- 💬 [Discord community](https://discord.gg/SkhMZ34CvC)
-- ☕ [Ko-fi tip](https://ko-fi.com/xybuilds)
-- 🐙 [GitHub Issues](https://github.com/XYBuilds/chronicle_v3_3d_galaxy/issues)
-- 📝 Tally feedback — in-app Feedback top-right
+<p align="center">
+  <a href="https://discord.gg/SkhMZ34CvC" title="Join the Discord community"><img height="32" src="https://cdn.simpleicons.org/discord/5865F2" alt="Discord community" /></a>
+  &nbsp;
+  <a href="https://github.com/XYBuilds/chronicle_v3_3d_galaxy/issues" title="Open bugs and feature requests on GitHub"><img height="32" src="https://cdn.simpleicons.org/github/181717" alt="GitHub Issues" /></a>
+  &nbsp;
+</p>
+
+<p align="center">Discord · Issues</p>
 
 ---
 

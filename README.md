@@ -11,13 +11,16 @@ The Movie Cosmos 把近六万部 TMDB 影片织成一片可走进的星海：在
 
 **在线体验：** [themoviecosmos.com](https://themoviecosmos.com/)
 
-**English readme:** [README.en.md](README.en.md) 
+**English readme:** [README.en.md](README.en.md)
 
+<p align="center">
+  <a href="https://discord.gg/SkhMZ34CvC" title="加入 Discord 社区"><img height="32" src="https://cdn.simpleicons.org/discord/5865F2" alt="Discord 社区" /></a>
+  &nbsp;
+  <a href="https://github.com/XYBuilds/chronicle_v3_3d_galaxy/issues" title="在 GitHub 提交问题与建议"><img height="32" src="https://cdn.simpleicons.org/github/181717" alt="GitHub Issues" /></a>
+  &nbsp;
+</p>
 
-- 💬 [Discord 社区](https://discord.gg/SkhMZ34CvC)
-- ☕ [Ko-fi 打赏](https://ko-fi.com/xybuilds)
-- 🐙 [GitHub Issue](https://github.com/XYBuilds/chronicle_v3_3d_galaxy/issues)
-- 📝 Tally 反馈 — 应用内右上角 Feedback
+<p align="center">Discord · Issues</p>
 
 ---
 
@@ -481,5 +484,4 @@ python -m pip install -r requirements.cpu.txt
 | `**docs/` 下 Markdown 文档**（`project_docs/`、`reports/`、`guides/` 等） | [CC BY 4.0](docs/LICENSE)     | 可分享与改编文档文字；须适当署名、提供许可链接并注明是否修改。文中代码块作为软件使用时仍适用根目录 Apache-2.0。                                                                                                                                                                                                                                                                                                                              |
 | **TMDB / IMDb 数据与商标**                                                | 各自条款                      | 不由 Apache-2.0 授权；处理或再发布数据集时须自行遵守 TMDB 与 IMDb 条件（见上文与 NOTICE）。                                                                                                                                                                                                                                                                                                                                                  |
 | **捆绑字体**（`assets/fonts/`）                                           | 字体作者许可                  | Inter（`Inter.ttf`）：© Rasmus Andersson 与 Inter Project Authors，[SIL Open Font License 1.1](assets/fonts/Inter-OFL.txt)；用于 OG 卡片正文等。Butler（`Butler-Medium.ttf`、`Butler-Bold.ttf`）：© Fabian De Smet；[官方页面](https://www.fabiandesmet.com/portfolio/butler-font/) 声明个人与商业免费（请以作者当前条款为准）；用于 OG 品牌行与封面标识字体。HUD 用 WOFF 由 TTF 构建，见 [assets/fonts/README.md](assets/fonts/README.md)。 |
-
 

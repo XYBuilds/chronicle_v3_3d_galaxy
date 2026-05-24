@@ -1,9 +1,8 @@
-# P18.6 gray release: keep GitHub Pages deploy alongside Cloudflare Pages for 1–2 weeks after cutover.
+# RETIRED (P18.6 gray release): production is Cloudflare Pages only.
+# Kept for optional manual smoke-test via workflow_dispatch; push to main no longer deploys GHP.
 name: Deploy GitHub Pages
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:

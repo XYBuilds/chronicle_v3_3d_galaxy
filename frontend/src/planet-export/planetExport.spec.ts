@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 vi.mock('@/three/shaders/perlin.frag.glsl', () => ({ default: '' }))
 vi.mock('@/three/shaders/perlin.vert.glsl', () => ({ default: '' }))
 
-import { computeGlobalPlanetRadius, computeOrthographicHalfExtent } from './sizing'
+import { computeExportWorldRadius, computeGlobalPlanetRadius, computeOrthographicHalfExtent } from './sizing'
 import { findExportMovie, indexGalaxyMovies, parsePlanetExportRequest } from './request'
 import { prepareExportPlanet } from './renderPlanetImage'
 import { PLANET_VISUAL_DEFAULTS } from '@/three/planetVisualDefaults'
@@ -65,9 +65,11 @@ describe('planet export request and sizing', () => {
     basic.dispose()
   })
 
-  it('uses shared sizing defaults for the largest actual radius and fixed padding', () => {
+  it('uses a base radius for the mesh, then reserves terrace growth in the camera extent', () => {
     const movies = [movie(1, 2, ['Drama']), movie(2, 5, ['Drama', 'Action'])]
-    expect(computeGlobalPlanetRadius(movies)).toBeCloseTo(5 * PLANET_VISUAL_DEFAULTS.activeShell.sizeScale * PLANET_VISUAL_DEFAULTS.activeShell.activeSizeMultiplier * 1.03)
+    const baseRadius = 5 * PLANET_VISUAL_DEFAULTS.activeShell.sizeScale * PLANET_VISUAL_DEFAULTS.activeShell.activeSizeMultiplier
+    expect(computeExportWorldRadius(movies[1]!)).toBeCloseTo(baseRadius, 10)
+    expect(computeGlobalPlanetRadius(movies)).toBeCloseTo(baseRadius * 1.03)
     expect(computeOrthographicHalfExtent(10, 0.08)).toBeCloseTo(10 / 0.92)
     expect(() => computeGlobalPlanetRadius([])).toThrow(/empty movie list/)
   })

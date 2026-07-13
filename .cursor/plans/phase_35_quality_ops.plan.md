@@ -4,28 +4,28 @@ overview: Phase 35 在核心体验稳定后补齐长期维护能力：审计搜�
 todos:
   - id: p35-plan-doc-preflight
     content: 35.1 创建并维护 `.cursor/plans/phase_35_quality_ops.plan.md`，确认 Phase 30–34 的稳定范围
-    status: pending
+    status: cancelled
   - id: p35-search-semantics-audit
     content: 35.2 审计搜索索引字段语义，确认 title、original title、person name 的语言来源与前端提示一致
-    status: pending
+    status: cancelled
   - id: p35-performance-baseline
     content: 35.3 建立全量数据性能基线，记录 FPS、首次加载、gzip 下载/解压/parse 与 search index 加载时间
-    status: pending
+    status: cancelled
   - id: p35-visual-params-versioning
     content: 35.4 版本化 SDR/HDR 视觉参数，记录默认值、调参依据、适用阶段与回滚方式
-    status: pending
+    status: cancelled
   - id: p35-regression-tests
     content: 35.5 补齐路由解析、share URL、poster 状态机、locale parity、today fallback 等回归测试
-    status: pending
+    status: cancelled
   - id: p35-build-deploy-guardrails
     content: 35.6 强化构建与部署 guardrails，覆盖 dist 体积、静态资源、R2/manifest 与 gzip 数据路径
-    status: pending
+    status: cancelled
   - id: p35-ops-runbook
     content: 35.7 整理运维 runbook：数据更新、today/OG、缓存、回滚、性能异常与用户反馈排查
-    status: pending
+    status: cancelled
   - id: p35-final-acceptance
     content: 35.8 执行质量验收矩阵并输出后续 backlog，不把长期运营问题混入功能 phase
-    status: pending
+    status: cancelled
 isProject: false
 ---
 

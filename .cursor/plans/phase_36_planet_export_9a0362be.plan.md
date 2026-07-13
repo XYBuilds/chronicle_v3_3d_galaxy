@@ -19,7 +19,7 @@ todos:
     status: complete
   - id: p36-daily-python-adapter
     content: 36.6 在 Daily Stargazing 增加 Python 子进程适配器、环境配置和契约测试
-    status: pending
+    status: complete
   - id: p36-daily-publish-integration
     content: 36.7 将星球导出默认接入 Daily `main.py publish`，提供跳过与 Bloom 参数
     status: pending

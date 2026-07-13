@@ -34,6 +34,7 @@ void main() {
   vGeomNormalWorld = normalize((modelMatrix * vec4(normal, 0.0)).xyz);
 
   vec4 worldPos4 = modelMatrix * vec4(displaced, 1.0);
-  vWorldPos = worldPos4.xyz;
+  // Translation is irrelevant to the face normal and destroys derivative precision at decimal-year Z coordinates.
+  vWorldPos = (modelMatrix * vec4(displaced, 0.0)).xyz;
   gl_Position = projectionMatrix * viewMatrix * worldPos4;
 }

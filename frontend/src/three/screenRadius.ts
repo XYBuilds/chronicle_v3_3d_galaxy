@@ -4,6 +4,7 @@ import type { SearchMode } from '@/store/galaxyInteractionStore'
 import type { Movie } from '@/types/galaxy'
 
 import { applyMacroFadeBlend, computeIdleNearFadeAlpha } from './idleNearFade'
+import { computeActiveShellWorldRadius, resolveSelectionRadiusValues } from './planetSizing'
 import { computeIdleZFadeAlpha } from './idleZFade'
 
 /**
@@ -119,7 +120,13 @@ export function computeActiveWorldRadius(
   const u = activeMaterial.uniforms
   const uSizeScale = (u.uSizeScale as THREE.Uniform<number>).value
   const uActiveSizeMul = (u.uActiveSizeMul as THREE.Uniform<number>).value
-  return inF * uSizeScale * uActiveSizeMul * movie.size * extraWorldScale
+  return computeActiveShellWorldRadius(
+    movie.size,
+    uSizeScale,
+    uActiveSizeMul,
+    inF,
+    extraWorldScale,
+  )
 }
 
 /**
@@ -135,16 +142,15 @@ export function resolveSelectionWorldRadius(
   activeMaterial: THREE.ShaderMaterial,
   selectionMaskPickSet: Set<number> | null = null,
 ): { r: number; rActive: number } {
-  const rActive = computeActiveWorldRadius(movie, zCurrent, zVisWindow, activeMaterial, selectionMaskPickSet)
-  if (rActive > 1e-6) {
-    return { r: rActive, rActive }
-  }
+  const inFocus = selectionMaskPickSet
+    ? selectionMaskPickSet.has(movie.id)
+      ? 1
+      : 0
+    : movieZInFocusFactor(movie.z, zCurrent, zVisWindow)
   const u = activeMaterial.uniforms
   const uSizeScale = (u.uSizeScale as THREE.Uniform<number>).value
   const uActiveSizeMul = (u.uActiveSizeMul as THREE.Uniform<number>).value
-  const rShell = uSizeScale * uActiveSizeMul * movie.size
-  const r = Math.max(rShell, 1e-6)
-  return { r, rActive }
+  return resolveSelectionRadiusValues(movie.size, uSizeScale, uActiveSizeMul, inFocus)
 }
 
 export type ActiveRayPickResult = { index: number; hitPoint: THREE.Vector3; t: number }

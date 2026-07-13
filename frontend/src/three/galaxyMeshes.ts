@@ -11,7 +11,7 @@ import { IDLE_NEAR_FADE_DEFAULTS } from './idleNearFade'
 import { IDLE_Z_FADE_DEFAULTS } from './idleZFade'
 import { computeSelectionMaskAtlasDimensions } from './selectionMask'
 import { DEFAULT_GALAXY_U_ACTIVE_SIZE_MUL, DEFAULT_GALAXY_U_SIZE_SCALE } from './galaxyUniformDefaults'
-
+import { PLANET_VISUAL_DEFAULTS } from './planetVisualDefaults'
 export { DEFAULT_GALAXY_U_ACTIVE_SIZE_MUL, DEFAULT_GALAXY_U_SIZE_SCALE } from './galaxyUniformDefaults'
 export { IDLE_NEAR_FADE_DEFAULTS } from './idleNearFade'
 export { IDLE_Z_FADE_DEFAULTS } from './idleZFade'
@@ -100,20 +100,20 @@ function makeSharedUniforms(
       uSizeScale: { value: DEFAULT_GALAXY_U_SIZE_SCALE },
       uActiveSizeMul: { value: DEFAULT_GALAXY_U_ACTIVE_SIZE_MUL },
       uBgSizeMul: { value: 0.002 },
-      uLMin: { value: 0.3 },
-      uLMax: { value: 1.0 },
-      uHighRatingT: { value: 0.85 },
-      uHighTierTRangeScale: { value: 0.4 },
-      uLightnessRatingExponent: { value: 3.0 },
+      uLMin: { value: PLANET_VISUAL_DEFAULTS.galaxyColor.lMin },
+      uLMax: { value: PLANET_VISUAL_DEFAULTS.galaxyColor.lMax },
+      uHighRatingT: { value: PLANET_VISUAL_DEFAULTS.galaxyColor.highRatingT },
+      uHighTierTRangeScale: { value: PLANET_VISUAL_DEFAULTS.galaxyColor.highTierTRangeScale },
+      uLightnessRatingExponent: { value: PLANET_VISUAL_DEFAULTS.galaxyColor.lightnessRatingExponent },
       /** P17.1 — Z-axis camera standoff (world years); distance-L reference `d0 = max(uZCamDistance, ε)`. */
       uZCamDistance: { value: 30 },
       /** P17.1 — lower clamp on `pow(d0/d, 2/3)` so stars nearer than the reference plane do not blow past vote L. P17.4 production default. */
       uDistanceLightnessFloor: { value: 0.5 },
-      uChroma: { value: 0.18 },
+      uChroma: { value: PLANET_VISUAL_DEFAULTS.galaxyColor.chroma },
       /** P17.2 — Hunt exponent γ (shared idle / active / Perlin). P17.4 production default after sweep. */
-      uHuntGamma: { value: 0.3 },
+      uHuntGamma: { value: PLANET_VISUAL_DEFAULTS.color.huntGamma },
       /** P17.2 — bit 0 = idle vert, bit 1 = active vert, bit 2 = perlin frag; default 0b111 = 7. */
-      uHuntApplyMask: { value: 7 },
+      uHuntApplyMask: { value: PLANET_VISUAL_DEFAULTS.color.huntApplyMask },
       /** P17.2 — focus-neighborhood hover: instance id for alpha lift; -1 = none. */
       uHoveredInstanceId: { value: -1 },
       uFocusedInstanceId: { value: -1 },

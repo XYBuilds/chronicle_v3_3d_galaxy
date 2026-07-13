@@ -1,0 +1,25 @@
+{
+  "name": "planet-exporter",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run --exclude src/*.integration.test.ts",
+    "test:integration": "vitest run src/browser.integration.test.ts",
+    "typecheck": "tsc --noEmit --target ES2022 --module NodeNext --moduleResolution NodeNext --types node src/args.ts src/artifacts.ts src/browser.ts src/cli.ts src/data-source.ts src/png.ts",
+    "lint": "eslint src --ext .ts"
+  },
+  "dependencies": {
+    "playwright": "1.52.0",
+    "tsx": "4.19.0",
+    "vite": "8.0.4"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.4",
+    "@types/node": "^24.12.2",
+    "eslint": "^9.39.4",
+    "globals": "^17.4.0",
+    "typescript": "5.9.3",
+    "typescript-eslint": "^8.58.0",
+    "vitest": "^4.1.4"
+  }
+}

@@ -5,13 +5,16 @@ import { planetVisualConfigHashInput } from '@/three/planetVisualDefaults'
 import { renderPlanetImage } from './renderPlanetImage'
 
 async function main(): Promise<void> {
+  let failureKind: 'data' | 'render' = 'render'
   try {
     const request = parsePlanetExportRequest(window.location.search)
+    failureKind = 'data'
     const data = await loadGalaxyData(request.dataUrl)
     const index = indexGalaxyMovies(data)
     const movie = findExportMovie(index, request.movieId)
     console.log(`[PlanetExport] movies=${index.size} targetId=${request.movieId} sample=${JSON.stringify({ id: movie.id, title: movie.title, size: movie.size, genres: movie.genres })}`)
     const globalRadius = computeGlobalPlanetRadius(data.movies)
+    failureKind = 'render'
     const canvas = document.createElement('canvas')
     canvas.width = request.resolution
     canvas.height = request.resolution
@@ -30,8 +33,10 @@ async function main(): Promise<void> {
     document.body.dataset.exportReady = '1'
     console.log(`[PlanetExport] ready movieId=${movie.id} resolution=${request.resolution} bloom=${request.bloom ? 'on' : 'off'} mode=${request.renderMode}`)
   } catch (error) {
-    console.error(error instanceof Error ? error.message : String(error))
-    document.body.dataset.exportError = '1'
+    const message = error instanceof Error ? error.message : String(error)
+    console.error(message)
+    document.body.dataset.exportFailureKind = failureKind
+    document.body.dataset.exportError = message
   }
 }
 

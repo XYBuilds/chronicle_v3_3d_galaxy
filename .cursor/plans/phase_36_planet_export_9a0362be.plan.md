@@ -22,7 +22,7 @@ todos:
     status: complete
   - id: p36-daily-publish-integration
     content: 36.7 将星球导出默认接入 Daily `main.py publish`，提供跳过与 Bloom 参数
-    status: pending
+    status: complete
   - id: p36-cross-repo-acceptance
     content: 36.8 [需人工验收] 完成真实数据跨仓库端到端验证和最终视觉验收
     status: pending

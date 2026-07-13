@@ -20,6 +20,10 @@ type PngHeader = {
 
 const PNG_SIGNATURE = '89504e470d0a1a0a'
 
+// Bloom's separable blur may leave a one-unit alpha tail at the canvas edge.
+// It is invisible in 8-bit output and must not be treated as geometric cropping.
+const VISIBLE_ALPHA_MIN = 2
+
 function paethPredictor(left: number, above: number, upperLeft: number): number {
   const estimate = left + above - upperLeft
   const leftDistance = Math.abs(estimate - left)
@@ -108,7 +112,7 @@ export function inspectPng(png: Buffer): PngInspection {
       else if (filter !== 0) throw new Error(`PNG row filter ${filter} unsupported`)
     }
     for (let x = 0; x < width; x += 1) {
-      if (row[x * 4 + 3]! === 0) continue
+      if (row[x * 4 + 3]! < VISIBLE_ALPHA_MIN) continue
       alphaPixels += 1
       left = Math.min(left, x)
       right = Math.max(right, x)

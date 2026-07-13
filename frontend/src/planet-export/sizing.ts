@@ -1,5 +1,5 @@
 import type { Movie } from '@/types/galaxy'
-import { computeMoviePlanetOuterRadius } from '@/three/planetSizing'
+import { computeActiveShellWorldRadius, computeMoviePlanetOuterRadius } from '@/three/planetSizing'
 import { PLANET_VISUAL_DEFAULTS } from '@/three/planetVisualDefaults'
 
 export function computeGlobalPlanetRadius(movies: Movie[]): number {
@@ -21,8 +21,9 @@ export function computeOrthographicHalfExtent(globalRadius: number, padding: num
 }
 
 export function computeExportWorldRadius(movie: Movie): number {
-  return computeMoviePlanetOuterRadius(movie, {
-    sizeScale: PLANET_VISUAL_DEFAULTS.activeShell.sizeScale,
-    activeSizeMultiplier: PLANET_VISUAL_DEFAULTS.activeShell.activeSizeMultiplier,
-  })
+  return computeActiveShellWorldRadius(
+    movie.size,
+    PLANET_VISUAL_DEFAULTS.activeShell.sizeScale,
+    PLANET_VISUAL_DEFAULTS.activeShell.activeSizeMultiplier,
+  )
 }

@@ -16,7 +16,7 @@ todos:
     status: complete
   - id: p36-chronicle-export-acceptance
     content: 36.5 [需人工验收] 完成 Chronicle 自动检查并验收三档星球的 Bloom、光照、比例与留白
-    status: pending
+    status: complete
   - id: p36-daily-python-adapter
     content: 36.6 在 Daily Stargazing 增加 Python 子进程适配器、环境配置和契约测试
     status: pending
@@ -221,7 +221,7 @@ npm run planet:export -- --movie-id 157336 --output "...\2026-07-13_157336_plane
 
 - Focus mesh 颜色、地形和光照与网站正式默认效果一致。
 - Bloom off 的透明区干净；Bloom on 的半透明光晕可接受。
-- 确定 Daily 发布流程的 Bloom 默认值。
+- Daily 发布流程对每部选定电影同时导出 Bloom off 与 Bloom on 两个版本。
 
 验收通过前，不开始 Daily 仓库集成。
 
@@ -269,11 +269,12 @@ def render_planet(
 实施要求：
 
 - 修改 `T:/themoviecosmos-daily-stargazing/scripts/main.py`：定位 candidate 后、调用付费 C2 文案生成前执行 `render_planet()`。
-- 默认生成图片；增加 `--no-planet-image` 显式跳过。
-- 增加 `--planet-bloom on|off`，默认使用 36.5 人工确认值。
+- 默认各执行一次 Bloom off 与 Bloom on 导出；`--no-planet-image` 显式跳过两张图。
 - 输出：
-  - `output/Daily_Briefing/{date}_{tmdb_id}_planet.png`
-  - `output/Daily_Briefing/{date}_{tmdb_id}_planet.render.json`
+  - `output/Daily_Briefing/{date}_{tmdb_id}_planet_bloom-off.png`
+  - `output/Daily_Briefing/{date}_{tmdb_id}_planet_bloom-off.png.render.json`
+  - `output/Daily_Briefing/{date}_{tmdb_id}_planet_bloom-on.png`
+  - `output/Daily_Briefing/{date}_{tmdb_id}_planet_bloom-on.png.render.json`
 - 图片失败时 publish 返回非零且不进入 C2；避免产生文案成功、图片缺失的半完成发布。
 - 保持现有 `{date}_copy.md` 主体契约；成功信息可附加图片和 metadata 路径，不修改检索、候选筛选或 C2 写作职责。
 

@@ -1,0 +1,31 @@
+---
+description: Chronicle-specific adapter for the shared execute-plan-todo workflow
+alwaysApply: false
+---
+
+# Chronicle Plan TODO adapter
+
+Apply this rule only while the shared `execute-plan-todo` skill is active.
+
+## Plans and branches
+
+- Plans live under `.cursor/plans/*.plan.md`.
+- Prefer branch names in the form `<type>/p<N.N>-<short-task-name>` unless the active plan defines a more specific convention.
+- Base new independent TODO branches on the latest `main`.
+
+## Verification
+
+Choose checks by changed scope:
+
+- Frontend: `npm test`, `npm run lint`, and `npm run build` as required by the TODO.
+- Python pipeline: run the relevant tests under `scripts/tests/` with `python -m pytest`.
+- Locale structure changes: run `npx vitest run frontend/src/lib/locales/locales.schema.spec.ts` from the repository root.
+- Do not run expensive full data rebuilds unless the TODO or user explicitly requires them.
+
+## Completion artifacts
+
+- Final TODO reports live under `docs/reports/`.
+- After approval, update the plan status and report before finalization.
+- This repository uses `finish_todo.sh` to commit remaining accepted changes, push, create a PR, merge through GitHub checks, synchronize `main`, and delete the task branch.
+- On Windows, invoke it through Git Bash with `FINISH_TODO_MESSAGE` as documented by the script.
+- Never run `finish_todo.sh` before the required human approval or without explicit authorization to commit, push, create a PR, and merge.

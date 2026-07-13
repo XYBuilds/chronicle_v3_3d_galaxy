@@ -1,0 +1,38 @@
+---
+description: Shared Git safety, decision, and human-approval boundaries for plan-driven work
+alwaysApply: true
+---
+
+# Shared workflow guardrails
+
+## Applicability
+
+The full Plan TODO workflow applies only when:
+
+- the Agent is executing a TODO from an accepted or current plan; or
+- the user explicitly requests the Plan TODO, one-task-one-branch, or equivalent workflow.
+
+Ordinary edits, read-only investigation, explanations, and ad-hoc maintenance do not start this workflow.
+
+## Decision gate
+
+Stop and ask before proceeding when a product, architecture, scope, dependency, data, security, deployment, review, or Git decision can change implementation direction or history. Do not silently choose a consequential default.
+
+## Human approval gate
+
+When a TODO is marked `[需人工验收]`, `human approval required`, or equivalent:
+
+- implementation, local verification, and an implementation commit may be completed first;
+- then stop, preserve the branch state, report changes, verification, and remaining risk;
+- do not mark the plan TODO complete, write its final report, push, open or merge a PR, or delete the branch until the user explicitly replies `approve`, `Approved`, `通过`, or an equally clear acceptance phrase.
+
+Without an explicit approval marker, follow the accepted plan's stated completion gates.
+
+## Git safety
+
+- Use one task branch per Plan TODO; do not execute Plan TODO work directly on `main` or `master`.
+- Never revert unrelated user changes.
+- Never use `git reset --hard`, `git checkout -- <path>`, force-push, or destructive cleanup unless the user explicitly requests it.
+- Never bypass hooks, checks, required reviews, or branch protection.
+- Do not amend unless the user explicitly requests it and the target commit is local and safe to rewrite.
+- Do not commit, push, open a PR, or merge unless the user has explicitly authorized that operation.

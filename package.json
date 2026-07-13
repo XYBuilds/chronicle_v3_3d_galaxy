@@ -3,7 +3,8 @@
   "private": true,
   "license": "Apache-2.0",
   "workspaces": [
-    "frontend"
+    "frontend",
+    "tools/planet-exporter"
   ],
   "scripts": {
     "dev": "npm run dev -w frontend",
@@ -12,6 +13,7 @@
     "preview": "npm run preview -w frontend",
     "storybook": "npm run storybook -w frontend",
     "build-storybook": "npm run build-storybook -w frontend",
-    "test": "npm run test -w frontend"
+    "test": "npm run test -w frontend",
+    "planet:export": "tsx tools/planet-exporter/src/cli.ts"
   }
 }

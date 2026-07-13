@@ -7,13 +7,13 @@ todos:
     status: complete
   - id: p36-shared-planet-core
     content: 36.2 抽出共享星球默认参数、外观和半径纯模块，并保持网站 focus 行为不变
-    status: pending
+    status: complete
   - id: p36-headless-export-scene
     content: 36.3 实现无 UI、透明背景、正交相机的确定性星球导出场景，支持 Bloom on/off
-    status: pending
+    status: complete
   - id: p36-planet-export-cli
     content: 36.4 建立 Playwright Chromium 本地 CLI、数据源覆盖和 PNG/metadata 文件协议
-    status: pending
+    status: complete
   - id: p36-chronicle-export-acceptance
     content: 36.5 [需人工验收] 完成 Chronicle 自动检查并验收三档星球的 Bloom、光照、比例与留白
     status: pending

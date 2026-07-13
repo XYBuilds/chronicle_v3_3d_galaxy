@@ -1,11 +1,11 @@
 ---
-description: Chronicle-specific adapter for the shared execute-plan-todo workflow
+description: Chronicle-specific adapter for the shared execute-todo and execute-plan workflows
 alwaysApply: false
 ---
 
-# Chronicle Plan TODO adapter
+# Chronicle Plan execution adapter
 
-Apply this rule only while the shared `execute-plan-todo` skill is active.
+Apply this rule only while the shared `execute-todo` or `execute-plan` Skill is active.
 
 ## Plans and branches
 
@@ -32,7 +32,7 @@ Choose checks by changed scope:
 - The main Agent reviews the implementation, Plan status, and report as one TODO-owned diff before finalization.
 - This repository uses `finish_todo.sh` to commit all remaining accepted TODO changes, push, create a PR, merge, synchronize `main`, and delete the task branch.
 - On Windows, invoke it through Git Bash with `FINISH_TODO_MESSAGE` as documented by the script.
-- Never run `finish_todo.sh` before required technical/human acceptance or without explicit authorization to commit, push, create a PR, and merge.
+- Never run `finish_todo.sh` before required technical/human acceptance or without explicit authorization to commit, push, create a PR, and merge. A matching `execute-todo` or `execute-plan` command supplies that standard Git delivery authorization.
 - After the script completes, independently verify that the PR is merged, the merged commit is reachable from local `main`, the primary worktree is on synchronized `main`, and the TODO branch is deleted before starting another TODO.
 
 ## PR checks and merge

@@ -94,14 +94,6 @@ export function MovieTooltip() {
       ? hoverTooltipSideOffsetPx(hoverPlanetRadiusCss)
       : 12
 
-  useEffect(() => {
-    if (!import.meta.env.DEV) return
-    if (!open || !movie) return
-    console.log(
-      `[MovieTooltip] id=${movie.id} primaryGenre=${primaryGenreLabel ? JSON.stringify(primaryGenreLabel) : 'none'} color=${primaryGenreColorHex ?? 'muted'}`,
-    )
-  }, [open, movie, primaryGenreLabel, primaryGenreColorHex])
-
   return (
     <MovieTooltipHud
       open={open}

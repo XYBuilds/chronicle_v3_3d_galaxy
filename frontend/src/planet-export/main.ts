@@ -1,6 +1,6 @@
 import { loadGalaxyData } from '@/utils/loadGalaxyData'
 import { parsePlanetExportRequest, findExportMovie, indexGalaxyMovies } from './request'
-import { computeGlobalPlanetRadius } from './sizing'
+import { computeGlobalPlanetRadius, PLANET_EXPORT_SIZE_ROOTS } from './sizing'
 import { planetVisualConfigHashInput } from '@/three/planetVisualDefaults'
 import { renderPlanetImage } from './renderPlanetImage'
 
@@ -13,7 +13,7 @@ async function main(): Promise<void> {
     const index = indexGalaxyMovies(data)
     const movie = findExportMovie(index, request.movieId)
     console.log(`[PlanetExport] movies=${index.size} targetId=${request.movieId} sample=${JSON.stringify({ id: movie.id, title: movie.title, size: movie.size, genres: movie.genres })}`)
-    const globalRadius = computeGlobalPlanetRadius(data.movies)
+    const globalRadius = computeGlobalPlanetRadius(data.movies, request.sizeRoot)
     failureKind = 'render'
     const canvas = document.createElement('canvas')
     canvas.width = request.resolution
@@ -29,7 +29,11 @@ async function main(): Promise<void> {
     document.body.dataset.maxTextureSize = String(gl.getParameter(gl.MAX_TEXTURE_SIZE))
     document.body.dataset.webglRenderer = String(gl.getParameter(gl.RENDERER) ?? 'unknown')
     document.body.dataset.dataVersion = data.meta.version
-    document.body.dataset.visualHash = planetVisualConfigHashInput()
+    document.body.dataset.visualHash = JSON.stringify({
+      planet: planetVisualConfigHashInput(),
+      exportSizeRoot: request.sizeRoot,
+      supportedExportSizeRoots: PLANET_EXPORT_SIZE_ROOTS,
+    })
     document.body.dataset.exportReady = '1'
     console.log(`[PlanetExport] ready movieId=${movie.id} resolution=${request.resolution} bloom=${request.bloom ? 'on' : 'off'} mode=${request.renderMode}`)
   } catch (error) {

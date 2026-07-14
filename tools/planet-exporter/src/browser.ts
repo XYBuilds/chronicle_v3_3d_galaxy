@@ -86,6 +86,7 @@ export async function renderInBrowser(args: ExportArgs, source: DataSource, root
       resolution: String(args.resolution),
       padding: String(args.padding),
       bloom: args.bloom,
+      sizeRoot: String(args.sizeRoot),
       renderMode: 'shader',
     })
     await page.goto(new URL(`planet-export.html?${query.toString()}`, serverUrl).toString(), { waitUntil: 'networkidle', timeout: 120_000 })

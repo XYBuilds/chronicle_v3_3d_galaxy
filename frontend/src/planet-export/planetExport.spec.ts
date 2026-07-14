@@ -4,9 +4,14 @@ import { describe, expect, it, vi } from 'vitest'
 vi.mock('@/three/shaders/perlin.frag.glsl', () => ({ default: '' }))
 vi.mock('@/three/shaders/perlin.vert.glsl', () => ({ default: '' }))
 
-import { computeExportWorldRadius, computeGlobalPlanetRadius, computeOrthographicHalfExtent } from './sizing'
+import {
+  computeExportWorldRadius,
+  computeGlobalPlanetRadius,
+  computeOrthographicHalfExtent,
+  mapMovieSizeForExport,
+} from './sizing'
 import { findExportMovie, indexGalaxyMovies, parsePlanetExportRequest } from './request'
-import { prepareExportPlanet } from './renderPlanetImage'
+import { positionExportCamera, prepareExportPlanet } from './renderPlanetImage'
 import { PLANET_VISUAL_DEFAULTS } from '@/three/planetVisualDefaults'
 import type { GalaxyData, Movie } from '@/types/galaxy'
 
@@ -33,8 +38,9 @@ const galaxy = (movies: Movie[]): GalaxyData => ({
 describe('planet export request and sizing', () => {
   it('strictly validates the explicit shader and basic smoke requests', () => {
     expect(parsePlanetExportRequest(request())).toEqual({
-      movieId: 7, dataUrl: 'https://example.test/galaxy_data.json.gz', resolution: 300, padding: 0.08, bloom: false, renderMode: 'shader',
+      movieId: 7, dataUrl: 'https://example.test/galaxy_data.json.gz', resolution: 300, padding: 0.08, bloom: false, sizeRoot: 3, renderMode: 'shader',
     })
+    expect(parsePlanetExportRequest(request('&sizeRoot=2'))).toMatchObject({ sizeRoot: 2 })
     expect(parsePlanetExportRequest(request('&renderMode=basic').replace('renderMode=shader&renderMode=basic', 'renderMode=basic'))).toMatchObject({ renderMode: 'basic' })
     expect(() => parsePlanetExportRequest(request('&movieId=8'))).toThrow(/movieId must appear exactly once/)
     expect(() => parsePlanetExportRequest(request('&unknown=x'))).toThrow(/unknown request parameter/)
@@ -55,8 +61,8 @@ describe('planet export request and sizing', () => {
   it('selects an explicitly visible basic or shader material path', () => {
     const target = movie(7, 2, ['Drama'])
     const data = galaxy([target])
-    const shader = prepareExportPlanet(target, data.meta, 'shader')
-    const basic = prepareExportPlanet(target, data.meta, 'basic')
+    const shader = prepareExportPlanet(target, data.meta, 'shader', 2)
+    const basic = prepareExportPlanet(target, data.meta, 'basic', 2)
     expect(shader.mesh.visible).toBe(true)
     expect(shader.mesh.material).toBe(shader.material)
     expect(basic.mesh.visible).toBe(true)
@@ -65,12 +71,27 @@ describe('planet export request and sizing', () => {
     basic.dispose()
   })
 
-  it('uses a base radius for the mesh, then reserves terrace growth in the camera extent', () => {
-    const movies = [movie(1, 2, ['Drama']), movie(2, 5, ['Drama', 'Action'])]
-    const baseRadius = 5 * PLANET_VISUAL_DEFAULTS.activeShell.sizeScale * PLANET_VISUAL_DEFAULTS.activeShell.activeSizeMultiplier
-    expect(computeExportWorldRadius(movies[1]!)).toBeCloseTo(baseRadius, 10)
-    expect(computeGlobalPlanetRadius(movies)).toBeCloseTo(baseRadius * 1.03)
+  it('uses the in-app default focus view from world -Z', () => {
+    const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.01, 100)
+    positionExportCamera(camera, 10)
+
+    expect(camera.position.toArray()).toEqual([0, 0, -20])
+    const direction = camera.getWorldDirection(new THREE.Vector3())
+    expect(direction.x).toBeCloseTo(0, 10)
+    expect(direction.y).toBeCloseTo(0, 10)
+    expect(direction.z).toBeCloseTo(1, 10)
+  })
+
+  it('supports square, cube, and fourth-root export mappings while reserving terrace growth in the camera extent', () => {
+    const movies = [movie(1, 4, ['Drama']), movie(2, 81, ['Drama', 'Action'])]
+    const scale = PLANET_VISUAL_DEFAULTS.activeShell.sizeScale * PLANET_VISUAL_DEFAULTS.activeShell.activeSizeMultiplier
+    expect(mapMovieSizeForExport(81, 2)).toBe(9)
+    expect(mapMovieSizeForExport(81, 3)).toBeCloseTo(4.3267487109, 10)
+    expect(mapMovieSizeForExport(81, 4)).toBe(3)
+    expect(computeExportWorldRadius(movies[1]!, 4)).toBeCloseTo(3 * scale, 10)
+    expect(computeGlobalPlanetRadius(movies, 4)).toBeCloseTo(3 * scale * 1.03)
     expect(computeOrthographicHalfExtent(10, 0.08)).toBeCloseTo(10 / 0.92)
-    expect(() => computeGlobalPlanetRadius([])).toThrow(/empty movie list/)
+    expect(() => mapMovieSizeForExport(-1, 2)).toThrow(/movie\.size/)
+    expect(() => computeGlobalPlanetRadius([], 2)).toThrow(/empty movie list/)
   })
 })

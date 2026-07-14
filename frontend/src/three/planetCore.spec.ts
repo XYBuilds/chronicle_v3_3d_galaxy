@@ -101,8 +101,8 @@ describe('planet visual defaults', () => {
       lighting: {
         enabled: true,
         direction: [0.7, 0.7, -0.14],
-        ambient: 0.8,
-        diffuse: 0.4,
+        ambient: 0.06,
+        diffuse: 1.0,
         flatShadingMix: 0.8,
       },
       material: {

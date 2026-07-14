@@ -11,6 +11,7 @@ describe('parseArgs', () => {
       resolution: 3000,
       padding: 0.08,
       bloom: 'off',
+      sizeRoot: 3,
       dataFile: undefined,
       dataUrl: undefined,
     })
@@ -27,11 +28,16 @@ describe('parseArgs', () => {
     expect(args.dataUrl).toBe('https://example.test/galaxy.json.gz')
   })
 
+  it.each([2, 3, 4])('accepts size-root %i', (sizeRoot) => {
+    expect(parseArgs(['--movie-id', '1', '--output', 'planet.png', '--size-root', String(sizeRoot)], resolvePath).sizeRoot).toBe(sizeRoot)
+  })
+
   it.each([
     ['unknown option', ['--movie-id', '1', '--output', 'planet.png', '--wat', 'x']],
     ['duplicate option', ['--movie-id', '1', '--movie-id', '2', '--output', 'planet.png']],
     ['invalid resolution', ['--movie-id', '1', '--output', 'planet.png', '--resolution', '0']],
     ['invalid padding', ['--movie-id', '1', '--output', 'planet.png', '--padding', '0.5']],
+    ['invalid size root', ['--movie-id', '1', '--output', 'planet.png', '--size-root', '5']],
     ['credentialed URL', ['--movie-id', '1', '--output', 'planet.png', '--data-url', 'https://user:pass@example.test/data.json']],
   ])('rejects %s with the arguments exit code', (_label, argv) => {
     expect(() => parseArgs(argv, resolvePath)).toThrowError(CliError)

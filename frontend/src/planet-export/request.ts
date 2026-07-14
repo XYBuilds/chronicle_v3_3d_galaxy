@@ -8,10 +8,11 @@ export type PlanetExportRequest = {
   resolution: number
   padding: number
   bloom: boolean
+  sizeRoot: 2 | 3 | 4
   renderMode: PlanetExportRenderMode
 }
 
-const REQUEST_PARAMS = new Set(['movieId', 'dataUrl', 'resolution', 'padding', 'bloom', 'renderMode'])
+const REQUEST_PARAMS = new Set(['movieId', 'dataUrl', 'resolution', 'padding', 'bloom', 'sizeRoot', 'renderMode'])
 
 function requiredUniqueParam(params: URLSearchParams, name: string): string {
   const values = params.getAll(name)
@@ -73,6 +74,11 @@ export function parsePlanetExportRequest(search: string): PlanetExportRequest {
   const bloomText = requiredUniqueParam(params, 'bloom')
   if (bloomText !== 'on' && bloomText !== 'off') throw new Error('[PlanetExport] bloom must be on or off')
 
+  const sizeRoot = params.has('sizeRoot') ? Number(requiredUniqueParam(params, 'sizeRoot')) : 3
+  if (sizeRoot !== 2 && sizeRoot !== 3 && sizeRoot !== 4) {
+    throw new Error('[PlanetExport] sizeRoot must be 2, 3, or 4')
+  }
+
   const renderMode = requiredUniqueParam(params, 'renderMode')
   if (renderMode !== 'basic' && renderMode !== 'shader') {
     throw new Error('[PlanetExport] renderMode must be basic or shader')
@@ -81,7 +87,7 @@ export function parsePlanetExportRequest(search: string): PlanetExportRequest {
     throw new Error('[PlanetExport] basic renderMode requires bloom=off')
   }
 
-  return { movieId, dataUrl, resolution, padding, bloom: bloomText === 'on', renderMode }
+  return { movieId, dataUrl, resolution, padding, bloom: bloomText === 'on', sizeRoot: sizeRoot as 2 | 3 | 4, renderMode }
 }
 
 export function indexGalaxyMovies(data: GalaxyData): Map<number, GalaxyData['movies'][number]> {

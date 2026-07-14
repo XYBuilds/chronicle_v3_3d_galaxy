@@ -18,6 +18,7 @@ export type PlanetRenderOptions = {
   padding: number
   bloom: boolean
   renderMode: PlanetExportRenderMode
+  sizeRoot: 2 | 3 | 4
 }
 
 export type PlanetRenderResult = {
@@ -30,10 +31,11 @@ export function prepareExportPlanet(
   movie: Movie,
   meta: Meta,
   renderMode: PlanetExportRenderMode,
+  sizeRoot: 2 | 3 | 4,
 ): SelectionPlanetHandle {
   const defaults = PLANET_VISUAL_DEFAULTS
   const planet = createSelectionPlanet()
-  const worldRadius = computeExportWorldRadius(movie)
+  const worldRadius = computeExportWorldRadius(movie, sizeRoot)
   planet.setFromMovie(movie, meta.genre_palette, worldRadius, {
     uLMin: defaults.galaxyColor.lMin,
     uLMax: defaults.galaxyColor.lMax,
@@ -113,8 +115,15 @@ function renderAlphaPreservingBloom(
   target.dispose()
 }
 
+export function positionExportCamera(camera: THREE.OrthographicCamera, halfExtent: number): void {
+  // Match the in-app focus default: yaw=0 observes the planet from world -Z.
+  camera.position.set(0, 0, -halfExtent * 2)
+  camera.lookAt(0, 0, 0)
+  camera.updateMatrixWorld(true)
+}
+
 export function renderPlanetImage(options: PlanetRenderOptions): PlanetRenderResult {
-  const { canvas, movie, meta, globalRadius, resolution, padding, bloom, renderMode } = options
+  const { canvas, movie, meta, globalRadius, resolution, padding, bloom, renderMode, sizeRoot } = options
   const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, preserveDrawingBuffer: true })
   renderer.setPixelRatio(1)
   renderer.setSize(resolution, resolution, false)
@@ -125,10 +134,9 @@ export function renderPlanetImage(options: PlanetRenderOptions): PlanetRenderRes
   const scene = new THREE.Scene()
   const half = computeOrthographicHalfExtent(globalRadius, padding)
   const camera = new THREE.OrthographicCamera(-half, half, half, -half, 0.01, half * 4)
-  camera.position.set(0, 0, half * 2)
-  camera.lookAt(0, 0, 0)
+  positionExportCamera(camera, half)
 
-  const planet = prepareExportPlanet(movie, meta, renderMode)
+  const planet = prepareExportPlanet(movie, meta, renderMode, sizeRoot)
   scene.add(planet.mesh)
   if (bloom) {
     renderAlphaPreservingBloom(renderer, scene, camera, planet.mesh, resolution)

@@ -54,8 +54,8 @@ export const PLANET_VISUAL_DEFAULTS = {
   lighting: {
     enabled: PERLIN_LIGHTING_ENABLED_DEFAULT,
     direction: [0.7, 0.7, -0.14] as const,
-    ambient: 0.8,
-    diffuse: 0.4,
+    ambient: 0.06,
+    diffuse: 1.0,
     flatShadingMix: 0.8,
   },
   material: {

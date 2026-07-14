@@ -25,7 +25,7 @@ todos:
     status: complete
   - id: p36-cross-repo-acceptance
     content: 36.8 [需人工验收] 完成真实数据跨仓库端到端验证和最终视觉验收
-    status: pending
+    status: complete
 isProject: false
 ---
 

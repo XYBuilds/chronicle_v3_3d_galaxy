@@ -13,7 +13,7 @@ todos:
     status: complete
   - id: p37-local-verification
     content: 37.4 完成聚焦测试、fixture dry-run 与流水线 SSOT 文档对齐
-    status: pending
+    status: complete
   - id: p37-production-recovery
     content: 37.5 [需人工验收] 依次恢复 monthly、nightly、R2、KV、Cloudflare 与 production smoke
     status: pending

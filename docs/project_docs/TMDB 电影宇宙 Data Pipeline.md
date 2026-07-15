@@ -92,6 +92,8 @@ flowchart TD
 已确认并实施的 Phase 18 数据流决策：
 
 - **Supabase 角色**：source of truth（`movies` / `movies_pending` / `galaxy_v1_reference` / `vote_snapshots` / `threshold_versions`）。前端不直接查询 Supabase，仍加载静态 JSON.gz。
+- **Supabase preflight**：nightly / monthly 在安装 Python 依赖之后、Kaggle 下载或 UMAP 前运行只读 `check_supabase_health.py`。它依次校验配置、URL、DNS、TLS/PostgREST 与唯一 active `threshold_versions`，日志只包含脱敏主机标识、错误分类、状态码与门槛年份范围。
+- **维度漂移 SSOT**：monthly 只以动态门槛后的 final membership 触发阻断；pre-threshold 长尾语言/genre 仅记录观测，不能单独阻断。计算出的同一 `thresholds_json` 同时用于 membership 过滤和 active `threshold_versions` 持久化。
 - **UMAP 模型策略**：不持久化 `.pkl`（旧版 `umap_model.pkl` ~884MB，且受 numba/umap pickle ABI 影响不可稳定复用）。月度直接全量 `fit_transform`（CPU `umap-learn`，DensMAP）。
 - **更新节奏**（最终决策，对照计划「daily light refresh + monthly full refit」）：
   - **每日（P18.4 nightly）**：沿用上一周期 frozen `threshold_versions`，刷新已入库电影的 `vote_count` / `vote_average` / `popularity`，新过线片入 `movies_pending`，重导静态 JSON。

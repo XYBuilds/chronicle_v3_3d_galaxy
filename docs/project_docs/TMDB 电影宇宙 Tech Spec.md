@@ -547,7 +547,7 @@ Browser
 * **Supabase** 仅作 source of truth；前端不直连数据库。
 * **每日任务（P18.4）** 沿用 frozen `threshold_versions`，只刷新 `vote_count` / `vote_average` / `popularity`，新过线片入 `movies_pending`；不重算 UMAP 坐标。
 * **月度任务（P18.5 + P18.5b）** 重算 dynamic threshold + 全量 `fit_transform` + Procrustes 对齐 `galaxy_v1_reference`；锚点采用 **软闸**（`MONTHLY_ANCHOR_MODE` 默认 `soft`），仅极端残差或结构性错误 fail；产出 `monthly_refit_meta.json` artifact 供 P95 收紧观测。
-* **维度漂移守卫（P20.2）**：nightly / monthly 在 cleaning 后、写库/UMAP 前统一调用 `assert_no_dim_drift`，同时校验 `genre_palette_version` 与 `lang_palette_version`；默认 fail-loud，紧急场景可经 `force_skip_dim_check` 单次放行并留痕。
+* **维度漂移守卫（P20.2 / Phase 37）**：nightly 在 frozen-threshold cleaning 后、写库前统一调用 `assert_no_dim_drift`。monthly 先计算一份 `thresholds_json`，以其过滤出 final membership；pre-threshold drift 只记录，**仅** final membership 可在 UMAP/写库前阻断。两条路径均校验 `genre_palette_version` 与 active `lang_palette_version`；默认 fail-loud，`DIM_DRIFT_FORCE_SKIP` 仅用于明确的排障记录，不能作为生产恢复的通过条件。
 * **Cloudflare Pages** 仅托管前端 bundle；Pages 侧 Git 自动构建已 Disconnect，发布主链路为 GitHub Actions Direct Upload。
 * **Cloudflare R2** 托管 `galaxy_*.json.gz` 及 **`today.json` / `og-today.png`**（与 gzip 同 nightly 发布节奏）；galaxy 包 URL 通过 `frontend/src/lib/galaxyAssetUrls.ts` 按「`VITE_*` → `?dataset=` → manifest → 同源默认」解析；**`today_url`** 见 manifest 与 `loadToday.ts`。
 * **GitHub Pages** 通过 `.github/workflows/deploy-pages.yml` 在 push 到 `main` 时部署，作为 1–2 周灰度备线；该路径仍走同源 gzip，不依赖 R2。

@@ -695,6 +695,8 @@ def main(argv: list[str] | None = None) -> int:
         str(lang_npy),
         "--meta-output",
         str(lang_meta),
+        "--palette",
+        "active",
     ]
     rc = _run_subprocess_logged(cmd4, cwd=_REPO_ROOT, log=log, label="language")
     if rc != 0:

@@ -11,6 +11,7 @@ Example::
 from __future__ import annotations
 
 import argparse
+import hashlib
 import sys
 import zipfile
 from pathlib import Path
@@ -19,7 +20,44 @@ import numpy as np
 import pandas as pd
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
+_SCRIPTS_DIR = _REPO_ROOT / "scripts"
+if str(_SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS_DIR))
+
+from feature_engineering.language_palette import FROZEN_LANG_ORDER, LANG_PALETTE_VERSION  # noqa: E402
+
 _NAMES = ("cleaned.csv", "text_embeddings.npy", "genre_vectors.npy", "language_vectors.npy")
+
+
+def _assert_matrix_contract(
+    *,
+    name: str,
+    matrix: np.ndarray,
+    expected_rows: int,
+    expected_width: int | None = None,
+) -> None:
+    assert matrix.ndim == 2, f"{name} must be a 2D matrix, got shape {matrix.shape}"
+    assert matrix.shape[0] == expected_rows, f"{name} rows {matrix.shape[0]} != cleaned rows {expected_rows}"
+    if expected_width is not None:
+        assert matrix.shape[1] == expected_width, (
+            f"{name} width {matrix.shape[1]} != expected {expected_width}"
+        )
+    assert np.isfinite(matrix).all(), f"{name} contains NaN or Inf"
+    norms = np.linalg.norm(matrix.astype(np.float64, copy=False), axis=1)
+    assert np.allclose(norms, 1.0, atol=1e-4), f"{name} rows must be L2-normalized"
+    print(
+        f"[pack] {name}.shape={matrix.shape} min={float(matrix.min()):.6g} "
+        f"max={float(matrix.max()):.6g} norm=[{float(norms.min()):.6g},{float(norms.max()):.6g}]",
+        flush=True,
+    )
+
+
+def _sha256_prefix(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for block in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()[:16]
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -50,15 +88,21 @@ def main(argv: list[str] | None = None) -> int:
     te = np.load(paths["text_embeddings.npy"])
     ge = np.load(paths["genre_vectors.npy"])
     le = np.load(paths["language_vectors.npy"])
-    print(f"[pack] cleaned rows={n:,} text={te.shape} genre={ge.shape} lang={le.shape}")
-    assert te.shape[0] == n == ge.shape[0] == le.shape[0], "row count mismatch between cleaned and npy files"
-    assert te.shape[1] == 384, f"expected text dim 384, got {te.shape[1]}"
+    print(f"[pack] cleaned.shape={df.shape} active_lang={LANG_PALETTE_VERSION}:{len(FROZEN_LANG_ORDER)}", flush=True)
+    assert n > 0, "cleaned.csv must not be empty"
+    assert df["id"].is_unique, "cleaned.csv must have unique TMDB ids"
+    _assert_matrix_contract(name="text", matrix=te, expected_rows=n, expected_width=384)
+    _assert_matrix_contract(name="genre", matrix=ge, expected_rows=n)
+    _assert_matrix_contract(name="language", matrix=le, expected_rows=n, expected_width=len(FROZEN_LANG_ORDER))
 
     out.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         for n in _NAMES:
             zf.write(paths[n], arcname=n)
-    print(f"[pack] wrote {out} ({out.stat().st_size / (1024 * 1024):.1f} MiB)")
+    print(
+        f"[pack] wrote {out} ({out.stat().st_size / (1024 * 1024):.1f} MiB) sha256prefix={_sha256_prefix(out)}",
+        flush=True,
+    )
     return 0
 
 

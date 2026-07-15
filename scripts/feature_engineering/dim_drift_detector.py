@@ -13,7 +13,7 @@ from feature_engineering.genre_palette import (
 )
 from feature_engineering.language_encoding import normalize_language_code
 from feature_engineering.language_palette import (
-    FROZEN_LANG_CODES_V1,
+    FROZEN_LANG_CODES,
     LANG_PALETTE_VERSION,
     collect_normalized_language_codes,
 )
@@ -44,7 +44,7 @@ def _unknown_genres(genres_series: pd.Series) -> list[str]:
 
 def _unknown_languages(lang_series: pd.Series) -> list[str]:
     found = collect_normalized_language_codes(lang_series)
-    return sorted(found - FROZEN_LANG_CODES_V1)
+    return sorted(found - FROZEN_LANG_CODES)
 
 
 def _unknown_language_counts(lang_series: pd.Series, unknown_codes: list[str]) -> dict[str, int]:

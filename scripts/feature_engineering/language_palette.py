@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""Phase 20.2: frozen original_language vocabulary for dimension-drift detection.
+"""Frozen ``original_language`` palettes and the active vocabulary contract.
 
 v1 **order** matches ``collect_sorted_languages()`` on the Phase 18 canonical
 ``data/output/cleaned.csv`` used to seed production embeddings. One-hot column
-index i follows this sorted tuple.
+index i follows the matching frozen tuple.
 
-If TMDB introduces new ISO codes in raw data: extend ``FROZEN_LANG_ORDER_V1``,
-bump ``LANG_PALETTE_VERSION``, and schedule a full re-embed (see Tech Spec).
+Keep historical palettes immutable. ``FROZEN_LANG_ORDER`` and
+``FROZEN_LANG_CODES`` are the only runtime vocabulary imports; changing the
+active version requires rebuilding the complete canonical embedding bundle.
 """
 from __future__ import annotations
 
@@ -128,6 +129,21 @@ assert len(FROZEN_LANG_ORDER_V1) == len(set(FROZEN_LANG_ORDER_V1)), "duplicate l
 
 FROZEN_LANG_CODES_V1: frozenset[str] = frozenset(FROZEN_LANG_ORDER_V1)
 
+# v2 admits the only code observed in the 2026-07-16 final membership audit.
+# The tuple is derived once from immutable v1 plus ``rm`` so its one-hot column
+# order remains lexical and deterministic; v1 itself stays available for audit.
+FROZEN_LANG_ORDER_V2: tuple[str, ...] = tuple(sorted((*FROZEN_LANG_ORDER_V1, "rm")))
+FROZEN_LANG_CODES_V2: frozenset[str] = frozenset(FROZEN_LANG_ORDER_V2)
+assert len(FROZEN_LANG_ORDER_V2) == len(FROZEN_LANG_CODES_V2), "duplicate language code in FROZEN_LANG_ORDER_V2"
+
+# Active palette SSOT. The v2 switch is valid only with the matching rebuilt
+# canonical bundle; see ``audit_final_membership_languages.py`` and pack tool.
+LANG_PALETTE_VERSION = "v2"
+FROZEN_LANG_ORDER: tuple[str, ...] = FROZEN_LANG_ORDER_V2
+FROZEN_LANG_CODES: frozenset[str] = FROZEN_LANG_CODES_V2
+
+assert len(FROZEN_LANG_ORDER) == len(set(FROZEN_LANG_ORDER)), "duplicate language code in active frozen palette"
+
 
 def collect_normalized_language_codes(series: pd.Series) -> set[str]:
     """All normalized language codes appearing in ``original_language`` column."""
@@ -137,8 +153,20 @@ def collect_normalized_language_codes(series: pd.Series) -> set[str]:
     return found
 
 
+def assert_all_languages_in_frozen(lang_series: pd.Series) -> None:
+    """Fail fast when a series contains a code outside the active palette."""
+    found = collect_normalized_language_codes(lang_series)
+    unknown = found - FROZEN_LANG_CODES
+    if unknown:
+        raise AssertionError(
+            f"Unknown original_language code(s) not in frozen palette {LANG_PALETTE_VERSION}: "
+            f"{sorted(unknown)!r}. "
+            "Extend the next immutable palette version, switch the active exports, and re-embed."
+        )
+
+
 def assert_all_languages_in_frozen_v1(lang_series: pd.Series) -> None:
-    """Fail fast if cleaned data contains any normalized code outside ``FROZEN_LANG_ORDER_V1``."""
+    """Compatibility wrapper for callers that explicitly audit the v1 historical palette."""
     found = collect_normalized_language_codes(lang_series)
     unknown = found - FROZEN_LANG_CODES_V1
     if unknown:

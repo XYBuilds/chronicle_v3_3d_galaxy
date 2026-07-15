@@ -43,10 +43,10 @@ from feature_engineering.genre_encoding import (  # noqa: E402
 from feature_engineering.genre_palette import FROZEN_GENRE_ORDER_V1  # noqa: E402
 from feature_engineering.language_encoding import (  # noqa: E402
     UNKNOWN_LANG,
-    collect_sorted_languages,
     l2_normalize_rows,
     one_hot_language_matrix_with_fallback,
 )
+from feature_engineering.language_palette import FROZEN_LANG_ORDER, assert_all_languages_in_frozen  # noqa: E402
 from feature_engineering.procrustes_align import align_to_reference  # noqa: E402
 from feature_engineering.text_embedding import (  # noqa: E402
     DEFAULT_MODEL_ID,
@@ -577,12 +577,14 @@ def main(argv: list[str] | None = None) -> int:
         cleaned_by_id["_mid"] = cleaned_by_id["id"].map(_mid)
         cleaned_by_id = cleaned_by_id.set_index("_mid", drop=False)
 
-        # Same vocabulary as ``language_encoding.py`` / ``language_vectors.npy`` (no unconditional UNKNOWN slot).
-        lang_order = collect_sorted_languages(cache_clean["original_language"])
-        print(f"[P18.5 monthly] lang_order dim={len(lang_order)} (from cache cleaned.csv)", flush=True)
+        # Cache vectors must use the active frozen order; cache-derived dynamic
+        # vocabularies are unsafe after a palette migration.
+        assert_all_languages_in_frozen(cache_clean["original_language"])
+        lang_order = list(FROZEN_LANG_ORDER)
+        print(f"[P18.5 monthly] active lang_order dim={len(lang_order)}", flush=True)
         assert len(lang_order) == dl, (
-            f"language vocab len {len(lang_order)} != language_vectors.npy width {dl}; "
-            "regenerate embedding bundle from this cleaned.csv or fix cache files."
+            f"active language palette len {len(lang_order)} != language_vectors.npy width {dl}; "
+            "rebuild the canonical embedding bundle for the active palette."
         )
 
         row_index_by_movie_id = {mid: i for i, mid in enumerate(cleaned_ids_sorted)}

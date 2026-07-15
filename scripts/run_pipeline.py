@@ -70,7 +70,10 @@ def run_phase2_through_export(
         ["--input", c, "--device", embedding_device, "--model-id", str(model_id)],
     )
     _run_python_script(Path("scripts") / "feature_engineering" / "genre_encoding.py", ["--input", c])
-    _run_python_script(Path("scripts") / "feature_engineering" / "language_encoding.py", ["--input", c])
+    _run_python_script(
+        Path("scripts") / "feature_engineering" / "language_encoding.py",
+        ["--input", c, "--palette", "active"],
+    )
 
     backend = "umap" if force_umap_cpu else umap_backend
     umap_args: list[str] = [

@@ -56,7 +56,7 @@ jobs:
             data/output/text_embeddings.npy
             data/output/genre_vectors.npy
             data/output/language_vectors.npy
-          key: ${{ runner.os }}-p18-monthly-emb-${{ hashFiles('requirements.cpu.txt') }}-v1
+          key: ${{ runner.os }}-p18-monthly-emb-${{ hashFiles('requirements.cpu.txt') }}-v2
           restore-keys: |
             ${{ runner.os }}-p18-monthly-emb-
 

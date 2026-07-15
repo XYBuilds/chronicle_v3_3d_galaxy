@@ -10,7 +10,10 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-_REPO_ROOT = Path(__file__).resolve().parents[2]
+_SCRIPTS_DIR = Path(__file__).resolve().parents[1]
+if str(_SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS_DIR))
+_REPO_ROOT = _SCRIPTS_DIR.parent
 
 # Bucket for missing/blank cells (still one-hot + L2-norm ≈ 1)
 UNKNOWN_LANG = "__unknown__"
@@ -103,6 +106,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=None,
         help="Optional JSON: language column order (for downstream fusion)",
     )
+    p.add_argument(
+        "--palette",
+        choices=("observed", "active"),
+        default="observed",
+        help=(
+            "Vocabulary source: observed keeps the legacy dynamic order; active uses the frozen "
+            "LANG_PALETTE_VERSION order and rejects codes outside it."
+        ),
+    )
     return p.parse_args(argv)
 
 
@@ -121,7 +133,25 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     n = len(df)
-    lang_order = collect_sorted_languages(df["original_language"])
+    palette_version: str | None = None
+    if args.palette == "active":
+        # Kept local to preserve ``language_palette -> language_encoding`` as a
+        # one-way dependency for normalization and drift detection.
+        from feature_engineering.language_palette import (  # noqa: WPS433
+            FROZEN_LANG_ORDER,
+            LANG_PALETTE_VERSION,
+            assert_all_languages_in_frozen,
+        )
+
+        assert_all_languages_in_frozen(df["original_language"])
+        lang_order = list(FROZEN_LANG_ORDER)
+        palette_version = LANG_PALETTE_VERSION
+        print(
+            f"[Language] Frozen palette: {palette_version} ({len(lang_order)} columns)",
+            flush=True,
+        )
+    else:
+        lang_order = collect_sorted_languages(df["original_language"])
     n_lang = len(lang_order)
 
     counts: dict[str, int] = {}
@@ -167,6 +197,8 @@ def main(argv: list[str] | None = None) -> int:
             "unknown_token": UNKNOWN_LANG,
             "n_rows": n,
             "n_lang": n_lang,
+            "palette_mode": str(args.palette),
+            "palette_version": palette_version,
         }
         meta_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
         print(f"[Language] Wrote meta {meta_path}")

@@ -10,7 +10,7 @@ todos:
     status: complete
   - id: p37-language-palette-migration
     content: 37.3 审计最终语料未知语言，必要时升级 palette 并重建 canonical embedding bundle
-    status: pending
+    status: complete
   - id: p37-local-verification
     content: 37.4 完成聚焦测试、fixture dry-run 与流水线 SSOT 文档对齐
     status: pending

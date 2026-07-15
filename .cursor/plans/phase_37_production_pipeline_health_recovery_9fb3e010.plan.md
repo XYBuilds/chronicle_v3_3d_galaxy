@@ -4,7 +4,7 @@ overview: Phase 37 修复 Supabase 连通性与语言维度漂移的数据边界
 todos:
   - id: p37-supabase-preflight
     content: 37.1 [需人工验收] 恢复现有 Supabase 项目并加入脱敏只读 preflight 与错误分类测试
-    status: pending
+    status: complete
   - id: p37-final-membership-drift
     content: 37.2 将 monthly 阻断式维度漂移检查移动到最终 membership，并统一 threshold 数据流
     status: pending

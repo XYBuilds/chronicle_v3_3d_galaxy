@@ -16,7 +16,7 @@ todos:
     status: complete
   - id: p37-production-recovery
     content: 37.5 [需人工验收] 依次恢复 monthly、nightly、R2、KV、Cloudflare 与 production smoke
-    status: pending
+    status: complete
   - id: p37-scheduled-health-acceptance
     content: 37.6 [需人工验收] 验收线上网站和下一次 scheduled nightly，并完成恢复报告
     status: pending

@@ -31,7 +31,11 @@ if str(_SCRIPTS_DIR) not in sys.path:
 from cron.pick_movie_today import write_today_json_after_galaxy_export  # noqa: E402
 from cron.sync_og_index_kv import sync_og_index_after_galaxy_export  # noqa: E402
 from export.export_galaxy_json import decimal_year_with_jitter  # noqa: E402
-from feature_engineering.dim_drift_detector import DimDriftError, assert_no_dim_drift  # noqa: E402
+from feature_engineering.dim_drift_detector import (  # noqa: E402
+    DimDriftError,
+    assert_no_dim_drift,
+    inspect_dim_drift,
+)
 from feature_engineering.genre_encoding import (  # noqa: E402
     DEFAULT_GENRE_WEIGHT_RATIO,
     rank_weighted_genre_matrix,
@@ -59,9 +63,9 @@ from pipeline.cleaning import (  # noqa: E402
     ALPHA,
     QUANTILE,
     ROLLING_WINDOW,
+    apply_frozen_vote_threshold,
     compute_year_to_vote_threshold,
     load_raw_csv,
-    run_cleaning_pipeline,
     run_cleaning_pipeline_before_vote_threshold,
 )
 
@@ -203,6 +207,24 @@ def _resolve_anchor_mode(args: argparse.Namespace) -> tuple[str, float]:
 def _env_dim_drift_force_skip() -> bool:
     v = os.environ.get("DIM_DRIFT_FORCE_SKIP", "").strip().lower()
     return v in ("1", "true", "yes", "on")
+
+
+def _compute_final_membership(
+    df_pre: pd.DataFrame,
+) -> tuple[dict[int, float], pd.DataFrame, Any]:
+    """Freeze a single threshold map, then derive the sole monthly fit membership from it."""
+    thresholds_json = compute_year_to_vote_threshold(
+        df_pre,
+        quantile=QUANTILE,
+        alpha=ALPHA,
+        abs_min=ABS_MIN,
+        rolling_window=ROLLING_WINDOW,
+    )
+    cleaned, threshold_step = apply_frozen_vote_threshold(df_pre, thresholds_json)
+    assert not cleaned.empty, "final monthly membership must not be empty"
+    ids = cleaned["id"].map(_mid)
+    assert ids.is_unique, "final monthly membership must have unique TMDB ids"
+    return thresholds_json, cleaned, threshold_step
 
 
 def _resolve_soft_fail_max(args: argparse.Namespace) -> float:
@@ -473,38 +495,57 @@ def main(argv: list[str] | None = None) -> int:
 
         df_pre, _steps_pre, _base_pre = run_cleaning_pipeline_before_vote_threshold(raw)
         print(f"[P18.5 monthly] pre-threshold.shape={df_pre.shape}", flush=True)
+        pre_threshold_drift = inspect_dim_drift(df_pre)
+        print(
+            "[P18.5 monthly] pre-threshold drift observation "
+            f"unknown_language_rows={pre_threshold_drift['unknown_language_row_count']} "
+            f"count_min={pre_threshold_drift['unknown_language_count_min']} "
+            f"count_max={pre_threshold_drift['unknown_language_count_max']} "
+            f"by_code={json.dumps(pre_threshold_drift['unknown_language_counts'], sort_keys=True)}",
+            flush=True,
+        )
+
+        thr_map, cleaned, threshold_step = _compute_final_membership(df_pre)
+        print(
+            f"[P18.5 monthly] recomputed thresholds_json years={len(thr_map)} "
+            f"min_year={min(thr_map)} max_year={max(thr_map)}",
+            flush=True,
+        )
+        print(
+            f"[P18.5 monthly] final-membership.shape={cleaned.shape} "
+            f"last_step={threshold_step.name}",
+            flush=True,
+        )
 
         try:
-            dim_drift_report = assert_no_dim_drift(
-                df_pre,
+            membership_drift = assert_no_dim_drift(
+                cleaned,
                 force_skip=_env_dim_drift_force_skip(),
             )
         except DimDriftError as err:
             _write_monthly_meta(
                 {
                     "status": "aborted_dim_drift",
-                    **err.report,
+                    "pre_threshold_drift": pre_threshold_drift,
+                    "membership_drift": err.report,
                     "raw_source": f"{raw_path.name}:sha256prefix={raw_fp}",
                 }
             )
-            print(f"[P18.5 monthly] ABORT dim drift: {err}", flush=True)
+            print(f"[P18.5 monthly] ABORT final-membership dim drift: {err}", flush=True)
             return 1
 
-        thr_map = compute_year_to_vote_threshold(
-            df_pre,
-            quantile=QUANTILE,
-            alpha=ALPHA,
-            abs_min=ABS_MIN,
-            rolling_window=ROLLING_WINDOW,
-        )
+        drift_reports = {
+            "pre_threshold_drift": pre_threshold_drift,
+            "membership_drift": membership_drift,
+        }
         print(
-            f"[P18.5 monthly] recomputed thresholds_json years={len(thr_map)} "
-            f"min_year={min(thr_map)} max_year={max(thr_map)}",
+            "[P18.5 monthly] final-membership drift gate passed "
+            f"unknown_language_rows={membership_drift['unknown_language_row_count']} "
+            f"count_min={membership_drift['unknown_language_count_min']} "
+            f"count_max={membership_drift['unknown_language_count_max']} "
+            f"by_code={json.dumps(membership_drift['unknown_language_counts'], sort_keys=True)}",
             flush=True,
         )
-
-        cleaned, steps = run_cleaning_pipeline(raw)
-        print(f"[P18.5 monthly] cleaned.shape={cleaned.shape} last_step={steps[-1].name}", flush=True)
 
         cache_clean = pd.read_csv(cache_dir / "cleaned.csv")
         text_all = np.load(cache_dir / "text_embeddings.npy")
@@ -732,7 +773,7 @@ def main(argv: list[str] | None = None) -> int:
         if not gate_ok:
             meta_fail = {
                 **kv_obs,
-                **dim_drift_report,
+                **drift_reports,
                 "abort_reason": gate_reason,
                 "status": "aborted_anchor_residual",
                 "threshold_version": ver_label,
@@ -809,7 +850,7 @@ def main(argv: list[str] | None = None) -> int:
             )
             if ex.returncode != 0:
                 _write_monthly_meta(
-                    {**kv_obs, **dim_drift_report, "status": "aborted_export", "threshold_version": ver_label}
+                    {**kv_obs, **drift_reports, "status": "aborted_export", "threshold_version": ver_label}
                 )
                 raise SystemExit(ex.returncode)
             val = subprocess.run(
@@ -824,7 +865,7 @@ def main(argv: list[str] | None = None) -> int:
             if val.returncode != 0:
                 meta_val = {
                     **kv_obs,
-                    **dim_drift_report,
+                    **drift_reports,
                     "status": "aborted_validate",
                     "threshold_version": ver_label,
                 }
@@ -841,7 +882,7 @@ def main(argv: list[str] | None = None) -> int:
 
         meta_ok = {
             **kv_obs,
-            **dim_drift_report,
+            **drift_reports,
             "status": "success",
             "threshold_version": ver_label,
         }

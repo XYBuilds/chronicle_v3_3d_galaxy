@@ -122,6 +122,14 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements.cpu.txt
 
+      - name: Supabase read-only preflight
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          set -euo pipefail
+          python scripts/cron/check_supabase_health.py
+
       - name: Monthly refit (threshold + UMAP + Procrustes + Supabase)
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}

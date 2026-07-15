@@ -11,6 +11,7 @@ from feature_engineering.genre_palette import (
     GENRE_PALETTE_VERSION,
     collect_genre_labels_from_series,
 )
+from feature_engineering.language_encoding import normalize_language_code
 from feature_engineering.language_palette import (
     FROZEN_LANG_CODES_V1,
     LANG_PALETTE_VERSION,
@@ -46,6 +47,40 @@ def _unknown_languages(lang_series: pd.Series) -> list[str]:
     return sorted(found - FROZEN_LANG_CODES_V1)
 
 
+def _unknown_language_counts(lang_series: pd.Series, unknown_codes: list[str]) -> dict[str, int]:
+    unknown = frozenset(unknown_codes)
+    counts: dict[str, int] = {}
+    for cell in lang_series.astype(object):
+        code = normalize_language_code(cell)
+        if code in unknown:
+            counts[code] = counts.get(code, 0) + 1
+    return {code: counts[code] for code in sorted(counts)}
+
+
+def inspect_dim_drift(cleaned_df: pd.DataFrame) -> dict[str, Any]:
+    """Return a complete vocabulary-drift observation without deciding whether to block."""
+    if "genres" not in cleaned_df.columns:
+        raise KeyError("cleaned_df must include column 'genres'")
+    if "original_language" not in cleaned_df.columns:
+        raise KeyError("cleaned_df must include column 'original_language'")
+
+    unknown_genres = _unknown_genres(cleaned_df["genres"])
+    unknown_languages = _unknown_languages(cleaned_df["original_language"])
+    unknown_language_counts = _unknown_language_counts(cleaned_df["original_language"], unknown_languages)
+    count_values = list(unknown_language_counts.values())
+
+    return {
+        "genre_palette_version": GENRE_PALETTE_VERSION,
+        "lang_palette_version": LANG_PALETTE_VERSION,
+        "unknown_genres": unknown_genres,
+        "unknown_languages": unknown_languages,
+        "unknown_language_counts": unknown_language_counts,
+        "unknown_language_row_count": int(sum(count_values)),
+        "unknown_language_count_min": int(min(count_values)) if count_values else 0,
+        "unknown_language_count_max": int(max(count_values)) if count_values else 0,
+    }
+
+
 def assert_no_dim_drift(
     cleaned_df: pd.DataFrame,
     *,
@@ -56,21 +91,11 @@ def assert_no_dim_drift(
     Aggregates **all** unknown labels before failing (operator sees full diff).
     When ``force_skip`` is True, never raises; caller should persist the report (e.g. monthly meta).
     """
-    if "genres" not in cleaned_df.columns:
-        raise KeyError("cleaned_df must include column 'genres'")
-    if "original_language" not in cleaned_df.columns:
-        raise KeyError("cleaned_df must include column 'original_language'")
+    report = inspect_dim_drift(cleaned_df)
+    report["dim_drift_force_skip"] = bool(force_skip)
 
-    unknown_genres = _unknown_genres(cleaned_df["genres"])
-    unknown_languages = _unknown_languages(cleaned_df["original_language"])
-
-    report: dict[str, Any] = {
-        "genre_palette_version": GENRE_PALETTE_VERSION,
-        "lang_palette_version": LANG_PALETTE_VERSION,
-        "unknown_genres": unknown_genres,
-        "unknown_languages": unknown_languages,
-        "dim_drift_force_skip": bool(force_skip),
-    }
+    unknown_genres = report["unknown_genres"]
+    unknown_languages = report["unknown_languages"]
 
     print(
         f"[dim_drift] genre={GENRE_PALETTE_VERSION} lang={LANG_PALETTE_VERSION} "

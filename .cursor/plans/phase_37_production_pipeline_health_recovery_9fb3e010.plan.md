@@ -7,7 +7,7 @@ todos:
     status: complete
   - id: p37-final-membership-drift
     content: 37.2 将 monthly 阻断式维度漂移检查移动到最终 membership，并统一 threshold 数据流
-    status: pending
+    status: complete
   - id: p37-language-palette-migration
     content: 37.3 审计最终语料未知语言，必要时升级 palette 并重建 canonical embedding bundle
     status: pending

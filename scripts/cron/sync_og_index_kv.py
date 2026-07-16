@@ -32,14 +32,12 @@ from cron.og_index_kv import (  # noqa: E402
     META_G_KEY,
     TODAY_KEY,
     _required_kv_env,
-    iter_og_index_entries,
     kv_bulk_delete,
     kv_bulk_put,
     kv_list_movie_keys,
     kv_read_many,
     load_galaxy_and_today,
     movie_kv_key,
-    sync_entries_to_kv,
     today_kv_value,
     verify_kv_absent,
     verify_kv_values,
@@ -47,6 +45,7 @@ from cron.og_index_kv import (  # noqa: E402
 from cron.og_index_snapshot_r2 import (  # noqa: E402
     SnapshotCorruptError,
     SnapshotMissingError,
+    SnapshotRepositoryError,
     commit_snapshot,
     create_r2_client,
     load_snapshot,
@@ -649,39 +648,6 @@ def run_sync(*, public_data: Path, scope: str = "incremental", dry_run: bool = F
     return plan
 
 
-def sync_og_index_after_galaxy_export(
-    repo_root: Path,
-    *,
-    scope: str = "daily",
-    batch_size: int = DEFAULT_BULK_BATCH_SIZE,
-) -> bool | None:
-    """Preserve the Phase 34 cron behavior until TODO 38.4 removes this facade."""
-    scope_norm = scope.strip().lower()
-    if scope_norm not in {"daily", "full"}:
-        raise ValueError(f"legacy scope must be daily or full, got {scope!r}")
-    if _required_kv_env() is None:
-        print(
-            "[og_index_kv] skip: set CLOUDFLARE_ACCOUNT_ID, OG_INDEX_KV_NAMESPACE_ID, "
-            "and OG_INDEX_KV_API_TOKEN (or CLOUDFLARE_API_TOKEN) to enable KV sync",
-            flush=True,
-        )
-        return None
-
-    public_data = (repo_root / "frontend" / "public" / "data").resolve()
-    data_version, today_payload, movies = load_galaxy_and_today(public_data)
-    entries = list(
-        iter_og_index_entries(
-            data_version=data_version,
-            today_payload=today_payload,
-            movies=movies if scope_norm == "full" else None,
-        )
-    )
-    written = sync_entries_to_kv(entries, batch_size=batch_size)
-    assert written == len(entries), f"written {written} != entries {len(entries)}"
-    print(f"[og_index_kv] legacy done scope={scope_norm} keys_written={written}", flush=True)
-    return True
-
-
 def main(argv: list[str] | None = None) -> int:
     env_path = _REPO_ROOT / ".env"
     if env_path.is_file():
@@ -704,7 +670,7 @@ def main(argv: list[str] | None = None) -> int:
                  bootstrap_remote_audit=args.bootstrap_remote_audit, allow_full_recovery=args.allow_full_recovery,
                  allow_over_quota=args.allow_over_quota, max_puts=args.max_puts, max_deletes=args.max_deletes,
                  batch_size=args.batch_size, kv_env=kv_env)
-    except (CredentialsError, QuotaExceededError, SnapshotMissingError, SnapshotCorruptError, RemoteAuditError, PermissionError, ValueError, RuntimeError) as exc:
+    except (CredentialsError, QuotaExceededError, SnapshotMissingError, SnapshotCorruptError, SnapshotRepositoryError, RemoteAuditError, PermissionError, ValueError, RuntimeError) as exc:
         print(f"[og_index_kv] ERROR {exc}", file=sys.stderr, flush=True)
         return 2
     return 0

@@ -15,7 +15,7 @@ _SCRIPTS_DIR = Path(__file__).resolve().parents[1]
 if str(_SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS_DIR))
 
-from cron.og_index_snapshot_r2 import SnapshotCorruptError, SnapshotMissingError
+from cron.og_index_snapshot_r2 import SnapshotCorruptError, SnapshotMissingError, SnapshotRepositoryError
 from cron.og_index_state import SnapshotValidationError, build_snapshot
 from cron.sync_og_index_kv import (
     CredentialsError,
@@ -31,7 +31,6 @@ from cron.sync_og_index_kv import (
     main,
     read_remote_audit_state,
     run_sync,
-    sync_og_index_after_galaxy_export,
 )
 
 _ENV = {"CLOUDFLARE_ACCOUNT_ID": "acc", "OG_INDEX_KV_NAMESPACE_ID": "ns", "CLOUDFLARE_API_TOKEN": "not-a-secret"}
@@ -500,29 +499,13 @@ class TestApplication(unittest.TestCase):
         self.assertEqual(result, 2)
         self.assertIn("current OG export is invalid", stderr.getvalue())
 
-    def test_legacy_cron_facade_preserves_skip_and_full_behavior_without_r2(self) -> None:
-        tmp = tempfile.TemporaryDirectory()
-        self.addCleanup(tmp.cleanup)
+    def test_cli_returns_nonzero_for_missing_publish_prerequisites(self) -> None:
         with mock.patch("cron.sync_og_index_kv._required_kv_env", return_value=None), \
-             mock.patch("cron.sync_og_index_kv.create_r2_client") as create_r2:
-            self.assertIsNone(sync_og_index_after_galaxy_export(Path(tmp.name), scope="daily"))
-        create_r2.assert_not_called()
-
-        movies = [_movie(1)]
-        with mock.patch("cron.sync_og_index_kv._required_kv_env", return_value=_ENV), \
-             mock.patch("cron.sync_og_index_kv.load_galaxy_and_today", return_value=("v1", {"date": "2026-01-01", "movie_id": 1}, movies)), \
-             mock.patch("cron.sync_og_index_kv.sync_entries_to_kv", return_value=3) as sync_entries, \
-             mock.patch("cron.sync_og_index_kv.create_r2_client") as create_r2:
-            self.assertTrue(sync_og_index_after_galaxy_export(Path(tmp.name), scope="full"))
-        self.assertEqual(len(sync_entries.call_args.args[0]), 3)
-        create_r2.assert_not_called()
-
-        with mock.patch("cron.sync_og_index_kv._required_kv_env", return_value=_ENV), \
-             mock.patch("cron.sync_og_index_kv.load_galaxy_and_today", return_value=("v1", {"date": "2026-01-01", "movie_id": 1}, movies)), \
-             mock.patch("cron.sync_og_index_kv.sync_entries_to_kv", return_value=2) as sync_entries:
-            self.assertTrue(sync_og_index_after_galaxy_export(Path(tmp.name), scope="daily", batch_size=7))
-        self.assertEqual([key for key, _value in sync_entries.call_args.args[0]], ["meta:G", "today"])
-        self.assertEqual(sync_entries.call_args.kwargs["batch_size"], 7)
+             mock.patch("cron.sync_og_index_kv.run_sync", side_effect=SnapshotRepositoryError("R2 snapshot requires credentials")), \
+             mock.patch("sys.stderr", new_callable=io.StringIO) as stderr:
+            result = main(["--dry-run"])
+        self.assertEqual(result, 2)
+        self.assertIn("R2 snapshot requires credentials", stderr.getvalue())
 
 
 if __name__ == "__main__":

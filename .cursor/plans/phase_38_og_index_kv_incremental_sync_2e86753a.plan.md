@@ -4,7 +4,7 @@ overview: Phase 38 将 OG Index KV 从 monthly 全量覆盖改为 nightly/monthl
 todos:
   - id: p38-og-index-state-domain
     content: 38.1 建立 OG canonical projection、R2 snapshot schema 与纯函数 hash diff
-    status: pending
+    status: complete
   - id: p38-kv-r2-adapters
     content: 38.2 实现 KV 增量 PUT/DELETE/read-back 与 R2 snapshot adapters
     status: pending

@@ -26,21 +26,32 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 _DEFAULT_PUBLIC_DATA = _REPO_ROOT / "frontend" / "public" / "data"
 
 
-def _required_env() -> dict[str, str] | None:
+def _required_r2_credentials() -> dict[str, str] | None:
+    """Return the shared R2 S3 credentials without any public-serving settings."""
     keys = (
         "R2_ACCOUNT_ID",
         "R2_ACCESS_KEY_ID",
         "R2_SECRET_ACCESS_KEY",
         "R2_BUCKET",
-        "R2_PUBLIC_BASE_URL",
     )
     out: dict[str, str] = {}
-    for k in keys:
-        v = os.environ.get(k, "").strip()
-        if not v:
+    for key in keys:
+        value = os.environ.get(key, "").strip()
+        if not value:
             return None
-        out[k] = v
+        out[key] = value
     return out
+
+
+def _required_env() -> dict[str, str] | None:
+    """Return upload credentials plus the public URL required by manifest generation."""
+    out = _required_r2_credentials()
+    if out is None:
+        return None
+    public_base_url = os.environ.get("R2_PUBLIC_BASE_URL", "").strip()
+    if not public_base_url:
+        return None
+    return {**out, "R2_PUBLIC_BASE_URL": public_base_url}
 
 
 def _public_base_url(base: str) -> str:

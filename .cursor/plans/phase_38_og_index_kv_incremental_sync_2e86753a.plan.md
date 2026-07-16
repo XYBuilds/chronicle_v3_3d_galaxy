@@ -10,7 +10,7 @@ todos:
     status: complete
   - id: p38-incremental-orchestration
     content: 38.3 重构 incremental CLI，加入 dry-run、配额门槛和远端审计 bootstrap
-    status: pending
+    status: complete
   - id: p38-pipeline-wiring
     content: 38.4 将 nightly/monthly KV 同步迁为 workflow 独立发布步骤
     status: pending

@@ -13,7 +13,7 @@ todos:
     status: complete
   - id: p38-pipeline-wiring
     content: 38.4 将 nightly/monthly KV 同步迁为 workflow 独立发布步骤
-    status: pending
+    status: complete
   - id: p38-tests-docs
     content: 38.5 完成聚焦测试、61k fixture dry-run 与流水线文档对齐
     status: pending

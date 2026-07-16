@@ -45,7 +45,6 @@ from feature_engineering.text_embedding import (  # noqa: E402
 from pipeline.cleaning import load_raw_csv, run_cleaning_pipeline  # noqa: E402
 
 from cron.pick_movie_today import write_today_json_after_galaxy_export  # noqa: E402
-from cron.sync_og_index_kv import sync_og_index_after_galaxy_export  # noqa: E402
 
 
 def _env_dim_drift_force_skip() -> bool:
@@ -506,12 +505,6 @@ def main(argv: list[str] | None = None) -> int:
                 raise SystemExit(val.returncode)
 
             write_today_json_after_galaxy_export(_REPO_ROOT)
-            kv_result = sync_og_index_after_galaxy_export(_REPO_ROOT, scope="daily")
-            if kv_result is None:
-                print(
-                    "[P18.4 nightly] WARN og_index KV not synced (OG_INDEX_KV_NAMESPACE_ID unset)",
-                    flush=True,
-                )
 
         print(f"[P18.4 nightly] completed at {now_iso}", flush=True)
         return 0

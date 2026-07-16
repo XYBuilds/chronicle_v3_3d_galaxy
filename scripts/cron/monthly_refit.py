@@ -29,7 +29,6 @@ if str(_SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS_DIR))
 
 from cron.pick_movie_today import write_today_json_after_galaxy_export  # noqa: E402
-from cron.sync_og_index_kv import sync_og_index_after_galaxy_export  # noqa: E402
 from export.export_galaxy_json import decimal_year_with_jitter  # noqa: E402
 from feature_engineering.dim_drift_detector import (  # noqa: E402
     DimDriftError,
@@ -875,12 +874,6 @@ def main(argv: list[str] | None = None) -> int:
                 raise SystemExit(val.returncode)
 
             write_today_json_after_galaxy_export(_REPO_ROOT)
-            kv_result = sync_og_index_after_galaxy_export(_REPO_ROOT, scope="full")
-            if kv_result is None:
-                print(
-                    "[P18.5 monthly] WARN og_index KV not synced (OG_INDEX_KV_NAMESPACE_ID unset)",
-                    flush=True,
-                )
 
         meta_ok = {
             **kv_obs,

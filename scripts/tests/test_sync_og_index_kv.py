@@ -6,6 +6,8 @@ import io
 import json
 import sys
 import tempfile
+import time
+import tracemalloc
 import unittest
 from contextlib import ExitStack
 from pathlib import Path
@@ -506,6 +508,107 @@ class TestApplication(unittest.TestCase):
             result = main(["--dry-run"])
         self.assertEqual(result, 2)
         self.assertIn("R2 snapshot requires credentials", stderr.getvalue())
+
+
+class TestSynthetic61kDryRun(unittest.TestCase):
+    """Exercise planning scale without raw data or any Cloudflare boundary."""
+
+    fixture_count = 61_000
+    changed_count = 17
+    added_count = 11
+    deleted_count = 11
+
+    def test_hash_fixture_reports_stable_dry_run_resource_summary(self) -> None:
+        from cron.og_index_snapshot_r2 import snapshot_gzip
+
+        tracemalloc.start()
+        self.addCleanup(lambda: tracemalloc.stop() if tracemalloc.is_tracing() else None)
+        current_movies = [
+            _movie(movie_id, title=f"Film {movie_id:05d}")
+            for movie_id in range(1, self.fixture_count + 1)
+        ]
+        previous_movies = [
+            _movie(movie_id, title=f"Film {movie_id:05d}")
+            for movie_id in range(1, self.fixture_count - self.added_count + 1)
+        ] + [
+            _movie(movie_id, title=f"Removed {movie_id:05d}")
+            for movie_id in range(self.fixture_count + 1, self.fixture_count + self.deleted_count + 1)
+        ]
+        for movie_id in range(1, self.changed_count + 1):
+            previous_movies[movie_id - 1]["title"] = f"Previous {movie_id:05d}"
+
+        current = _snapshot(current_movies, version="fixture-61k")
+        previous = _snapshot(previous_movies, version="fixture-61k")
+        started = time.perf_counter()
+        plan = build_incremental_plan(previous, current, current_movies)
+        diff_ms = (time.perf_counter() - started) * 1_000
+        gzip_bytes = len(snapshot_gzip(current))
+        _current, peak_bytes = tracemalloc.get_traced_memory()
+        tracemalloc.stop()
+
+        summary = plan.summary(batch_size=1_000, dry_run=True)
+        expected_puts = self.changed_count + self.added_count
+        expected_unchanged = self.fixture_count - expected_puts
+        self.assertEqual(summary["current"], self.fixture_count)
+        self.assertEqual(summary["previous"], self.fixture_count - self.added_count + self.deleted_count)
+        self.assertEqual(summary["movie_put"], expected_puts)
+        self.assertEqual(summary["delete"], self.deleted_count)
+        self.assertEqual(summary["unchanged"], expected_unchanged)
+        self.assertEqual(
+            {key for key, _value in plan.movie_puts},
+            {
+                *(f"movie:{movie_id}" for movie_id in range(1, self.changed_count + 1)),
+                *(
+                    f"movie:{movie_id}"
+                    for movie_id in range(self.fixture_count - self.added_count + 1, self.fixture_count + 1)
+                ),
+            },
+        )
+        self.assertEqual(
+            plan.movie_deletes,
+            tuple(f"movie:{movie_id}" for movie_id in range(self.fixture_count + 1, self.fixture_count + self.deleted_count + 1)),
+        )
+        self.assertEqual(summary["total_put"], expected_puts)
+        self.assertEqual(summary["put_batches"], 1)
+        self.assertEqual(summary["delete_batches"], 1)
+        self.assertLess(gzip_bytes, self.fixture_count * 80)
+        self.assertLess(peak_bytes, 256 * 1024 * 1024)
+        self.assertGreaterEqual(diff_ms, 0.0)
+
+        boundaries = (
+            "kv_bulk_put",
+            "kv_bulk_delete",
+            "verify_kv_values",
+            "verify_kv_absent",
+            "read_remote_movie_keys",
+            "commit_snapshot",
+        )
+        with ExitStack() as stack:
+            mocks = [stack.enter_context(mock.patch(f"cron.sync_og_index_kv.{name}")) for name in boundaries]
+            execute_plan(plan, kv_env={}, r2_client=object(), r2_bucket="fixture", batch_size=1_000, dry_run=True)
+        for boundary in mocks:
+            boundary.assert_not_called()
+
+        print(
+            "OG_INDEX_61K_DRY_RUN "
+            + json.dumps(
+                {
+                    "fixture_count": self.fixture_count,
+                    "changed": self.changed_count,
+                    "added": self.added_count,
+                    "put": expected_puts,
+                    "delete": self.deleted_count,
+                    "unchanged": expected_unchanged,
+                    "gzip_bytes": gzip_bytes,
+                    "diff_ms": round(diff_ms, 3),
+                    "peak_bytes": peak_bytes,
+                    "network_mutations": 0,
+                },
+                sort_keys=True,
+                separators=(",", ":"),
+            ),
+            flush=True,
+        )
 
 
 if __name__ == "__main__":

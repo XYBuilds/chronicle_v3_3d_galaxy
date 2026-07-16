@@ -153,9 +153,15 @@ flowchart TD
     Browser -.->|"gray release"| GHPages
 ```
 
+### 3.3 Phase 38：OG Index KV 增量发布
 
+OG metadata 索引是独立发布层，不属于 nightly/monthly 的计算脚本：两条 workflow 在 export 成功后、常规 R2 galaxy 上传前调用同一 `scripts/cron/sync_og_index_kv.py --scope incremental` 步骤。OG Worker 继续读取 `movie:{id}`、`today`、`meta:G`，键契约不变。
 
-
+- 影片差异只比较规范化投影：`title`、`release_date`、`genres`、`poster_url`。评分、票数、热度、坐标或其他 galaxy 字段变化不触发 `movie:*` 写入。
+- R2 checkpoint 是 `ops/og-index/state-v1.json.gz`：schema `1`、projection `og-index-v1` 的 gzip JSON，`Cache-Control: no-store`，不进入前端 manifest，也不由 Worker 读取。缺失、损坏、未知 schema/projection、数量或 key/hash 不一致均 fail closed，scheduled 绝不自动全量回退。
+- 正常提交顺序固定为：movie PUT → movie DELETE → changed `today` → last `meta:G` → changed/deleted key read-back → snapshot commit。任一步失败都不推进 checkpoint；后续重试按旧 snapshot 幂等恢复。
+- 默认配额为 `OG_INDEX_MAX_PUTS=900` 与 `OG_INDEX_MAX_DELETES=900`。PUT 包含 `today`、`meta:G` 控制键；门槛在第一笔网络写入前检查，超限输出 current/previous/put/delete/unchanged/batch/sample 摘要。
+- snapshot 首次缺失时，仅 `workflow_dispatch` 的 `bootstrap_og_index` 可执行一次远端只读审计并创建 checkpoint；scheduled 不自动 bootstrap 或 full fallback。灾难全量恢复须同时明确 `--scope full --allow-full-recovery`，并在提交前验证最终远端 movie keyset。
 
 ## 4. 数据源与清洗规则
 

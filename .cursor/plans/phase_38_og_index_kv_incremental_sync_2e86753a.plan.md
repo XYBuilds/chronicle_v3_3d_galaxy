@@ -16,7 +16,7 @@ todos:
     status: complete
   - id: p38-tests-docs
     content: 38.5 完成聚焦测试、61k fixture dry-run 与流水线文档对齐
-    status: pending
+    status: complete
   - id: p38-production-gate
     content: 38.6 [需人工验收] 完成远端 bootstrap、生产增量与下一次 scheduled nightly Gate
     status: pending

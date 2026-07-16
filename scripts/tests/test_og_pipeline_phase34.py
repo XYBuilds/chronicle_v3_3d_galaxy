@@ -60,6 +60,18 @@ class TestOgPipelinePhase34(unittest.TestCase):
                 self.assertLess(sync_start, text.index("python scripts/cron/upload_galaxy_r2.py"))
                 self.assertLess(sync_start, text.index("R2_GALAXY_PRUNE_AFTER_UPLOAD"))
 
+    def test_scheduled_contract_cannot_grant_bootstrap_or_disaster_recovery(self) -> None:
+        for workflow in (_NIGHTLY_WORKFLOW, _MONTHLY_WORKFLOW):
+            with self.subTest(workflow=workflow.name):
+                text = workflow.read_text(encoding="utf-8")
+                sync_start = text.index(f"name: {_SYNC_STEP}")
+                sync_end = text.index("      # P18.6b:", sync_start)
+                sync_block = text[sync_start:sync_end]
+                self.assertIn("github.event_name == 'workflow_dispatch'", sync_block)
+                self.assertNotIn("--allow-full-recovery", sync_block)
+                self.assertNotIn("--allow-over-quota", sync_block)
+                self.assertNotIn("--scope full", sync_block)
+
 
 if __name__ == "__main__":
     unittest.main()

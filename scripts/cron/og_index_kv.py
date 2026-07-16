@@ -9,11 +9,14 @@ Keys (SSOT for Worker repo):
 from __future__ import annotations
 
 import json
+import math
 import os
 import socket
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any, Iterator, Mapping, Sequence
 
@@ -24,6 +27,9 @@ DEFAULT_BULK_BATCH_SIZE = 1000
 CF_KV_BULK_MAX_KEYS = 10_000
 CF_KV_BULK_GET_MAX_KEYS = 100
 CF_KV_LIST_MAX_LIMIT = 1_000
+DEFAULT_READ_BACK_RETRY_DELAYS_S: tuple[float, ...] = (1.0, 2.0, 4.0, 8.0, 16.0, 32.0)
+MAX_READ_BACK_VERIFY_ATTEMPTS = 7
+MAX_READ_BACK_VERIFY_WAIT_S = 63.0
 
 
 class KvAdapterError(RuntimeError):
@@ -297,6 +303,61 @@ def kv_read_many(
     return values
 
 
+def _validated_read_back_retry_delays(retry_delays_s: Sequence[float]) -> tuple[float, ...]:
+    """Validate the bounded stale-read retry schedule without sleeping."""
+    if isinstance(retry_delays_s, (str, bytes)):
+        raise ValueError("read-back retry delays must be a sequence of finite non-negative numbers")
+    delays: list[float] = []
+    for delay in retry_delays_s:
+        if not isinstance(delay, (int, float)) or isinstance(delay, bool) or not math.isfinite(delay) or delay < 0:
+            raise ValueError("read-back retry delays must be finite non-negative numbers")
+        delays.append(float(delay))
+    if len(delays) + 1 > MAX_READ_BACK_VERIFY_ATTEMPTS:
+        raise ValueError(f"read-back retry attempts exceed {MAX_READ_BACK_VERIFY_ATTEMPTS}")
+    if sum(delays) > MAX_READ_BACK_VERIFY_WAIT_S:
+        raise ValueError(f"read-back retry wait exceeds {MAX_READ_BACK_VERIFY_WAIT_S:g}s")
+    return tuple(delays)
+
+
+def _verify_read_back(
+    *,
+    operation: str,
+    account_id: str,
+    namespace_id: str,
+    api_token: str,
+    keys: Sequence[str],
+    mismatch_count: Callable[[Mapping[str, str | None]], int],
+    retry_delays_s: Sequence[float],
+    timeout_s: float,
+) -> None:
+    """Re-read stale KV state on a bounded schedule; never repeats mutations."""
+    delays = _validated_read_back_retry_delays(retry_delays_s)
+    for attempt in range(1, len(delays) + 2):
+        actual = kv_read_many(
+            account_id=account_id,
+            namespace_id=namespace_id,
+            api_token=api_token,
+            keys=keys,
+            timeout_s=timeout_s,
+        )
+        mismatches = mismatch_count(actual)
+        if mismatches == 0:
+            return
+        if attempt > len(delays):
+            raise KvAdapterError(
+                operation=operation,
+                status="mismatch",
+                context=f"attempts={attempt} key_count={mismatches}",
+            )
+        sleep_s = delays[attempt - 1]
+        print(
+            f"[og_index_kv] {operation} stale-mismatch "
+            f"attempt={attempt} key_count={mismatches} sleep_s={sleep_s:g}",
+            flush=True,
+        )
+        time.sleep(sleep_s)
+
+
 def verify_kv_values(
     *,
     account_id: str,
@@ -304,17 +365,25 @@ def verify_kv_values(
     api_token: str,
     expected: Mapping[str, str],
     timeout_s: float = 120.0,
+    retry_delays_s: Sequence[float] = DEFAULT_READ_BACK_RETRY_DELAYS_S,
 ) -> None:
-    """Read once and fail when any committed value differs byte-for-byte."""
+    """Verify values after bounded stale-read retries without repeating PUTs."""
     if not expected:
         raise ValueError("read-back expected values must be non-empty")
-    actual = kv_read_many(
-        account_id=account_id, namespace_id=namespace_id, api_token=api_token,
-        keys=list(expected), timeout_s=timeout_s,
+
+    def mismatch_count(actual: Mapping[str, str | None]) -> int:
+        return sum(actual.get(key) != value for key, value in expected.items())
+
+    _verify_read_back(
+        operation="read-back-verify-values",
+        account_id=account_id,
+        namespace_id=namespace_id,
+        api_token=api_token,
+        keys=list(expected),
+        mismatch_count=mismatch_count,
+        retry_delays_s=retry_delays_s,
+        timeout_s=timeout_s,
     )
-    mismatched = [key for key, value in expected.items() if actual.get(key) != value]
-    if mismatched:
-        raise KvAdapterError(operation="read-back-verify-values", status="mismatch", context=f"key_count={len(mismatched)}")
 
 
 def verify_kv_absent(
@@ -324,14 +393,23 @@ def verify_kv_absent(
     api_token: str,
     keys: Sequence[str],
     timeout_s: float = 120.0,
+    retry_delays_s: Sequence[float] = DEFAULT_READ_BACK_RETRY_DELAYS_S,
 ) -> None:
-    """Read once and fail if a deleted key is still present."""
-    actual = kv_read_many(
-        account_id=account_id, namespace_id=namespace_id, api_token=api_token, keys=keys, timeout_s=timeout_s,
+    """Verify deletions after bounded stale-read retries without repeating DELETEs."""
+
+    def mismatch_count(actual: Mapping[str, str | None]) -> int:
+        return sum(value is not None for value in actual.values())
+
+    _verify_read_back(
+        operation="read-back-verify-delete",
+        account_id=account_id,
+        namespace_id=namespace_id,
+        api_token=api_token,
+        keys=keys,
+        mismatch_count=mismatch_count,
+        retry_delays_s=retry_delays_s,
+        timeout_s=timeout_s,
     )
-    present = [key for key, value in actual.items() if value is not None]
-    if present:
-        raise KvAdapterError(operation="read-back-verify-delete", status="mismatch", context=f"key_count={len(present)}")
 
 
 def kv_list_movie_keys(

@@ -195,9 +195,84 @@ class TestKvAdapterTransfers(unittest.TestCase):
             kv_bulk_get(account_id="a", namespace_id="n", api_token="x", keys=[str(i) for i in range(101)])
         with mock.patch("cron.og_index_kv.urllib.request.urlopen", self._urlopen([{"success": True, "result": {"values": {}}}])):
             with self.assertRaises(KvAdapterError) as ctx:
-                verify_kv_values(account_id="a", namespace_id="n", api_token="token-not-logged", expected={"movie:1": "one"})
+                verify_kv_values(
+                    account_id="a",
+                    namespace_id="n",
+                    api_token="token-not-logged",
+                    expected={"movie:1": "one"},
+                    retry_delays_s=(),
+                )
         self.assertIn("read-back-verify-values", str(ctx.exception))
         self.assertNotIn("token-not-logged", str(ctx.exception))
+
+    def test_values_readback_retries_stale_value_then_converges(self) -> None:
+        from cron.og_index_kv import verify_kv_values
+
+        read_many = mock.Mock(side_effect=[{"movie:1": "old"}, {"movie:1": "one"}])
+        with mock.patch("cron.og_index_kv.kv_read_many", read_many), \
+             mock.patch("cron.og_index_kv.time.sleep") as sleep:
+            verify_kv_values(
+                account_id="a",
+                namespace_id="n",
+                api_token="hidden",
+                expected={"movie:1": "one"},
+                retry_delays_s=(0.0,),
+            )
+        self.assertEqual(read_many.call_count, 2)
+        sleep.assert_called_once_with(0.0)
+
+    def test_absent_readback_retries_stale_value_then_converges(self) -> None:
+        from cron.og_index_kv import verify_kv_absent
+
+        read_many = mock.Mock(side_effect=[{"movie:1": "old"}, {"movie:1": None}])
+        with mock.patch("cron.og_index_kv.kv_read_many", read_many), \
+             mock.patch("cron.og_index_kv.time.sleep") as sleep:
+            verify_kv_absent(
+                account_id="a",
+                namespace_id="n",
+                api_token="hidden",
+                keys=["movie:1"],
+                retry_delays_s=(0.0,),
+            )
+        self.assertEqual(read_many.call_count, 2)
+        sleep.assert_called_once_with(0.0)
+
+    def test_readback_retry_exhaustion_fails_closed_with_bounded_attempts(self) -> None:
+        from cron.og_index_kv import KvAdapterError, verify_kv_values
+
+        read_many = mock.Mock(return_value={"movie:1": "old"})
+        with mock.patch("cron.og_index_kv.kv_read_many", read_many), \
+             mock.patch("cron.og_index_kv.time.sleep") as sleep:
+            with self.assertRaises(KvAdapterError) as ctx:
+                verify_kv_values(
+                    account_id="a",
+                    namespace_id="n",
+                    api_token="hidden",
+                    expected={"movie:1": "one"},
+                    retry_delays_s=(0.0, 0.0),
+                )
+        self.assertEqual(read_many.call_count, 3)
+        self.assertEqual(sleep.call_args_list, [mock.call(0.0), mock.call(0.0)])
+        self.assertIn("attempts=3", ctx.exception.context)
+        self.assertIn("key_count=1", ctx.exception.context)
+        self.assertNotIn("movie:1", ctx.exception.context)
+        self.assertNotIn("hidden", str(ctx.exception))
+
+    def test_readback_retry_delays_are_bounded_before_reading(self) -> None:
+        from cron.og_index_kv import verify_kv_values
+
+        read_many = mock.Mock()
+        for delays in ((-1.0,), (float("nan"),), (64.0,), (0.0,) * 7):
+            with self.subTest(delays=delays), mock.patch("cron.og_index_kv.kv_read_many", read_many):
+                with self.assertRaises(ValueError):
+                    verify_kv_values(
+                        account_id="a",
+                        namespace_id="n",
+                        api_token="hidden",
+                        expected={"movie:1": "one"},
+                        retry_delays_s=delays,
+                    )
+        read_many.assert_not_called()
 
     def test_http_timeout_and_cloudflare_failure_are_safe(self) -> None:
         from cron.og_index_kv import KvAdapterError, kv_bulk_put

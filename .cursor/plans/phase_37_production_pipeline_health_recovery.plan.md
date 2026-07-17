@@ -19,7 +19,7 @@ todos:
     status: complete
   - id: p37-scheduled-health-acceptance
     content: 37.6 [需人工验收] 验收线上网站和下一次 scheduled nightly，并完成恢复报告
-    status: pending
+    status: complete
 isProject: false
 ---
 

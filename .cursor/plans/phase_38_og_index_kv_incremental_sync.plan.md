@@ -19,7 +19,7 @@ todos:
     status: complete
   - id: p38-production-gate
     content: 38.6 [需人工验收] 完成远端 bootstrap、生产增量与下一次 scheduled nightly Gate
-    status: pending
+    status: complete
 isProject: false
 ---
 

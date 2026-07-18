@@ -16,7 +16,7 @@ export const PERLIN_LIGHTING_ENABLED_DEFAULT = true
  * Keep vectors as tuples so the same object can be hashed into render metadata.
  */
 export const PLANET_VISUAL_DEFAULTS = {
-  schemaVersion: 3,
+  schemaVersion: 4,
   geometry: {
     detail: 8,
   },
@@ -48,7 +48,8 @@ export const PLANET_VISUAL_DEFAULTS = {
     lightness: 0.55,
     chroma: 0.15,
     emission: {
-      modelVersion: 'vote-average-linear-clamped-v1',
+      modelVersion: 'vote-average-power-clamped-v1',
+      exponent: 3,
       intensityMin: 0.06,
       intensityMax: 0.6,
     },

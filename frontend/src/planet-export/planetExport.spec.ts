@@ -87,7 +87,7 @@ describe('planet export request and sizing', () => {
   it('captures renderer-owned P39 diagnostics while rating changes only emission', () => {
     const camera = new THREE.OrthographicCamera(-10, 10, 10, -10, 0.01, 40)
     positionExportCamera(camera, 10)
-    const snapshots = [0, 5, 10].map((vote_average) => {
+    const snapshots = [0, 4, 5, 10].map((vote_average) => {
       const target = { ...movie(157336, 2, ['Drama']), vote_average }
       const handle = prepareExportPlanet(target, galaxy([target]).meta, 'shader', 3)
       const diagnostics = capturePlanetRenderDiagnostics(target, handle, camera, { sizeRoot: 3, padding: 0.08 })
@@ -95,11 +95,18 @@ describe('planet export request and sizing', () => {
       return diagnostics
     })
 
-    expect(snapshots.map((snapshot) => snapshot.rating)).toEqual([0, 5, 10])
+    expect(snapshots.map((snapshot) => snapshot.rating)).toEqual([0, 4, 5, 10])
     expect(snapshots[0]!.emission).toBeCloseTo(0.06, 12)
-    expect(snapshots[1]!.emission).toBeCloseTo(0.33, 12)
-    expect(snapshots[2]!.emission).toBeCloseTo(0.6, 12)
+    expect(snapshots[1]!.emission).toBeCloseTo(0.09456, 12)
+    expect(snapshots[2]!.emission).toBeCloseTo(0.1275, 12)
+    expect(snapshots[3]!.emission).toBeCloseTo(0.6, 12)
     for (const snapshot of snapshots) {
+      expect(snapshot.emission_curve).toEqual({
+        model_version: PLANET_VISUAL_DEFAULTS.focus.emission.modelVersion,
+        exponent: PLANET_VISUAL_DEFAULTS.focus.emission.exponent,
+        intensity_min: PLANET_VISUAL_DEFAULTS.focus.emission.intensityMin,
+        intensity_max: PLANET_VISUAL_DEFAULTS.focus.emission.intensityMax,
+      })
       expect(snapshot.fixed_lightness).toBe(PLANET_VISUAL_DEFAULTS.focus.lightness)
       expect(snapshot.fixed_chroma).toBe(PLANET_VISUAL_DEFAULTS.focus.chroma)
       expect(snapshot.key_light).toMatchObject({
@@ -122,6 +129,7 @@ describe('planet export request and sizing', () => {
       })
     }
     expect(snapshots.map((snapshot) => snapshot.rotation)).toEqual([
+      snapshots[0]!.rotation,
       snapshots[0]!.rotation,
       snapshots[0]!.rotation,
       snapshots[0]!.rotation,

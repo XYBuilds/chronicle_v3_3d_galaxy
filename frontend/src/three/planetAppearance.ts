@@ -14,6 +14,10 @@ export interface PlanetAppearance {
   lightness: number
   chroma: number
   emissionIntensity: number
+  emissionModelVersion: string
+  emissionExponent: number
+  emissionIntensityMin: number
+  emissionIntensityMax: number
   keyLightIntensity: number
   bandCount: number
   cutCount: number
@@ -31,6 +35,7 @@ export function focusEmissionIntensityFromVoteAverage(
   voteAverage: number,
   minIntensity: number,
   maxIntensity: number,
+  exponent: number,
 ): number {
   if (!Number.isFinite(voteAverage)) {
     throw new Error(`[PlanetAppearance] voteAverage must be finite; received ${voteAverage}`)
@@ -40,6 +45,9 @@ export function focusEmissionIntensityFromVoteAverage(
   }
   if (!Number.isFinite(maxIntensity)) {
     throw new Error(`[PlanetAppearance] maxIntensity must be finite; received ${maxIntensity}`)
+  }
+  if (!Number.isFinite(exponent) || exponent <= 0) {
+    throw new Error(`[PlanetAppearance] exponent must be finite and > 0; received ${exponent}`)
   }
   if (minIntensity < 0) {
     throw new Error(`[PlanetAppearance] minIntensity must be non-negative; received ${minIntensity}`)
@@ -57,7 +65,7 @@ export function focusEmissionIntensityFromVoteAverage(
   const t = clampedVoteAverage / 10
   if (t === 0) return minIntensity
   if (t === 1) return maxIntensity
-  return minIntensity + t * (maxIntensity - minIntensity)
+  return minIntensity + Math.pow(t, exponent) * (maxIntensity - minIntensity)
 }
 
 /** xmur3 string hash → deterministic 32-bit seed. */
@@ -119,7 +127,12 @@ export function resolvePlanetAppearance(movie: Movie, palette: Meta['genre_palet
       movie.vote_average,
       emission.intensityMin,
       emission.intensityMax,
+      emission.exponent,
     ),
+    emissionModelVersion: emission.modelVersion,
+    emissionExponent: emission.exponent,
+    emissionIntensityMin: emission.intensityMin,
+    emissionIntensityMax: emission.intensityMax,
     keyLightIntensity: PLANET_VISUAL_DEFAULTS.lighting.keyLightIntensity,
     bandCount: genres.length,
     cutCount: Math.max(0, genres.length - 1),

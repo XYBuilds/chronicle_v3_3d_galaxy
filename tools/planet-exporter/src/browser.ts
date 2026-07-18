@@ -70,6 +70,17 @@ export function parseVisualDiagnostics(value: string): Record<string, unknown> {
   for (const field of ['rating', 'emission', 'fixed_lightness', 'fixed_chroma']) {
     diagnosticsNumber(root[field], field)
   }
+  const emissionCurve = diagnosticsObject(root.emission_curve, 'emission_curve')
+  if (typeof emissionCurve.model_version !== 'string' || emissionCurve.model_version.length === 0) {
+    throw new CliError('visual diagnostics emission_curve.model_version must be non-empty string', EXIT_CODES.render)
+  }
+  const exponent = diagnosticsNumber(emissionCurve.exponent, 'emission_curve.exponent')
+  if (exponent <= 0) throw new CliError('visual diagnostics emission_curve.exponent must be > 0', EXIT_CODES.render)
+  const intensityMin = diagnosticsNumber(emissionCurve.intensity_min, 'emission_curve.intensity_min')
+  const intensityMax = diagnosticsNumber(emissionCurve.intensity_max, 'emission_curve.intensity_max')
+  if (intensityMin < 0 || intensityMax < intensityMin) {
+    throw new CliError('visual diagnostics emission_curve intensity range is invalid', EXIT_CODES.render)
+  }
   const padding = diagnosticsNumber(root.padding, 'padding')
   if (padding < 0 || padding >= 0.5) {
     throw new CliError('visual diagnostics padding must be in [0, 0.5)', EXIT_CODES.render)

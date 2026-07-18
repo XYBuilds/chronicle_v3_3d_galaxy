@@ -20,8 +20,8 @@ const source: DataSource = { kind: 'url', label: 'https://example.test/galaxy_da
 
 const visualHash = JSON.stringify({
   planet: JSON.stringify({
-    schemaVersion: 3,
-    focus: { emission: { modelVersion: 'vote-average-linear-clamped-v1', intensityMin: 0.06, intensityMax: 0.6 } },
+    schemaVersion: 4,
+    focus: { emission: { modelVersion: 'vote-average-power-clamped-v1', exponent: 3, intensityMin: 0.06, intensityMax: 0.6 } },
     lighting: { keyLightIntensity: 1 },
     color: { pipelineVersion: 'oklch-local-base-linear-emission-fixed-key-single-srgb-v1' },
   }),
@@ -38,7 +38,8 @@ const visualDiagnostics = {
   outer_radius: 0.01,
   size_root: 3,
   padding: 0.08,
-  emission: 0.33,
+  emission: 0.1275,
+  emission_curve: { model_version: 'vote-average-power-clamped-v1', exponent: 3, intensity_min: 0.06, intensity_max: 0.6 },
   fixed_lightness: 0.55,
   fixed_chroma: 0.15,
   key_light: { enabled: true, direction: [0.7, 0.7, -0.14], intensity: 1, flat_shading_mix: 0.8 },
@@ -115,7 +116,8 @@ describe('browser render metadata', () => {
     expect(metadata.visual_diagnostics).toBe(visualDiagnostics)
     expect(metadata.visual_diagnostics).toMatchObject({
       rating: 5,
-      emission: 0.33,
+      emission: 0.1275,
+      emission_curve: { model_version: 'vote-average-power-clamped-v1', exponent: 3 },
       fixed_lightness: 0.55,
       fixed_chroma: 0.15,
       key_light: { intensity: 1 },

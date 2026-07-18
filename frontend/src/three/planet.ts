@@ -7,6 +7,7 @@ import {
   createPlanetRandom,
   planetNoiseSeed,
   resolvePlanetAppearance,
+  type PlanetAppearance,
 } from './planetAppearance'
 import { computePlanetOuterRadius } from './planetSizing'
 import { PLANET_MAX_BANDS, PLANET_VISUAL_DEFAULTS } from './planetVisualDefaults'
@@ -116,6 +117,7 @@ export interface SelectionPlanetHandle {
   mesh: THREE.Mesh
   material: THREE.ShaderMaterial
   lastRadius: number
+  lastAppearance: PlanetAppearance | null
   setFromMovie: (
     movie: Movie,
     palette: Meta['genre_palette'],
@@ -307,6 +309,7 @@ export function createSelectionPlanet(): SelectionPlanetHandle {
     mesh,
     material,
     lastRadius: 0.1,
+    lastAppearance: null,
     setFromMovie: () => { },
     syncCpuNoiseFromUniforms: () => { },
     setOpacity: () => { },
@@ -328,6 +331,7 @@ export function createSelectionPlanet(): SelectionPlanetHandle {
       baseQuaternion,
     } = appearance
     assertFocusUniformValues(lightness, chroma, emissionIntensity, keyLightIntensity)
+    handle.lastAppearance = appearance
     handle.lastRadius = computePlanetOuterRadius(worldRadius, bandCount, stepH)
     const radiusMul = handle.lastRadius / worldRadius
     console.assert(handle.lastRadius >= worldRadius, '[Planet] lastRadius covers base sphere', handle.lastRadius, worldRadius)

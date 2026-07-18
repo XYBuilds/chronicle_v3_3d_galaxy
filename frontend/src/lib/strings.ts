@@ -97,14 +97,7 @@ export function buildStrings(localeId: LocaleId) {
         revenue: raw.drawer.details.revenue,
       },
       links: raw.drawer.links,
-    },
-    focusLReference: {
-      ariaLabel: (rating: string, filmTitle: string) =>
-        interpolate(raw.focusLReference.ariaLabel, { rating, filmTitle }),
-    },
-    focusVoteReference: {
-      tierLabels: raw.focusVoteReference.tierLabels,
-    },
+    }
   }
 }
 

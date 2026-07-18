@@ -1,6 +1,6 @@
 /**
  * Default values for galaxy dual-mesh scale uniforms (`galaxyMeshes` shared bag).
- * Kept shader-free so specs (e.g. `galaxyVoteSize.spec.ts`) can import without GLSL bundling.
+ * Kept shader-free so specs can import without GLSL bundling.
  */
 export const DEFAULT_GALAXY_U_SIZE_SCALE = 0.5
 

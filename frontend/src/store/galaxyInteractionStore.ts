@@ -9,19 +9,6 @@ export type SearchSuggestion =
   | { kind: 'person'; personKey: string; label: string; movieCount: number }
   | { kind: 'genre'; genreName: string; label: string; count: number }
 
-export interface FocusLightnessSnap {
-  uLMin: number
-  uLMax: number
-  uHighRatingT: number
-  uHighTierTRangeScale: number
-  uLightnessRatingExponent: number
-  uChroma: number
-  /** P17.2 — same as galaxy `uHuntGamma` (HUD legend mirrors active vert Hunt). */
-  uHuntGamma: number
-  /** P17.2 — same as galaxy `uHuntApplyMask`; bit 1 = active Hunt (FocusLReference uses this). */
-  uHuntApplyMask: number
-}
-
 /** Phase 4.1 — Raycaster-driven HUD prep: hover / selection ids (TMDB `Movie.id`). */
 /** Phase 5.1.5 — Macro view: time focus + visible Z span + camera standoff (Design Spec 方案 1). */
 /** Phase 12.2 — Search + multi-film select (`selectionIds`) for person/genre sessions. */
@@ -62,12 +49,6 @@ export interface GalaxyInteractionState {
   focusNeighborIds: number[] | null
   /** P13.3 — orbit camera around focus pivot (r fixed); reset when returning to macro idle. */
   focusOrbit: { yaw: number; pitch: number }
-
-  /**
-   * P13.5 — snapshot of galaxy P10.1 + chroma uniforms for focus HUD (scene writes when selection animation active).
-   * `null` in macro idle.
-   */
-  focusLightnessSnap: FocusLightnessSnap | null
 }
 
 export const useGalaxyInteractionStore = create<GalaxyInteractionState>(() => ({
@@ -89,8 +70,6 @@ export const useGalaxyInteractionStore = create<GalaxyInteractionState>(() => ({
   focusNeighborRadius: 5,
   focusNeighborIds: null,
   focusOrbit: { yaw: 0, pitch: 0 },
-
-  focusLightnessSnap: null,
 }))
 
 /** Derived: timeline vis-window must not drive `inFocus` when in person/genre select (Tech Spec §4.5). */

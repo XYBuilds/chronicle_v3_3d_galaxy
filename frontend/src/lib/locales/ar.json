@@ -164,17 +164,5 @@
       "tmdb": "TMDB",
       "imdb": "IMDb"
     }
-  },
-  "focusLReference": {
-    "ariaLabel": "{{rating}} من 10 على طيف OKLab L لـ {{filmTitle}}؛ عشر شرائح بنصف درجة تقييم"
-  },
-  "focusVoteReference": {
-    "tierLabels": [
-      "10 أصوات",
-      "100 صوت",
-      "1,000 صوت",
-      "10,000 صوت",
-      "100,000 صوت"
-    ]
   }
 }

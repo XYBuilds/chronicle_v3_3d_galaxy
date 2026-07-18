@@ -41,7 +41,6 @@ import {
   selectionPlanetSpinAngleRad,
 } from './selectionPlanetRotation'
 import { computeActiveWorldRadius, getSelectionMaskPickSet, resolveSelectionWorldRadius } from './screenRadius'
-import { createFocusSizeReferenceRings } from './FocusSizeReferenceRings'
 import { computeFocusNeighborIds } from './focusNeighborMask'
 import { buildMovieIdToIndexMap, setSelectionMask, type SelectionMaskUniformBag } from './selectionMask'
 import { createTransitionDriver } from './transitionDriver'
@@ -469,7 +468,7 @@ export function mountGalaxyScene(
   planet.mesh.renderOrder = 2
   scene.add(planet.mesh)
 
-  /** P32.6 — slow spin about reference-ring plane normal; reset baseline on movie change. */
+  /** P32.6 — slow spin about the planet-local pole; reset baseline on movie change. */
   let planetSpinMovieId = -1
   let planetSpinStartMs = 0
   let planetSpinRevsPerSec = 0
@@ -494,10 +493,6 @@ export function mountGalaxyScene(
     planet.mesh.updateMatrixWorld(true)
   }
 
-  const sizeRings = createFocusSizeReferenceRings(movies)
-  scene.add(sizeRings.group)
-  let lastFocusLightSnapJson = ''
-
   type SelectionPhase = 'idle' | 'selecting' | 'selected' | 'deselecting'
   let selectionPhase: SelectionPhase = 'idle'
   const macroZWheel = () => selectionPhase === 'idle' && !useCoverModeStore.getState().coverMode
@@ -515,7 +510,6 @@ export function mountGalaxyScene(
   const deselectFromQuat = new THREE.Quaternion()
   const deselectToQuat = new THREE.Quaternion().setFromEuler(GALAXY_CAMERA_EULER)
   const orbitPivotVec = new THREE.Vector3()
-  const ringsPivot = new THREE.Vector3()
   let inputLocked = false
   /** true 当次 `selecting` 从宏观 `idle` 飞入；false = focus 内换星，飞入时 slerp 四元数保留视角。 */
   let selectingEnteredFromMacro = true
@@ -1472,55 +1466,6 @@ export function mountGalaxyScene(
     syncSelectionPlanetWorldScale()
     applySelectionPlanetSpin(nowMs)
 
-    const ringsPhaseActive =
-      selectionPhase === 'selecting' || selectionPhase === 'selected' || selectionPhase === 'deselecting'
-    const mRings = movies[pendingSelectInstanceIndex]
-    const ringOpacity =
-      Math.max(uFocusCameraBlend.value, uFocusActiveDimBlend.value) *
-      (planet.material.uniforms.uAlpha.value as number)
-    if (ringsPhaseActive && mRings) {
-      ringsPivot.set(mRings.x, mRings.y, mRings.z)
-      sizeRings.update({
-        pivotWorld: ringsPivot,
-        movieId: mRings.id,
-        voteCount: mRings.vote_count,
-        opacity: ringOpacity,
-        uSizeScale: uSizeScale.value,
-        uActiveSizeMul: uActiveSizeMul.value,
-      })
-    } else {
-      ringsPivot.set(0, 0, 0)
-      sizeRings.update({
-        pivotWorld: ringsPivot,
-        movieId: 0,
-        voteCount: 0,
-        opacity: 0,
-        uSizeScale: uSizeScale.value,
-        uActiveSizeMul: uActiveSizeMul.value,
-      })
-    }
-
-    if (ringsPhaseActive && mRings) {
-      const snap = {
-        uLMin: uLMin.value,
-        uLMax: uLMax.value,
-        uHighRatingT: uHighRatingT.value,
-        uHighTierTRangeScale: uHighTierTRangeScale.value,
-        uLightnessRatingExponent: uLightnessRatingExponent.value,
-        uChroma: uChroma.value,
-        uHuntGamma: uHuntGammaU.value,
-        uHuntApplyMask: uHuntApplyMaskU.value,
-      }
-      const snapJson = JSON.stringify(snap)
-      if (snapJson !== lastFocusLightSnapJson) {
-        lastFocusLightSnapJson = snapJson
-        useGalaxyInteractionStore.setState({ focusLightnessSnap: snap })
-      }
-    } else if (lastFocusLightSnapJson !== '') {
-      lastFocusLightSnapJson = ''
-      useGalaxyInteractionStore.setState({ focusLightnessSnap: null })
-    }
-
     if (selectionPhase === 'idle') {
       const covLive = useCoverModeStore.getState()
       if (!(covLive.coverMode && covLive.todayMovieId !== null)) {
@@ -1565,8 +1510,6 @@ export function mountGalaxyScene(
     constellation.dispose()
     detachControls()
     detachInteraction()
-    sizeRings.group.removeFromParent()
-    sizeRings.dispose()
     planet.mesh.removeFromParent()
     planet.dispose()
     galaxy.idle.removeFromParent()

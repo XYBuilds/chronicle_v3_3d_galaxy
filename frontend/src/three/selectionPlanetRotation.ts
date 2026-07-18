@@ -1,10 +1,7 @@
 import * as THREE from 'three'
 
-/**
- * Local normal of {@link THREE.RingGeometry} / {@link FocusSizeReferenceRings} group
- * before plane orientation is applied (ring lies in local XY, normal +Z).
- */
-export const REFERENCE_RING_PLANE_LOCAL_NORMAL = new THREE.Vector3(0, 0, 1)
+/** Local planet pole before its seeded base orientation is applied. */
+export const SELECTION_PLANET_LOCAL_SPIN_AXIS = new THREE.Vector3(0, 0, 1)
 
 /** World +Y — vertical; spin axis is Y tilted by seeded cone (0–45°, any azimuth). */
 export const SELECTION_PLANET_WORLD_UP = new THREE.Vector3(0, 1, 0)
@@ -60,7 +57,6 @@ export function selectionPlanetSpinRevsPerSec(movieId: number): number {
 
 /**
  * Unit world spin axis: +Y tilted by seeded {@link SeededSpinAxisParams}.
- * Size-reference rings lie in the plane ⊥ this axis through the planet center.
  */
 export function selectionPlanetSpinAxisWorld(movieId: number, target?: THREE.Vector3): THREE.Vector3 {
   const { tiltDeg, azimuthDeg } = seededSpinAxisParamsForMovie(movieId)
@@ -76,32 +72,30 @@ export function selectionPlanetSpinAxisWorld(movieId: number, target?: THREE.Vec
 }
 
 /**
- * Quaternion orienting ring/planet so local +Z (ring plane normal) aligns with spin axis.
+ * Quaternion orienting the planet-local pole (+Z) to its seeded world spin axis.
  */
-export function selectionPlanetRingPlaneQuaternion(
+export function selectionPlanetBaseOrientationQuaternion(
   movieId: number,
   target?: THREE.Quaternion,
 ): THREE.Quaternion {
   const axis = selectionPlanetSpinAxisWorld(movieId, new THREE.Vector3())
   const out = target ?? new THREE.Quaternion()
-  return out.setFromUnitVectors(REFERENCE_RING_PLANE_LOCAL_NORMAL, axis)
+  return out.setFromUnitVectors(SELECTION_PLANET_LOCAL_SPIN_AXIS, axis)
 }
 
-/**
- * P32.5/32.6 — Baseline mesh orientation: coplanar with size rings (⊥ spin axis through center).
- */
+/** Baseline mesh orientation for deterministic planet-local spin. */
 export function selectionPlanetBaseQuaternion(
   movieId: number,
   target?: THREE.Quaternion,
 ): THREE.Quaternion {
-  return selectionPlanetRingPlaneQuaternion(movieId, target)
+  return selectionPlanetBaseOrientationQuaternion(movieId, target)
 }
 
 export type SelectionPlanetRotationAxis = {
   movieId: number
   /** Unit world-space axis for slow spin (32.6). */
   spinAxisWorld: THREE.Vector3
-  /** Baseline mesh orientation aligned with reference rings (reset on movie change). */
+  /** Baseline mesh orientation for deterministic local-pole spin (reset on movie change). */
   baseQuaternion: THREE.Quaternion
   /** Seeded signed spin rate (rev/s), ∈ [-0.1, 0.1]. */
   revsPerSec: number
@@ -136,7 +130,7 @@ export function selectionPlanetOrientedQuaternion(
   target?: THREE.Quaternion,
 ): THREE.Quaternion {
   const out = target ?? new THREE.Quaternion()
-  scratchSpinDelta.setFromAxisAngle(REFERENCE_RING_PLANE_LOCAL_NORMAL, angleRad)
+  scratchSpinDelta.setFromAxisAngle(SELECTION_PLANET_LOCAL_SPIN_AXIS, angleRad)
   out.copy(baseQuaternion).multiply(scratchSpinDelta)
   return out
 }

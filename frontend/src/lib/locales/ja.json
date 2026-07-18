@@ -164,17 +164,5 @@
       "tmdb": "TMDB",
       "imdb": "IMDb"
     }
-  },
-  "focusLReference": {
-    "ariaLabel": "{{filmTitle}} の OKLab L スペクトラムにおける {{rating}} / 10；半刻み評価に対応する 10 段階"
-  },
-  "focusVoteReference": {
-    "tierLabels": [
-      "10 票",
-      "100 票",
-      "1,000 票",
-      "10,000 票",
-      "100,000 票"
-    ]
   }
 }

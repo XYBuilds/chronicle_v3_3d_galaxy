@@ -12,7 +12,6 @@ import { Timeline } from '@/components/Timeline'
 import { CoverBackdrop } from '@/hud/CoverBackdrop'
 import { HoverRing } from '@/hud/HoverRing'
 import { FocusExitButton } from '@/hud/FocusExitButton'
-import { FocusLReference } from '@/hud/FocusLReference'
 import { FeedbackButton } from '@/hud/FeedbackButton'
 import { SupportButton } from '@/hud/SupportButton'
 import { FullscreenButton } from '@/hud/FullscreenButton'
@@ -368,7 +367,6 @@ function App() {
       {!coverMode ? (
         <>
           <SearchBar hasSearchIndex={hasSearchIndex} movies={data.movies} animateZCurrentTo={animateZCurrentTo} />
-          <FocusLReference />
           <Timeline orientation={timelineOrientation} />
           <FocusExitButton />
           <MovieDetailDrawer animateZCurrentTo={animateZCurrentTo} hasSearchIndex={hasSearchIndex} />

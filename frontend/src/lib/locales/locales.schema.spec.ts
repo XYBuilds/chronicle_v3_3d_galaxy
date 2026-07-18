@@ -39,8 +39,4 @@ describe('locale JSON schema parity', () => {
   it.each(bundles)('%s matches en.json leaf key paths', (_name, bundle) => {
     expect(leafPaths(bundle).sort()).toEqual(canonicalPaths)
   })
-
-  it.each(bundles)('%s focusVoteReference tier count matches en', (_name, bundle) => {
-    expect(bundle.focusVoteReference.tierLabels.length).toBe(en.focusVoteReference.tierLabels.length)
-  })
 })

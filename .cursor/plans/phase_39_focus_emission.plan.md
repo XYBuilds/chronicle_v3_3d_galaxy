@@ -19,7 +19,7 @@ todos:
     status: complete
   - id: p39-reference-retirement
     content: 39.6 完整退役 FocusLReference、FocusSizeReferenceRings 及旧契约
-    status: pending
+    status: complete
   - id: p39-verification
     content: 39.7 完成自动化回归、受控评分矩阵与 3000×3000 导出一致性验证
     status: pending

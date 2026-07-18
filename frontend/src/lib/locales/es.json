@@ -164,17 +164,5 @@
       "tmdb": "TMDB",
       "imdb": "IMDb"
     }
-  },
-  "focusLReference": {
-    "ariaLabel": "{{rating}} de 10 en el espectro OKLab L para {{filmTitle}}; diez bandas a medios pasos de valoración"
-  },
-  "focusVoteReference": {
-    "tierLabels": [
-      "10 votos",
-      "100 votos",
-      "1.000 votos",
-      "10.000 votos",
-      "100.000 votos"
-    ]
   }
 }

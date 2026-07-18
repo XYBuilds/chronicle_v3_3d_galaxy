@@ -4,8 +4,7 @@ import { useStrings } from '@/lib/strings'
 import { cn } from '@/lib/utils'
 
 /**
- * P22.5 — Exit focus, anchored like {@link FocusLReference}: rating legend sits left of the on-screen
- * planet (`top-1/2` + horizontal offset); this control sits below the planet (`left-1/2` + downward offset).
+ * P22.5 — Exit focus sits below the on-screen planet (`left-1/2` + downward offset).
  * P25.1 — Vertical offset 定稿：`50%+22rem`（`lg+` `24rem`），并受 safe-area / 短视口上限约束。
  */
 export function FocusExitButton() {

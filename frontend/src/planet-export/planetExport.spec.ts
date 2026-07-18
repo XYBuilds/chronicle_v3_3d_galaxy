@@ -14,7 +14,8 @@ import {
   mapMovieSizeForExport,
 } from './sizing'
 import { findExportMovie, indexGalaxyMovies, parsePlanetExportRequest } from './request'
-import { positionExportCamera, prepareExportPlanet } from './renderPlanetImage'
+import { capturePlanetRenderDiagnostics, positionExportCamera, prepareExportPlanet } from './renderPlanetImage'
+import { planetNoiseSeed } from '@/three/planetAppearance'
 import { PLANET_VISUAL_DEFAULTS } from '@/three/planetVisualDefaults'
 import type { GalaxyData, Movie } from '@/types/galaxy'
 
@@ -83,6 +84,85 @@ describe('planet export request and sizing', () => {
     basic.dispose()
   })
 
+  it('captures renderer-owned P39 diagnostics while rating changes only emission', () => {
+    const camera = new THREE.OrthographicCamera(-10, 10, 10, -10, 0.01, 40)
+    positionExportCamera(camera, 10)
+    const snapshots = [0, 5, 10].map((vote_average) => {
+      const target = { ...movie(157336, 2, ['Drama']), vote_average }
+      const handle = prepareExportPlanet(target, galaxy([target]).meta, 'shader', 3)
+      const diagnostics = capturePlanetRenderDiagnostics(target, handle, camera, { sizeRoot: 3, padding: 0.08 })
+      handle.dispose()
+      return diagnostics
+    })
+
+    expect(snapshots.map((snapshot) => snapshot.rating)).toEqual([0, 5, 10])
+    expect(snapshots[0]!.emission).toBeCloseTo(0.06, 12)
+    expect(snapshots[1]!.emission).toBeCloseTo(0.33, 12)
+    expect(snapshots[2]!.emission).toBeCloseTo(0.6, 12)
+    for (const snapshot of snapshots) {
+      expect(snapshot.fixed_lightness).toBe(PLANET_VISUAL_DEFAULTS.focus.lightness)
+      expect(snapshot.fixed_chroma).toBe(PLANET_VISUAL_DEFAULTS.focus.chroma)
+      expect(snapshot.key_light).toMatchObject({
+        enabled: PLANET_VISUAL_DEFAULTS.lighting.enabled,
+        intensity: PLANET_VISUAL_DEFAULTS.lighting.keyLightIntensity,
+        flat_shading_mix: PLANET_VISUAL_DEFAULTS.lighting.flatShadingMix,
+      })
+      for (const [index, value] of snapshot.key_light.direction.entries()) {
+        expect(value).toBeCloseTo(PLANET_VISUAL_DEFAULTS.lighting.direction[index]!, 3)
+      }
+      expect(snapshot.noise).toEqual({
+        seed: planetNoiseSeed(157336),
+        scale: PLANET_VISUAL_DEFAULTS.noise.scale,
+        octaves: PLANET_VISUAL_DEFAULTS.noise.octaves,
+        persistence: PLANET_VISUAL_DEFAULTS.noise.persistence,
+      })
+      expect(snapshot.camera).toMatchObject({
+        projection: 'orthographic', position: [0, 0, -20], direction: [0, 0, 1],
+        left: -10, right: 10, top: 10, bottom: -10, near: 0.01, far: 40,
+      })
+    }
+    expect(snapshots.map((snapshot) => snapshot.rotation)).toEqual([
+      snapshots[0]!.rotation,
+      snapshots[0]!.rotation,
+      snapshots[0]!.rotation,
+    ])
+  })
+
+  it('fails fast when renderer-owned diagnostics contain invalid state', () => {
+    const target = movie(157336, 2, ['Drama'])
+    const handle = prepareExportPlanet(target, galaxy([target]).meta, 'shader', 3)
+    const camera = new THREE.OrthographicCamera(-10, 10, 10, -10, 0.01, 40)
+    positionExportCamera(camera, 10)
+
+    handle.material.uniforms.uLightingEnabled.value = 2
+    expect(() => capturePlanetRenderDiagnostics(
+      target,
+      handle,
+      camera,
+      { sizeRoot: 3, padding: 0.08 },
+    )).toThrow('lighting enabled must be 0 or 1')
+
+    handle.material.uniforms.uLightingEnabled.value = 1
+    handle.material.uniforms.uOctaves.value = 0
+    expect(() => capturePlanetRenderDiagnostics(
+      target,
+      handle,
+      camera,
+      { sizeRoot: 3, padding: 0.08 },
+    )).toThrow('noise octaves must be a positive integer')
+
+    handle.material.uniforms.uOctaves.value = PLANET_VISUAL_DEFAULTS.noise.octaves
+    handle.lastRadius = handle.mesh.scale.x / 2
+    expect(() => capturePlanetRenderDiagnostics(
+      target,
+      handle,
+      camera,
+      { sizeRoot: 3, padding: 0.08 },
+    )).toThrow('outer radius must cover world radius')
+
+    handle.dispose()
+  })
+
   it('routes website Focus, Cover today, and static export through the shared three-argument planet setter', () => {
     expect(sceneSource.match(/planet\.setFromMovie\(movie, meta\.genre_palette, r\)/g)).toHaveLength(1)
     expect(sceneSource.match(/planet\.setFromMovie\(tm, meta\.genre_palette, r\)/g)).toHaveLength(1)
@@ -102,6 +182,7 @@ describe('planet export request and sizing', () => {
     expect(exportPageSource).toMatch(
       /planetExportVisualConfigInput\(\s*planetVisualConfigHashInput\(\),\s*request\.sizeRoot,\s*\)/,
     )
+    expect(exportPageSource).toContain('document.body.dataset.visualDiagnostics = JSON.stringify(result.diagnostics)')
   })
 
   it('uses the in-app default focus view from world -Z', () => {

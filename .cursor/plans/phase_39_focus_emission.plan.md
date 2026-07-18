@@ -22,7 +22,7 @@ todos:
     status: complete
   - id: p39-verification
     content: 39.7 完成自动化回归、受控评分矩阵与 3000×3000 导出一致性验证
-    status: pending
+    status: complete
   - id: p39-visual-gate
     content: 39.8 [需人工验收] 完成 Emission 低中高评分视觉 Gate、参数固化与文档报告
     status: pending

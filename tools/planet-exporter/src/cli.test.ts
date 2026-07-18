@@ -27,6 +27,7 @@ function createDependencies(): RunDependencies {
       dataVersion: 'fixture-v1',
       webglRenderer: 'fixture-gpu',
       visualHash: 'visual',
+      visualDiagnostics: { rating: 5, emission: 0.33 },
       chromiumVersion: 'fixture-chromium',
     })),
     assertPngSafe: vi.fn(() => ({

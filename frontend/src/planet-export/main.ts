@@ -34,6 +34,7 @@ async function main(): Promise<void> {
       planetVisualConfigHashInput(),
       request.sizeRoot,
     )
+    document.body.dataset.visualDiagnostics = JSON.stringify(result.diagnostics)
     document.body.dataset.exportReady = '1'
     console.log(`[PlanetExport] ready movieId=${movie.id} resolution=${request.resolution} bloom=${request.bloom ? 'on' : 'off'} mode=${request.renderMode}`)
   } catch (error) {

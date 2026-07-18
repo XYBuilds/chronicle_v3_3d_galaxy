@@ -108,6 +108,7 @@ export function resolvePlanetAppearance(movie: Movie, palette: Meta['genre_palet
     genre === primaryGenreName ? primaryHue : genreHueForGenreName(genre, palette, fallbackHue),
   )
   const { focus } = PLANET_VISUAL_DEFAULTS
+  const { emission } = focus
 
   return {
     genres,
@@ -116,8 +117,8 @@ export function resolvePlanetAppearance(movie: Movie, palette: Meta['genre_palet
     chroma: focus.chroma,
     emissionIntensity: focusEmissionIntensityFromVoteAverage(
       movie.vote_average,
-      focus.emissionIntensityMin,
-      focus.emissionIntensityMax,
+      emission.intensityMin,
+      emission.intensityMax,
     ),
     keyLightIntensity: PLANET_VISUAL_DEFAULTS.lighting.keyLightIntensity,
     bandCount: genres.length,

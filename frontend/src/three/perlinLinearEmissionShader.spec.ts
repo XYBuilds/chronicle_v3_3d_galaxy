@@ -77,16 +77,16 @@ describe('Perlin linear-emission shader contract', () => {
   it('keeps the configured Key fixed while rating-derived emission brightens dark and lit sides without HDR clipping', () => {
     const base: LinearRgb = [0.25, 0.5, 0.75]
     const voteAverages = [0, 5, 10] as const
-    const { emissionIntensityMin, emissionIntensityMax } = PLANET_VISUAL_DEFAULTS.focus
+    const { intensityMin, intensityMax } = PLANET_VISUAL_DEFAULTS.focus.emission
     const keyLightIntensity = PLANET_VISUAL_DEFAULTS.lighting.keyLightIntensity
     const emissions = voteAverages.map((voteAverage) =>
-      focusEmissionIntensityFromVoteAverage(voteAverage, emissionIntensityMin, emissionIntensityMax),
+      focusEmissionIntensityFromVoteAverage(voteAverage, intensityMin, intensityMax),
     )
 
     expectRgbClose([emissions[0]!, emissions[1]!, emissions[2]!], [
-      emissionIntensityMin,
-      (emissionIntensityMin + emissionIntensityMax) / 2,
-      emissionIntensityMax,
+      intensityMin,
+      (intensityMin + intensityMax) / 2,
+      intensityMax,
     ])
 
     for (const lambert of [0, 0.7]) {

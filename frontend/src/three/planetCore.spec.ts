@@ -69,7 +69,7 @@ const palette: Meta['genre_palette'] = {
 describe('planet visual defaults', () => {
   it('serializes the versioned Focus visual configuration for metadata hashing', () => {
     expect(PLANET_VISUAL_DEFAULTS).toEqual({
-      schemaVersion: 2,
+      schemaVersion: 3,
       geometry: { detail: 8 },
       activeShell: { sizeScale: 0.5, activeSizeMultiplier: 0.012 },
       noise: { scale: 2.35, octaves: 4, persistence: 0.52 },
@@ -80,12 +80,20 @@ describe('planet visual defaults', () => {
         stepHeight: 0.03,
         stepSmoothness: 0.01,
       },
-      color: { lMax: 1, huntGamma: 0.3, huntApplyMask: 7 },
+      color: {
+        pipelineVersion: 'oklch-local-base-linear-emission-fixed-key-single-srgb-v1',
+        lMax: 1,
+        huntGamma: 0.3,
+        huntApplyMask: 7,
+      },
       focus: {
         lightness: 0.55,
         chroma: 0.15,
-        emissionIntensityMin: 0.06,
-        emissionIntensityMax: 0.6,
+        emission: {
+          modelVersion: 'vote-average-linear-clamped-v1',
+          intensityMin: 0.06,
+          intensityMax: 0.6,
+        },
       },
       galaxyColor: {
         lMin: 0.3,

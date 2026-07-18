@@ -1,7 +1,8 @@
 import { loadGalaxyData } from '@/utils/loadGalaxyData'
 import { parsePlanetExportRequest, findExportMovie, indexGalaxyMovies } from './request'
-import { computeGlobalPlanetRadius, PLANET_EXPORT_SIZE_ROOTS } from './sizing'
+import { computeGlobalPlanetRadius } from './sizing'
 import { planetVisualConfigHashInput } from '@/three/planetVisualDefaults'
+import { planetExportVisualConfigInput } from './visualConfig'
 import { renderPlanetImage } from './renderPlanetImage'
 
 async function main(): Promise<void> {
@@ -29,11 +30,10 @@ async function main(): Promise<void> {
     document.body.dataset.maxTextureSize = String(gl.getParameter(gl.MAX_TEXTURE_SIZE))
     document.body.dataset.webglRenderer = String(gl.getParameter(gl.RENDERER) ?? 'unknown')
     document.body.dataset.dataVersion = data.meta.version
-    document.body.dataset.visualHash = JSON.stringify({
-      planet: planetVisualConfigHashInput(),
-      exportSizeRoot: request.sizeRoot,
-      supportedExportSizeRoots: PLANET_EXPORT_SIZE_ROOTS,
-    })
+    document.body.dataset.visualHash = planetExportVisualConfigInput(
+      planetVisualConfigHashInput(),
+      request.sizeRoot,
+    )
     document.body.dataset.exportReady = '1'
     console.log(`[PlanetExport] ready movieId=${movie.id} resolution=${request.resolution} bloom=${request.bloom ? 'on' : 'off'} mode=${request.renderMode}`)
   } catch (error) {

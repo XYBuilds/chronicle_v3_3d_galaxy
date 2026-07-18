@@ -16,7 +16,7 @@ todos:
     status: complete
   - id: p39-shared-consumers-hash
     content: 39.5 统一网站 Focus、Cover、静态导出与视觉 hash
-    status: pending
+    status: complete
   - id: p39-reference-retirement
     content: 39.6 完整退役 FocusLReference、FocusSizeReferenceRings 及旧契约
     status: pending

@@ -32,6 +32,12 @@ export type PlanetRenderDiagnostics = {
   size_root: 2 | 3 | 4
   padding: number
   emission: number
+  emission_curve: {
+    model_version: string
+    exponent: number
+    intensity_min: number
+    intensity_max: number
+  }
   fixed_lightness: number
   fixed_chroma: number
   key_light: {
@@ -114,6 +120,8 @@ export function capturePlanetRenderDiagnostics(
     throw new Error('[PlanetExport] padding must be in [0, 0.5)')
   }
 
+  const appearance = planet.lastAppearance
+  if (!appearance) throw new Error('[PlanetExport] planet appearance must be resolved before diagnostics')
   const scale = planet.mesh.scale
   const worldRadius = positive(scale.x, 'world radius')
   if (scale.y !== scale.x || scale.z !== scale.x) {
@@ -166,6 +174,12 @@ export function capturePlanetRenderDiagnostics(
     size_root: options.sizeRoot,
     padding: serializableNumber(options.padding, 'padding'),
     emission: serializableNumber(uniforms.uEmissionIntensity.value as number, 'emission'),
+    emission_curve: {
+      model_version: appearance.emissionModelVersion,
+      exponent: serializableNumber(appearance.emissionExponent, 'emission exponent'),
+      intensity_min: serializableNumber(appearance.emissionIntensityMin, 'emission minimum'),
+      intensity_max: serializableNumber(appearance.emissionIntensityMax, 'emission maximum'),
+    },
     fixed_lightness: serializableNumber(uniforms.uPerlinL.value as number, 'lightness'),
     fixed_chroma: serializableNumber(uniforms.uPerlinChroma.value as number, 'chroma'),
     key_light: {

@@ -2,7 +2,7 @@ import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import { gunzipSync } from 'node:zlib'
 
-export const CONTROLLED_VOTE_AVERAGES = [0, 5, 10] as const
+export const CONTROLLED_VOTE_AVERAGES = [0, 4, 5, 10] as const
 export const PHASE39_FIXED_MOVIE_ID = 157336
 
 export type JsonRecord = Record<string, unknown>

@@ -26,6 +26,9 @@ todos:
   - id: p39-visual-gate
     content: 39.8 [需人工验收] 完成 Emission 低中高评分视觉 Gate、参数固化与文档报告
     status: pending
+  - id: p39-emission-curve-diagnostics
+    content: 39.9 隔离固定 Key、验证 cubic Emission 曲线并重建低中高候选矩阵
+    status: complete
 isProject: false
 ---
 
@@ -134,6 +137,7 @@ vec3 litLinear = emissiveLinear + keyLitLinear;
 
 - Phase 39 的唯一生产候选是 `E(rating) + KFixed`，不同时实现 `K(rating)`，避免在同一轮引入两条评分曲线和四个可调端点。
 - 若 39.8 仅发现亮度范围或 Bloom 问题，继续一次只调整一个 Emission 端点、固定 Key 或既有 Bloom 参数，不以评分 Key 掩盖问题。
+- 2026-07-18 首轮 39.8 人工 Gate 为 No-Go：低分星球过亮，低分与高分的直觉亮度差异不足。后续 P39.9 先隔离固定 Key，再验证 cubic Emission；只有排除 Key 与曲线后仍偏亮，才评估固定 OKLab Lightness。
 - 若受控矩阵证明高 Emission 必然抬平地形、而固定 Key 无法同时满足低/高评分，39.8 保持 pending：尚未交付时新增明确的后续 TODO 评估 E+K；若当前视觉契约已经交付或需要重新定义，则另开后续 Phase。
 - 后续 E+K 必须有自己的纯函数、hash 版本和人工 Gate，不在本 Phase 预留隐藏运行时分支。
 
@@ -268,6 +272,25 @@ vec3 litLinear = emissiveLinear + keyLitLinear;
 8. 人工 Go 后固化 Emission 端点与固定 Key，更新 [`docs/project_docs/星球状态机 spec.md`](docs/project_docs/星球状态机%20spec.md) 及实际受影响的视觉映射说明，并写入 [`docs/reports/Phase 39 P39 Focus 评分自发光与颜色空间统一 实施报告.md`](docs/reports/Phase%2039%20P39%20Focus%20评分自发光与颜色空间统一%20实施报告.md)。
 
 若 E(rating) + KFixed 因高评分地形抬平而 No-Go，不在本 TODO 内临时加入评分 Key 或隐藏模式：39.8 保持 pending，并按 D5 决定新增后续 TODO 或独立 Phase。未获人工 Go 前，不将 39.8 标为 complete，不宣称最终参数定稿，不写最终实施报告或执行发布交付。
+
+### 39.9 `[diagnostics+curve]` 隔离固定 Key、验证 cubic Emission 与重建候选矩阵
+
+**依赖：** 39.7 完成；39.8 首轮人工 Gate 已明确 No-Go。
+
+- 保留 P39.7 线性曲线、fixed Key ON 的 3000×3000 导出作为 A 基线，不改写其 PNG、fixture 或 sidecar。
+- 用同一 movie、genre、seed、姿态、相机、固定 L/C 和 Emission 端点生成单变量候选：A `linear + Key ON`、B `linear + Key OFF`、C `cubic + Key OFF`、D `cubic + Key ON`；评分至少覆盖 `0/4/5/10`，其中 cubic 使用 `t³`，例如评分 4 的归一化权重为 `0.4³`。
+- Key OFF 只用于离线诊断，生成证据后恢复 fixed Key ON；不得提交隐藏运行时开关、评分 Key、入口专属参数或第二套 appearance 数据流。
+- 若 C 相对 B 证明曲线能压低低分，而 D 回装 fixed Key 后仍保留可辨识层级，则生产候选改为可序列化的 power curve，并把 exponent/model version 纳入 visual hash；端点、固定 L/C、fixed Key 强度与 Bloom 参数本 TODO 不同时调整。
+- 只有 B/C 在 Key OFF 下仍显示低分底色过亮，才新增固定 OKLab Lightness 候选；不得在同一轮同时改 curve 与 Lightness。
+- 新候选产物写入独立 ignored 目录，不覆盖 `data/runs/phase39-p39.7/` 原始证据；更新领域函数、三入口/hash contract、export diagnostics 和非 focus 不变量测试。
+
+**验收：**
+
+- A/B 只改变 fixed Key，B/C 只改变线性与 cubic 曲线，C/D 只改变 fixed Key；其余 diagnostics 完全一致。
+- cubic 对有限评分先 clamp 到 `0…10`，再计算 `t³`；`0/10` 仍精确命中既有端点，`4/5` 明显低于线性值，保持严格单调和快速失败。
+- 最终生产候选仍是 `E_curve(rating) + KFixed`，评分不进入 Key、L/C、genre band、size、pose、camera 或 Bloom。
+- 新 visual hash 能识别 curve exponent/model version；相同候选重复导出 PNG SHA-256 稳定。
+- 人工只在候选矩阵生成后判断层级；未获新 Go 前，39.8 保持 pending，不更新最终状态机/视觉映射文档。
 
 ## Phase 39 验收标准
 

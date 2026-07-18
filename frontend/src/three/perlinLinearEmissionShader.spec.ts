@@ -76,18 +76,18 @@ describe('Perlin linear-emission shader contract', () => {
 
   it('keeps the configured Key fixed while rating-derived emission brightens dark and lit sides without HDR clipping', () => {
     const base: LinearRgb = [0.25, 0.5, 0.75]
-    const voteAverages = [0, 5, 10] as const
-    const { intensityMin, intensityMax } = PLANET_VISUAL_DEFAULTS.focus.emission
+    const voteAverages = [0, 4, 5, 10] as const
+    const { intensityMin, intensityMax, exponent } = PLANET_VISUAL_DEFAULTS.focus.emission
     const keyLightIntensity = PLANET_VISUAL_DEFAULTS.lighting.keyLightIntensity
     const emissions = voteAverages.map((voteAverage) =>
-      focusEmissionIntensityFromVoteAverage(voteAverage, intensityMin, intensityMax),
+      focusEmissionIntensityFromVoteAverage(voteAverage, intensityMin, intensityMax, exponent),
     )
 
-    expectRgbClose([emissions[0]!, emissions[1]!, emissions[2]!], [
-      intensityMin,
-      (intensityMin + intensityMax) / 2,
-      intensityMax,
-    ])
+    expect(emissions).toHaveLength(4)
+    expect(emissions[0]).toBeCloseTo(intensityMin, 12)
+    expect(emissions[1]).toBeCloseTo(0.09456, 12)
+    expect(emissions[2]).toBeCloseTo(0.1275, 12)
+    expect(emissions[3]).toBeCloseTo(intensityMax, 12)
 
     for (const lambert of [0, 0.7]) {
       const linearByRating = emissions.map((emissionIntensity) =>
@@ -105,8 +105,8 @@ describe('Perlin linear-emission shader contract', () => {
 
     const hdrBase: LinearRgb = [0.9, 0.8, 0.7]
     const hdrLambert = 0.7
-    const hdrLinear = litLinear(hdrBase, emissions[2]!, keyLightIntensity, hdrLambert)
-    const expectedHdrGreen = hdrBase[1] * (emissions[2]! + keyLightIntensity * hdrLambert)
+    const hdrLinear = litLinear(hdrBase, emissions[3]!, keyLightIntensity, hdrLambert)
+    const expectedHdrGreen = hdrBase[1] * (emissions[3]! + keyLightIntensity * hdrLambert)
 
     expect(hdrBase.every((channel) => channel <= 1)).toBe(true)
     expect(hdrLinear[1]).toBeGreaterThan(1)

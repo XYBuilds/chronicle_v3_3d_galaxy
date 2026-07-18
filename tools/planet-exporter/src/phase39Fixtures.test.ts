@@ -30,7 +30,7 @@ function canonicalControlledFixture(fixture: Record<string, unknown>): Record<st
 }
 
 describe('P39.7 offline fixture generator', () => {
-  it('changes only vote_average for 0/5/10 controlled exports', () => {
+  it('changes only vote_average for 0/4/5/10 controlled exports', () => {
     const fixtures = createControlledFixtures(baseline)
     const original = baseline.movies[0]!
     const controlledVersion = `${baseline.meta.version}-p39.7-controlled`
@@ -48,6 +48,7 @@ describe('P39.7 offline fixture generator', () => {
     }
 
     expect(canonicalFixtures).toEqual([
+      canonicalFixtures[0],
       canonicalFixtures[0],
       canonicalFixtures[0],
       canonicalFixtures[0],

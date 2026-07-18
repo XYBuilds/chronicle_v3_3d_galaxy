@@ -28,6 +28,46 @@ export interface PlanetAppearance {
   baseQuaternion: THREE.Quaternion
 }
 
+/**
+ * Maps a finite TMDB vote average to the Focus emission range.
+ *
+ * The Focus emission curve is deliberately independent from macro-layer
+ * Lightness and Key Light calculations. Invalid configuration fails here
+ * rather than being silently clamped into a visually misleading value.
+ */
+export function focusEmissionIntensityFromVoteAverage(
+  voteAverage: number,
+  minIntensity: number,
+  maxIntensity: number,
+): number {
+  if (!Number.isFinite(voteAverage)) {
+    throw new Error(`[PlanetAppearance] voteAverage must be finite; received ${voteAverage}`)
+  }
+  if (!Number.isFinite(minIntensity)) {
+    throw new Error(`[PlanetAppearance] minIntensity must be finite; received ${minIntensity}`)
+  }
+  if (!Number.isFinite(maxIntensity)) {
+    throw new Error(`[PlanetAppearance] maxIntensity must be finite; received ${maxIntensity}`)
+  }
+  if (minIntensity < 0) {
+    throw new Error(`[PlanetAppearance] minIntensity must be non-negative; received ${minIntensity}`)
+  }
+  if (maxIntensity < 0) {
+    throw new Error(`[PlanetAppearance] maxIntensity must be non-negative; received ${maxIntensity}`)
+  }
+  if (maxIntensity < minIntensity) {
+    throw new Error(
+      `[PlanetAppearance] maxIntensity must be greater than or equal to minIntensity; received min=${minIntensity}, max=${maxIntensity}`,
+    )
+  }
+
+  const clampedVoteAverage = Math.min(10, Math.max(0, voteAverage))
+  const t = clampedVoteAverage / 10
+  if (t === 0) return minIntensity
+  if (t === 1) return maxIntensity
+  return minIntensity + t * (maxIntensity - minIntensity)
+}
+
 /** xmur3 string hash → deterministic 32-bit seed. */
 export function planetNoiseSeed(movieId: number): number {
   const str = String(movieId)

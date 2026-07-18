@@ -152,14 +152,19 @@ export function createSelectionPlanet(): SelectionPlanetHandle {
 
   const uHueArray = new Float32Array(PLANET_MAX_BANDS)
   const uMeshWorldPos = new THREE.Vector3()
+  /**
+   * 39.2 compatibility only: preserve the old shader output until 39.3
+   * replaces `uAmbient` with the Focus emission uniform. Do not export or hash.
+   */
+  const legacyShaderAmbientIntensity = 0.06
   /** P11.4 定稿：世界空间主光方向（归一化）。调试用 `window.__planetTerrace.perlinLightDir`。 */
   const uLightDir = new THREE.Vector3(...defaults.lighting.direction).normalize()
 
   const material = new THREE.ShaderMaterial({
     uniforms: {
       uHue: { value: uHueArray },
-      uPerlinL: { value: defaults.color.lightness },
-      uPerlinChroma: { value: defaults.color.chroma },
+      uPerlinL: { value: defaults.focus.lightness },
+      uPerlinChroma: { value: defaults.focus.chroma },
       /** P17.2 — Hunt reference L (same as galaxy `uLMax`); synced from dual-mesh uniforms each frame. */
       uLMax: { value: defaults.color.lMax },
       uHuntGamma: { value: defaults.color.huntGamma },
@@ -168,8 +173,13 @@ export function createSelectionPlanet(): SelectionPlanetHandle {
       uLightDir: { value: uLightDir },
       /** P11.4 定稿：`lit = baseCol × (uAmbient + uDiffuse × lambert)` when `uLightingEnabled` > 0.5. */
       uLightingEnabled: { value: defaults.lighting.enabled ? 1 : 0 },
-      uAmbient: { value: defaults.lighting.ambient },
-      uDiffuse: { value: defaults.lighting.diffuse },
+      /**
+       * Transitional 39.2 mapping: retain the existing shader uniforms and
+       * output while sourcing its fixed diffuse scalar from the new Focus key
+       * default. 39.3 renames/replaces these uniforms with the emission path.
+       */
+      uAmbient: { value: legacyShaderAmbientIntensity },
+      uDiffuse: { value: defaults.lighting.keyLightIntensity },
       /** 导数法线与几何法线混合；1 = 纯屏幕导数法线。 */
       uFlatShadingMix: { value: defaults.lighting.flatShadingMix },
       uAlpha: { value: defaults.material.alpha },

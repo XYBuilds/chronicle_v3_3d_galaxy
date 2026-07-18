@@ -76,9 +76,9 @@ const galaxyColor = {
 }
 
 describe('planet visual defaults', () => {
-  it('freezes the existing focus visual baseline as serializable data', () => {
+  it('serializes the versioned Focus visual configuration for metadata hashing', () => {
     expect(PLANET_VISUAL_DEFAULTS).toEqual({
-      schemaVersion: 1,
+      schemaVersion: 2,
       geometry: { detail: 8 },
       activeShell: { sizeScale: 0.5, activeSizeMultiplier: 0.012 },
       noise: { scale: 2.35, octaves: 4, persistence: 0.52 },
@@ -89,7 +89,13 @@ describe('planet visual defaults', () => {
         stepHeight: 0.03,
         stepSmoothness: 0.01,
       },
-      color: { lightness: 0.55, chroma: 0.15, lMax: 1, huntGamma: 0.3, huntApplyMask: 7 },
+      color: { lMax: 1, huntGamma: 0.3, huntApplyMask: 7 },
+      focus: {
+        lightness: 0.55,
+        chroma: 0.15,
+        emissionIntensityMin: 0.06,
+        emissionIntensityMax: 0.6,
+      },
       galaxyColor: {
         lMin: 0.3,
         lMax: 1,
@@ -101,8 +107,7 @@ describe('planet visual defaults', () => {
       lighting: {
         enabled: true,
         direction: [0.7, 0.7, -0.14],
-        ambient: 0.06,
-        diffuse: 1.0,
+        keyLightIntensity: 1.0,
         flatShadingMix: 0.8,
       },
       material: {

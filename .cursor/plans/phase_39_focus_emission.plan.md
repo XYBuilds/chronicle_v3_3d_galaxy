@@ -7,7 +7,7 @@ todos:
     status: complete
   - id: p39-emission-domain
     content: 39.2 建立可测试的评分→Emission 强度线性纯函数与显式端点
-    status: pending
+    status: complete
   - id: p39-focus-appearance-uniform
     content: 39.3 固定 Focus L/C 与 Key Light 并让评分只写入 Emission uniform
     status: pending

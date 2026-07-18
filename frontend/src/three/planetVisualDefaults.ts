@@ -16,7 +16,7 @@ export const PERLIN_LIGHTING_ENABLED_DEFAULT = true
  * Keep vectors as tuples so the same object can be hashed into render metadata.
  */
 export const PLANET_VISUAL_DEFAULTS = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   geometry: {
     detail: 8,
   },
@@ -37,11 +37,20 @@ export const PLANET_VISUAL_DEFAULTS = {
     stepSmoothness: 0.01,
   },
   color: {
-    lightness: 0.55,
-    chroma: 0.15,
     lMax: 1,
     huntGamma: 0.3,
     huntApplyMask: 7,
+  },
+  /**
+   * Focus-only appearance inputs. These are serializable now; 39.3 will make
+   * the material consume them instead of the macro galaxy-colour snapshot.
+   * Emission endpoints are candidates pending the 39.8 visual gate.
+   */
+  focus: {
+    lightness: 0.55,
+    chroma: 0.15,
+    emissionIntensityMin: 0.06,
+    emissionIntensityMax: 0.6,
   },
   galaxyColor: {
     lMin: 0.3,
@@ -54,8 +63,7 @@ export const PLANET_VISUAL_DEFAULTS = {
   lighting: {
     enabled: PERLIN_LIGHTING_ENABLED_DEFAULT,
     direction: [0.7, 0.7, -0.14] as const,
-    ambient: 0.06,
-    diffuse: 1.0,
+    keyLightIntensity: 1.0,
     flatShadingMix: 0.8,
   },
   material: {

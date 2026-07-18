@@ -5,7 +5,6 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 import { PERLIN_BLOOM_DEFAULTS, PERLIN_BLOOM_LAYER } from '@/three/perlinSelectiveBloom'
 import { createSelectionPlanet, type SelectionPlanetHandle } from '@/three/planet'
 import type { Meta, Movie } from '@/types/galaxy'
-import { PLANET_VISUAL_DEFAULTS } from '@/three/planetVisualDefaults'
 import { computeExportWorldRadius, computeOrthographicHalfExtent } from './sizing'
 import type { PlanetExportRenderMode } from './request'
 
@@ -33,17 +32,9 @@ export function prepareExportPlanet(
   renderMode: PlanetExportRenderMode,
   sizeRoot: 2 | 3 | 4,
 ): SelectionPlanetHandle {
-  const defaults = PLANET_VISUAL_DEFAULTS
   const planet = createSelectionPlanet()
   const worldRadius = computeExportWorldRadius(movie, sizeRoot)
-  planet.setFromMovie(movie, meta.genre_palette, worldRadius, {
-    uLMin: defaults.galaxyColor.lMin,
-    uLMax: defaults.galaxyColor.lMax,
-    uHighRatingT: defaults.galaxyColor.highRatingT,
-    uHighTierTRangeScale: defaults.galaxyColor.highTierTRangeScale,
-    uLightnessRatingExponent: defaults.galaxyColor.lightnessRatingExponent,
-    uChroma: defaults.galaxyColor.chroma,
-  })
+  planet.setFromMovie(movie, meta.genre_palette, worldRadius)
   planet.mesh.position.set(0, 0, 0)
   planet.material.uniforms.uMeshWorldPos.value.set(0, 0, 0)
   planet.setOpacity(1)

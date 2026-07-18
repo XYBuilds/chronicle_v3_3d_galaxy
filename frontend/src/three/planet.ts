@@ -7,7 +7,6 @@ import {
   createPlanetRandom,
   planetNoiseSeed,
   resolvePlanetAppearance,
-  type PlanetGalaxyColorSnap,
 } from './planetAppearance'
 import { computePlanetOuterRadius } from './planetSizing'
 import { PLANET_MAX_BANDS, PLANET_VISUAL_DEFAULTS } from './planetVisualDefaults'
@@ -15,7 +14,6 @@ import perlinFragmentShader from './shaders/perlin.frag.glsl'
 import perlinVertexShader from './shaders/perlin.vert.glsl'
 
 export { PLANET_MAX_BANDS, PERLIN_LIGHTING_ENABLED_DEFAULT } from './planetVisualDefaults'
-export type { PlanetGalaxyColorSnap } from './planetAppearance'
 
 /** Largest-remainder allocation so band sizes sum to N. */
 function bandCountsLrm(N: number, proportions: number[]): number[] {
@@ -122,12 +120,37 @@ export interface SelectionPlanetHandle {
     movie: Movie,
     palette: Meta['genre_palette'],
     worldRadius: number,
-    galaxyColor: PlanetGalaxyColorSnap,
   ) => void
   /** P8.3 — Recompute CPU noise + quantile thresholds after Leva changes uScale / octaves / persistence / uAreaRatio. */
   syncCpuNoiseFromUniforms: () => void
   setOpacity: (alpha: number) => void
   dispose: () => void
+}
+
+function assertFocusUniformValues(
+  lightness: number,
+  chroma: number,
+  emissionIntensity: number,
+  keyLightIntensity: number,
+): void {
+  const { focus, lighting } = PLANET_VISUAL_DEFAULTS
+  const values = { lightness, chroma, emissionIntensity, keyLightIntensity }
+  for (const [name, value] of Object.entries(values)) {
+    if (!Number.isFinite(value)) {
+      throw new Error(`[Planet] ${name} uniform must be finite; received ${value}`)
+    }
+  }
+  if (lightness !== focus.lightness || chroma !== focus.chroma) {
+    throw new Error('[Planet] Focus lightness and chroma must match shared visual defaults')
+  }
+  if (emissionIntensity < focus.emissionIntensityMin || emissionIntensity > focus.emissionIntensityMax) {
+    throw new Error(
+      `[Planet] emission intensity must be within configured endpoints; received ${emissionIntensity}`,
+    )
+  }
+  if (keyLightIntensity !== lighting.keyLightIntensity) {
+    throw new Error('[Planet] key light intensity must match shared visual defaults')
+  }
 }
 
 /**
@@ -152,11 +175,6 @@ export function createSelectionPlanet(): SelectionPlanetHandle {
 
   const uHueArray = new Float32Array(PLANET_MAX_BANDS)
   const uMeshWorldPos = new THREE.Vector3()
-  /**
-   * 39.2 compatibility only: preserve the old shader output until 39.3
-   * replaces `uAmbient` with the Focus emission uniform. Do not export or hash.
-   */
-  const legacyShaderAmbientIntensity = 0.06
   /** P11.4 定稿：世界空间主光方向（归一化）。调试用 `window.__planetTerrace.perlinLightDir`。 */
   const uLightDir = new THREE.Vector3(...defaults.lighting.direction).normalize()
 
@@ -165,21 +183,16 @@ export function createSelectionPlanet(): SelectionPlanetHandle {
       uHue: { value: uHueArray },
       uPerlinL: { value: defaults.focus.lightness },
       uPerlinChroma: { value: defaults.focus.chroma },
-      /** P17.2 — Hunt reference L (same as galaxy `uLMax`); synced from dual-mesh uniforms each frame. */
+      /** P17.2 — fixed Focus Hunt reference L; it does not follow macro runtime uniforms. */
       uLMax: { value: defaults.color.lMax },
       uHuntGamma: { value: defaults.color.huntGamma },
       uHuntApplyMask: { value: defaults.color.huntApplyMask },
       uMeshWorldPos: { value: uMeshWorldPos },
       uLightDir: { value: uLightDir },
-      /** P11.4 定稿：`lit = baseCol × (uAmbient + uDiffuse × lambert)` when `uLightingEnabled` > 0.5. */
+      /** P11.4 — Lambert shading can be disabled for a flat diagnostic. */
       uLightingEnabled: { value: defaults.lighting.enabled ? 1 : 0 },
-      /**
-       * Transitional 39.2 mapping: retain the existing shader uniforms and
-       * output while sourcing its fixed diffuse scalar from the new Focus key
-       * default. 39.3 renames/replaces these uniforms with the emission path.
-       */
-      uAmbient: { value: legacyShaderAmbientIntensity },
-      uDiffuse: { value: defaults.lighting.keyLightIntensity },
+      uEmissionIntensity: { value: defaults.focus.emissionIntensityMin },
+      uKeyLightIntensity: { value: defaults.lighting.keyLightIntensity },
       /** 导数法线与几何法线混合；1 = 纯屏幕导数法线。 */
       uFlatShadingMix: { value: defaults.lighting.flatShadingMix },
       uAlpha: { value: defaults.material.alpha },
@@ -299,10 +312,21 @@ export function createSelectionPlanet(): SelectionPlanetHandle {
     dispose: () => { },
   }
 
-  const setFromMovie = (movie: Movie, palette: Meta['genre_palette'], worldRadius: number, galaxyColor: PlanetGalaxyColorSnap) => {
+  const setFromMovie = (movie: Movie, palette: Meta['genre_palette'], worldRadius: number) => {
     const stepH = material.uniforms.uStepHeight.value as number
-    const appearance = resolvePlanetAppearance(movie, palette, galaxyColor)
-    const { genres, hues, lightness, chroma, bandCount, cutCount, baseQuaternion } = appearance
+    const appearance = resolvePlanetAppearance(movie, palette)
+    const {
+      genres,
+      hues,
+      lightness,
+      chroma,
+      emissionIntensity,
+      keyLightIntensity,
+      bandCount,
+      cutCount,
+      baseQuaternion,
+    } = appearance
+    assertFocusUniformValues(lightness, chroma, emissionIntensity, keyLightIntensity)
     handle.lastRadius = computePlanetOuterRadius(worldRadius, bandCount, stepH)
     const radiusMul = handle.lastRadius / worldRadius
     console.assert(handle.lastRadius >= worldRadius, '[Planet] lastRadius covers base sphere', handle.lastRadius, worldRadius)
@@ -319,6 +343,8 @@ export function createSelectionPlanet(): SelectionPlanetHandle {
 
     u.uPerlinL.value = lightness
     u.uPerlinChroma.value = chroma
+    u.uEmissionIntensity.value = emissionIntensity
+    u.uKeyLightIntensity.value = keyLightIntensity
     u.uBandCount.value = bandCount
     u.uCutCount.value = cutCount
 
@@ -332,7 +358,7 @@ export function createSelectionPlanet(): SelectionPlanetHandle {
 
     const hexList = genres.map((genre) => palette[genre] ?? `#${fallbackColor.getHexString()}`)
     console.log(
-      `[Planet] K=${bandCount} genres=${JSON.stringify(genres)} colors=${JSON.stringify(hexList)} | uPerlinL=${lightness.toFixed(4)} uPerlinChroma=${chroma.toFixed(4)} vote_avg=${movie.vote_average.toFixed(2)} | lastRadius=${handle.lastRadius.toFixed(4)} worldR=${worldRadius.toFixed(4)} stepH=${stepH.toFixed(3)} radiusMul=${radiusMul.toFixed(3)}`,
+      `[Planet] K=${bandCount} genres=${JSON.stringify(genres)} colors=${JSON.stringify(hexList)} | vote_average=${movie.vote_average.toFixed(2)} fixedL=${lightness.toFixed(4)} fixedC=${chroma.toFixed(4)} emission=${emissionIntensity.toFixed(4)} fixedKey=${keyLightIntensity.toFixed(4)} | lastRadius=${handle.lastRadius.toFixed(4)} worldR=${worldRadius.toFixed(4)} stepH=${stepH.toFixed(3)} radiusMul=${radiusMul.toFixed(3)}`,
     )
   }
 

@@ -10,7 +10,7 @@ todos:
     status: complete
   - id: p39-focus-appearance-uniform
     content: 39.3 固定 Focus L/C 与 Key Light 并让评分只写入 Emission uniform
-    status: pending
+    status: complete
   - id: p39-linear-emission-shader
     content: 39.4 实现逐片元局部底色 Emission、linear RGB 固定主光与单次 sRGB 输出
     status: pending

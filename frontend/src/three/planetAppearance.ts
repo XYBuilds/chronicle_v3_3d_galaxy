@@ -1,28 +1,20 @@
 import * as THREE from 'three'
 
-import { lightnessFromVoteAverage } from '@/lib/colorMath'
 import type { Meta, Movie } from '@/types/galaxy'
 import { genreHueForGenreName, hueFromGenreColor, primaryGenreHueRad } from '@/utils/genreHue'
 
-import { PLANET_MAX_BANDS } from './planetVisualDefaults'
+import { PLANET_MAX_BANDS, PLANET_VISUAL_DEFAULTS } from './planetVisualDefaults'
 import { selectionPlanetBaseQuaternion } from './selectionPlanetRotation'
 
 const PHI = (1 + Math.sqrt(5)) / 2
-
-export interface PlanetGalaxyColorSnap {
-  uLMin: number
-  uLMax: number
-  uHighRatingT: number
-  uHighTierTRangeScale: number
-  uLightnessRatingExponent: number
-  uChroma: number
-}
 
 export interface PlanetAppearance {
   genres: string[]
   hues: number[]
   lightness: number
   chroma: number
+  emissionIntensity: number
+  keyLightIntensity: number
   bandCount: number
   cutCount: number
   baseQuaternion: THREE.Quaternion
@@ -105,11 +97,7 @@ export function planetGenreDisplayWeights(
   return { genres: list, weights: raw.map((weight) => weight / sum) }
 }
 
-export function resolvePlanetAppearance(
-  movie: Movie,
-  palette: Meta['genre_palette'],
-  galaxyColor: PlanetGalaxyColorSnap,
-): PlanetAppearance {
+export function resolvePlanetAppearance(movie: Movie, palette: Meta['genre_palette']): PlanetAppearance {
   const { genres } = planetGenreDisplayWeights(movie.genres)
   const fallbackHue =
     movie.genre_hue ??
@@ -119,12 +107,19 @@ export function resolvePlanetAppearance(
   const hues = genres.map((genre) =>
     genre === primaryGenreName ? primaryHue : genreHueForGenreName(genre, palette, fallbackHue),
   )
+  const { focus } = PLANET_VISUAL_DEFAULTS
 
   return {
     genres,
     hues,
-    lightness: lightnessFromVoteAverage(movie.vote_average, galaxyColor),
-    chroma: galaxyColor.uChroma,
+    lightness: focus.lightness,
+    chroma: focus.chroma,
+    emissionIntensity: focusEmissionIntensityFromVoteAverage(
+      movie.vote_average,
+      focus.emissionIntensityMin,
+      focus.emissionIntensityMax,
+    ),
+    keyLightIntensity: PLANET_VISUAL_DEFAULTS.lighting.keyLightIntensity,
     bandCount: genres.length,
     cutCount: Math.max(0, genres.length - 1),
     baseQuaternion: selectionPlanetBaseQuaternion(movie.id),

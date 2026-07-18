@@ -13,7 +13,7 @@ todos:
     status: complete
   - id: p39-linear-emission-shader
     content: 39.4 实现逐片元局部底色 Emission、linear RGB 固定主光与单次 sRGB 输出
-    status: pending
+    status: complete
   - id: p39-shared-consumers-hash
     content: 39.5 统一网站 Focus、Cover、静态导出与视觉 hash
     status: pending

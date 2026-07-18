@@ -24,14 +24,12 @@ varying vec3 vWorldPos;
 varying float vLevel;
 varying vec3 vGeomNormalWorld;
 
-vec3 hueToOkSrgb(float hue, float L, float C) {
+vec3 hueToOkLinear(float hue, float L, float C) {
   float a = C * cos(hue);
   float b = C * sin(hue);
-  // Low vote_average can drive L low while C stays high; some hue families then
-  // leave the displayable sRGB gamut. Clamp before gamma encoding so negative
-  // linear channels do not enter pow() and produce undefined/NaN colors.
-  vec3 lin = clamp(oklab_to_linear_srgb(vec3(L, a, b)), 0.0, 1.0);
-  return linear_to_srgb(lin);
+  // Keep band colors in linear RGB. Out-of-gamut negative channels are unsafe
+  // for the single final gamma conversion, but positive HDR values stay intact.
+  return max(oklab_to_linear_srgb(vec3(L, a, b)), vec3(0.0));
 }
 
 void main() {
@@ -50,16 +48,16 @@ void main() {
   bandIdx += step(5.5, uCutCount) * step(uThresh[5], n);
   bandIdx += step(6.5, uCutCount) * step(uThresh[6], n);
 
-  vec3 col0 = hueToOkSrgb(uHue[0], uPerlinL, C_perlin);
-  vec3 col1 = hueToOkSrgb(uHue[1], uPerlinL, C_perlin);
-  vec3 col2 = hueToOkSrgb(uHue[2], uPerlinL, C_perlin);
-  vec3 col3 = hueToOkSrgb(uHue[3], uPerlinL, C_perlin);
-  vec3 col4 = hueToOkSrgb(uHue[4], uPerlinL, C_perlin);
-  vec3 col5 = hueToOkSrgb(uHue[5], uPerlinL, C_perlin);
-  vec3 col6 = hueToOkSrgb(uHue[6], uPerlinL, C_perlin);
-  vec3 col7 = hueToOkSrgb(uHue[7], uPerlinL, C_perlin);
+  vec3 col0 = hueToOkLinear(uHue[0], uPerlinL, C_perlin);
+  vec3 col1 = hueToOkLinear(uHue[1], uPerlinL, C_perlin);
+  vec3 col2 = hueToOkLinear(uHue[2], uPerlinL, C_perlin);
+  vec3 col3 = hueToOkLinear(uHue[3], uPerlinL, C_perlin);
+  vec3 col4 = hueToOkLinear(uHue[4], uPerlinL, C_perlin);
+  vec3 col5 = hueToOkLinear(uHue[5], uPerlinL, C_perlin);
+  vec3 col6 = hueToOkLinear(uHue[6], uPerlinL, C_perlin);
+  vec3 col7 = hueToOkLinear(uHue[7], uPerlinL, C_perlin);
 
-  vec3 baseCol =
+  vec3 baseLinear =
     col0 * (1.0 - step(1.0, bandIdx)) +
     col1 * step(1.0, bandIdx) * (1.0 - step(2.0, bandIdx)) +
     col2 * step(2.0, bandIdx) * (1.0 - step(3.0, bandIdx)) +
@@ -76,10 +74,14 @@ void main() {
   }
 
   vec3 N = normalize(mix(normalize(vGeomNormalWorld), nDeriv, uFlatShadingMix));
-
   float lambert = max(dot(N, normalize(uLightDir)), 0.0);
-  float shade = uEmissionIntensity + uKeyLightIntensity * lambert;
-  vec3 lit = mix(baseCol, baseCol * shade, step(0.5, uLightingEnabled));
 
-  gl_FragColor = vec4(lit, uAlpha);
+  vec3 emissiveLinear = baseLinear * uEmissionIntensity;
+  vec3 keyLitLinear = baseLinear * uKeyLightIntensity * lambert;
+  vec3 litLinear = emissiveLinear + keyLitLinear;
+  vec3 finalLinear = mix(baseLinear, litLinear, step(0.5, uLightingEnabled));
+
+  // One shared output boundary keeps flat diagnostic and lit HDR paths linear
+  // until gamma encoding. Do not clamp positive values before selective Bloom.
+  gl_FragColor = vec4(linear_to_srgb(max(finalLinear, vec3(0.0))), uAlpha);
 }

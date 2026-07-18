@@ -5,7 +5,7 @@
   "scripts": {
     "test": "vitest run --exclude src/*.integration.test.ts",
     "test:integration": "vitest run src/browser.integration.test.ts",
-    "typecheck": "tsc --noEmit --target ES2022 --module NodeNext --moduleResolution NodeNext --types node src/args.ts src/artifacts.ts src/browser.ts src/cli.ts src/data-source.ts src/png.ts",
+    "typecheck": "tsc --noEmit --target ES2022 --module NodeNext --moduleResolution NodeNext --types node src/args.ts src/artifacts.ts src/browser.ts src/cli.ts src/data-source.ts src/phase39Fixtures.ts src/png.ts",
     "lint": "eslint src --ext .ts"
   },
   "dependencies": {

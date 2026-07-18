@@ -4,6 +4,8 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js'
 import { PERLIN_BLOOM_DEFAULTS, PERLIN_BLOOM_LAYER } from '@/three/perlinSelectiveBloom'
 import { createSelectionPlanet, type SelectionPlanetHandle } from '@/three/planet'
+import { planetNoiseSeed } from '@/three/planetAppearance'
+import { selectionPlanetRotationAxisForMovie } from '@/three/selectionPlanetRotation'
 import type { Meta, Movie } from '@/types/galaxy'
 import { computeExportWorldRadius, computeOrthographicHalfExtent } from './sizing'
 import type { PlanetExportRenderMode } from './request'
@@ -20,10 +22,185 @@ export type PlanetRenderOptions = {
   sizeRoot: 2 | 3 | 4
 }
 
+export type PlanetRenderDiagnostics = {
+  movie_id: number
+  genres: string[]
+  rating: number
+  band_count: number
+  world_radius: number
+  outer_radius: number
+  size_root: 2 | 3 | 4
+  padding: number
+  emission: number
+  fixed_lightness: number
+  fixed_chroma: number
+  key_light: {
+    enabled: boolean
+    direction: [number, number, number]
+    intensity: number
+    flat_shading_mix: number
+  }
+  noise: {
+    seed: number
+    scale: number
+    octaves: number
+    persistence: number
+  }
+  rotation: {
+    base_quaternion: [number, number, number, number]
+    seeded_spin_axis_world: [number, number, number]
+    revs_per_sec: number
+  }
+  camera: {
+    projection: 'orthographic'
+    position: [number, number, number]
+    quaternion: [number, number, number, number]
+    direction: [number, number, number]
+    left: number
+    right: number
+    top: number
+    bottom: number
+    near: number
+    far: number
+  }
+}
+
 export type PlanetRenderResult = {
   renderer: THREE.WebGLRenderer
   visible: boolean
   renderMode: PlanetExportRenderMode
+  diagnostics: PlanetRenderDiagnostics
+}
+
+function serializableNumber(value: number, label: string): number {
+  if (!Number.isFinite(value)) throw new Error(`[PlanetExport] ${label} must be finite`)
+  return Object.is(value, -0) ? 0 : value
+}
+
+function vectorTuple(vector: THREE.Vector3, label: string): [number, number, number] {
+  return [
+    serializableNumber(vector.x, `${label}[0]`),
+    serializableNumber(vector.y, `${label}[1]`),
+    serializableNumber(vector.z, `${label}[2]`),
+  ]
+}
+
+function quaternionTuple(quaternion: THREE.Quaternion, label: string): [number, number, number, number] {
+  return [serializableNumber(quaternion.x, `${label}[0]`), serializableNumber(quaternion.y, `${label}[1]`), serializableNumber(quaternion.z, `${label}[2]`), serializableNumber(quaternion.w, `${label}[3]`)]
+}
+
+function positive(value: number, label: string): number {
+  const result = serializableNumber(value, label)
+  if (result <= 0) throw new Error(`[PlanetExport] ${label} must be > 0`)
+  return result
+}
+
+export function capturePlanetRenderDiagnostics(
+  movie: Movie,
+  planet: SelectionPlanetHandle,
+  camera: THREE.OrthographicCamera,
+  options: Pick<PlanetRenderOptions, 'sizeRoot' | 'padding'>,
+): PlanetRenderDiagnostics {
+  if (!Number.isSafeInteger(movie.id) || movie.id <= 0) {
+    throw new Error('[PlanetExport] movie id must be a positive integer')
+  }
+  if (!Array.isArray(movie.genres) || movie.genres.some((genre) => typeof genre !== 'string')) {
+    throw new Error('[PlanetExport] genres must be strings')
+  }
+  if (options.sizeRoot !== 2 && options.sizeRoot !== 3 && options.sizeRoot !== 4) {
+    throw new Error('[PlanetExport] size root must be 2, 3, or 4')
+  }
+  if (!Number.isFinite(options.padding) || options.padding < 0 || options.padding >= 0.5) {
+    throw new Error('[PlanetExport] padding must be in [0, 0.5)')
+  }
+
+  const scale = planet.mesh.scale
+  const worldRadius = positive(scale.x, 'world radius')
+  if (scale.y !== scale.x || scale.z !== scale.x) {
+    throw new Error('[PlanetExport] mesh scale must be uniform')
+  }
+  const outerRadius = positive(planet.lastRadius, 'outer radius')
+  if (outerRadius < worldRadius) {
+    throw new Error('[PlanetExport] outer radius must cover world radius')
+  }
+
+  const uniforms = planet.material.uniforms
+  const bandCount = uniforms.uBandCount.value as number
+  if (!Number.isSafeInteger(bandCount) || bandCount < 1 || bandCount > 8) {
+    throw new Error('[PlanetExport] band count must be an integer in [1, 8]')
+  }
+  const lightingEnabled = uniforms.uLightingEnabled.value as number
+  if (lightingEnabled !== 0 && lightingEnabled !== 1) {
+    throw new Error('[PlanetExport] lighting enabled must be 0 or 1')
+  }
+  const noiseOctaves = uniforms.uOctaves.value as number
+  if (!Number.isSafeInteger(noiseOctaves) || noiseOctaves <= 0) {
+    throw new Error('[PlanetExport] noise octaves must be a positive integer')
+  }
+  const noiseSeed = planetNoiseSeed(movie.id)
+  if (!Number.isSafeInteger(noiseSeed) || noiseSeed < 0) {
+    throw new Error('[PlanetExport] noise seed must be a non-negative integer')
+  }
+
+  const cameraValues = [camera.left, camera.right, camera.top, camera.bottom, camera.near, camera.far]
+  if (
+    cameraValues.some((value) => !Number.isFinite(value))
+    || camera.left >= camera.right
+    || camera.bottom >= camera.top
+    || camera.near <= 0
+    || camera.far <= camera.near
+  ) {
+    throw new Error('[PlanetExport] invalid orthographic camera frustum')
+  }
+
+  const rotation = selectionPlanetRotationAxisForMovie(movie.id)
+  const lightDirection = uniforms.uLightDir.value as THREE.Vector3
+  const cameraDirection = camera.getWorldDirection(new THREE.Vector3())
+  return {
+    movie_id: movie.id,
+    genres: [...movie.genres],
+    rating: serializableNumber(movie.vote_average, 'rating'),
+    band_count: bandCount,
+    world_radius: worldRadius,
+    outer_radius: outerRadius,
+    size_root: options.sizeRoot,
+    padding: serializableNumber(options.padding, 'padding'),
+    emission: serializableNumber(uniforms.uEmissionIntensity.value as number, 'emission'),
+    fixed_lightness: serializableNumber(uniforms.uPerlinL.value as number, 'lightness'),
+    fixed_chroma: serializableNumber(uniforms.uPerlinChroma.value as number, 'chroma'),
+    key_light: {
+      enabled: lightingEnabled === 1,
+      direction: vectorTuple(lightDirection, 'key light direction'),
+      intensity: serializableNumber(uniforms.uKeyLightIntensity.value as number, 'key light intensity'),
+      flat_shading_mix: serializableNumber(
+        uniforms.uFlatShadingMix.value as number,
+        'flat shading mix',
+      ),
+    },
+    noise: {
+      seed: noiseSeed,
+      scale: serializableNumber(uniforms.uScale.value as number, 'noise scale'),
+      octaves: noiseOctaves,
+      persistence: serializableNumber(uniforms.uPersistence.value as number, 'noise persistence'),
+    },
+    rotation: {
+      base_quaternion: quaternionTuple(planet.mesh.quaternion, 'base quaternion'),
+      seeded_spin_axis_world: vectorTuple(rotation.spinAxisWorld, 'spin axis'),
+      revs_per_sec: serializableNumber(rotation.revsPerSec, 'revs per sec'),
+    },
+    camera: {
+      projection: 'orthographic',
+      position: vectorTuple(camera.position, 'camera position'),
+      quaternion: quaternionTuple(camera.quaternion, 'camera quaternion'),
+      direction: vectorTuple(cameraDirection, 'camera direction'),
+      left: serializableNumber(camera.left, 'camera left'),
+      right: serializableNumber(camera.right, 'camera right'),
+      top: serializableNumber(camera.top, 'camera top'),
+      bottom: serializableNumber(camera.bottom, 'camera bottom'),
+      near: positive(camera.near, 'camera near'),
+      far: positive(camera.far, 'camera far'),
+    },
+  }
 }
 
 export function prepareExportPlanet(
@@ -128,6 +305,7 @@ export function renderPlanetImage(options: PlanetRenderOptions): PlanetRenderRes
   positionExportCamera(camera, half)
 
   const planet = prepareExportPlanet(movie, meta, renderMode, sizeRoot)
+  const diagnostics = capturePlanetRenderDiagnostics(movie, planet, camera, options)
   scene.add(planet.mesh)
   if (bloom) {
     renderAlphaPreservingBloom(renderer, scene, camera, planet.mesh, resolution)
@@ -135,5 +313,5 @@ export function renderPlanetImage(options: PlanetRenderOptions): PlanetRenderRes
     renderer.render(scene, camera)
   }
   console.assert(planet.mesh.visible, '[PlanetExport] planet must be visible before rendering')
-  return { renderer, visible: planet.mesh.visible, renderMode }
+  return { renderer, visible: planet.mesh.visible, renderMode, diagnostics }
 }

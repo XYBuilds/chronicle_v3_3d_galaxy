@@ -21,6 +21,11 @@ describe('parseArgs', () => {
   it('accepts explicit basic mode with Bloom disabled', () => {
     expect(parseArgs(['--movie-id', '1', '--output', 'planet.png', '--render-mode', 'basic'], resolvePath).renderMode).toBe('basic')
   })
+  it('accepts a non-negative diagnostic Bloom strength only with Bloom enabled', () => {
+    expect(parseArgs(['--movie-id', '1', '--output', 'planet.png', '--bloom', 'on', '--bloom-strength', '0'], resolvePath).bloomStrength).toBe(0)
+    expect(() => parseArgs(['--movie-id', '1', '--output', 'planet.png', '--bloom-strength', '0'], resolvePath)).toThrow(CliError)
+  })
+
   it('preserves both data selectors so file priority can be applied later', () => {
     const args = parseArgs([
       '--movie-id', '1',

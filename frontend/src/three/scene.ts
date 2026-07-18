@@ -1486,7 +1486,7 @@ export function mountGalaxyScene(
       composer.render()
     } else {
       const planetAlpha = planet.material.uniforms.uAlpha.value as number
-      perlinBloom.renderFrame(renderer, scene, camera, {
+      perlinBloom.renderFrame({
         userEnabled: perlinBloom.debug.enabled,
         globalPostFxBloomEnabled: postFxBloomEnabled,
         planetVisible: planet.mesh.visible,

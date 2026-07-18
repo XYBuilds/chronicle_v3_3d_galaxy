@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto'
 
 import { describe, expect, it } from 'vitest'
 
+import { perlinBloomVisualConfigInput } from '@/three/perlinBloomContract'
 import { planetVisualConfigHashInput } from '@/three/planetVisualDefaults'
 import { planetExportVisualConfigInput } from './visualConfig'
 
@@ -24,14 +25,18 @@ describe('planet export visual configuration', () => {
   it('builds a stable page input from the planet visual SSOT and export size root', () => {
     const planetConfigInput = planetVisualConfigHashInput()
 
-    expect(planetExportVisualConfigInput).toHaveLength(2)
+    expect(planetExportVisualConfigInput).toHaveLength(3)
     expect(JSON.parse(planetExportVisualConfigInput(planetConfigInput, 3))).toEqual({
       planet: planetConfigInput,
+      perlinBloom: perlinBloomVisualConfigInput(),
       exportSizeRoot: 3,
       supportedExportSizeRoots: [2, 3, 4],
     })
     expect(planetExportVisualConfigInput(planetConfigInput, 3)).toBe(
       planetExportVisualConfigInput(planetVisualConfigHashInput(), 3),
+    )
+    expect(planetExportVisualConfigInput(planetConfigInput, 3, { enabled: true, strength: 0, radius: 1, threshold: 0 })).not.toBe(
+      planetExportVisualConfigInput(planetConfigInput, 3),
     )
   })
 

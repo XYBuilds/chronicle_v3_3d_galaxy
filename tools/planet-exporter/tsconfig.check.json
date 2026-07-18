@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "types": ["node"]
+  },
+  "files": [
+    "src/args.ts",
+    "src/artifacts.ts",
+    "src/bloomProof.ts",
+    "src/browser.ts",
+    "src/cli.ts",
+    "src/data-source.ts",
+    "src/phase39Fixtures.ts",
+    "src/png.ts"
+  ],
+  "include": ["scripts/**/*.ts"]
+}

@@ -33,6 +33,7 @@ async function main(): Promise<void> {
     document.body.dataset.visualHash = planetExportVisualConfigInput(
       planetVisualConfigHashInput(),
       request.sizeRoot,
+      request.bloomParamsOverride,
     )
     document.body.dataset.visualDiagnostics = JSON.stringify(result.diagnostics)
     document.body.dataset.exportReady = '1'

@@ -55,6 +55,13 @@ describe('planet export request and sizing', () => {
         .replace('resolution=300', 'resolution=3000'),
     )
     expect(basic3000).toMatchObject({ resolution: 3000, bloom: false, renderMode: 'basic' })
+    expect(parsePlanetExportRequest(request('&bloomStrength=0').replace('bloom=off', 'bloom=on'))).toMatchObject({
+      bloom: true,
+      bloomParamsOverride: { enabled: true, strength: 0, radius: 1, threshold: 0 },
+    })
+    expect(() => parsePlanetExportRequest(request('&bloomStrength=-1'))).toThrow(/bloomStrength/)
+    expect(() => parsePlanetExportRequest(request('&bloomStrength=0'))).toThrow(/bloomStrength/)
+    expect(() => parsePlanetExportRequest(request('&bloomStrength=0&bloomStrength=0').replace('bloom=off', 'bloom=on'))).toThrow(/bloomStrength/)
     expect(() => parsePlanetExportRequest(request('&movieId=8'))).toThrow(/movieId must appear exactly once/)
     expect(() => parsePlanetExportRequest(request('&unknown=x'))).toThrow(/unknown request parameter/)
     expect(() => parsePlanetExportRequest(request().replace('https%3A%2F%2Fexample.test%2Fgalaxy_data.json.gz', 'file%3A%2F%2F%2Fc%3A%2Fdata.json.gz'))).toThrow(/http or https/)
@@ -136,6 +143,32 @@ describe('planet export request and sizing', () => {
     ])
   })
 
+  it('records the actual offline Bloom override without changing production defaults', () => {
+    const target = movie(157336, 2, ['Drama'])
+    const handle = prepareExportPlanet(target, galaxy([target]).meta, 'shader', 3)
+    const camera = new THREE.OrthographicCamera(-10, 10, 10, -10, 0.01, 40)
+    positionExportCamera(camera, 10)
+    const diagnostics = capturePlanetRenderDiagnostics(target, handle, camera, {
+      sizeRoot: 3,
+      padding: 0.08,
+      bloom: true,
+      bloomParamsOverride: {
+        enabled: true,
+        strength: 0,
+        radius: 1,
+        threshold: 0,
+      },
+    })
+    expect(diagnostics.bloom).toEqual({
+      enabled: true,
+      composition: 'pure-bloom-delta-v1',
+      strength: 0,
+      radius: 1,
+      threshold: 0,
+    })
+    handle.dispose()
+  })
+
   it('fails fast when renderer-owned diagnostics contain invalid state', () => {
     const target = movie(157336, 2, ['Drama'])
     const handle = prepareExportPlanet(target, galaxy([target]).meta, 'shader', 3)
@@ -174,8 +207,15 @@ describe('planet export request and sizing', () => {
   it('routes website Focus, Cover today, and static export through the shared three-argument planet setter', () => {
     expect(sceneSource.match(/planet\.setFromMovie\(movie, meta\.genre_palette, r\)/g)).toHaveLength(1)
     expect(sceneSource.match(/planet\.setFromMovie\(tm, meta\.genre_palette, r\)/g)).toHaveLength(1)
-    expect(exportRendererSource).toContain('const planet = createSelectionPlanet()')
-    expect(exportRendererSource).toContain('planet.setFromMovie(movie, meta.genre_palette, worldRadius)')
+    expect(sceneSource).toMatch(/perlinBloom\.renderFrame\(\{/)
+    expect(sceneSource).not.toContain('perlinBloom.renderFrame(renderer, scene, camera')
+    expect(exportRendererSource).toContain("from '@/three/perlinBloomContract'")
+    expect(exportRendererSource).toContain('withCameraLayer(camera, PERLIN_BLOOM_LAYER')
+    expect(exportRendererSource).toContain('const delta = createPerlinBloomDeltaCompositor(renderer, scene, camera)')
+    expect(exportRendererSource).toContain('delta.renderDelta()')
+    expect(exportRendererSource).toContain('delta.compositeDelta()')
+    expect(exportRendererSource).not.toMatch(/new (EffectComposer|RenderPass|UnrealBloomPass)\(/)
+    expect(exportRendererSource).toContain('composition: PERLIN_BLOOM_COMPOSITION')
 
     for (const source of [sceneSource, exportRendererSource]) {
       expect(source).not.toMatch(
@@ -188,7 +228,7 @@ describe('planet export request and sizing', () => {
   it('delegates page visual-hash construction to the shared production helper', () => {
     expect(exportPageSource).toContain("import { planetExportVisualConfigInput } from './visualConfig'")
     expect(exportPageSource).toMatch(
-      /planetExportVisualConfigInput\(\s*planetVisualConfigHashInput\(\),\s*request\.sizeRoot,\s*\)/,
+      /planetExportVisualConfigInput\(\s*planetVisualConfigHashInput\(\),\s*request\.sizeRoot,\s*request\.bloomParamsOverride,\s*\)/,
     )
     expect(exportPageSource).toContain('document.body.dataset.visualDiagnostics = JSON.stringify(result.diagnostics)')
   })

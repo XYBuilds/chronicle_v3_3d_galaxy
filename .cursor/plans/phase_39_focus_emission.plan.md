@@ -1,6 +1,6 @@
 ---
 name: Phase 39 Focus 自发光
-overview: 将 focus Perlin 星球从“评分控制 OKLab Lightness”迁移为“固定基础 Lightness/Chroma + 评分线性控制逐片元局部底色 Emission + 固定 Key Light 塑形”，并修正 linear RGB 合成后再统一转换 sRGB 的颜色空间顺序。网站 focus、Cover 今日星球与静态导出共用同一视觉配置，并彻底退役 FocusLReference 与 FocusSizeReferenceRings。
+overview: 将 focus Perlin 星球从“评分控制 OKLab Lightness”迁移为“固定基础 Lightness/Chroma + 评分经可版本化 power curve 控制逐片元局部底色 Emission + 固定 Key Light 塑形”，修正 linear RGB 合成后再统一转换 sRGB 的颜色空间顺序，并收敛网站 focus、Cover 今日星球与静态导出的纯 Bloom 增量合成与视觉参数。三个入口共用同一视觉配置，FocusLReference 与 FocusSizeReferenceRings 完整退役。
 todos:
   - id: p39-contract-baseline
     content: 39.1 锁定现状、基础材质 smoke 与非 focus Lightness 不变量
@@ -23,12 +23,18 @@ todos:
   - id: p39-verification
     content: 39.7 完成自动化回归、受控评分矩阵与 3000×3000 导出一致性验证
     status: complete
-  - id: p39-visual-gate
-    content: 39.8 [需人工验收] 完成 Emission 低中高评分视觉 Gate、参数固化与文档报告
-    status: pending
   - id: p39-emission-curve-diagnostics
     content: 39.9 隔离固定 Key、验证 cubic Emission 曲线并重建低中高候选矩阵
     status: complete
+  - id: p39-bloom-composition-correctness
+    content: 39.10 修复 Perlin Bloom 基础画面重复叠加、统一三端合成契约并验证参数范围
+    status: complete
+  - id: p39-visual-parameter-convergence
+    content: 39.11 [需人工验收] 按 Key、Emission exponent、Bloom、Emission 端点顺序完成单变量视觉收敛
+    status: pending
+  - id: p39-visual-gate
+    content: 39.8 [需人工验收] 使用最终参数完成三端与宏观层综合视觉 Gate、参数固化及文档报告
+    status: pending
 isProject: false
 ---
 
@@ -37,7 +43,7 @@ isProject: false
 ## 前置与目标
 
 - 非 focus 的 idle / active / select 继续使用现有评分 → OKLab Lightness 映射，不改 [`frontend/src/lib/colorMath.ts`](frontend/src/lib/colorMath.ts) 与宏观 galaxy shader 的视觉语义。
-- focus Perlin 星球改为固定基础 Lightness/Chroma；`vote_average` 只进入独立的评分 → Emission 强度线性函数，不再改变 Focus 的基础 L 或 Key Light。
+- focus Perlin 星球改为固定基础 Lightness/Chroma；`vote_average` 只进入独立、可版本化的评分 → Emission power curve，不再改变 Focus 的基础 L 或 Key Light。
 - Emission 使用 Perlin/genre band 合成后的逐片元局部底色：蓝色区域发蓝光，黄色区域发黄光，不叠加白色 Emission 改写局部色相。
 - 不引入 Three.js `PointLight` / `DirectionalLight`；固定 Key Light 仍由 [`frontend/src/three/shaders/perlin.frag.glsl`](frontend/src/three/shaders/perlin.frag.glsl) 的中性 Lambert uniform 模型实现，只负责球体、地形和 band 塑形。
 - 网站 focus、Cover 今日星球、静态星球导出继续共同消费 [`createSelectionPlanet()`](frontend/src/three/planet.ts)，不得形成三套参数或分支。
@@ -45,7 +51,7 @@ isProject: false
 
 ```mermaid
 flowchart LR
-  V[Movie.vote_average] --> M[纯函数 clamp + linear map]
+  V[Movie.vote_average] --> M[纯函数 clamp + power map]
   M --> EI[uEmissionIntensity]
   C[固定 Focus L/C + genre/Perlin bands] --> B[逐片元 baseLinear]
   B --> EM[baseLinear × emissionIntensity]
@@ -66,7 +72,7 @@ flowchart LR
 
 ### 本 Phase 要做
 
-- 建立可测试纯函数 `focusEmissionIntensityFromVoteAverage(voteAverage, minIntensity, maxIntensity)`；输入评分先 clamp 到 `0…10`，再线性映射到明确的最低/最高 Emission 强度。
+- 建立可测试纯函数 `focusEmissionIntensityFromVoteAverage(voteAverage, minIntensity, maxIntensity, exponent)`；输入评分先 clamp 到 `0…10`，再经可版本化 power curve 映射到明确的最低/最高 Emission 强度。
 - 将 focus appearance 收敛为固定 `lightness/chroma/keyLightIntensity`、genre hues 和评分派生 `emissionIntensity`；删除 focus 对宏观 galaxy Lightness uniform 快照的依赖。
 - 删除与同色 Emission 数学重复的独立 ambient 参数；最低可见辐射由 `emissionIntensityMin` 承担。
 - 把 Perlin 颜色流程改为：OKLab/OKLCH → 逐片元 `baseLinear` → 局部底色 Emission + 固定 Lambert Key → 单次 sRGB 输出。
@@ -93,19 +99,19 @@ flowchart LR
 - `PlanetAppearance` 明确包含 `lightness`、`chroma`、`emissionIntensity`、`keyLightIntensity`。评分不得再写入 `uPerlinL` 或 `uKeyLightIntensity`。
 - `keyLightIntensity` 保留在 appearance 中作为最终视觉状态的一部分，但对所有评分保持固定且由共享 defaults 提供。
 
-### D2 · 独立 Emission 线性曲线
+### D2 · 独立、可版本化的 Emission power curve
 
-采用以下纯函数语义：
+39.2 先建立线性纯函数；39.9 在保持端点不变的前提下将生产候选扩展为以下 power curve：
 
 ```ts
 const t = clamp(voteAverage, 0, 10) / 10
-return minIntensity + t * (maxIntensity - minIntensity)
+return minIntensity + Math.pow(t, exponent) * (maxIntensity - minIntensity)
 ```
 
-- `emissionIntensityMin`、`emissionIntensityMax` 是 [`PLANET_VISUAL_DEFAULTS`](frontend/src/three/planetVisualDefaults.ts) 中可序列化的 Focus 自发光参数；`keyLightIntensity` 是独立的固定标量。
-- 函数对非有限评分、非有限端点、负端点、`maxIntensity < minIntensity` 快速失败；只对有限的越界评分执行 clamp，不静默修复非法配置。
+- `emissionIntensityMin`、`emissionIntensityMax`、`exponent` 与 curve model version 是 [`PLANET_VISUAL_DEFAULTS`](frontend/src/three/planetVisualDefaults.ts) 中可序列化的 Focus 自发光参数；`keyLightIntensity` 是独立的固定标量。
+- 函数对非有限评分/端点/exponent、负端点、`maxIntensity < minIntensity`、`exponent <= 0` 快速失败；只对有限的越界评分执行 clamp，不静默修复非法配置。
 - `vote_average=0` 精确得到 min，`10` 精确得到 max；相等端点合法，用于固定 Emission 的诊断对照。
-- Emission 端点与固定 Key 的最终数值由 39.8 人工 Gate 固化。实现阶段记录候选值和截图，不把临时 console patch 当发布配置。
+- 39.9 当前候选为 exponent `3`、`Emin=0.06`、`Emax=0.6`；最终 exponent、端点与固定 Key 由 39.11 单变量收敛后交给 39.8 人工 Gate 验收，不把临时 diagnostics override 当发布配置。
 
 ### D3 · 局部底色自发光、固定 Key 与单次终点转换
 
@@ -150,6 +156,14 @@ vec3 litLinear = emissiveLinear + keyLitLinear;
 - 删除 [`frontend/src/index.css`](frontend/src/index.css) 的专属 `--hud-focus-ref-*` token。
 - 若 [`frontend/src/lib/galaxyVoteSize.ts`](frontend/src/lib/galaxyVoteSize.ts) 的 tier/ring helpers 已无消费者，则连同专属测试删除；不删除仍被真实粒子尺寸逻辑消费的代码。
 - [`frontend/src/three/selectionPlanetRotation.ts`](frontend/src/three/selectionPlanetRotation.ts) 保留确定性姿态、自转轴、自转速度和 quaternion 行为，但将 `REFERENCE_RING_*` / `RingPlane` 术语改为 planet-local spin/base-orientation 术语，并用测试锁定数值行为不变。
+
+### D7 · Bloom 是纯增量后处理，正确性先于视觉调参
+
+- 2026-07-19 对 P39.9 `d-cubic-bloom-matrix.png` 的复核发现：网站 Focus 与静态导出都先渲染基础场景，再把 `UnrealBloomPass` 已包含基础画面的 composer 输出整体加回，结果近似 `base + (base + bloom)`；该矩阵的 Bloom ON 行不能作为最终亮度或过曝判断依据。
+- [`frontend/src/three/perlinSelectiveBloom.ts`](frontend/src/three/perlinSelectiveBloom.ts) 与 [`frontend/src/planet-export/renderPlanetImage.ts`](frontend/src/planet-export/renderPlanetImage.ts) 必须共享“基础场景只出现一次，附加项只含纯 Bloom 增量”的合成契约，不允许以调低 `strength`、Key 或 Emission 掩盖重复主体。
+- Perlin Bloom 参数必须有限，且满足 `strength >= 0`、`radius ∈ [0,1]`、`threshold >= 0`；当前 `radius=2` 超出 Three.js `UnrealBloomPass` 契约，39.10 先恢复合法诊断基线，39.11 再做视觉择优。
+- 执行顺序固定为 `39.9 → 39.10 → 39.11 → 39.8`：39.10 只修正确性，39.11 按 Key、Emission 曲线、Bloom、Emission 端点的顺序单变量收敛，39.8 只验收最终参数。
+- 39.10/39.11 生成的候选与修复证据写入独立 ignored 目录，不覆盖 39.7/39.9 原始 PNG、sidecar 或联系表；旧证据保留为问题发现与行为对照。
 
 ## 工作拆分
 
@@ -258,21 +272,6 @@ vec3 litLinear = emissiveLinear + keyLitLinear;
 - Bloom OFF 能隔离验证表面 Emission/Key 层级；Bloom ON 能验证蓝/黄等局部颜色光晕且不改变 hash/config 归属。
 - 所有导出尺寸、透明背景、metadata 与 hash 正确；相同输入重复导出稳定。
 
-### 39.8 `[GATE]` Emission 低中高评分视觉验收与文档回写 `[需人工验收]`
-
-**依赖：** 39.7。
-
-1. 先检查同一 movie fixture 的受控低/中/高评分矩阵，确认只有 Emission 随评分单调增强，固定 L/C、Key、姿态、相机和局部 band 构图不变。
-2. Bloom OFF 下检查暗面与受光面均随评分合理变亮；高评分不能因 Emission 过强而明显抬平地形、吞掉法线或让 genre band 不可读。
-3. 检查蓝色区域保持蓝色自发光、黄色区域保持黄色自发光；允许 HDR/Bloom 引起的自然高光变浅与相邻光晕加色混合，但不能大面积漂白或失去局部色相身份。
-4. 再检查真实低/中/高评分电影，确认受控结论在实际 genre、seed 和构图下成立；不同电影只作为实际覆盖，不用于证明单变量因果。
-5. 对同一电影比较网站 focus、Cover 今日星球、3000×3000 Bloom ON 导出，确认基础色、Emission 层级、明暗关系和固定主光方向一致。
-6. 分别开启/关闭 Perlin selective Bloom，确认 Bloom 增强自发光但不重新定义低/中/高亮度层级；必要时只调整一个 `emissionIntensityMin/Max` 端点、固定 `keyLightIntensity` 或既有 Bloom 参数，并记录候选值与截图。
-7. 回到 idle / active / select 检查宏观评分亮度、色相、大小、拾取和状态切换无视觉回归。
-8. 人工 Go 后固化 Emission 端点与固定 Key，更新 [`docs/project_docs/星球状态机 spec.md`](docs/project_docs/星球状态机%20spec.md) 及实际受影响的视觉映射说明，并写入 [`docs/reports/Phase 39 P39 Focus 评分自发光与颜色空间统一 实施报告.md`](docs/reports/Phase%2039%20P39%20Focus%20评分自发光与颜色空间统一%20实施报告.md)。
-
-若 E(rating) + KFixed 因高评分地形抬平而 No-Go，不在本 TODO 内临时加入评分 Key 或隐藏模式：39.8 保持 pending，并按 D5 决定新增后续 TODO 或独立 Phase。未获人工 Go 前，不将 39.8 标为 complete，不宣称最终参数定稿，不写最终实施报告或执行发布交付。
-
 ### 39.9 `[diagnostics+curve]` 隔离固定 Key、验证 cubic Emission 与重建候选矩阵
 
 **依赖：** 39.7 完成；39.8 首轮人工 Gate 已明确 No-Go。
@@ -292,24 +291,98 @@ vec3 litLinear = emissiveLinear + keyLitLinear;
 - 新 visual hash 能识别 curve exponent/model version；相同候选重复导出 PNG SHA-256 稳定。
 - 人工只在候选矩阵生成后判断层级；未获新 Go 前，39.8 保持 pending，不更新最终状态机/视觉映射文档。
 
+### 39.10 `[bloom correctness]` 修复 Bloom 合成与参数契约
+
+**依赖：** 39.9 完成；P39.9 Bloom ON 复核已确认主体重复叠加与非法 `radius=2`。
+
+**目标：** 只恢复工程正确性，不对 Key、cubic exponent、Emission 端点、`threshold=0` 或 `strength=0.005` 做视觉择优。
+
+- 在 [`frontend/src/three/perlinSelectiveBloom.ts`](frontend/src/three/perlinSelectiveBloom.ts) 收敛 Bloom 管线职责：基础场景只渲染一次，附加合成只包含纯 Bloom 增量，不再把 `UnrealBloomPass` 的 `base + bloom` 结果整体加回基础画面。
+- 将网站 Focus 与 [`frontend/src/planet-export/renderPlanetImage.ts`](frontend/src/planet-export/renderPlanetImage.ts) 的 Bloom 参数校验、render target 和纯增量合成语义收敛到共享模块；入口只负责场景/相机/透明背景差异，不保留两套近似算法。
+- 对 Bloom 参数快速失败：所有值必须有限，且满足 `strength >= 0`、`radius ∈ [0,1]`、`threshold >= 0`；把非法默认 `radius=2` 暂置为合法上限 `1.0`，仅作为 39.11 前诊断基线，不视为视觉定稿。
+- 保留 HalfFloat HDR、透明背景、planet-only layer 与全局 Bloom 互斥语义；不得让 idle/active 粒子进入 Perlin selective Bloom，也不得改变全局 `window.__bloom` 默认关闭行为。
+- 更新 [`frontend/src/three/perlinSelectiveBloom.spec.ts`](frontend/src/three/perlinSelectiveBloom.spec.ts)、[`frontend/src/planet-export/planetExport.spec.ts`](frontend/src/planet-export/planetExport.spec.ts) 及 exporter 必要测试，锁定共享配置、参数边界和合成契约。
+- 使用固定 fixture 生成 `data/runs/phase39-p39.10/` 证据：`strength=0` 时 Bloom ON/OFF 可见主体 RGB 一致；非零 strength 只增加 Bloom 增量，不能再次叠加完整 base；修复前后的差异可由结构化统计和联系表复现。
+
+**验收：**
+
+- 自动化测试证明基础画面只出现一次，非有限/负参数及越界 radius 被拒绝。
+- 网站 Focus 与 3000×3000 exporter 消费同一个 Bloom 合成与参数契约；静态导出仍正确保留 RGBA 透明背景。
+- 生成修复后的 `rating 0/4/5/10 × Bloom OFF/ON` 诊断矩阵，只用于验证合成正确性，不用于固化最终视觉参数。
+- `K=1.0`、exponent `3`、`Emin=0.06`、`Emax=0.6` 在本 TODO 中保持不变；除合法性基线外不调 Bloom。
+- frontend 定向测试、`npm test`、`npm run lint`、`npm run build`，以及 [`tools/planet-exporter`](tools/planet-exporter) 的相关 test/typecheck 全部通过。
+
+### 39.11 `[visual convergence]` Key、Emission 曲线与 Bloom 单变量收敛 `[需人工验收]`
+
+**依赖：** 39.10 完成，且修复后的 Bloom OFF/ON 证据已证明可用于视觉判断。
+
+- 候选生成使用独立的离线 diagnostics override，不提交隐藏运行时开关、评分 Key、入口专属参数或并行视觉数据流；最终只把人工选定值一次性写回 [`PLANET_VISUAL_DEFAULTS`](frontend/src/three/planetVisualDefaults.ts)。
+- 所有候选使用同一 movie、genre、seed、pose、camera、固定 L/C 与 rating `0/4/5/10`，写入 `data/runs/phase39-p39.11/`；每个 checkpoint 只改变声明的单一变量族，并保留结构化 sidecar 对比。
+
+#### Checkpoint A · Bloom OFF 下选择固定 Key
+
+- 保持 exponent `3`、`Emin=0.06`、`Emax=0.6` 不变，先比较 `K=0.35/0.50/0.65`；必要时只围绕最佳候选缩小一次区间。
+- 人工选择足以塑形、保留地形和明暗方向，但不主导主体亮度的固定 Key；评分仍不得进入 Key。
+
+#### Checkpoint B · 固定 Key 后评估 Emission exponent
+
+- 若 rating 4/5 仍过暗或难以区分，再比较 exponent `3/2.5/2`；若 Checkpoint A 后 cubic 已满足层级，则保持 exponent `3`，不为产生改动而调参。
+- `Emin/Emax` 继续固定，人工选择能兼顾低分可读性、4/5 层级和高分动态范围的单一 exponent。
+
+#### Checkpoint C · 固定表面亮度后调整 Bloom
+
+- 在修正后的纯 Bloom 管线上，按 `threshold → radius → strength` 顺序一次只改变一个参数。
+- `threshold=0` 可以作为“整球柔光”候选，但必须与低正 threshold 对照，确认不会填平暗部、地形和评分层级；`radius` 始终保持在 `[0,1]`。
+- Bloom 只负责光晕，不得通过 Bloom 参数补偿错误的 Key 或 Emission 曲线。
+
+#### Checkpoint D · 最后评估 Emission 端点
+
+- 只有固定 K、exponent 和 Bloom 后 rating 10 仍过曝，才单独评估降低 `Emax=0.6`。
+- 只有 rating 0 暗面不可读，才单独评估 `Emin=0.06`；两个端点不得同轮盲调。
+- 将最终参数、model/config version、schema version 和 visual hash 一并更新；网站 Focus、Cover 与静态导出继续只经共享 defaults 和 `resolvePlanetAppearance()` 取值。
+
+**验收：**
+
+- 每个 checkpoint 的单变量关系均由 sidecar 自动验证，且不覆盖 39.7/39.9/39.10 原始证据。
+- 最终生成受控 `rating 0/4/5/10 × Bloom OFF/ON` 矩阵和真实低/中/高评分样本；相同输入重复导出 PNG SHA-256 稳定。
+- 人工确认 Key 只塑形、Emission 决定评分层级、Bloom 只增加光晕；rating 4/5 可读且存在有意义的视觉差异。
+- 自动化检查、PNG/sidecar/hash 一致性、三入口配置一致性全部通过；人工接受后才把 39.11 标为 complete。
+
+### 39.8 `[GATE]` 最终 Emission / Key / Bloom 视觉验收与文档回写 `[需人工验收]`
+
+**依赖：** 39.10、39.11 全部完成；执行顺序为 `39.9 → 39.10 → 39.11 → 39.8`。
+
+1. 只使用 39.11 已选定并写入共享 defaults 的最终参数；P39.9 `d-cubic-bloom-matrix.png` 的 Bloom ON 行只保留为问题发现证据，不作为最终验收输入。
+2. 检查受控 `rating 0/4/5/10 × Bloom OFF/ON` 矩阵：固定 L/C、Key、姿态、相机和局部 band 构图不变，只有 Emission 随评分单调增强，Bloom ON 不重复主体或重定义评分层级。
+3. 检查真实低/中/高评分电影：低分可读、中段有层级、高分不因 Emission/Bloom 过强而抬平地形、吞掉法线或大面积漂白；蓝/黄等局部区域保持色相身份。
+4. 对同一电影比较网站 Focus、Cover 今日星球与 3000×3000 Bloom ON 静态导出，确认基础色、Emission 层级、主光方向、Bloom 形态和透明背景符合各入口契约。
+5. 回到 idle / active / select 检查宏观评分亮度、色相、大小、拾取和状态切换无视觉回归。
+6. 39.8 不再现场调参；若任一项 No-Go，返回 39.11 对应 checkpoint 重新做单变量候选，不在 Gate 中临时 patch。
+7. 人工 Go 后固化最终参数与 visual hash，更新 [`docs/project_docs/星球状态机 spec.md`](docs/project_docs/星球状态机%20spec.md) 及实际受影响的视觉映射说明，并写入 [`docs/reports/Phase 39 P39 Focus 评分自发光与颜色空间统一 实施报告.md`](docs/reports/Phase%2039%20P39%20Focus%20评分自发光与颜色空间统一%20实施报告.md)。
+
+未获人工 Go 前，不将 39.8 标为 complete，不宣称 Phase 39 参数定稿，不写最终实施报告或执行发布交付。
+
 ## Phase 39 验收标准
 
 - 非 focus 的评分 → OKLab Lightness 视觉与数值保持不变。
-- Focus 基础 Lightness/Chroma 与 Key Light 固定，评分只通过独立线性函数控制逐片元局部底色 Emission。
+- Focus 基础 Lightness/Chroma 与 Key Light 固定，评分只通过独立、可版本化的 power curve 控制逐片元局部底色 Emission。
 - 蓝色、黄色等局部区域使用自身 `baseLinear` 发光，不以白色 Emission 或单一 genre 色覆盖 band。
 - Perlin shader 在 linear RGB 中相加 Emission 与固定 Lambert Key，并只在输出边界转换一次 sRGB；不存在独立 ambient 重复项或 Bloom 前 HDR 截断。
-- 网站 focus、Cover 今日星球、静态导出共用同一 appearance、uniform 与 visual defaults。
-- visual hash 能识别 Emission 曲线、固定 Key 与颜色流程，旧导出不会误复用。
+- 网站 focus、Cover 今日星球、静态导出共用同一 appearance、uniform、visual defaults 与纯 Bloom 增量合成契约。
+- 基础场景只出现一次；`strength=0` 的 Bloom ON/OFF 可见主体 RGB 一致，非零 strength 只增加 Bloom 增量。
+- Perlin Bloom 参数全部有限，且满足 `strength >= 0`、`radius ∈ [0,1]`、`threshold >= 0`；非法参数快速失败。
+- visual hash 能识别 Emission 曲线、固定 Key、最终 Bloom 参数与颜色流程，旧导出不会误复用。
 - `FocusLReference`、`FocusSizeReferenceRings` 及其运行时状态/更新/文案/测试契约彻底消失。
-- 确定性姿态与自转保留；受控评分矩阵可复现，Bloom 不破坏评分亮度层级和局部色相身份。
-- 自动化检查、3000×3000 导出矩阵和人工 Gate 全部通过。
+- 确定性姿态与自转保留；受控评分矩阵可复现，Key 只塑形、Emission 决定评分层级、Bloom 只增加光晕。
+- 自动化检查、3000×3000 导出矩阵、三入口一致性和人工 Gate 全部通过。
 - Phase 39 不包含评分驱动 Key；若固定 Key 模型 No-Go，按 D5 独立规划 E+K。
 
 ## Phase 39 交付物
 
-- `.cursor/plans/phase_39_focus_lighting.plan.md`
-- Focus 评分 → Emission 强度纯函数、固定 Key 与共享 visual defaults。
+- `.cursor/plans/phase_39_focus_emission.plan.md`
+- Focus 评分 → Emission power curve、固定 Key 与共享 visual defaults。
 - 使用逐片元局部底色的 Perlin Emission + linear Lambert Key → 单次 sRGB shader。
-- 三入口共用的 planet appearance/uniform 链路与新 visual hash。
+- 三入口共用的 planet appearance/uniform、纯 Bloom 增量合成链与 visual hash。
 - 两个 Reference 的完整退役 diff。
-- 同一 movie fixture 受控低/中/高评分矩阵、真实样本导出、聚焦测试、状态机 spec 更新与 Phase 39 实施报告。
+- 39.7/39.9 原始证据，以及 39.10 合成修复矩阵、39.11 单变量收敛矩阵和最终真实样本导出。
+- 聚焦测试、状态机 spec、视觉映射说明与 Phase 39 最终实施报告。

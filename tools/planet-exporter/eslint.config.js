@@ -4,7 +4,7 @@ import tseslint from 'typescript-eslint'
 import { defineConfig } from 'eslint/config'
 
 export default defineConfig({
-  files: ['src/**/*.ts'],
+  files: ['src/**/*.ts', 'scripts/**/*.ts'],
   extends: [js.configs.recommended, tseslint.configs.recommended],
   languageOptions: {
     ecmaVersion: 2022,

@@ -110,9 +110,9 @@ function makeSharedUniforms(
       /** P17.1 — lower clamp on `pow(d0/d, 2/3)` so stars nearer than the reference plane do not blow past vote L. P17.4 production default. */
       uDistanceLightnessFloor: { value: 0.5 },
       uChroma: { value: PLANET_VISUAL_DEFAULTS.galaxyColor.chroma },
-      /** P17.2 — Hunt exponent γ (shared idle / active / Perlin). P17.4 production default after sweep. */
+      /** P17.2 — Hunt exponent γ for idle / active macro layers; Focus reads its fixed visual defaults. */
       uHuntGamma: { value: PLANET_VISUAL_DEFAULTS.color.huntGamma },
-      /** P17.2 — bit 0 = idle vert, bit 1 = active vert, bit 2 = perlin frag; default 0b111 = 7. */
+      /** P17.2 — bit 0 = idle vert, bit 1 = active vert; Focus reads its fixed visual defaults. */
       uHuntApplyMask: { value: PLANET_VISUAL_DEFAULTS.color.huntApplyMask },
       /** P17.2 — focus-neighborhood hover: instance id for alpha lift; -1 = none. */
       uHoveredInstanceId: { value: -1 },

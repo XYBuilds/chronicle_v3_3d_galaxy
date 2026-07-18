@@ -66,15 +66,6 @@ const palette: Meta['genre_palette'] = {
   'Science Fiction': '#0000ff',
 }
 
-const galaxyColor = {
-  uLMin: 0.3,
-  uLMax: 1,
-  uHighRatingT: 0.85,
-  uHighTierTRangeScale: 0.3,
-  uLightnessRatingExponent: 0.8,
-  uChroma: 0.15,
-}
-
 describe('planet visual defaults', () => {
   it('serializes the versioned Focus visual configuration for metadata hashing', () => {
     expect(PLANET_VISUAL_DEFAULTS).toEqual({
@@ -123,23 +114,19 @@ describe('planet visual defaults', () => {
 })
 
 describe('planet appearance', () => {
-  it('feeds export color inputs from the shared visual defaults', () => {
-    const defaults = PLANET_VISUAL_DEFAULTS.galaxyColor
-    const appearance = resolvePlanetAppearance(movie, palette, {
-      uLMin: defaults.lMin,
-      uLMax: defaults.lMax,
-      uHighRatingT: defaults.highRatingT,
-      uHighTierTRangeScale: defaults.highTierTRangeScale,
-      uLightnessRatingExponent: defaults.lightnessRatingExponent,
-      uChroma: defaults.chroma,
-    })
-    expect(appearance.chroma).toBe(defaults.chroma)
-    expect(appearance.lightness).toBeGreaterThan(0)
+  it('uses fixed Focus lightness, chroma, and key light from shared defaults', () => {
+    const appearance = resolvePlanetAppearance(movie, palette)
+
+    expect(resolvePlanetAppearance).toHaveLength(2)
+    expect(appearance.lightness).toBe(PLANET_VISUAL_DEFAULTS.focus.lightness)
+    expect(appearance.chroma).toBe(PLANET_VISUAL_DEFAULTS.focus.chroma)
+    expect(appearance.keyLightIntensity).toBe(PLANET_VISUAL_DEFAULTS.lighting.keyLightIntensity)
+    expect(appearance.emissionIntensity).toBeCloseTo(0.5244, 12)
   })
 
-  it('is deterministic for noise, genres, hues, lightness, and base pose', () => {
-    const a = resolvePlanetAppearance(movie, palette, galaxyColor)
-    const b = resolvePlanetAppearance(movie, palette, galaxyColor)
+  it('is deterministic for noise, genres, hues, fixed appearance, emission, and base pose', () => {
+    const a = resolvePlanetAppearance(movie, palette)
+    const b = resolvePlanetAppearance(movie, palette)
 
     expect(planetNoiseSeed(movie.id)).toBe(planetNoiseSeed(movie.id))
     const randomA = createPlanetRandom(planetNoiseSeed(movie.id))
@@ -147,28 +134,30 @@ describe('planet appearance', () => {
     expect([randomA(), randomA(), randomA()]).toEqual([randomB(), randomB(), randomB()])
     expect(a.genres).toEqual(movie.genres)
     expect(a.hues).toEqual(b.hues)
-    expect(a.lightness).toBe(b.lightness)
-    expect(a.chroma).toBe(galaxyColor.uChroma)
+    expect(a.lightness).toBe(PLANET_VISUAL_DEFAULTS.focus.lightness)
+    expect(a.chroma).toBe(PLANET_VISUAL_DEFAULTS.focus.chroma)
+    expect(a.emissionIntensity).toBe(b.emissionIntensity)
+    expect(a.keyLightIntensity).toBe(PLANET_VISUAL_DEFAULTS.lighting.keyLightIntensity)
     expect(a.bandCount).toBe(3)
     expect(a.cutCount).toBe(2)
     expect(a.baseQuaternion.equals(b.baseQuaternion)).toBe(true)
   })
 
-  it('keeps facade uniforms, scale, quaternion, and outer radius aligned', () => {
+  it('writes fixed Focus L/C/key uniforms and rating-derived emission', () => {
     const handle = createSelectionPlanet()
     try {
-      handle.setFromMovie(movie, palette, 2, galaxyColor)
+      handle.setFromMovie(movie, palette, 2)
 
+      expect(handle.setFromMovie).toHaveLength(3)
       expect(handle.material.uniforms.uBandCount.value).toBe(3)
       expect(handle.material.uniforms.uCutCount.value).toBe(2)
-      expect(handle.material.uniforms.uPerlinL.value).toBeCloseTo(0.916392385291124, 12)
-      expect(handle.material.uniforms.uPerlinL.value).toBe(
-        resolvePlanetAppearance(movie, palette, galaxyColor).lightness,
-      )
-      expect(handle.material.uniforms.uPerlinChroma.value).toBe(0.15)
+      expect(handle.material.uniforms.uPerlinL.value).toBe(PLANET_VISUAL_DEFAULTS.focus.lightness)
+      expect(handle.material.uniforms.uPerlinChroma.value).toBe(PLANET_VISUAL_DEFAULTS.focus.chroma)
+      expect(handle.material.uniforms.uEmissionIntensity.value).toBeCloseTo(0.5244, 12)
+      expect(handle.material.uniforms.uKeyLightIntensity.value).toBe(PLANET_VISUAL_DEFAULTS.lighting.keyLightIntensity)
+      expect(handle.material.uniforms).not.toHaveProperty('uAmbient')
+      expect(handle.material.uniforms).not.toHaveProperty('uDiffuse')
       expect(handle.material.uniforms.uLightingEnabled.value).toBe(1)
-      expect(handle.material.uniforms.uAmbient.value).toBe(0.06)
-      expect(handle.material.uniforms.uDiffuse.value).toBe(1)
       expect((handle.material.uniforms.uLightDir.value as { toArray: () => number[] }).toArray()).toEqual([
         0.7001400420140049,
         0.7001400420140049,
@@ -184,27 +173,27 @@ describe('planet appearance', () => {
     }
   })
 
-  it('locks current focus uniform values for representative low, mid, and high ratings', () => {
+  it('keeps fixed uniforms stable while emission follows rating linearly', () => {
     const handle = createSelectionPlanet()
     try {
-      for (const [voteAverage, lightness] of [
-        [3.9, 0.6295715584351893],
-        [5.3, 0.7212294584249238],
-        [8.6, 0.9163923852911244],
-      ] as const) {
-        handle.setFromMovie({ ...movie, vote_average: voteAverage }, palette, 2, galaxyColor)
+      const uniforms = [0, 5, 10].map((voteAverage) => {
+        handle.setFromMovie({ ...movie, vote_average: voteAverage }, palette, 2)
+        return {
+          lightness: handle.material.uniforms.uPerlinL.value,
+          chroma: handle.material.uniforms.uPerlinChroma.value,
+          emission: handle.material.uniforms.uEmissionIntensity.value,
+          key: handle.material.uniforms.uKeyLightIntensity.value,
+        }
+      })
 
-        expect(handle.material.uniforms.uPerlinL.value).toBeCloseTo(lightness, 12)
-        expect(handle.material.uniforms.uPerlinChroma.value).toBe(0.15)
-        expect(handle.material.uniforms.uLightingEnabled.value).toBe(1)
-        expect(handle.material.uniforms.uAmbient.value).toBe(0.06)
-        expect(handle.material.uniforms.uDiffuse.value).toBe(1)
-        expect((handle.material.uniforms.uLightDir.value as { toArray: () => number[] }).toArray()).toEqual([
-          0.7001400420140049,
-          0.7001400420140049,
-          -0.14002800840280102,
-        ])
-      }
+      expect(uniforms.map(({ lightness }) => lightness)).toEqual([0.55, 0.55, 0.55])
+      expect(uniforms.map(({ chroma }) => chroma)).toEqual([0.15, 0.15, 0.15])
+      expect(uniforms.map(({ key }) => key)).toEqual([1, 1, 1])
+      expect(uniforms.map(({ emission }) => emission)[0]).toBe(0.06)
+      expect(uniforms.map(({ emission }) => emission)[1]).toBeCloseTo(0.33, 12)
+      expect(uniforms.map(({ emission }) => emission)[2]).toBe(0.6)
+      expect(uniforms[0]!.emission).toBeLessThan(uniforms[1]!.emission)
+      expect(uniforms[1]!.emission).toBeLessThan(uniforms[2]!.emission)
     } finally {
       handle.dispose()
     }

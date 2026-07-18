@@ -32,6 +32,13 @@ describe('colorMath P10.1', () => {
     expect(t2).toBeCloseTo(t, 10)
   })
 
+  it('locks representative non-focus rating-to-Lightness outputs', () => {
+    expect(lightnessFromVoteAverage(0, defaultSnap)).toBeCloseTo(0.3, 12)
+    expect(lightnessFromVoteAverage(5, defaultSnap)).toBeCloseTo(0.615437661913791, 12)
+    expect(lightnessFromVoteAverage(8.5, defaultSnap)).toBeCloseTo(0.88067055562305, 12)
+    expect(lightnessFromVoteAverage(10, defaultSnap)).toBeCloseTo(0.922103052298253, 12)
+  })
+
   it('lightnessFromVoteAverage matches voteNorm path', () => {
     const L1 = lightnessFromVoteAverage(8.2, defaultSnap)
     const L2 = lightnessFromVoteNorm(0.82, defaultSnap)

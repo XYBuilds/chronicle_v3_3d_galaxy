@@ -36,7 +36,7 @@ export async function run(
   try {
     const args = parseArgs(argv, (value) => path.resolve(value))
     const source = await dependencies.chooseDataSource(args, path.join(root, 'frontend/public/data/galaxy_assets_manifest.json'))
-    io.stderr.write(`[planet:export] movieId=${args.movieId} source=${source.label} resolution=${args.resolution} output=${args.output}\n`)
+    io.stderr.write(`[planet:export] movieId=${args.movieId} source=${source.label} resolution=${args.resolution} mode=${args.renderMode} output=${args.output}\n`)
     const render = await dependencies.renderInBrowser(args, source, root)
     dependencies.assertPngSafe(render.png, args.resolution)
     const metadata = dependencies.metadataFor(args, source, render, dependencies.getGitCommit(root))

@@ -41,6 +41,7 @@ export function metadataFor(args: ExportArgs, source: DataSource, render: Browse
     resolution: args.resolution,
     padding: args.padding,
     bloom: args.bloom,
+    render_mode: args.renderMode,
     chronicle_git_commit: gitCommit,
     visual_config_hash: createHash('sha256').update(render.visualHash ?? '').digest('hex'),
     chromium_version: render.chromiumVersion,
@@ -87,7 +88,7 @@ export async function renderInBrowser(args: ExportArgs, source: DataSource, root
       padding: String(args.padding),
       bloom: args.bloom,
       sizeRoot: String(args.sizeRoot),
-      renderMode: 'shader',
+      renderMode: args.renderMode,
     })
     await page.goto(new URL(`planet-export.html?${query.toString()}`, serverUrl).toString(), { waitUntil: 'networkidle', timeout: 120_000 })
     await page.waitForFunction(() => document.body.dataset.exportReady === '1' || document.body.dataset.exportError !== undefined, undefined, { timeout: 120_000 })

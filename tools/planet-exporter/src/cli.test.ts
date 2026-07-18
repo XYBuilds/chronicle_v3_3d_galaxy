@@ -59,6 +59,25 @@ describe('planet export CLI orchestration', () => {
     expect(dependencies.writeArtifactsAtomically).toHaveBeenCalledOnce()
   })
 
+  it('passes explicit basic mode through the reusable export path', async () => {
+    const capture = createIo()
+    const dependencies = createDependencies()
+
+    await expect(run([...argv, '--render-mode', 'basic'], capture.io, dependencies)).resolves.toBe(0)
+
+    expect(dependencies.renderInBrowser).toHaveBeenCalledWith(
+      expect.objectContaining({ renderMode: 'basic', bloom: 'off' }),
+      expect.anything(),
+      expect.any(String),
+    )
+    expect(dependencies.metadataFor).toHaveBeenCalledWith(
+      expect.objectContaining({ renderMode: 'basic' }),
+      expect.anything(),
+      expect.anything(),
+      'fixture-commit',
+    )
+  })
+
   it.each([
     ['data', 'chooseDataSource', EXIT_CODES.data],
     ['render', 'renderInBrowser', EXIT_CODES.render],

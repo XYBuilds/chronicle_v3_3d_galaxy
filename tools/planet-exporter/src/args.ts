@@ -22,13 +22,14 @@ export type ExportArgs = {
   padding: number
   bloom: 'on' | 'off'
   sizeRoot: 2 | 3 | 4
+  renderMode: 'basic' | 'shader'
   dataFile?: string
   dataUrl?: string
 }
 
-export const usage = 'usage: npm run planet:export -- --movie-id ID --output FILE.png [--resolution N] [--padding N] [--bloom on|off] [--size-root 2|3|4] [--data-file FILE] [--data-url URL]'
+export const usage = 'usage: npm run planet:export -- --movie-id ID --output FILE.png [--resolution N] [--padding N] [--bloom on|off] [--size-root 2|3|4] [--render-mode basic|shader] [--data-file FILE] [--data-url URL]'
 
-const allowed = new Set(['movie-id', 'output', 'resolution', 'padding', 'bloom', 'size-root', 'data-file', 'data-url'])
+const allowed = new Set(['movie-id', 'output', 'resolution', 'padding', 'bloom', 'size-root', 'render-mode', 'data-file', 'data-url'])
 
 export function parseArgs(argv: string[], resolvePath: (value: string) => string): ExportArgs {
   const values = new Map<string, string>()
@@ -49,8 +50,9 @@ export function parseArgs(argv: string[], resolvePath: (value: string) => string
   const padding = Number(values.get('padding') ?? 0.08)
   const bloom = values.get('bloom') ?? 'off'
   const sizeRoot = Number(values.get('size-root') ?? 3)
+  const renderMode = values.get('render-mode') ?? 'shader'
   const dataUrl = values.get('data-url')
-  if (!Number.isSafeInteger(movieId) || movieId <= 0 || !output || !Number.isSafeInteger(resolution) || resolution < 1 || resolution > 16384 || !Number.isFinite(padding) || padding < 0 || padding >= 0.5 || (bloom !== 'on' && bloom !== 'off') || (sizeRoot !== 2 && sizeRoot !== 3 && sizeRoot !== 4)) {
+  if (!Number.isSafeInteger(movieId) || movieId <= 0 || !output || !Number.isSafeInteger(resolution) || resolution < 1 || resolution > 16384 || !Number.isFinite(padding) || padding < 0 || padding >= 0.5 || (bloom !== 'on' && bloom !== 'off') || (sizeRoot !== 2 && sizeRoot !== 3 && sizeRoot !== 4) || (renderMode !== 'basic' && renderMode !== 'shader') || (renderMode === 'basic' && bloom !== 'off')) {
     throw new CliError(`invalid arguments; ${usage}`, EXIT_CODES.arguments)
   }
   if (dataUrl !== undefined) {
@@ -68,6 +70,7 @@ export function parseArgs(argv: string[], resolvePath: (value: string) => string
     padding,
     bloom: bloom as 'on' | 'off',
     sizeRoot: sizeRoot as 2 | 3 | 4,
+    renderMode: renderMode as 'basic' | 'shader',
     dataFile: values.has('data-file') ? resolvePath(values.get('data-file')!) : undefined,
     dataUrl,
   }

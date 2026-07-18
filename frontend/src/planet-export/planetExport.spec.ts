@@ -41,7 +41,12 @@ describe('planet export request and sizing', () => {
       movieId: 7, dataUrl: 'https://example.test/galaxy_data.json.gz', resolution: 300, padding: 0.08, bloom: false, sizeRoot: 3, renderMode: 'shader',
     })
     expect(parsePlanetExportRequest(request('&sizeRoot=2'))).toMatchObject({ sizeRoot: 2 })
-    expect(parsePlanetExportRequest(request('&renderMode=basic').replace('renderMode=shader&renderMode=basic', 'renderMode=basic'))).toMatchObject({ renderMode: 'basic' })
+    const basic3000 = parsePlanetExportRequest(
+      request('&renderMode=basic')
+        .replace('renderMode=shader&renderMode=basic', 'renderMode=basic')
+        .replace('resolution=300', 'resolution=3000'),
+    )
+    expect(basic3000).toMatchObject({ resolution: 3000, bloom: false, renderMode: 'basic' })
     expect(() => parsePlanetExportRequest(request('&movieId=8'))).toThrow(/movieId must appear exactly once/)
     expect(() => parsePlanetExportRequest(request('&unknown=x'))).toThrow(/unknown request parameter/)
     expect(() => parsePlanetExportRequest(request().replace('https%3A%2F%2Fexample.test%2Fgalaxy_data.json.gz', 'file%3A%2F%2F%2Fc%3A%2Fdata.json.gz'))).toThrow(/http or https/)

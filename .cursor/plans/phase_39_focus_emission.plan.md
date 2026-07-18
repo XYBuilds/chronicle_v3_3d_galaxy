@@ -4,7 +4,7 @@ overview: 将 focus Perlin 星球从“评分控制 OKLab Lightness”迁移为�
 todos:
   - id: p39-contract-baseline
     content: 39.1 锁定现状、基础材质 smoke 与非 focus Lightness 不变量
-    status: pending
+    status: complete
   - id: p39-emission-domain
     content: 39.2 建立可测试的评分→Emission 强度线性纯函数与显式端点
     status: pending

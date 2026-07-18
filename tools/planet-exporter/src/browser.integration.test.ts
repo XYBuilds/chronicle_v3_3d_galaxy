@@ -26,20 +26,24 @@ afterAll(async () => {
 })
 
 describe('Playwright Chromium planet export', () => {
-  it('exports two safe transparent PNGs in sequence', async () => {
+  it('exports shader and 3000px basic safe transparent PNGs', async () => {
     const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'planet-export-browser-'))
     temporaryDirectories.push(directory)
     const fixture = path.resolve(import.meta.dirname, '../fixtures/galaxy.minimal.json')
 
-    for (const sequence of [1, 2]) {
-      const output = path.join(directory, `planet-${sequence}.png`)
+    for (const { renderMode, resolution } of [
+      { renderMode: 'shader', resolution: 128 },
+      { renderMode: 'basic', resolution: 3000 },
+    ] as const) {
+      const output = path.join(directory, `planet-${renderMode}.png`)
       const capture = captureIo()
       const exitCode = await run([
         '--movie-id', '1',
         '--output', output,
-        '--resolution', '128',
+        '--resolution', String(resolution),
         '--padding', '0.08',
         '--bloom', 'off',
+        '--render-mode', renderMode,
         '--data-file', fixture,
       ], capture.io)
 
@@ -52,22 +56,23 @@ describe('Playwright Chromium planet export', () => {
       })
 
       const inspection = inspectPng(await fs.readFile(output))
-      expect(inspection).toMatchObject({ width: 128, height: 128, colorType: 6 })
+      expect(inspection).toMatchObject({ width: resolution, height: resolution, colorType: 6 })
       expect(inspection.alphaPixels).toBeGreaterThan(0)
-      expect(inspection.alphaPixels).toBeLessThan(128 * 128)
+      expect(inspection.alphaPixels).toBeLessThan(resolution * resolution)
       expect(inspection.bounds).not.toBeNull()
       expect(inspection.bounds?.left).toBeGreaterThan(0)
       expect(inspection.bounds?.top).toBeGreaterThan(0)
-      expect(inspection.bounds?.right).toBeLessThan(127)
-      expect(inspection.bounds?.bottom).toBeLessThan(127)
+      expect(inspection.bounds?.right).toBeLessThan(resolution - 1)
+      expect(inspection.bounds?.bottom).toBeLessThan(resolution - 1)
 
       const metadata = JSON.parse(await fs.readFile(`${output}.render.json`, 'utf8')) as Record<string, unknown>
       expect(metadata).toMatchObject({
         tmdb_id: 1,
         data_version: 'planet-export-fixture-v1',
-        resolution: 128,
+        resolution,
         padding: 0.08,
         bloom: 'off',
+        render_mode: renderMode,
       })
       expect(metadata.chromium_version).toEqual(expect.any(String))
       expect(metadata.webgl_renderer).toEqual(expect.any(String))

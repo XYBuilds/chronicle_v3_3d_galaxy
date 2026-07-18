@@ -156,14 +156,50 @@ describe('planet appearance', () => {
 
       expect(handle.material.uniforms.uBandCount.value).toBe(3)
       expect(handle.material.uniforms.uCutCount.value).toBe(2)
+      expect(handle.material.uniforms.uPerlinL.value).toBeCloseTo(0.916392385291124, 12)
       expect(handle.material.uniforms.uPerlinL.value).toBe(
         resolvePlanetAppearance(movie, palette, galaxyColor).lightness,
       )
+      expect(handle.material.uniforms.uPerlinChroma.value).toBe(0.15)
+      expect(handle.material.uniforms.uLightingEnabled.value).toBe(1)
+      expect(handle.material.uniforms.uAmbient.value).toBe(0.06)
+      expect(handle.material.uniforms.uDiffuse.value).toBe(1)
+      expect((handle.material.uniforms.uLightDir.value as { toArray: () => number[] }).toArray()).toEqual([
+        0.7001400420140049,
+        0.7001400420140049,
+        -0.14002800840280102,
+      ])
       expect(handle.mesh.scale.x).toBe(2)
       expect(handle.mesh.scale.y).toBe(2)
       expect(handle.mesh.scale.z).toBe(2)
       expect(handle.mesh.quaternion.equals(selectionPlanetBaseQuaternion(movie.id))).toBe(true)
       expect(handle.lastRadius).toBeCloseTo(computePlanetOuterRadius(2, 3))
+    } finally {
+      handle.dispose()
+    }
+  })
+
+  it('locks current focus uniform values for representative low, mid, and high ratings', () => {
+    const handle = createSelectionPlanet()
+    try {
+      for (const [voteAverage, lightness] of [
+        [3.9, 0.6295715584351893],
+        [5.3, 0.7212294584249238],
+        [8.6, 0.9163923852911244],
+      ] as const) {
+        handle.setFromMovie({ ...movie, vote_average: voteAverage }, palette, 2, galaxyColor)
+
+        expect(handle.material.uniforms.uPerlinL.value).toBeCloseTo(lightness, 12)
+        expect(handle.material.uniforms.uPerlinChroma.value).toBe(0.15)
+        expect(handle.material.uniforms.uLightingEnabled.value).toBe(1)
+        expect(handle.material.uniforms.uAmbient.value).toBe(0.06)
+        expect(handle.material.uniforms.uDiffuse.value).toBe(1)
+        expect((handle.material.uniforms.uLightDir.value as { toArray: () => number[] }).toArray()).toEqual([
+          0.7001400420140049,
+          0.7001400420140049,
+          -0.14002800840280102,
+        ])
+      }
     } finally {
       handle.dispose()
     }

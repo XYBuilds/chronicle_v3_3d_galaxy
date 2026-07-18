@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+
 import * as THREE from 'three'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -14,6 +17,10 @@ import { findExportMovie, indexGalaxyMovies, parsePlanetExportRequest } from './
 import { positionExportCamera, prepareExportPlanet } from './renderPlanetImage'
 import { PLANET_VISUAL_DEFAULTS } from '@/three/planetVisualDefaults'
 import type { GalaxyData, Movie } from '@/types/galaxy'
+
+const sceneSource = readFileSync(fileURLToPath(new URL('../three/scene.ts', import.meta.url)), 'utf8')
+const exportRendererSource = readFileSync(fileURLToPath(new URL('./renderPlanetImage.ts', import.meta.url)), 'utf8')
+const exportPageSource = readFileSync(fileURLToPath(new URL('./main.ts', import.meta.url)), 'utf8')
 
 const movie = (id: number, size: number, genres: string[]): Movie => ({
   id, size, genres, x: 0, y: 0, z: 0, emissive: 0, genre_color: [1, 1, 1], title: `Movie ${id}`,
@@ -74,6 +81,27 @@ describe('planet export request and sizing', () => {
     expect(basic.mesh.material).toBeInstanceOf(THREE.MeshBasicMaterial)
     shader.dispose()
     basic.dispose()
+  })
+
+  it('routes website Focus, Cover today, and static export through the shared three-argument planet setter', () => {
+    expect(sceneSource.match(/planet\.setFromMovie\(movie, meta\.genre_palette, r\)/g)).toHaveLength(1)
+    expect(sceneSource.match(/planet\.setFromMovie\(tm, meta\.genre_palette, r\)/g)).toHaveLength(1)
+    expect(exportRendererSource).toContain('const planet = createSelectionPlanet()')
+    expect(exportRendererSource).toContain('planet.setFromMovie(movie, meta.genre_palette, worldRadius)')
+
+    for (const source of [sceneSource, exportRendererSource]) {
+      expect(source).not.toMatch(
+        /PLANET_VISUAL_DEFAULTS|focusEmissionIntensityFromVoteAverage|intensity(?:Min|Max)|pipelineVersion|linear_to_srgb/,
+      )
+      expect(source).not.toMatch(/u(?:EmissionIntensity|KeyLightIntensity|PerlinL|PerlinChroma)\.value\s*=/)
+    }
+  })
+
+  it('delegates page visual-hash construction to the shared production helper', () => {
+    expect(exportPageSource).toContain("import { planetExportVisualConfigInput } from './visualConfig'")
+    expect(exportPageSource).toMatch(
+      /planetExportVisualConfigInput\(\s*planetVisualConfigHashInput\(\),\s*request\.sizeRoot,\s*\)/,
+    )
   })
 
   it('uses the in-app default focus view from world -Z', () => {

@@ -16,7 +16,7 @@ export const PERLIN_LIGHTING_ENABLED_DEFAULT = true
  * Keep vectors as tuples so the same object can be hashed into render metadata.
  */
 export const PLANET_VISUAL_DEFAULTS = {
-  schemaVersion: 2,
+  schemaVersion: 3,
   geometry: {
     detail: 8,
   },
@@ -37,20 +37,21 @@ export const PLANET_VISUAL_DEFAULTS = {
     stepSmoothness: 0.01,
   },
   color: {
+    /** Identifies the linear composition and single display conversion used by the Perlin fragment shader. */
+    pipelineVersion: 'oklch-local-base-linear-emission-fixed-key-single-srgb-v1',
     lMax: 1,
     huntGamma: 0.3,
     huntApplyMask: 7,
   },
-  /**
-   * Focus-only appearance inputs. These are serializable now; 39.3 will make
-   * the material consume them instead of the macro galaxy-colour snapshot.
-   * Emission endpoints are candidates pending the 39.8 visual gate.
-   */
+  /** Focus-only inputs; the vote-driven emission contract is independent of macro galaxy color. */
   focus: {
     lightness: 0.55,
     chroma: 0.15,
-    emissionIntensityMin: 0.06,
-    emissionIntensityMax: 0.6,
+    emission: {
+      modelVersion: 'vote-average-linear-clamped-v1',
+      intensityMin: 0.06,
+      intensityMax: 0.6,
+    },
   },
   galaxyColor: {
     lMin: 0.3,

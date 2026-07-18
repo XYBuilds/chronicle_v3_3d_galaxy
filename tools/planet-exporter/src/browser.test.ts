@@ -25,6 +25,7 @@ const visualHash = JSON.stringify({
     lighting: { keyLightIntensity: 1 },
     color: { pipelineVersion: 'oklch-local-base-linear-emission-fixed-key-single-srgb-v1' },
   }),
+  perlinBloom: JSON.stringify({ composition: 'pure-bloom-delta-v1', enabled: true, strength: 0.005, radius: 1, threshold: 0 }),
   exportSizeRoot: 3,
   supportedExportSizeRoots: [2, 3, 4],
 })
@@ -42,6 +43,7 @@ const visualDiagnostics = {
   emission_curve: { model_version: 'vote-average-power-clamped-v1', exponent: 3, intensity_min: 0.06, intensity_max: 0.6 },
   fixed_lightness: 0.55,
   fixed_chroma: 0.15,
+  bloom: { enabled: true, composition: 'pure-bloom-delta-v1', strength: 0.005, radius: 1, threshold: 0 },
   key_light: { enabled: true, direction: [0.7, 0.7, -0.14], intensity: 1, flat_shading_mix: 0.8 },
   noise: { seed: 123, scale: 2.35, octaves: 4, persistence: 0.52 },
   rotation: { base_quaternion: [0, 0, 0, 1], seeded_spin_axis_world: [0, 1, 0], revs_per_sec: 0.01 },
@@ -78,6 +80,8 @@ describe('visual diagnostics parser', () => {
     ['invalid padding', { ...visualDiagnostics, padding: 0.5 }],
     ['outer radius below world radius', { ...visualDiagnostics, outer_radius: 0.001 }],
     ['invalid band count', { ...visualDiagnostics, band_count: 9 }],
+    ['invalid bloom radius', { ...visualDiagnostics, bloom: { ...visualDiagnostics.bloom, radius: 2 } }],
+    ['invalid bloom strength', { ...visualDiagnostics, bloom: { ...visualDiagnostics.bloom, strength: -1 } }],
     [
       'invalid noise seed',
       { ...visualDiagnostics, noise: { ...visualDiagnostics.noise, seed: -1 } },

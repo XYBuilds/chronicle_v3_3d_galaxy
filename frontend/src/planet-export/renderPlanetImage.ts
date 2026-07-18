@@ -1,8 +1,13 @@
 import * as THREE from 'three'
-import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js'
-import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
-import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js'
-import { PERLIN_BLOOM_DEFAULTS, PERLIN_BLOOM_LAYER } from '@/three/perlinSelectiveBloom'
+import {
+  PERLIN_BLOOM_COMPOSITION,
+  PERLIN_BLOOM_DEFAULTS,
+  PERLIN_BLOOM_LAYER,
+  createPerlinBloomDeltaCompositor,
+  type PerlinBloomParams,
+  validatePerlinBloomParams,
+  withCameraLayer,
+} from '@/three/perlinBloomContract'
 import { createSelectionPlanet, type SelectionPlanetHandle } from '@/three/planet'
 import { planetNoiseSeed } from '@/three/planetAppearance'
 import { selectionPlanetRotationAxisForMovie } from '@/three/selectionPlanetRotation'
@@ -20,6 +25,8 @@ export type PlanetRenderOptions = {
   bloom: boolean
   renderMode: PlanetExportRenderMode
   sizeRoot: 2 | 3 | 4
+  /** Offline diagnostics only; page and production CLI always use shared defaults. */
+  bloomParamsOverride?: PerlinBloomParams
 }
 
 export type PlanetRenderDiagnostics = {
@@ -40,6 +47,13 @@ export type PlanetRenderDiagnostics = {
   }
   fixed_lightness: number
   fixed_chroma: number
+  bloom: {
+    enabled: boolean
+    composition: typeof PERLIN_BLOOM_COMPOSITION
+    strength: number
+    radius: number
+    threshold: number
+  }
   key_light: {
     enabled: boolean
     direction: [number, number, number]
@@ -105,7 +119,7 @@ export function capturePlanetRenderDiagnostics(
   movie: Movie,
   planet: SelectionPlanetHandle,
   camera: THREE.OrthographicCamera,
-  options: Pick<PlanetRenderOptions, 'sizeRoot' | 'padding'>,
+  options: Pick<PlanetRenderOptions, 'sizeRoot' | 'padding' | 'bloomParamsOverride'> & { bloom?: boolean },
 ): PlanetRenderDiagnostics {
   if (!Number.isSafeInteger(movie.id) || movie.id <= 0) {
     throw new Error('[PlanetExport] movie id must be a positive integer')
@@ -122,6 +136,7 @@ export function capturePlanetRenderDiagnostics(
 
   const appearance = planet.lastAppearance
   if (!appearance) throw new Error('[PlanetExport] planet appearance must be resolved before diagnostics')
+  const bloomParams = validatePerlinBloomParams(options.bloomParamsOverride ?? PERLIN_BLOOM_DEFAULTS)
   const scale = planet.mesh.scale
   const worldRadius = positive(scale.x, 'world radius')
   if (scale.y !== scale.x || scale.z !== scale.x) {
@@ -182,6 +197,13 @@ export function capturePlanetRenderDiagnostics(
     },
     fixed_lightness: serializableNumber(uniforms.uPerlinL.value as number, 'lightness'),
     fixed_chroma: serializableNumber(uniforms.uPerlinChroma.value as number, 'chroma'),
+    bloom: {
+      enabled: options.bloom ?? false,
+      composition: PERLIN_BLOOM_COMPOSITION,
+      strength: bloomParams.strength,
+      radius: bloomParams.radius,
+      threshold: bloomParams.threshold,
+    },
     key_light: {
       enabled: lightingEnabled === 1,
       direction: vectorTuple(lightDirection, 'key light direction'),
@@ -243,58 +265,21 @@ function renderAlphaPreservingBloom(
   camera: THREE.Camera,
   planet: THREE.Mesh,
   resolution: number,
+  params: PerlinBloomParams,
 ): void {
+  // The display framebuffer receives the base once. The shared GPU contract then
+  // adds only the planet-only composite minus its isolated RenderPass base.
   renderer.render(scene, camera)
   planet.layers.enable(PERLIN_BLOOM_LAYER)
-  const target = new THREE.WebGLRenderTarget(resolution, resolution, {
-    type: THREE.HalfFloatType,
-    format: THREE.RGBAFormat,
-  })
-  const composer = new EffectComposer(renderer, target)
-  composer.renderToScreen = false
-  const renderPass = new RenderPass(scene, camera)
-  renderPass.clearAlpha = 0
-  const bloomPass = new UnrealBloomPass(
-    new THREE.Vector2(resolution, resolution),
-    PERLIN_BLOOM_DEFAULTS.strength,
-    PERLIN_BLOOM_DEFAULTS.radius,
-    PERLIN_BLOOM_DEFAULTS.threshold,
-  )
-  composer.addPass(renderPass)
-  composer.addPass(bloomPass)
-  const previousMask = camera.layers.mask
-  camera.layers.set(PERLIN_BLOOM_LAYER)
-  composer.render()
-  camera.layers.mask = previousMask
-
-  const blend = new THREE.ShaderMaterial({
-    uniforms: { tBloom: { value: composer.readBuffer.texture } },
-    vertexShader: 'varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position.xy,0.,1.); }',
-    fragmentShader: 'uniform sampler2D tBloom; varying vec2 vUv; void main(){ vec3 bloom=texture2D(tBloom,vUv).rgb; gl_FragColor=vec4(bloom,max(max(bloom.r,bloom.g),bloom.b)); }',
-    transparent: true,
-    blending: THREE.CustomBlending,
-    blendSrc: THREE.OneFactor,
-    blendDst: THREE.OneFactor,
-    blendEquation: THREE.AddEquation,
-    blendSrcAlpha: THREE.OneFactor,
-    blendDstAlpha: THREE.OneFactor,
-    blendEquationAlpha: THREE.MaxEquation,
-    depthTest: false,
-    depthWrite: false,
-  })
-  const blendScene = new THREE.Scene()
-  const blendQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), blend)
-  blendScene.add(blendQuad)
-  const ortho = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1)
-  const previousAutoClear = renderer.autoClear
-  renderer.autoClear = false
-  renderer.render(blendScene, ortho)
-  renderer.autoClear = previousAutoClear
-
-  blend.dispose()
-  blendQuad.geometry.dispose()
-  composer.dispose()
-  target.dispose()
+  const delta = createPerlinBloomDeltaCompositor(renderer, scene, camera)
+  try {
+    delta.applyParams(params)
+    delta.setSize(resolution, resolution, 1)
+    withCameraLayer(camera, PERLIN_BLOOM_LAYER, () => delta.renderDelta())
+    delta.compositeDelta()
+  } finally {
+    delta.dispose()
+  }
 }
 
 export function positionExportCamera(camera: THREE.OrthographicCamera, halfExtent: number): void {
@@ -305,7 +290,8 @@ export function positionExportCamera(camera: THREE.OrthographicCamera, halfExten
 }
 
 export function renderPlanetImage(options: PlanetRenderOptions): PlanetRenderResult {
-  const { canvas, movie, meta, globalRadius, resolution, padding, bloom, renderMode, sizeRoot } = options
+  const { canvas, movie, meta, globalRadius, resolution, padding, bloom, renderMode, sizeRoot, bloomParamsOverride } = options
+  const bloomParams = validatePerlinBloomParams(bloomParamsOverride ?? PERLIN_BLOOM_DEFAULTS)
   const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, preserveDrawingBuffer: true })
   renderer.setPixelRatio(1)
   renderer.setSize(resolution, resolution, false)
@@ -322,7 +308,7 @@ export function renderPlanetImage(options: PlanetRenderOptions): PlanetRenderRes
   const diagnostics = capturePlanetRenderDiagnostics(movie, planet, camera, options)
   scene.add(planet.mesh)
   if (bloom) {
-    renderAlphaPreservingBloom(renderer, scene, camera, planet.mesh, resolution)
+    renderAlphaPreservingBloom(renderer, scene, camera, planet.mesh, resolution, bloomParams)
   } else {
     renderer.render(scene, camera)
   }

@@ -70,6 +70,16 @@ export function parseVisualDiagnostics(value: string): Record<string, unknown> {
   for (const field of ['rating', 'emission', 'fixed_lightness', 'fixed_chroma']) {
     diagnosticsNumber(root[field], field)
   }
+  const bloom = diagnosticsObject(root.bloom, 'bloom')
+  if (bloom.composition !== 'pure-bloom-delta-v1' || typeof bloom.enabled !== 'boolean') {
+    throw new CliError('visual diagnostics bloom contract is invalid', EXIT_CODES.render)
+  }
+  const bloomStrength = diagnosticsNumber(bloom.strength, 'bloom.strength')
+  const bloomRadius = diagnosticsNumber(bloom.radius, 'bloom.radius')
+  const bloomThreshold = diagnosticsNumber(bloom.threshold, 'bloom.threshold')
+  if (bloomStrength < 0 || bloomRadius < 0 || bloomRadius > 1 || bloomThreshold < 0) {
+    throw new CliError('visual diagnostics bloom parameters are invalid', EXIT_CODES.render)
+  }
   const emissionCurve = diagnosticsObject(root.emission_curve, 'emission_curve')
   if (typeof emissionCurve.model_version !== 'string' || emissionCurve.model_version.length === 0) {
     throw new CliError('visual diagnostics emission_curve.model_version must be non-empty string', EXIT_CODES.render)
@@ -205,6 +215,7 @@ export async function renderInBrowser(args: ExportArgs, source: DataSource, root
       bloom: args.bloom,
       sizeRoot: String(args.sizeRoot),
       renderMode: args.renderMode,
+      ...(args.bloomStrength === undefined ? {} : { bloomStrength: String(args.bloomStrength) }),
     })
     await page.goto(new URL(`planet-export.html?${query.toString()}`, serverUrl).toString(), { waitUntil: 'networkidle', timeout: 120_000 })
     await page.waitForFunction(() => document.body.dataset.exportReady === '1' || document.body.dataset.exportError !== undefined, undefined, { timeout: 120_000 })

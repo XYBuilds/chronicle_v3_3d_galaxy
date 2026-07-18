@@ -1,11 +1,19 @@
 import { promises as fs } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import sharp from 'sharp'
 import { afterAll, describe, expect, it } from 'vitest'
+import { assertPureBloomCore, BLOOM_CORE_PROOF } from './bloomProof.js'
 import { run } from './cli.js'
 import { inspectPng } from './png.js'
 
 const temporaryDirectories: string[] = []
+
+async function rgba(file: string): Promise<{ data: Buffer; width: number; height: number }> {
+  const image = await sharp(file).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
+  if (image.info.channels !== 4) throw new Error('expected RGBA PNG')
+  return { data: image.data, width: image.info.width, height: image.info.height }
+}
 
 function captureIo(): {
   io: Pick<typeof process, 'stdout' | 'stderr'>
@@ -26,23 +34,24 @@ afterAll(async () => {
 })
 
 describe('Playwright Chromium planet export', () => {
-  it('exports shader and 3000px basic safe transparent PNGs', async () => {
+  it('exports Bloom OFF/ON shader and 3000px basic safe transparent PNGs', async () => {
     const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'planet-export-browser-'))
     temporaryDirectories.push(directory)
     const fixture = path.resolve(import.meta.dirname, '../fixtures/galaxy.minimal.json')
 
-    for (const { renderMode, resolution } of [
-      { renderMode: 'shader', resolution: 128 },
-      { renderMode: 'basic', resolution: 3000 },
+    for (const { renderMode, resolution, bloom } of [
+      { renderMode: 'shader', resolution: 128, bloom: 'off' },
+      { renderMode: 'shader', resolution: 128, bloom: 'on' },
+      { renderMode: 'basic', resolution: 3000, bloom: 'off' },
     ] as const) {
-      const output = path.join(directory, `planet-${renderMode}.png`)
+      const output = path.join(directory, `planet-${renderMode}-${bloom}.png`)
       const capture = captureIo()
       const exitCode = await run([
         '--movie-id', '1',
         '--output', output,
         '--resolution', String(resolution),
         '--padding', '0.08',
-        '--bloom', 'off',
+        '--bloom', bloom,
         '--render-mode', renderMode,
         '--data-file', fixture,
       ], capture.io)
@@ -71,13 +80,54 @@ describe('Playwright Chromium planet export', () => {
         data_version: 'planet-export-fixture-v1',
         resolution,
         padding: 0.08,
-        bloom: 'off',
+        bloom,
         render_mode: renderMode,
       })
       expect(metadata.chromium_version).toEqual(expect.any(String))
       expect(metadata.webgl_renderer).toEqual(expect.any(String))
+      expect(metadata.visual_diagnostics).toMatchObject({
+        bloom: { enabled: bloom === 'on', composition: 'pure-bloom-delta-v1', strength: 0.005, radius: 1, threshold: 0 },
+      })
     }
   }, 240_000)
+
+  it('keeps a real Chromium nonzero Bloom core below the doubled-base regression while adding measurable light', async () => {
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'planet-export-browser-pure-bloom-'))
+    temporaryDirectories.push(directory)
+    const fixture = path.resolve(import.meta.dirname, '../fixtures/galaxy.minimal.json')
+    const off = path.join(directory, 'off.png')
+    const on = path.join(directory, 'on.png')
+
+    for (const argv of [
+      ['--movie-id', '1', '--output', off, '--resolution', '128', '--padding', '0.08', '--bloom', 'off', '--render-mode', 'shader', '--data-file', fixture],
+      ['--movie-id', '1', '--output', on, '--resolution', '128', '--padding', '0.08', '--bloom', 'on', '--render-mode', 'shader', '--data-file', fixture],
+    ]) {
+      expect(await run(argv)).toBe(0)
+    }
+
+    const stats = assertPureBloomCore(await rgba(off), await rgba(on))
+    expect(stats.on_to_off_mean_luma_ratio).toBeLessThanOrEqual(BLOOM_CORE_PROOF.maxOnToOffMeanLumaRatio)
+    expect(stats.positive_luma_fraction).toBeGreaterThanOrEqual(BLOOM_CORE_PROOF.minPositiveCoreLumaFraction)
+  }, 120_000)
+
+  it('exports Bloom ON strength=0 with byte-identical visible RGB to Bloom OFF', async () => {
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'planet-export-browser-zero-bloom-'))
+    temporaryDirectories.push(directory)
+    const fixture = path.resolve(import.meta.dirname, '../fixtures/galaxy.minimal.json')
+    const off = path.join(directory, 'off.png')
+    const zero = path.join(directory, 'zero.png')
+
+    for (const argv of [
+      ['--movie-id', '1', '--output', off, '--resolution', '128', '--padding', '0.08', '--bloom', 'off', '--render-mode', 'shader', '--data-file', fixture],
+      ['--movie-id', '1', '--output', zero, '--resolution', '128', '--padding', '0.08', '--bloom', 'on', '--bloom-strength', '0', '--render-mode', 'shader', '--data-file', fixture],
+    ]) {
+      expect(await run(argv)).toBe(0)
+    }
+
+    expect(await fs.readFile(zero)).toEqual(await fs.readFile(off))
+    const metadata = JSON.parse(await fs.readFile(`${zero}.render.json`, 'utf8')) as { visual_diagnostics: { bloom: unknown } }
+    expect(metadata.visual_diagnostics.bloom).toEqual({ enabled: true, composition: 'pure-bloom-delta-v1', strength: 0, radius: 1, threshold: 0 })
+  }, 120_000)
 
   it('classifies an unknown movie as a data failure without artifacts', async () => {
     const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'planet-export-browser-failure-'))

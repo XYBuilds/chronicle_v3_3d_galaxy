@@ -16,7 +16,7 @@ todos:
     status: complete
   - id: p40-worker-retirement
     content: 40.5 退役 OG Worker Today KV/meta/PNG 路由并固定旧 URL 为 404
-    status: pending
+    status: complete
   - id: p40-tests-docs
     content: 40.6 完成回归测试、locale parity、现行 SSOT 与中英文 README 对齐
     status: pending

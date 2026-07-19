@@ -8,12 +8,6 @@
     "phaseIndexSkipped": "Index de recherche — ignoré",
     "phaseIndexFailed": "Index de recherche — échec"
   },
-  "cover": {
-    "title": "the movie cosmos",
-    "start": "Commencer",
-    "startAriaLabel": "Commencer — entrer dans la galaxie et initialiser les graphismes",
-    "todayFocusAriaLabel": "The Movie Today : {{title}}"
-  },
   "galaxyData": {
     "downloadProgress": "Téléchargé {{downloadedMb}} / {{totalMb}}",
     "downloadProgressPartial": "Téléchargé {{downloadedMb}}",
@@ -90,7 +84,7 @@
       },
       {
         "heading": "Utilisation",
-        "body": "Après le chargement : couverture → touchez le globe central pour The Movie Today (un titre par jour, UTC).\n\nFaites glisser pour faire tourner la vue. Sans Espace : la molette ou la frise vous déplace sur la profondeur des années de sortie. En macro, maintenez Espace et la molette pour vous rapprocher temporairement ; relâchez Espace pour réinitialiser la distance. Survolez pour un aperçu d’une ligne.\n\nRecherchez titres, personnes ou genres dans la barre ; Échap remonte la recherche, le panneau latéral puis le focus. Cliquez sur un film pour le focus et la fiche ; cliquez sur les voisins pour changer."
+        "body": "Après le chargement, explorez directement.\n\nFaites glisser pour faire tourner la vue. Sans Espace : la molette ou la frise vous déplace sur la profondeur des années de sortie. En macro, maintenez Espace et la molette pour vous rapprocher temporairement ; relâchez Espace pour réinitialiser la distance. Survolez pour un aperçu d’une ligne.\n\nRecherchez titres, personnes ou genres dans la barre ; Échap remonte la recherche, le panneau latéral puis le focus. Cliquez sur un film pour le focus et la fiche ; cliquez sur les voisins pour changer."
       },
       {
         "heading": "Données et matériel",

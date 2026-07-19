@@ -1,7 +1,5 @@
-import { resolveTodayMovieId } from '@/data/loadToday'
 import { replaceRoutePath } from '@/lib/routeActions'
 import { buildHomePath, type ParsedRoute } from '@/lib/routes'
-import { useCoverModeStore } from '@/store/coverModeStore'
 import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
 import type { Movie } from '@/types/galaxy'
 
@@ -17,29 +15,12 @@ export function normalizeUnknownRoute(route: ParsedRoute, search: string): Parse
   return { kind: 'home' }
 }
 
-export function clearCoverAndFocus(): void {
-  useCoverModeStore.setState({
-    coverMode: false,
-    todayMovieId: null,
-    exitCoverPreserveOrbit: false,
-  })
+export function clearSelection(): void {
   useGalaxyInteractionStore.setState({ selectedMovieId: null })
 }
 
 export function applyMovieFocusToStores(movieId: number): void {
-  useCoverModeStore.setState({
-    coverMode: false,
-    todayMovieId: null,
-    exitCoverPreserveOrbit: false,
-  })
   useGalaxyInteractionStore.setState({ selectedMovieId: movieId })
-}
-
-export async function applyCoverRouteFromToday(movies: Movie[]): Promise<number> {
-  useGalaxyInteractionStore.setState({ selectedMovieId: null })
-  const { movieId } = await resolveTodayMovieId(movies)
-  useCoverModeStore.getState().setCover(movieId)
-  return movieId
 }
 
 export interface ApplyParsedRouteOptions {
@@ -49,10 +30,10 @@ export interface ApplyParsedRouteOptions {
 }
 
 /** URL → store (§5.8 T1–T3, popstate, R2). Caller sets `routeSyncGuard.suppressStoreToUrl` when needed. */
-export async function applyParsedRouteToStores(
+export function applyParsedRouteToStores(
   rawRoute: ParsedRoute,
   options: ApplyParsedRouteOptions,
-): Promise<void> {
+): void {
   const { movies } = options
   const search = options.search ?? window.location.search
   const route = normalizeUnknownRoute(rawRoute, search)
@@ -62,37 +43,21 @@ export async function applyParsedRouteToStores(
     if (!movieExistsInGalaxy(movies, id)) {
       console.warn('[route] movie not in galaxy (R2)', { id })
       replaceRoutePath(buildHomePath(search))
-      clearCoverAndFocus()
-      await applyCoverRouteFromToday(movies)
+      clearSelection()
       return
     }
     applyMovieFocusToStores(id)
     return
   }
 
-  await applyCoverRouteFromToday(movies)
+  clearSelection()
 }
 
-export type InitialRouteBootResult = 'movie' | 'cover'
-
-/** R4 initial boot — movie deep link skips cover when id exists in galaxy (§5.8 T1/T2). */
+/** Initial boot applies the parsed home/movie state without any Today fallback. */
 export function runInitialRouteBoot(
   rawRoute: ParsedRoute,
   movies: Movie[],
   search = window.location.search,
-): InitialRouteBootResult {
-  const route = normalizeUnknownRoute(rawRoute, search)
-
-  if (route.kind === 'movie' && route.movieId != null && movieExistsInGalaxy(movies, route.movieId)) {
-    applyMovieFocusToStores(route.movieId)
-    return 'movie'
-  }
-
-  if (route.kind === 'movie' && route.movieId != null) {
-    console.warn('[route] initial movie missing in galaxy (R2) → cover boot', { id: route.movieId })
-    replaceRoutePath(buildHomePath(search))
-  }
-
-  useGalaxyInteractionStore.setState({ selectedMovieId: null })
-  return 'cover'
+): void {
+  applyParsedRouteToStores(rawRoute, { movies, search })
 }

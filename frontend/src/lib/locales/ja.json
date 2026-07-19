@@ -8,12 +8,6 @@
     "phaseIndexSkipped": "検索インデックス — スキップ",
     "phaseIndexFailed": "検索インデックス — 失敗"
   },
-  "cover": {
-    "title": "the movie cosmos",
-    "start": "開始",
-    "startAriaLabel": "開始 — ギャラクシーへ進みグラフィックスを初期化",
-    "todayFocusAriaLabel": "The Movie Today: {{title}}"
-  },
   "galaxyData": {
     "downloadProgress": "ダウンロード済み {{downloadedMb}} / {{totalMb}}",
     "downloadProgressPartial": "ダウンロード済み {{downloadedMb}}",
@@ -90,7 +84,7 @@
       },
       {
         "heading": "使い方",
-        "body": "読み込み後：カバー → 中央の球をタップして The Movie Today（UTC で日替わりの 1 本）。\n\nドラッグで視点を回転。Space なし：ホイールかタイムラインで公開年の奥行き移動。マクロ時は Space＋ホイールで一時的に寄る、Space を離すと距離が戻る。ホバーで一行プレビュー。\n\n上部バーで作品名・人物・ジャンルを検索；ESC で検索 → シート → フォーカスの順に戻る。クリックでフォーカスとサイドシート、隣の星で切り替え。"
+        "body": "読み込み後はそのまま探索できます。\n\nドラッグで視点を回転。Space なし：ホイールかタイムラインで公開年の奥行き移動。マクロ時は Space＋ホイールで一時的に寄る、Space を離すと距離が戻る。ホバーで一行プレビュー。\n\n上部バーで作品名・人物・ジャンルを検索；ESC で検索 → シート → フォーカスの順に戻る。クリックでフォーカスとサイドシート、隣の星で切り替え。"
       },
       {
         "heading": "データと環境",

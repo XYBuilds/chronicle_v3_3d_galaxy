@@ -1,9 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { replaceRoutePath } from '@/lib/routeActions'
-import { galaxyMinimalFixture } from '@/types/galaxyMinimalFixture'
-import { useCoverModeStore } from '@/store/coverModeStore'
 import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
+import { galaxyMinimalFixture } from '@/types/galaxyMinimalFixture'
 
 import {
   applyParsedRouteToStores,
@@ -15,85 +14,73 @@ vi.mock('@/lib/routeActions', () => ({
   replaceRoutePath: vi.fn(),
 }))
 
-vi.mock('@/data/loadToday', () => ({
-  resolveTodayMovieId: vi.fn(async () => ({
-    movieId: 42,
-    payload: null,
-    usedFallback: true,
-  })),
-}))
-
 const movies = [...galaxyMinimalFixture.movies]
 
-function resetStores(): void {
+function resetStore(): void {
   useGalaxyInteractionStore.setState({ selectedMovieId: null })
-  useCoverModeStore.setState({
-    coverMode: false,
-    todayMovieId: null,
-    exitCoverPreserveOrbit: false,
-  })
 }
 
-describe('routeControllerSync (§5.8 T1–T3)', () => {
+describe('routeControllerSync home idle and movie focus', () => {
   beforeEach(() => {
     vi.stubGlobal('window', { location: { pathname: '/', search: '' } })
-    resetStores()
+    resetStore()
     vi.mocked(replaceRoutePath).mockClear()
   })
 
   afterEach(() => {
     vi.unstubAllGlobals()
+    resetStore()
   })
 
-  it('T1: /movie/:id (exists) → focus, cover off', async () => {
-    await applyParsedRouteToStores({ kind: 'movie', movieId: 1 }, { movies, search: '' })
+  it('focuses an in-galaxy movie without a fallback request', () => {
+    applyParsedRouteToStores({ kind: 'movie', movieId: 1 }, { movies, search: '' })
     expect(useGalaxyInteractionStore.getState().selectedMovieId).toBe(1)
-    expect(useCoverModeStore.getState().coverMode).toBe(false)
     expect(replaceRoutePath).not.toHaveBeenCalled()
   })
 
-  it('T2: /movie/:id (missing) → replace home + cover boot', async () => {
-    await applyParsedRouteToStores({ kind: 'movie', movieId: 999_999_999 }, { movies, search: '' })
+  it('canonicalizes a missing movie to home and leaves the galaxy idle', () => {
+    applyParsedRouteToStores({ kind: 'movie', movieId: 999_999_999 }, { movies, search: '' })
     expect(replaceRoutePath).toHaveBeenCalledWith('/')
     expect(useGalaxyInteractionStore.getState().selectedMovieId).toBeNull()
-    expect(useCoverModeStore.getState().coverMode).toBe(true)
-    expect(useCoverModeStore.getState().todayMovieId).toBe(42)
   })
 
-  it('T3: /today → cover + todayId, no focus', async () => {
-    await applyParsedRouteToStores({ kind: 'today' }, { movies })
+  it('clears a prior selection for home', () => {
+    useGalaxyInteractionStore.setState({ selectedMovieId: 1 })
+    applyParsedRouteToStores({ kind: 'home' }, { movies })
     expect(useGalaxyInteractionStore.getState().selectedMovieId).toBeNull()
-    expect(useCoverModeStore.getState().coverMode).toBe(true)
-    expect(useCoverModeStore.getState().todayMovieId).toBe(42)
   })
 
-  it('R1: unknown path normalizes to home route apply', () => {
+  it('normalizes an unknown path to home idle while retaining query parameters', () => {
     const normalized = normalizeUnknownRoute({ kind: 'unknown' }, '?lang=zh')
     expect(normalized).toEqual({ kind: 'home' })
     expect(replaceRoutePath).toHaveBeenCalledWith('/?lang=zh')
   })
 })
 
-describe('runInitialRouteBoot (R4)', () => {
+describe('runInitialRouteBoot', () => {
   beforeEach(() => {
     vi.stubGlobal('window', { location: { pathname: '/', search: '' } })
-    resetStores()
+    resetStore()
     vi.mocked(replaceRoutePath).mockClear()
   })
 
   afterEach(() => {
     vi.unstubAllGlobals()
-    resetStores()
+    resetStore()
   })
 
-  it('returns movie when deep-link id exists (T1 boot)', () => {
-    expect(runInitialRouteBoot({ kind: 'movie', movieId: 1 }, movies)).toBe('movie')
+  it('initially focuses a known movie deep link', () => {
+    runInitialRouteBoot({ kind: 'movie', movieId: 1 }, movies)
     expect(useGalaxyInteractionStore.getState().selectedMovieId).toBe(1)
-    expect(useCoverModeStore.getState().coverMode).toBe(false)
   })
 
-  it('returns cover and replaces home when id missing (T2 boot)', () => {
-    expect(runInitialRouteBoot({ kind: 'movie', movieId: 999_999_999 }, movies, '')).toBe('cover')
+  it('initially enters idle for home and never resolves today.json', () => {
+    runInitialRouteBoot({ kind: 'home' }, movies)
+    expect(useGalaxyInteractionStore.getState().selectedMovieId).toBeNull()
+  })
+
+  it('initially canonicalizes a missing deep link to idle', () => {
+    runInitialRouteBoot({ kind: 'movie', movieId: 999_999_999 }, movies, '')
     expect(replaceRoutePath).toHaveBeenCalledWith('/')
     expect(useGalaxyInteractionStore.getState().selectedMovieId).toBeNull()
   })

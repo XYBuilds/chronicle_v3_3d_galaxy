@@ -8,12 +8,6 @@
     "phaseIndexSkipped": "搜索索引 — 已跳过",
     "phaseIndexFailed": "搜索索引 — 失败"
   },
-  "cover": {
-    "title": "the movie cosmos",
-    "start": "开始",
-    "startAriaLabel": "开始 — 进入星系并初始化图形",
-    "todayFocusAriaLabel": "The Movie Today：{{title}}"
-  },
   "galaxyData": {
     "downloadProgress": "已下载 {{downloadedMb}} / {{totalMb}}",
     "downloadProgressPartial": "已下载 {{downloadedMb}}",
@@ -90,7 +84,7 @@
       },
       {
         "heading": "使用",
-        "body": "加载完 → 封面 → 点正中星球 → The Movie Today（UTC 每日一部）。\n\n拖拽转视角；不按空格时用滚轮或时间轴沿上映年纵深；宏观漫游时按住空格再滚轮可临时推近，松空格观察距离复位；悬停可看一行摘要。\n\n顶栏搜片名、影人、流派；ESC 逐级退出搜索、侧栏、聚焦。浏览态单击进聚焦并开侧栏，可点邻星切换。"
+        "body": "加载完成后即可浏览。\n\n拖拽转视角；不按空格时用滚轮或时间轴沿上映年纵深；宏观漫游时按住空格再滚轮可临时推近，松空格观察距离复位；悬停可看一行摘要。\n\n顶栏搜片名、影人、流派；ESC 逐级退出搜索、侧栏、聚焦。浏览态单击进聚焦并开侧栏，可点邻星切换。"
       },
       {
         "heading": "数据与设备",

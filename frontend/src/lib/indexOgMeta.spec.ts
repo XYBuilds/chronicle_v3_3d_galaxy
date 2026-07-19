@@ -20,6 +20,6 @@ describe('apex index.html OG meta (P34.6 / P34.9)', () => {
   it('documents Worker HTML injection for deep links', () => {
     const html = fs.readFileSync(INDEX_HTML_PATH, 'utf-8')
     expect(html).toMatch(/\/movie\/\*.*Worker/i)
-    expect(html).toMatch(/\/today.*Worker/i)
+    expect(html).not.toMatch(/\/today/i)
   })
 })

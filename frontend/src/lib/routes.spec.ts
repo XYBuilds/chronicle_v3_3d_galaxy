@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest'
 import {
   buildHomePath,
   buildMoviePath,
-  buildTodayPath,
   parseLogicalPath,
   parseMovieIdSegment,
   parseRoute,
@@ -30,10 +29,10 @@ describe('parseMovieIdSegment', () => {
 })
 
 describe('parseLogicalPath', () => {
-  it('maps root and /today', () => {
+  it('maps root and treats /today as unknown', () => {
     expect(parseLogicalPath('/')).toEqual({ kind: 'home' })
-    expect(parseLogicalPath('/today')).toEqual({ kind: 'today' })
-    expect(parseLogicalPath('/today/')).toEqual({ kind: 'today' })
+    expect(parseLogicalPath('/today')).toEqual({ kind: 'unknown' })
+    expect(parseLogicalPath('/today/')).toEqual({ kind: 'unknown' })
   })
 
   it('maps valid /movie/:id', () => {
@@ -55,7 +54,7 @@ describe('parseRoute with BASE_URL subpath', () => {
       parseRoute({ pathname: '/chronicle/movie/42', search: '' }, { basePath: REPO_BASE }),
     ).toEqual({ kind: 'movie', movieId: 42 })
     expect(parseRoute({ pathname: '/chronicle/today', search: '' }, { basePath: REPO_BASE })).toEqual({
-      kind: 'today',
+      kind: 'unknown',
     })
     expect(parseRoute({ pathname: '/chronicle/', search: '' }, { basePath: REPO_BASE })).toEqual({
       kind: 'home',
@@ -76,10 +75,8 @@ describe('build*Path query preservation (R5)', () => {
     )
   })
 
-  it('buildTodayPath and buildHomePath keep full search', () => {
-    expect(buildTodayPath(search)).toBe(`/today${search}`)
+  it('buildHomePath keeps full search', () => {
     expect(buildHomePath(search)).toBe(`/${search}`)
-    expect(buildTodayPath(search, { basePath: REPO_BASE })).toBe(`/chronicle/today${search}`)
     expect(buildHomePath(search, { basePath: REPO_BASE })).toBe(`/chronicle${search}`)
   })
 

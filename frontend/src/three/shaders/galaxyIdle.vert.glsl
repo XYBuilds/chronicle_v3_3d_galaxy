@@ -34,9 +34,6 @@ uniform float uIdleZFadeMode;
 uniform float uIdleZFadeOutsideAlpha;
 /** P32.3 — 0…1 macro browse blend for P26.3 near + P27.4 Z idle fades (1 = full strength, 0 = off). */
 uniform float uIdleMacroFadesBlend;
-uniform float uCoverMode;
-uniform float uCoverTodayInstanceId;
-uniform float uCoverActiveSizeBoost;
 
 /**
  * P26.1 — packed instance attribute. vec4 (16-byte stride) for Apple Metal / ANGLE-Metal
@@ -56,14 +53,7 @@ void main() {
   float aZ = instanceMatrix[3][2];
   vec3 starWorld = vec3(aX, aY, aZ);
   bool exemptIdleNearFade =
-    ((uFocusedInstanceId >= 0) && (gl_InstanceID == uFocusedInstanceId))
-    || (uCoverMode > 0.5 && float(gl_InstanceID) == uCoverTodayInstanceId);
-  if (uCoverMode > 0.5 && float(gl_InstanceID) != uCoverTodayInstanceId) {
-    gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
-    vColor = vec3(0.0);
-    vNearFadeAlpha = 1.0;
-    return;
-  }
+    (uFocusedInstanceId >= 0) && (gl_InstanceID == uFocusedInstanceId);
   float zHi = uZCurrent + uZVisWindow;
   float W = uZVisWindow * 0.2;
 
@@ -84,9 +74,6 @@ void main() {
 
   bool isFocused = (uFocusedInstanceId >= 0) && (gl_InstanceID == uFocusedInstanceId);
   float sIdle = (1.0 - inFocus) * uSizeScale * uBgSizeMul * aSize;
-  if (uCoverMode > 0.5 && float(gl_InstanceID) == uCoverTodayInstanceId) {
-    sIdle *= uCoverActiveSizeBoost;
-  }
   if (isFocused) {
     sIdle = 0.0;
   }

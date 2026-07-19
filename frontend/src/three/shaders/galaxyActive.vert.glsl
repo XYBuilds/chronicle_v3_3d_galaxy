@@ -24,9 +24,6 @@ uniform sampler2D uSelectionMask;
 uniform int uSelectionMode;
 uniform int uSelectionAtlasWidth;
 uniform int uSelectionAtlasHeight;
-uniform float uCoverMode;
-uniform float uCoverTodayInstanceId;
-uniform float uCoverActiveSizeBoost;
 
 /**
  * P26.1 — packed instance attribute. vec4 (16-byte stride) for Apple Metal / ANGLE-Metal
@@ -42,12 +39,6 @@ void main() {
   float voteNorm = aHueVoteSize.y;
   float aSize = aHueVoteSize.z;
   float aZ = instanceMatrix[3][2];
-  if (uCoverMode > 0.5 && float(gl_InstanceID) != uCoverTodayInstanceId) {
-    gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
-    vColor = vec3(0.0);
-    vFocusAlphaMult = 1.0;
-    return;
-  }
   float zHi = uZCurrent + uZVisWindow;
   float W = uZVisWindow * 0.2;
 
@@ -68,9 +59,6 @@ void main() {
 
   bool isFocused = (uFocusedInstanceId >= 0) && (gl_InstanceID == uFocusedInstanceId);
   float sActive = inFocus * uSizeScale * uActiveSizeMul * aSize;
-  if (uCoverMode > 0.5 && float(gl_InstanceID) == uCoverTodayInstanceId) {
-    sActive *= uCoverActiveSizeBoost;
-  }
   if (isFocused) {
     sActive = 0.0;
   }

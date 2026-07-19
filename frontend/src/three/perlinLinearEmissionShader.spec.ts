@@ -85,8 +85,8 @@ describe('Perlin linear-emission shader contract', () => {
 
     expect(emissions).toHaveLength(4)
     expect(emissions[0]).toBeCloseTo(intensityMin, 12)
-    expect(emissions[1]).toBeCloseTo(0.09456, 12)
-    expect(emissions[2]).toBeCloseTo(0.1275, 12)
+    expect(emissions[1]).toBeCloseTo(0.1464, 12)
+    expect(emissions[2]).toBeCloseTo(0.195, 12)
     expect(emissions[3]).toBeCloseTo(intensityMax, 12)
 
     for (const lambert of [0, 0.7]) {
@@ -103,13 +103,20 @@ describe('Perlin linear-emission shader contract', () => {
       keyByRating.forEach((key) => expectRgbClose(key, keyByRating[0]!))
     }
 
-    const hdrBase: LinearRgb = [0.9, 0.8, 0.7]
+    const inGamutBase: LinearRgb = [0.9, 0.8, 0.7]
+    const hdrBase: LinearRgb = [1.25, 0.8, 0.7]
     const hdrLambert = 0.7
+    const inGamutLinear = litLinear(inGamutBase, emissions[3]!, keyLightIntensity, hdrLambert)
     const hdrLinear = litLinear(hdrBase, emissions[3]!, keyLightIntensity, hdrLambert)
-    const expectedHdrGreen = hdrBase[1] * (emissions[3]! + keyLightIntensity * hdrLambert)
+    const expectedInGamutGreen = inGamutBase[1] * (emissions[3]! + keyLightIntensity * hdrLambert)
+    const expectedHdrRed = hdrBase[0] * (emissions[3]! + keyLightIntensity * hdrLambert)
 
-    expect(hdrBase.every((channel) => channel <= 1)).toBe(true)
-    expect(hdrLinear[1]).toBeGreaterThan(1)
-    expect(hdrLinear[1]).toBeCloseTo(expectedHdrGreen, 12)
+    expect(inGamutBase.every((channel) => channel <= 1)).toBe(true)
+    expect(inGamutLinear[1]).toBeLessThanOrEqual(1)
+    expect(inGamutLinear[1]).toBeCloseTo(expectedInGamutGreen, 12)
+    // OKLab-to-linear conversion can legitimately produce an out-of-gamut channel.
+    expect(hdrBase.some((channel) => channel > 1)).toBe(true)
+    expect(hdrLinear[0]).toBeGreaterThan(1)
+    expect(hdrLinear[0]).toBeCloseTo(expectedHdrRed, 12)
   })
 })

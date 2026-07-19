@@ -52,12 +52,24 @@ describe('planet export visual configuration', () => {
     expect(repeatedHash).toBe(currentHash)
     expect(currentHash).not.toBe('28407a6ebef33b2749fdd5531158540f2c7ff5214f647f0a7de464b087185dcb')
 
+    for (const bloomChanged of [
+      { enabled: true, strength: 0.005, radius: 1, threshold: 0 },
+      { enabled: true, strength: 0.01, radius: 0.5, threshold: 0 },
+      { enabled: true, strength: 0.01, radius: 1, threshold: 0.05 },
+    ]) {
+      expect(sha256(planetExportVisualConfigInput(currentPlanetConfig, 3, bloomChanged))).not.toBe(currentHash)
+    }
+
+    const schemaChanged = parsePlanetVisualConfig(currentPlanetConfig)
+    schemaChanged.schemaVersion = 4
+    expect(sha256(planetExportVisualConfigInput(JSON.stringify(schemaChanged), 3))).not.toBe(currentHash)
+
     const emissionChanged = parsePlanetVisualConfig(currentPlanetConfig)
     emissionChanged.focus.emission.intensityMax = 0.61
     expect(sha256(planetExportVisualConfigInput(JSON.stringify(emissionChanged), 3))).not.toBe(sha256(currentPageConfig))
 
     const exponentChanged = parsePlanetVisualConfig(currentPlanetConfig)
-    exponentChanged.focus.emission.exponent = 2
+    exponentChanged.focus.emission.exponent = 3
     expect(sha256(planetExportVisualConfigInput(JSON.stringify(exponentChanged), 3))).not.toBe(sha256(currentPageConfig))
 
     const modelChanged = parsePlanetVisualConfig(currentPlanetConfig)

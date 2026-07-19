@@ -39,10 +39,10 @@ describe('Playwright Chromium planet export', () => {
     temporaryDirectories.push(directory)
     const fixture = path.resolve(import.meta.dirname, '../fixtures/galaxy.minimal.json')
 
-    for (const { renderMode, resolution, bloom } of [
-      { renderMode: 'shader', resolution: 128, bloom: 'off' },
-      { renderMode: 'shader', resolution: 128, bloom: 'on' },
-      { renderMode: 'basic', resolution: 3000, bloom: 'off' },
+    for (const { renderMode, resolution, padding, bloom } of [
+      { renderMode: 'shader', resolution: 128, padding: 0.35, bloom: 'off' },
+      { renderMode: 'shader', resolution: 128, padding: 0.35, bloom: 'on' },
+      { renderMode: 'basic', resolution: 3000, padding: 0.08, bloom: 'off' },
     ] as const) {
       const output = path.join(directory, `planet-${renderMode}-${bloom}.png`)
       const capture = captureIo()
@@ -50,7 +50,7 @@ describe('Playwright Chromium planet export', () => {
         '--movie-id', '1',
         '--output', output,
         '--resolution', String(resolution),
-        '--padding', '0.08',
+        '--padding', String(padding),
         '--bloom', bloom,
         '--render-mode', renderMode,
         '--data-file', fixture,
@@ -79,14 +79,14 @@ describe('Playwright Chromium planet export', () => {
         tmdb_id: 1,
         data_version: 'planet-export-fixture-v1',
         resolution,
-        padding: 0.08,
+        padding,
         bloom,
         render_mode: renderMode,
       })
       expect(metadata.chromium_version).toEqual(expect.any(String))
       expect(metadata.webgl_renderer).toEqual(expect.any(String))
       expect(metadata.visual_diagnostics).toMatchObject({
-        bloom: { enabled: bloom === 'on', composition: 'pure-bloom-delta-v1', strength: 0.005, radius: 1, threshold: 0 },
+        bloom: { enabled: bloom === 'on', composition: 'pure-bloom-delta-v1', strength: 0.01, radius: 1, threshold: 0 },
       })
     }
   }, 240_000)
@@ -99,8 +99,8 @@ describe('Playwright Chromium planet export', () => {
     const on = path.join(directory, 'on.png')
 
     for (const argv of [
-      ['--movie-id', '1', '--output', off, '--resolution', '128', '--padding', '0.08', '--bloom', 'off', '--render-mode', 'shader', '--data-file', fixture],
-      ['--movie-id', '1', '--output', on, '--resolution', '128', '--padding', '0.08', '--bloom', 'on', '--render-mode', 'shader', '--data-file', fixture],
+      ['--movie-id', '1', '--output', off, '--resolution', '128', '--padding', '0.35', '--bloom', 'off', '--render-mode', 'shader', '--data-file', fixture],
+      ['--movie-id', '1', '--output', on, '--resolution', '128', '--padding', '0.35', '--bloom', 'on', '--render-mode', 'shader', '--data-file', fixture],
     ]) {
       expect(await run(argv)).toBe(0)
     }

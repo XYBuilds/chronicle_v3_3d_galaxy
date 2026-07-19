@@ -21,8 +21,8 @@ import {
 const bloomContractSource = readFileSync(fileURLToPath(new URL('./perlinBloomContract.ts', import.meta.url)), 'utf8')
 
 describe('perlinSelectiveBloom', () => {
-  it('exports the shipped pure-delta baseline without advancing visual tuning', () => {
-    expect(PERLIN_BLOOM_DEFAULTS).toEqual({ enabled: true, strength: 0.005, radius: 1, threshold: 0 })
+  it('exports the selected P39.11 pure-delta defaults without changing composition semantics', () => {
+    expect(PERLIN_BLOOM_DEFAULTS).toEqual({ enabled: true, strength: 0.01, radius: 1, threshold: 0 })
     expect(perlinBloomVisualConfigInput()).toBe(JSON.stringify({ composition: PERLIN_BLOOM_COMPOSITION, ...PERLIN_BLOOM_DEFAULTS }))
   })
 

@@ -70,7 +70,7 @@ const palette: Meta['genre_palette'] = {
 describe('planet visual defaults', () => {
   it('serializes the versioned Focus visual configuration for metadata hashing', () => {
     expect(PLANET_VISUAL_DEFAULTS).toEqual({
-      schemaVersion: 4,
+      schemaVersion: 5,
       geometry: { detail: 8 },
       activeShell: { sizeScale: 0.5, activeSizeMultiplier: 0.012 },
       noise: { scale: 2.35, octaves: 4, persistence: 0.52 },
@@ -92,7 +92,7 @@ describe('planet visual defaults', () => {
         chroma: 0.15,
         emission: {
           modelVersion: 'vote-average-power-clamped-v1',
-          exponent: 3,
+          exponent: 2,
           intensityMin: 0.06,
           intensityMax: 0.6,
         },
@@ -108,7 +108,7 @@ describe('planet visual defaults', () => {
       lighting: {
         enabled: true,
         direction: [0.7, 0.7, -0.14],
-        keyLightIntensity: 1.0,
+        keyLightIntensity: 0.35,
         flatShadingMix: 0.8,
       },
       material: {
@@ -126,12 +126,12 @@ describe('planet visual defaults', () => {
 describe('Focus emission curve', () => {
   const min = 0.06
   const max = 0.6
-  const exponent = 3
+  const exponent = 2
 
-  it('clamps finite ratings and uses the configured cubic endpoints', () => {
+  it('clamps finite ratings and uses the configured square-law endpoints', () => {
     expect(focusEmissionIntensityFromVoteAverage(0, min, max, exponent)).toBe(min)
-    expect(focusEmissionIntensityFromVoteAverage(4, min, max, exponent)).toBeCloseTo(0.09456, 12)
-    expect(focusEmissionIntensityFromVoteAverage(5, min, max, exponent)).toBeCloseTo(0.1275, 12)
+    expect(focusEmissionIntensityFromVoteAverage(4, min, max, exponent)).toBeCloseTo(0.1464, 12)
+    expect(focusEmissionIntensityFromVoteAverage(5, min, max, exponent)).toBeCloseTo(0.195, 12)
     expect(focusEmissionIntensityFromVoteAverage(10, min, max, exponent)).toBe(max)
     expect(focusEmissionIntensityFromVoteAverage(-1, min, max, exponent)).toBe(min)
     expect(focusEmissionIntensityFromVoteAverage(11, min, max, exponent)).toBe(max)
@@ -157,7 +157,7 @@ describe('planet appearance', () => {
     expect(appearance.lightness).toBe(PLANET_VISUAL_DEFAULTS.focus.lightness)
     expect(appearance.chroma).toBe(PLANET_VISUAL_DEFAULTS.focus.chroma)
     expect(appearance.keyLightIntensity).toBe(PLANET_VISUAL_DEFAULTS.lighting.keyLightIntensity)
-    expect(appearance.emissionIntensity).toBeCloseTo(0.40347024, 12)
+    expect(appearance.emissionIntensity).toBeCloseTo(0.459384, 12)
   })
 
   it('is deterministic for noise, genres, hues, fixed appearance, emission, and base pose', () => {
@@ -189,7 +189,7 @@ describe('planet appearance', () => {
       expect(handle.material.uniforms.uCutCount.value).toBe(2)
       expect(handle.material.uniforms.uPerlinL.value).toBe(PLANET_VISUAL_DEFAULTS.focus.lightness)
       expect(handle.material.uniforms.uPerlinChroma.value).toBe(PLANET_VISUAL_DEFAULTS.focus.chroma)
-      expect(handle.material.uniforms.uEmissionIntensity.value).toBeCloseTo(0.40347024, 12)
+      expect(handle.material.uniforms.uEmissionIntensity.value).toBeCloseTo(0.459384, 12)
       expect(handle.material.uniforms.uKeyLightIntensity.value).toBe(PLANET_VISUAL_DEFAULTS.lighting.keyLightIntensity)
       expect(handle.material.uniforms).not.toHaveProperty('uAmbient')
       expect(handle.material.uniforms).not.toHaveProperty('uDiffuse')
@@ -209,7 +209,7 @@ describe('planet appearance', () => {
     }
   })
 
-  it('keeps fixed uniforms stable while cubic emission follows rating', () => {
+  it('keeps fixed uniforms stable while square-law emission follows rating', () => {
     const handle = createSelectionPlanet()
     try {
       const uniforms = [0, 4, 5, 10].map((voteAverage) => {
@@ -224,11 +224,11 @@ describe('planet appearance', () => {
 
       expect(uniforms.map(({ lightness }) => lightness)).toEqual([0.55, 0.55, 0.55, 0.55])
       expect(uniforms.map(({ chroma }) => chroma)).toEqual([0.15, 0.15, 0.15, 0.15])
-      expect(uniforms.map(({ key }) => key)).toEqual([1, 1, 1, 1])
+      expect(uniforms.map(({ key }) => key)).toEqual([0.35, 0.35, 0.35, 0.35])
       const emissions = uniforms.map(({ emission }) => emission)
       expect(emissions[0]).toBe(0.06)
-      expect(emissions[1]).toBeCloseTo(0.09456, 12)
-      expect(emissions[2]).toBeCloseTo(0.1275, 12)
+      expect(emissions[1]).toBeCloseTo(0.1464, 12)
+      expect(emissions[2]).toBeCloseTo(0.195, 12)
       expect(emissions[3]).toBe(0.6)
       expect(uniforms[0]!.emission).toBeLessThan(uniforms[1]!.emission)
       expect(uniforms[1]!.emission).toBeLessThan(uniforms[2]!.emission)

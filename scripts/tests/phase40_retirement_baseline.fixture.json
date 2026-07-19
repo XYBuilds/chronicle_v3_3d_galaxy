@@ -1,0 +1,102 @@
+{
+  "fixture_version": 1,
+  "captured_at_utc": "2026-07-19",
+  "purpose": "Pre-retirement baseline for Phase 40; every listed Today object remains read-only until the Phase 40.8 human gate.",
+  "repository_baseline": {
+    "main_site": {
+      "path": "E:/projects/chronicle_v3_3d_galaxy",
+      "branch": "chore/p40.1-contract-baseline",
+      "head": "ff7ec837856e0b7a6257554816b6b03f5fba8cb7",
+      "phase_39_merge": "ff7ec837856e0b7a6257554816b6b03f5fba8cb7"
+    },
+    "og_worker": {
+      "path": "E:/projects/themoviecosmos-og-worker",
+      "branch": "main",
+      "head": "57efb42bd6e29bc5b09c26c441b720bbfa681698"
+    },
+    "daily_stargazing": {
+      "path": "T:/themoviecosmos-daily-stargazing",
+      "branch": "main",
+      "head": "1edaa3169387c6ab67ff502a087f5719d01d4e8d",
+      "movie_link_prefix": "https://themoviecosmos.com/movie/"
+    }
+  },
+  "route_matrix": {
+    "home": {
+      "path": "/",
+      "current_get_html_status": 200,
+      "current_semantics": "SPA home currently boots the cover route; Phase 40 target is galaxy idle.",
+      "query_semantics": "query is retained by buildHomePath and does not select a Today route"
+    },
+    "movie": {
+      "path": "/movie/:id",
+      "current_get_html_status": 200,
+      "current_semantics": "positive known id focuses that movie; unknown id canonicalizes to home and cover boot.",
+      "head_semantics": "HEAD returns the GET status and headers with no body.",
+      "accept_semantics": "HTML injection accepts empty, text/html, or wildcard Accept excluding application/json; non-HTML Accept is 404.",
+      "query_semantics": "query is preserved in the canonical page URL and route builders."
+    },
+    "today": {
+      "path": "/today",
+      "current_get_html_status": 200,
+      "current_semantics": "Worker injects Today HTML metadata and SPA fallback serves the client cover route.",
+      "head_semantics": "HEAD returns the GET status and headers with no body.",
+      "accept_semantics": "HTML injection accepts empty, text/html, or wildcard Accept excluding application/json; non-HTML Accept is 404.",
+      "query_semantics": "query is retained in Today og:url; trailing slash is accepted.",
+      "target_after_retirement": "GET and HEAD return 404 for every Accept and query variant; no shell fetch or KV read."
+    },
+    "today_og": {
+      "path": "/og/today.png",
+      "current_get_without_version_status": 302,
+      "current_versioned_url": "https://themoviecosmos.com/og/today.png?v=2026.07.18.daily.113-4ba71a23",
+      "head_semantics": "HEAD returns the GET status and headers with no body.",
+      "accept_semantics": "Accept does not alter PNG routing.",
+      "query_semantics": "missing or stale v is replaced with the canonical v while unrelated query keys remain; canonical PNG is immutable.",
+      "target_after_retirement": "GET and HEAD return 404 for every query variant; no brand fallback."
+    }
+  },
+  "webgl_non_today_invariants": [
+    "Idle macro fade blend is 1; selected focus blend is 0; select and deselect transitions interpolate between them.",
+    "Idle near and Z fades preserve their existing disabled and exempt behavior.",
+    "Normal movie focus keeps its focus emission, selection planet, and constellation-hidden behavior; idle keeps constellation visibility."
+  ],
+  "production_legacy_objects": [
+    {
+      "identifier": "R2 ${R2_KEY_PREFIX:-galaxy}/today.json",
+      "current_contract": "uploaded only when local today.json exists; public manifest URL has a date v query; cache-control public, max-age=3600, must-revalidate",
+      "current_public_url": "https://pub-f949433b3a004a35b0a5e38f8f508c57.r2.dev/galaxy/today.json?v=2026-07-18",
+      "observed_manifest_data_version": "2026.07.18.daily.113",
+      "delete_phase": "40.8"
+    },
+    {
+      "identifier": "assets manifest today_url and r2_object_keys.today",
+      "current_contract": "optional fields emitted when today.json exists and consumed before the bundled Today URL fallback",
+      "delete_phase": "40.3"
+    },
+    {
+      "identifier": "KV today",
+      "current_contract": "JSON {date, movie_id}; current snapshot and Worker Today HTML/PNG depend on it",
+      "delete_phase": "40.8 after successful explicit v1-to-v2 migration"
+    },
+    {
+      "identifier": "R2 ops/og-index/state-v1.json.gz",
+      "current_contract": "gzip JSON schema_version 1, projection_version og-index-v1, control today_value and meta_g_value; cache-control no-store",
+      "delete_phase": "40.8 after v2 checkpoint audit"
+    },
+    {
+      "identifier": "Today OG cache URL/version",
+      "current_contract": "https://themoviecosmos.com/og/today.png?v={meta:G}-{today-content-hash}; layout version og-v1; canonical PNG cache is immutable",
+      "delete_phase": "40.8 after Worker 404 release and cache cleanup"
+    },
+    {
+      "identifier": "nightly and monthly scheduled workflows",
+      "current_contract": "nightly 0 20 * * * UTC; monthly 0 20 1 * * UTC; both calculate Today, incrementally sync KV, then upload R2",
+      "delete_phase": "40.3 code/workflow wiring; production verification in 40.8"
+    }
+  ],
+  "rollback_boundary": {
+    "before_v2_checkpoint_commit": "Keep v1 checkpoint and KV today unchanged; rerun only the explicit migration after fixing the failed mutation or verification.",
+    "after_v2_checkpoint_commit_before_legacy_cleanup": "Rollback is permitted by retaining v1 R2 object and restoring the verified Worker/main releases; do not delete v1, today.json, KV today, or Today cache until the 40.8 audit passes.",
+    "after_legacy_cleanup": "Requires a separately authorized recovery using recorded object metadata or backups; this fixture does not authorize recreation or remote mutation."
+  }
+}

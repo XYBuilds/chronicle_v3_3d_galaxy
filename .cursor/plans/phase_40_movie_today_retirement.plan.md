@@ -24,7 +24,7 @@ todos:
     content: 40.7 完成本地集成、迁移 dry-run 与 Daily Stargazing 深链验证
     status: complete
   - id: p40-production-gate
-    content: 40.8 [需人工验收] 完成生产发布、v2 迁移、线上清理与 scheduled Gate
+    content: 40.8 [需人工验收] 完成生产发布、v2 迁移、线上清理与 nightly production Gate
     status: pending
 isProject: false
 ---
@@ -239,7 +239,7 @@ flowchart LR
 4. 在下一次 schedule 前显式执行一次 v1→v2 migration；核对 movie PUT/DELETE、KV `today` delete/read-back、`meta:G`、v2 checkpoint schema/count/source version。
 5. v2 审计通过后删除 R2 `today.json` 与 `ops/og-index/state-v1.json.gz`；确认 v2 checkpoint、galaxy/search assets 未受影响。
 6. 清理 `/og/today.png` 的边缘缓存变体并复测 404；检查日志中无 Today KV read、today.json fetch 或 scheduled Today 生成。
-7. 验收下一次 scheduled nightly：movie 增量同步、v2 checkpoint 前进、R2 upload、Pages/production smoke 正常，Today 不再生成或回写。
+7. 验收一次 production nightly：movie 增量同步、v2 checkpoint 前进、R2 upload、Pages/production smoke 正常，Today 不再生成或回写。该 run 优先由自然 `schedule` 触发；也允许以 `workflow_dispatch` 作为等价的生产链路验收，但必须从远端默认分支 `main` 触发、记录并核对 `head_sha`、保持 `force_skip_dim_check=false`，且不得选择其他 ref 或 emergency override。采用手动触发时，另行静态确认 cron 仍为 `0 20 * * *`；手动 run 只替代本步骤的端到端执行证据，不替代 cron 配置检查。
 8. 使用 Daily Stargazing 的真实候选/发布包验证 CTA 为 `/movie/:id`，走通电影详情、返回 galaxy 与电影动态 OG。
 9. 人工 Go 后更新 canonical Plan 状态，并写入 [`docs/reports/Phase 40 P40 The Movie Today 退役实施报告.md`](E:/projects/chronicle_v3_3d_galaxy/docs/reports/Phase%2040%20P40%20The%20Movie%20Today%20退役实施报告.md)。
 
@@ -255,7 +255,7 @@ flowchart LR
 - OG snapshot v2 不含 Today control；KV `today`、R2 `today.json`、v1 checkpoint 与 Today cache 已清理且不会被 schedule 写回。
 - 现行 SSOT、运维指南、中英文 README、Worker README 与代码一致；历史计划/报告保持原文。
 - Daily Stargazing 真实发布链继续使用 `/movie/:id`，且无需产品代码改动。
-- 自动化、本地集成、生产迁移与下一次 scheduled nightly Gate 全部通过。
+- 自动化、本地集成、生产迁移与 production nightly Gate 全部通过；该 Gate 可由自然 `schedule` 或满足 40.8 第 7 步约束的 `workflow_dispatch` 提供端到端证据。
 
 ## Phase 40 交付物
 

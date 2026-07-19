@@ -89,10 +89,9 @@ This section discloses how the work was made. The Movie Cosmos was co-developed 
 
 ### Getting started
 
-1. Open [themoviecosmos.com](https://themoviecosmos.com/) and wait until loading finishes.
-2. Click the central “today” planet to enter The Movie Today.
-3. Click “Back to the cosmos” to enter macro browse.
-4. In macro roam, use the wheel to move along release years and the top search bar to find films.
+1. Open [themoviecosmos.com](https://themoviecosmos.com/) and wait for loading to finish.
+2. The home route enters galaxy idle immediately after data and search-index readiness; browse, search, or choose a film.
+3. Use the wheel to move through release years, or use top search to locate a film.
 
 ### Browse
 
@@ -113,11 +112,9 @@ Field-level detail: [TMDB feature engineering & 3D mapping table](docs/project_d
 
 | Input / action                                                                | Feedback                                                                                                                                                                                                               | Notes                                                                                                                                                                                                                                                                         |
 | ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Load complete (standard home)**                                             | Cover stage: light brand overlay (~1s entry animation; respects reduced motion); WebGL is mounted and you can drag to observe the highlighted The Movie Today planet. Search, timeline, and detail drawer stay hidden. | Deep link `/movie/:id` with a valid id skips cover and opens focus directly (see Focus).                                                                                                                                                                                      |
-| **On cover: click the center planet / Perlin sphere, or press Enter / Space** | Leave cover and focus today’s film (side archive drawer, orbit camera); URL becomes `/movie/:id`. Keyboard users can Tab to a transparent center control (visible focus ring).                                         | The Movie Today picks from `today.json` by UTC calendar day; stale feed, fetch failure, or missing id falls back to a random title from the top 1,000 by vote count (no blocking error). See [P23.1 acceptance guide](docs/guides/P23.1%20The%20Movie%20Today%20验收指南.md). |
-| **Visit `/today` in the address bar**                                         | Same as home: resolve today’s film, show Cover, then enter focus as above.                                                                                                                                             | Share previews for “today” links are handled by the OG Worker (see Share).                                                                                                                                                                                                    |
+| **Load complete (standard home)**                                             | Enter galaxy idle directly: WebGL, search, timeline, and common HUD controls are available. | A valid `/movie/:id` opens focus directly; an invalid id normalizes to `/` idle. |
 | **Canvas drag** (primary button)                                              | Macro: truck / pedestal pan (locked orientation). Focus orbit: yaw / pitch around the current pivot.                                                                                                                   | Small movement counts as a click pick; larger motion is treated as camera navigation.                                                                                                                                                                                         |
-| **Mouse wheel** (Space not held)                                              | Move `zCurrent` along the time axis (clamped to dataset `z_range`); camera follows `zCurrent - zCamDistance`.                                                                                                          | Wheel does not advance the timeline in focus orbit or Cover “today” orbit; Ctrl+wheel is left to the browser zoom.                                                                                                                                                            |
+| **Mouse wheel** (Space not held)                                              | Move `zCurrent` along the time axis (clamped to dataset `z_range`); camera follows `zCurrent - zCamDistance`.                                                                                                          | Wheel does not advance the timeline in focus orbit; Ctrl+wheel is left to the browser zoom.                                                                                                                                                            |
 | **Timeline** (left vertical rail / bottom horizontal bar)                     | Drag, tick click, or arrow / Home / End keys update `zCurrent` and the on-screen era window.                                                                                                                           | When a film is selected (`selectedMovieId`), the track shows bridge Z only and cannot change `zCurrent`.                                                                                                                                                                      |
 | **Space + wheel**                                                             | Dolly toward the cursor on the plane `z = zCurrent` (adjusts `zCamDistance` and XY).                                                                                                                                   | Releasing Space restores the default standoff; Space in a text field types normally and does not arm dolly.                                                                                                                                                                   |
 | **Hover a star**                                                              | Tooltip: title + primary genre (`genres[0]`), anchored at the planet’s screen projection; camera unchanged.                                                                                                            | Ray hit on the visible active sphere; focus mode adds neighborhood and Perlin treatment (see Focus).                                                                                                                                                                          |
@@ -165,7 +162,7 @@ Top search works in macro roam and in focus; picking a film enters focus (see Fo
 | **Top search · Movie**  | Match titles from the index; choosing a row enters focus on that film (`selectedMovieId`).                                                               | Requires loaded `search_index`; Cmd/Ctrl+K focuses the search field.                                          |
 | **Top search · Person** | Highlight the person’s film set (`selectionIds`); constellation lines (cast / crew / producers); timeline eases to the earliest release year in the set. | Cast/crew names in the drawer can start the same session (P27.3).                                             |
 | **Top search · Genre**  | AND multiple genre badges; intersection writes `selectionIds` and highlights matches.                                                                    | No text field; clearing all badges ends the genre session.                                                    |
-| **ESC**                 | Stack unwind: blur search → exit focus if any (keep person/genre highlight) → clear search session.                                                      | Search × clears search and focus in one action. Cover / info dialog have their own ESC handling (see Browse). |
+| **ESC**                 | Stack unwind: blur search → exit focus if any (keep person/genre highlight) → clear search session.                                                      | Search × clears search and focus in one action. The info dialog has separate ESC handling (see Browse). |
 
 
 ### Share
@@ -173,12 +170,12 @@ Top search works in macro roam and in focus; picking a film enters focus (see Fo
 
 | Input / action                   | Feedback                                                                                                 | Notes                                                                                  |
 | -------------------------------- | -------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| Drawer header **share icon row** | Copy a link to this film; or open X, Reddit, Discord, email, Telegram, Facebook, and similar share flows | Requires focus on a film first; controls live in the drawer header, not the cover menu |
+| Drawer header **share icon row** | Copy a link to this film; or open X, Reddit, Discord, email, Telegram, Facebook, and similar share flows | Requires focus on a film first; controls are grouped in the archive drawer header |
 
 
 After you focus on a film, use the icon row in the archive drawer header to copy a dedicated link or post to X, Reddit, Discord, email, Telegram, Facebook, and similar services. Anyone who opens the link lands on the same film in the cosmos with its archive panel.
 
-The home page and “today’s star” also have shareable URLs: the site root is the main entry, and `/today` opens the same cover experience as the daily highlight on the home page. Link previews are generated automatically when you paste into chat or social apps.
+The root home route `/` is galaxy idle; share a specific film at `/movie/:id`, which retains its dynamic movie OG. The brand home OG also remains. `/today` and `/og/today.png` are retired and return 404.
 
 ## Browser & environment
 
@@ -418,7 +415,6 @@ Frontend (Vite, build-time) — types in [`frontend/src/vite-env.d.ts`](frontend
 | ----------------------------------- | ---------------------------------------------------------- |
 | `VITE_GALAXY_DATA_GZIP_URL`         | Optional override for galaxy gzip URL                      |
 | `VITE_GALAXY_SEARCH_INDEX_GZIP_URL` | Optional override for search index gzip URL                |
-| `VITE_TODAY_JSON_URL`               | Optional override for The Movie Today `today.json`         |
 | `VITE_KOFI_URL`                     | Ko-fi support link; empty / `0` / `false` hides the button |
 | `VITE_TALLY_FEEDBACK_FORM_ID`       | Tally feedback form; empty hides the button                |
 | `VITE_DISCORD_INVITE_URL`           | Optional Discord invite for share links                    |

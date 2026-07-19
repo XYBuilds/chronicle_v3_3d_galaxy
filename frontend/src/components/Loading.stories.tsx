@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 
 import { Loading } from './Loading'
-import { STRINGS } from '@/lib/strings'
 
 const meta: Meta<typeof Loading> = {
   title: 'Loading',
@@ -51,36 +50,6 @@ export const PhaseSearchIndexSkipped: Story = {
 export const PhaseSearchIndexFailed: Story = {
   args: {
     label: 'Loading search index…',
-    progress: null,
-    gzipDone: true,
-    indexStatus: 'error',
-  },
-}
-
-/** P23.3 — index terminal + resolving today.json (matches App cover-loading-today gate). */
-export const CoverLoadingToday: Story = {
-  args: {
-    label: STRINGS.loading.title,
-    progress: null,
-    gzipDone: true,
-    indexStatus: 'ready',
-  },
-}
-
-/** Bundle without search index (fourth step skipped). */
-export const CoverIndexSkipped: Story = {
-  args: {
-    label: STRINGS.loading.title,
-    progress: null,
-    gzipDone: true,
-    indexStatus: 'skipped',
-  },
-}
-
-/** Search index hydrate failed; bundle still proceeds (search disabled at runtime). */
-export const CoverIndexFailed: Story = {
-  args: {
-    label: STRINGS.loading.title,
     progress: null,
     gzipDone: true,
     indexStatus: 'error',

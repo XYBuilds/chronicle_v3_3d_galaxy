@@ -1,5 +1,7 @@
 # **The Movie Cosmos \- 视觉与交互设计规范 (Design Spec)**
 
+> **Phase 40 现行契约（优先于本文遗留 Phase 23/27 表述）**：`/` 在 galaxy 数据和搜索索引到达终态后直接进入 **galaxy idle**，不是品牌 Cover 或每日入口。`/movie/:id` 保留并直接进入该电影的 focus；清除 selection 返回 `/` idle。Today picker、`today.json`、`today_url`、KV `today` 与 Today OG 已退役；`/today` 与 `/og/today.png` 由服务边界返回 404。品牌首页 OG 与电影动态 OG 保留。Phase 40.8 是生产部署、v1→v2 迁移和远端清理的人工 Gate，未获授权不得执行。
+
 ## **1\. 视觉映射法则 (Visual Mapping Rules)**
 
 在 3D 宇宙场景中，数据特征必须严格按照以下规则映射为天体的物理外观：
@@ -31,7 +33,7 @@
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **P26.1 色彩**              | Mac 上 idle/active **色相异常**已在 **顶点着色器**侧修复：**OKLab→线性 sRGB** 在 **gamma 编码前 clamp 到 \[0,1\]**，避免负通道在 Metal/ANGLE 上 **`pow` 未定义 → NaN** 污染混色；与「系统 HDR 内容管线」**无**归因关系。当前产品为 **常规 SDR WebGL** + **`THREE.SRGBColorSpace`**；**未**交付显示端 HDR。**原计划跨设备 HDR 矩阵**本阶段**不**纳入发布验收；工作留档见 **`docs/reports/Phase 26.1 P26.1 Mac 色彩修复与阶段收口 最终实施报告.md`**。                                                                                                                                                                                                                                                                                                                                                    |
 | **P26.2 小屏 HUD**          | 视口 / safe-area / **`--hud-*`** / **`--z-hud-*`** 体系统一写入 **§3.0**；设计基准约 **1600×900** 横屏，**1∶1～超宽** 与刘海内容框抽样验收。实施留档见 **`docs/reports/Phase 26.2 P26.2 HUD 视口与安全区 token 最终实施报告.md`**。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| **P26.3 idle 近距 fade**    | **仅 idle** 使用 **相机世界坐标—实例世界坐标** 距离驱动 **`vNearFadeAlpha`**；**focus / Cover 今日** 实例 **exempt**（与顶点 **`exemptIdleNearFade`** 语义一致）。**生产默认 `enabled = 1`**（`startDist = width = 4`、`minAlpha = 0.1` 世界单位，见 **`idleNearFade.ts`**）；**宏观**且启用时 idle 材质走 **transparent、无 depthWrite**。**focus 会话**（**`selectionPhase !== 'idle'`**）：**`uIdleMacroFadesActive = 0`**，近距分支 **不** 运行，idle **opaque**（与 **P27.4** 同门控）。**CPU active 射线拾取**在 **`inFocus` 低且近透明**时跳过求交，与视觉对齐。运行时调参：**`window.__galaxyIdleNearFade`**。留档见 **`docs/reports/Phase 26.3 P26.3 Camera-distance idle 近距渐变与拾取对齐 最终实施报告.md`**（文内关于 **P22.1 Z 近裁** 的保留表述已过时，以 Tech Spec **§1.4.5a** 为准）。 |
+| **P26.3 idle 近距 fade**    | **仅 idle** 使用 **相机世界坐标—实例世界坐标** 距离驱动 **`vNearFadeAlpha`**；焦点实例可豁免。**生产默认 `enabled = 1`**（`startDist = width = 4`、`minAlpha = 0.1` 世界单位，见 **`idleNearFade.ts`**）；**宏观**且启用时 idle 材质走 **transparent、无 depthWrite**。**focus 会话**（**`selectionPhase !== 'idle'`**）：**`uIdleMacroFadesActive = 0`**，近距分支 **不** 运行，idle **opaque**（与 **P27.4** 同门控）。**CPU active 射线拾取**在 **`inFocus` 低且近透明**时跳过求交，与视觉对齐。运行时调参：**`window.__galaxyIdleNearFade`**。 |
 | **P27.4 idle 时间轴 Z dim** | **仅 idle**。**`uIdleZFadeMode`**（**`−1` / `0` / `1`**）与 **`uIdleZFadeOutsideAlpha`**：在 **`[zCurrent, zCurrent+zVisWindow]`** 外 **单侧** 将 **`vNearFadeAlpha`** 再乘 **`outsideAlpha`**（硬边界）；与 **P26.3** **相乘**。**exempt** 同 **P26.3**。**`scene.ts`**：近距 **或** **Z-mode 非关** 时 idle **透明路径**，**且** **`selectionPhase === 'idle'`**（与 **`uIdleMacroFadesActive`** 一致；**focus** 下两 fade **不** 应用）。**Dev**：**`window.__galaxyIdleZFade`**。留档 **`docs/reports/Phase 27.4 P27.4 Galaxy idle 时间轴 Z 半透明与移除 world-Z 近裁 最终实施报告.md`**。**P22.1 world-Z 近裁已删除。**                                                                                                                                                                            |
 
 ### **1.3 Phase 29 — HDR 发布门槛与深链预检（决策摘要）**
@@ -46,10 +48,10 @@
 | **HDR 最小 proof（29.3）** | `window.__hdrProbe`：同屏 linear **1.0**（SDR 参考白）vs **4.0**（HDR 候选）；WebGPU `extended` vs `standard` 对比。Storybook **Dev/HDR proof lab**。详见 Phase 29 spec **§8**。 |
 | **SDR fallback（29.4）** | 生产恒 **WebGL2 + `SRGBColorSpace`** + Bloom 关；`hdr-capable` **不**切换主路径。`window.__sdrFallback` 暴露策略；视觉标定归 Phase 32。详见 Phase 29 spec **§9**。 |
 | **Phase 33 门禁**           | 仅 Phase 29 **proof** 在 §4.4 **P0/P1** 组合上稳定满足 HDR 语义时，才进入 Phase 33 production；否则 **SDR-only** + 保留 capability 记录。                                                                                           |
-| **深链契约（29.5）**        | Path：**`/`**、**`/movie/:id`**、**`/today`**；轻量 `routes.ts`（**无** React Router）。Focus SSOT：`selectedMovieId`；Cover/Today：`coverModeStore` + `today.json`（D9）。非法/未知 id → **`replaceState('/')`**；cover→focus → **`push /movie/:todayId`**；清 focus/关 Drawer → **`replace '/'`**；**保留** `lang`/`theme`/`timeline`。详见 Phase 29 spec **§5**。 |
+| **深链契约（Phase 40）** | Path：**`/`** 与 **`/movie/:id`**；轻量 `routes.ts`（无 React Router）。Focus SSOT 为 `selectedMovieId`；非法/未知 id → `replaceState('/')`；清 focus/关 Drawer → `replace '/'`；保留 `lang`/`theme`/`timeline`。`/today`（含 query）和 `/og/today.png` 是不支持的 404，不能由 SPA rewrite 接管。 |
 | **深链（Phase 30 实现）**   | 按 §5 落地 parser、route controller、Drawer 分享与静态 rewrite（Phase 30 plan）。                                                                                                                                    |
 | **静态托管**                | CF Pages **隐式 SPA** 已覆盖主域深链刷新；**无**显式 `_redirects`。GHP 备线须 `404.html`（29.6 预检）。30.7 落地显式规则并**豁免** `/data/*`、`/fonts/*` 与 assets（D8）。                                                                                |
-| **分享（现状 → Phase 30）** | 现 HUD **Today** 按钮分享**站点根路径**；Drawer **无**影片深链分享。Phase 30 迁移为 **`/movie/:id`** 分享（见 Phase 30 plan）。                                                                                                     |
+| **分享（Phase 40）** | 当前 HUD 不提供 Today 分享。影片分享使用 `/movie/:id`；品牌首页和影片 OG 保留，Today 路由与图片均为 404。 |
 
 ## **2\. 交互状态与视觉反馈 (Interaction States)**
 
@@ -100,7 +102,7 @@
 * **Phase 14 — HUD 文案 SSOT**：所有面向用户的 HUD **英文**字面量以 **`frontend/src/lib/locales/en.json`** 为**键值与模板**的单一事实源；运行时由 **`frontend/src/lib/strings.ts`** 聚合，组件**仅**通过 **`useStrings()`** hook 引用。**不在**各 React 组件内写死可复用文案（**例外**：一次性 **dev-only** **`console.log`** 等开发审计输出可保留字面量）。
 * **Phase 21.2 — HUD i18n（多语言）**：HUD 文案扩展为多语言，**仅 HUD / DOM 层**翻译；TMDB 电影标题、人名、genre 名等数据库字段保持原文。当前提供 **EN / 简体中文 / 繁體中文 / 日本語 / Español / Français / العربية**（实现以 [`frontend/src/lib/locales/`](../../frontend/src/lib/locales/) 与 [`LOCALE_IDS`](../../frontend/src/lib/locales/index.ts) 为准）。运行时由 **`useLocaleStore`** 维护当前 locale，**React 组件**用 **`useStrings()`**，**非 React 路径**（loader 错误、`scene.ts`、Three.js Sprite 等）用 **`getStrings()`**；详见 Tech Spec §1.4.8。`zh.json` / `zh-Hant.json` 等所有 locale JSON 的 **leaf key paths** 与 `en.json` 一致，由 `locales.schema.spec.ts` 单测断言。
 * **初始化与持久化**：`?lang=zh|zh-Hant|ja|es|fr|ar|en` query → `localStorage['tmc.locale']` → `navigator.language` 启发式 → 默认 `en`。**`setLocale`** 同步写 localStorage 与 `?lang=`（`history.replaceState`），并更新 `<html lang>` 与 `dir`（**`ar` → `rtl`**）。
-* **LanguageSwitch HUD**：右上工具条从左到右为 **Feedback → Support → Info →（条件）Share today → Lang → Fullscreen**（见 **§3.7**、**§3.8**）。其中 **Lang** 为 **`LanguageSwitch`**：Lucide `Languages` 图标按钮 + 下拉菜单，菜单使用**母语标签（endonym）**展示（`简体中文` / `繁體中文` / `日本語` / `Español` / `Français` / `العربية` / `English`）。RTL 全局环境下下拉 `<ul>` 显式 `dir="ltr"`，保证勾选 ✓ 始终位于选项右侧。Three.js focus 尺寸参考圆环的 vote-tier Sprite 标签订阅 `useLocaleStore`，locale 变更时重绘。
+* **LanguageSwitch HUD**：右上工具条从左到右为 **Feedback → Support → Info → Lang → Fullscreen**（见 **§3.7**、**§3.8**）。其中 **Lang** 为 **`LanguageSwitch`**：Lucide `Languages` 图标按钮 + 下拉菜单，菜单使用**母语标签（endonym）**展示（`简体中文` / `繁體中文` / `日本語` / `Español` / `Français` / `العربية` / `English`）。RTL 全局环境下下拉 `<ul>` 显式 `dir="ltr"`，保证勾选 ✓ 始终位于选项右侧。Three.js focus 尺寸参考圆环的 vote-tier Sprite 标签订阅 `useLocaleStore`，locale 变更时重绘。
 
 ### **3.0 Phase 26.2 — HUD 空间设计体系（视口、内容框与 token SSOT）**
 
@@ -161,7 +163,6 @@ HUD 元素**不得混用参照系而不声明**。统一为下列三类之一。
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | **宏观漫游（idle）** | Timeline、Search、右上工具为主；Hover/Tooltip 随指针与锚点。                                                                    |
 | **Focus**            | 星球邻域：`FocusLReference` 居星球左侧；`FocusExitButton` 置底居中；Timeline 只读、不驱动 `zCurrent`；Drawer 可从右侧占幅滑入。 |
-| **Cover**            | 全屏品牌与遮罩优先；与漫游 HUD 互斥挂载策略以 App 实现为准。                                                                    |
 | **Drawer 打开**      | Sheet 贴视口边缘滑入；须与 **§3.0.5** z 语义一致，避免误挡退出焦点等关键操作（与 **§2.2** / `Drawer.tsx` 实施为准）。           |
 
 **地盘原则**：每一模式下列出「主舞台 / 次信息 / 系统入口」，并标明是否允许与 3D 中心重叠；新增控件须先落入某一地盘，再分配 z 档位。
@@ -173,7 +174,6 @@ HUD 元素**不得混用参照系而不声明**。统一为下列三类之一。
 | 语义档位                | 典型内容                             | 相对顺序（低 → 高；以 `index.css` 中 `--z-hud-*` 为准）                          |
 | ----------------------- | ------------------------------------ | -------------------------------------------------------------------------------- |
 | **Canvas**              | WebGL 宿主                           | 最低（DOM 下）                                                                   |
-| **Cover veil / brand**  | Cover 遮罩与品牌层                   | `--z-hud-cover-veil` → `--z-hud-cover-brand`                                     |
 | **Ambient HUD**         | Timeline、右上工具                   | `--z-hud-timeline`、`--z-hud-top-tools`（语言下拉 `--z-hud-lang-menu` 紧随其后） |
 | **Focus chrome / exit** | `FocusLReference`、`FocusExitButton` | `--z-hud-focus-chrome`、`--z-hud-focus-exit`                                     |
 | **Hover feedback**      | Hover 环、Tooltip                    | `--z-hud-hover-ring`、`--z-hud-tooltip`                                          |
@@ -214,12 +214,12 @@ HUD 元素**不得混用参照系而不声明**。统一为下列三类之一。
 | 类型         | 原则                                                                                                |
 | ------------ | --------------------------------------------------------------------------------------------------- |
 | **Drawer**   | 以 **§2.2** 为准：整幅位移进出场、与 duration / easing 常量一致。                                   |
-| **模式切换** | Cover ↔ 漫游、进入 / 退出 Focus，避免同一控件无意义大跳；若必须变位，应有可感知的过渡或统一对齐边。 |
+| **模式切换** | idle ↔ Focus、Drawer 进出场避免同一控件无意义大跳；若必须变位，应有可感知的过渡或统一对齐边。 |
 | **微交互**   | Tooltip、按钮 hover 时长短于抽屉，避免「全屏同一 easing」的拖沓感。                                 |
 
 #### **3.0.9 信息架构与控件秩序**
 
-* **右上常驻顺序**（已定稿）：Feedback → Support → Info →（有今日片源时）Share today → Language → Fullscreen（与本节篇首 **§3** 工具条段落及 **§3.7** 一致）。
+* **右上常驻顺序**（已定稿）：Feedback → Support → Info → Language → Fullscreen（与本节篇首 **§3** 工具条段落及 **§3.7** 一致）。
 * **搜索**：主入口；与 Drawer 同时存在时，明确主次（例如 Drawer 打开时搜索是否保持可点，以产品决策为准并回写实现）。
 * **退出 Focus**：单一主路径（`FocusExitButton` / **`STRINGS.hud.exitFocus`**）；不依赖「点空白关闭」。
 
@@ -333,27 +333,13 @@ HUD 元素**不得混用参照系而不声明**。统一为下列三类之一。
 * **DB 字段**：电影标题、原标题、`overview`、`tagline`、人名、genre 名等**沿用 TMDB 原文**，不进入 i18n 翻译范围（避免歪曲数据语义并保持搜索一致性）。
 * **dev 审计 `console.log`**：保留**英文前缀**（如 `[Search] genre AND filter`），**不**进入 `STRINGS` / `locales/*.json`。中文仍可出现在**项目文档**（PRD / Tech Spec / Design Spec / 报告）。
 
-### **3.5 首屏 Loading + Cover（Phase 23 · The Movie Today）**
+### **3.5 首屏 Loading 与 galaxy idle（Phase 40）**
 
-本节取代原 **Phase 15 Cover-with-Start**：**已移除 Start 按钮**；加载完成后 **自动**进入 Cover，**Perlin 球**为唯一主入口。
+Loading 只覆盖 galaxy 数据和搜索索引的 hydrate。它保留 download、decompress、parse、index 四阶段以及 `role="status"`，但在 search index 到达 `ready`、`skipped` 或 `error` 后卸载；无 Start gate、Cover 入场、品牌遮罩、焦点陷阱或按日选择。数据加载失败显示 Retry；索引失败仍挂载场景并禁用搜索。
 
-#### **3.5.1 Loading（gzip + 索引）**
+加载结束后，`/` 直接显示无选中电影的 galaxy idle：Timeline、Search 和右上工具条按 idle 模式正常可用。`/movie/:id` 在同一数据就绪点进入影片 focus，显示 Perlin 球和 Drawer。产品不显示 Today 文案、Today 星体、Today 交互或 Cover HUD。
 
-* **组件**：**`frontend/src/components/Loading.tsx`**；根容器 **`role="status"`**（忙状态）。  
-* **叙事**：**四阶段**（download → decompress → parse → index），以**百分比数字 + 阶段词**为主；**无**旧版条形进度条。  
-* **品牌（UI 身份面小写）**：**`the movie cosmos`** 与 **`today`** 双品牌字；标题级字形使用 **`font-butler`**（Butler webfont，仅用于首屏品牌区）。  
-* **设计 token（P23.4b）**：**`--cosmos-universe-bg`**（宇宙背景色）与 **`--cosmos-brand-muted`**（浅灰场 / 完成态字色，当前 **`#f2f2f2`**）定义于 **`frontend/src/index.css`**；Loading 与 Cover 共用。**加载中**：**`the` / `movie` / `cosmos`** 在浅场上使用宇宙背景色字；**`today`** 使用 **`--cosmos-brand-muted`**。**旧版全屏背景 CSS 渐变动画已删除**。  
-* **完成态过渡**：Loading 卸载后，Cover 入场 **1000ms** 过渡由 **`CoverBackdrop`** 与页面遮罩（如 **`cosmos-cover-entry-page-shade`**）承担：**页面底色 → 宇宙背景**；**`the` / `movie` → brand-muted**；**`cosmos`** 保持宇宙色（分轨）；**`today`** 全程 brand-muted。实现须尊重 **`prefers-reduced-motion`**（见 `index.css` 媒体查询）。  
-* **像素级 SSOT**：间距、断点、曲线以 **Figma** 为准；对齐记录见 [`Phase 23.2 P23.2 Loading Figma 对齐实施报告.md`](../reports/Phase%2023.2%20P23.2%20Loading%20Figma%20对齐实施报告.md)、[`Phase 23.4b P23.4b Cover 首屏品牌与入场动效 实施报告.md`](../reports/Phase%2023.4b%20P23.4b%20Cover%20首屏品牌与入场动效%20实施报告.md)。
-
-#### **3.5.2 Cover（场景已挂载 · 无 click hint）**
-
-* **文案层**：**`frontend/src/hud/CoverBackdrop.tsx`** — 仅保留 **`the movie cosmos`**（左）与 **`today`**（右）；**不渲染** **`STRINGS.cover.todayHint`**（词条可保留兼容）。**不新增**其它提示文案。文案层 **`pointer-events: none`**，避免阻挡空白处 **orbit** 拖拽。  
-* **中心 Perlin**：**The Movie Today** 对应影片的 focus 球体；**复用主体 hover**（**`HoverRing`** 白圈）+ **`MovieTooltip`**（字段与主体一致：**title + genres**）。  
-* **点击 / 键盘**：点击球体，或 **`Enter` / `Space`**（**`CoverBackdrop`** 内在 **`showTodayFocusTrap`** 时渲染的透明 **`button`**，**`aria-label`** 来自 **`STRINGS.cover.todayFocusAriaLabel`**）→ **`exitCoverIntoFocus`**：展开 **Drawer**、**`coverMode=false`**；**相机 yaw/pitch/distance 沿用** Cover orbit。  
-* **空白拖拽**：与 **focus** 态一致绕 pivot **orbit**；**`?orbitDrag=normal|inverted`**（**`orbitDragDirection.ts`**）在 Cover / focus **一致**。  
-* **ESC**：Cover 阶段 **不**作为「取消 today」；退出 focus 仍按 **P22** **`FocusExitButton`**。  
-* **交叉引用**：**`coverModeStore.ts`**、**`scene.ts`** **`uCoverMode` / `uCoverTodayInstanceId`**、Tech Spec §1.1 / §1.4.7。
+**退役边界**：旧 Phase 23 的 Cover 视觉、`CoverBackdrop`、Today focus trap 和 `uCover*` shader/picking 仅可作为历史记录理解；它们不属于当前设计或验收。
 
 ### **3.6 Close 控件 primitive（Phase 14）**
 
@@ -364,17 +350,16 @@ HUD 元素**不得混用参照系而不声明**。统一为下列三类之一。
 
 ### **3.7 全局键盘快捷键与全屏 / 语言控件（Phase 14 · HUD ；Phase 21.2 LanguageSwitch）**
 
-* **HUD 右上工具条**（实现位置 **`frontend/src/App.tsx`**；边距与 z 以 **`index.css`** 中 **`--hud-inset-*`**、**`--z-hud-top-tools`** 等为准，见 **§3.0**）：从左到右依次为 **`FeedbackButton` → `SupportButton` → `InfoButton` →（有今日片源时）`ShareMovieTodayButton` → `LanguageSwitch` → `FullscreenButton`**。容器 `pointer-events-none`，子按钮自身 `pointer-events-auto`，避免遮挡 3D 画布的鼠标穿透。**Phase 28** 的反馈 / 支持细则见 **§3.8**。
-* **The Movie Today 分享（P27.1）**：**`ShareMovieTodayButton`**（`frontend/src/hud/ShareMovieTodayButton.tsx`）为 **`Share2`** 触发器 + **横向图标下拉**（**`role="menu"`**、`dir="ltr"`）：**复制链接**（`navigator.clipboard.writeText` 站点根 URL；成功显示短时 **toast**，文案 **`STRINGS.hud.shareTheMovieTodayLinkCopied`**）；以及 X / Reddit / Discord / Facebook / Mail / Telegram 的 **`target="_blank"`** composer 链接。标题与正文模板走 **`useStrings()`** 的 **`shareTheMovieTodayTitle` / `shareTheMovieTodayText`**。**Discord** 行 URL 见 Tech Spec §5.3（未配置合法邀请时为通用占位域名）。当前实现**未**使用 **`navigator.share`**；若未来接入 Web Share API，须同步更新本文与 PRD。
+* **HUD 右上工具条**（实现位置 **`frontend/src/App.tsx`**；边距与 z 以 **`index.css`** 中 **`--hud-inset-*`**、**`--z-hud-top-tools`** 等为准，见 **§3.0**）：从左到右依次为 **`FeedbackButton` → `SupportButton` → `InfoButton` → `LanguageSwitch` → `FullscreenButton`**。容器 `pointer-events-none`，子按钮自身 `pointer-events-auto`，避免遮挡 3D 画布的鼠标穿透。**Phase 28** 的反馈 / 支持细则见 **§3.8**。
 * **全屏按钮**：**`FullscreenButton`**（`frontend/src/hud/FullscreenButton.tsx`；**`lucide-react`** Maximize / Minimize）；监听 **`fullscreenchange`** / **`webkitfullscreenchange`** 同步图标；行为与下述 **`F`** 一致（Safari 等需 **webkit** 前缀检测时以源码为准）。
 * **语言开关**：**`LanguageSwitch`**（`frontend/src/hud/LanguageSwitch.tsx`；Lucide `Languages` 图标 + 下拉）。点击展开 `role="menu"` 菜单，列出**母语标签**；当前 locale 项 `aria-checked` + 行尾 ✓；点击其它项即时切换并持久化（详见 §3 头部 SSOT 段落与 Tech Spec §1.4.8）。下拉 `<ul>` 显式 `dir="ltr"`，使阿拉伯语等 RTL 全局下勾选位置仍稳定在右侧。
 
 ### **3.8 Phase 28 — 支持（Ko-fi）、反馈（Tally）与 Discord 入口层级**
 
-* **视觉层级**：**Feedback**、**Support**、**Info** 与 **Share today** 同属右上 **Ambient HUD**（`--z-hud-top-tools`），样式为低对比 **secondary** 小控件；**不得**在尺寸、动效或文案上压过核心星系操作（搜索条、时间轴、focus 读数等仍优先）。  
+* **视觉层级**：**Feedback**、**Support**、**Info** 同属右上 **Ambient HUD**（`--z-hud-top-tools`），样式为低对比 **secondary** 小控件；**不得**在尺寸、动效或文案上压过核心星系操作（搜索条、时间轴、focus 读数等仍优先）。
 * **Support（Ko-fi）**：**`SupportButton`** 为 **`<a target="_blank" rel="noopener noreferrer">`** 打开支持页；图标 + 短文案走 **`STRINGS`**（与 §3 HUD SSOT 一致）。未配置或关闭时整颗按钮不渲染（不留下占位洞）。  
 * **Feedback（Tally）**：**`FeedbackButton`** 使用 Tally **`data-tally-open`** + 懒加载 **`embed.js`**；**`data-tally-layout="modal"`** 等属性以源码为准。弹层由 Tally 托管，**不阻塞** Three.js 主 RAF；未配置表单 id 时按钮不渲染。  
-* **Discord**：应用内**无**独立 Discord 图标块；**主路径**为用户在 **Tally 提交成功后的 thank you page** 点击维护者配置的邀请（由 **Tally / Discord** 后台更新链接即可，通常无需发版）。**可选补充**：**`ShareMovieTodayButton`** 分享下拉里 **Discord** 一行在配置了生产邀请 URL 时指向该链接（否则为通用占位域名，见 Tech Spec §5.3）。
+* **Discord**：应用内无独立 Discord 图标块；主路径为用户在 **Tally 提交成功后的 thank you page** 点击维护者配置的邀请（由 **Tally / Discord** 后台更新链接即可，通常无需发版）。
 
 以下快捷键在 **App 级** 全局监听（与 §4 搜索 combobox 内 **`↓`/`↑`/`Enter`/`Tab`** 等**不重复登记**同一键位语义；实现以源码为准）：
 

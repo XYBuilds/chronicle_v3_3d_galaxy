@@ -1,5 +1,7 @@
 # **The Movie Cosmos \- 技术实现方案 (Tech Spec)**
 
+> **Phase 40 现行契约（优先于本文遗留 Phase 23/27 表述）**：前端在 galaxy 数据与搜索索引到达终态后将 `/` 挂载为无选中状态的 **galaxy idle**；不加载 `today.json`、不解析 `today_url`、不维护 Cover/WebGL Today 分支。`/movie/:id` 继续直达 focus；品牌首页 OG、电影动态 OG 继续存在，`/today` 与 `/og/today.png` 不注册且应为 404。assets manifest 只声明 galaxy/search assets。OG index writer 使用 snapshot v2（schema `2`、`ops/og-index/state-v2.json.gz`），v1 只能通过显式迁移读取；KV `today` 的删除、远端对象清理和生产发布仅属于 Phase 40.8 人工 Gate。
+
 ## **1\. 系统架构与技术栈**
 
 The Movie Cosmos 采用严格的前后端计算分离架构：
@@ -9,7 +11,7 @@ The Movie Cosmos 采用严格的前后端计算分离架构：
   * **3D 画布**：原生 **Three.js**（非 R3F / TresJS 等声明式封装），直接控制渲染循环、`InstancedMesh` + 自定义 ShaderMaterial、后处理与**非标准**轴平行相机。理由：~60K 实例双 mesh + focus 高模球体、性能敏感，原生 Three.js 可避免中间层抽象泄漏。  
   * **HUD / UI 层**：**React**（DOM 覆盖层），负责 Tooltip、档案详情抽屉、Loading 页面等。  
   * **状态桥接**：React ↔ Three.js 通过**轻量状态管理**（如 Zustand）通信——Three.js 写入选中/悬停状态，React 读取并渲染 UI；React 写入搜索/导航指令，Three.js 执行相机动画。  
-* **数据加载策略（Phase 23）**：前端启动时**一次性加载**全量坐标与属性数据（静态 JSON 或等价格式），经 **四阶段 gzip + 索引 Loading**（见 **§1.4.7**）后进入 **`cover-loading-today`**（解析 **`today.json`** / manifest **`today_url`**，失败则客户端 **Top-1000 fallback**，见 `loadToday.ts`）；随后 **`mountGalaxyScene`** 在无 **Start** 手势门闩的情况下挂载 **WebGL** 与双 `InstancedMesh`，并以 **`uCoverMode` / `uCoverTodayInstanceId`** 进入 **Cover**（仅渲染今日实例 + 中心 Perlin 入口）；用户从 Cover 进入 **focus** 后 `coverMode` 解除（见 **§1.4.7** 与 `coverModeStore.ts`）。
+* **数据加载策略（Phase 40）**：前端启动时一次性加载全量坐标与属性数据，经 gzip 数据加载和搜索索引 hydrate 后进入终态。`galaxyDataStore` ready 且搜索索引为 `ready`、`skipped` 或 `error` 时，`mountGalaxyScene` 直接将 `/` 挂载为无选中状态的 **galaxy idle**；索引错误只禁用搜索，不阻断场景。没有 Start 门闩、Today loader、Cover store 或专用 WebGL 分支。`/movie/:id` 在数据可用后进入对应电影 focus；未知 id 回到 `/`。
 
 ### **1.1 前端渲染架构（Phase 8：双 `InstancedMesh` + focus Perlin 球）**
 
@@ -35,8 +37,7 @@ The Movie Cosmos 采用严格的前后端计算分离架构：
 | **否则**                                                         | **B**（transparent）           | focus 管线 **P11.1** |
 
 * **Focus 态 Perlin 球（按需、单实例）**：`IcosahedronGeometry(1, 8)` + **CPU** 上按顶点 noise **分位数阈值**划分至多 **8** 档 genre 带（`perlin.frag.glsl` 中 **`step`** 分 **`bandIdx`**；顶点 **`perlin.vert.glsl`** 用 **`smoothstep`** 累加 **`level`** 做阶梯挤出，见《星球状态机 spec》§3.5）。**Phase 11.4**：片元用 **`dFdx`/`dFdy`** 重构法线与 Lambert 明暗；**`uPerlinL`** 由 **`vote_average`** 经与宏观一致的 **P10.1** 公式写入；**`uPerlinChroma`** 与星系 **`uChroma`** 快照一致；**hue** 为主 genre **`movie.genre_hue`**（若存在）+ 其余 genre **`genreHueForGenreName`**（palette key 序对齐 Python **`sorted`**）；线性 RGB **clamp** 后编码 **sRGB**；光照定稿见《视觉参数总表》§4。**Phase 11.5**：材质已切换为 **opaque**（`transparent: false`、`depthWrite: true`、`alphaTest: 0.01`），降低台阶边缘透明伪影。`movie.id` 种子化 PRNG；面积比例由 **`uAreaRatio`** 等控制。当 `uFocusedInstanceId` 命中时，**idle + active** 上该 `gl_InstanceID` 的 scale 在 shader 中**置零**，仅由 Perlin 球呈现。  
-* **Phase 23 · Cover mode（idle/active 顶点着色器）**：`galaxyIdle.vert.glsl` / `galaxyActive.vert.glsl` 增加 **`uCoverMode`**（`0` = 全量宏观，`1` = 仅今日）与 **`uCoverTodayInstanceId`**（`gl_InstanceID`，未设置时为 **`-1`**）。**`uCoverMode > 0.5`** 时，凡 **`gl_InstanceID != uCoverTodayInstanceId`** 的实例在 VS 早期 **cull**（移出裁剪体、`vSize = 0`），与 raycast 侧 **pickable mask**（`interaction.ts`）一致，保证 Cover 阶段仅今日星可 hover/click。uniform 初值与 RAF 写入见 **`galaxyMeshes.ts`** / **`scene.ts`**。
-* **后处理顺序（生产）**：同帧先画 idle → active → focus 时 Perlin 球 `visible=true`（`renderOrder` 以 `scene.ts` 为准）。**`UnrealBloomPass`** 默认**不**参与输出（§1.2）；调试启用时再走 composer。
+* **后处理顺序（生产）**：同帧先画 idle → active → focus 时 Perlin 球 `visible=true`（`renderOrder` 以 `scene.ts` 为准）。`UnrealBloomPass` 默认不参与输出（§1.2）；调试启用时再走 composer。不存在 Cover-only uniform、实例过滤或 picker 例外。
 
 **历史注记（Phase 5.1.6 · 已退役）**：旧版在**单 `THREE.Points`** 上用 `uBgSizeMul` / `uFocusSizeMul` 与 `gl_PointSize` 做 A/B 层；P8.4 起由双 mesh 的 `inFocus` 与双尺度取代。
 
@@ -139,7 +140,7 @@ Output
 * **Uniform `uIdleZFadeMode`**（实现上为 float，判 **`> 0.5` / `< −0.5`**）：**`1`** 时，仅当 **`aZ > uZCurrent + uZVisWindow`** 时 **`nearFadeAlpha *= clamp(uIdleZFadeOutsideAlpha, 0, 1)`**；**`−1`** 时，仅当 **`aZ < uZCurrent`** 时同乘；**`abs(mode) < 0.5`** 视为关闭。闭区间 **`[uZCurrent, uZCurrent + uZVisWindow]`** 内 **不** 施加本段 Z 乘子。
 * **`uIdleZFadeOutsideAlpha`**：乘子本体，与 **`nearFadeAlpha`** 相乘前 **clamp 到 `[0, 1]`**。
 
-**豁免**：与 **P26.3** 一致，**`exemptIdleNearFade`**（**焦点实例** 或 **Cover 今日实例**）**不参与** 本段 Z 乘子（保持该段之前算出的 **`nearFadeAlpha`**）。
+**豁免**：仅焦点实例可豁免本段 Z 乘子；已退役的 Cover/Today 实例没有运行时语义。
 
 **Focus 会话**：**`uIdleMacroFadesActive`** 为 **`0`** 时，**P26.3** 与 **P27.4** 的 idle alpha 分支在 **`galaxyIdle.vert.glsl`** 内**整体跳过**（与 **`scene.ts`** **`selectionPhase !== 'idle'`** 一致）；**CPU 拾取** 经 **`interaction.ts`** **`getIdleMacroFadesActive`** 与 **`pickClosestActiveMovieAlongRay`** 的 **`idleMacroFadesActive`** 对齐。
 
@@ -164,40 +165,26 @@ Output
 
 **非目标 / 禁止**：任何将目测 `-15° / -7.5° / 0.26180 / 0.13090` 等旋转值写入 `GALAXY_CAMERA_EULER` 或相机常量的"症状掩盖"式修复。
 
-#### **1.4.7 首屏加载体验（Phase 15 → Phase 23 修订）**
+#### **1.4.7 首屏加载与路由（Phase 40）**
 
-**gzip + 索引四阶段**（与 `Loading.tsx` 阶段文案一一对应；**无条形进度条**，百分比与阶段词见 Design Spec §3.5）：
+**gzip + 索引四阶段**：
 
-1. **download** — `fetch` **`galaxy_data.json.gz`**（经 `galaxyAssetUrls` 解析 manifest / 覆盖 URL；进度由 `Content-Length` / 已下载字节驱动）。  
-2. **decompress** — `DecompressionStream` 解压（进度仅阶段切换，无字节级）。  
-3. **parse** — `JSON.parse` + 类型校验。  
-4. **index** — **`galaxy_search_index.json.gz`** hydrate（`meta.has_search_index === true` 时执行；为 **`false`** 时本阶段 **`status='skipped'`**，不阻塞）。
+1. **download** — fetch `galaxy_data.json.gz`；
+2. **decompress** — `DecompressionStream` 解压；
+3. **parse** — `JSON.parse` 与类型校验；
+4. **index** — 在 `meta.has_search_index === true` 时 hydrate `galaxy_search_index.json.gz`；否则为 `skipped`。
 
-**App 级相位（`App.tsx` · Phase 23）**（与 UI 分支一致）：
+**App 相位**：`galaxy-loading` 显示全屏 `Loading`；数据下载、解压或解析失败显示 `galaxy-error` 与 Retry；数据 ready 但搜索索引尚未到终态时为 `index-loading`。当搜索索引到达 `ready`、`skipped` 或 `error`，立即 mount 场景。`error` 不阻断场景，只禁用搜索。
 
-| 相位                      | 条件摘要                                                                                                   | WebGL / HUD                                                                                                                                                                              |
-| :------------------------ | :--------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **`galaxy-loading`**      | `galaxyDataStore` 尚未 `ready`                                                                             | 全屏 `Loading`                                                                                                                                                                           |
-| **`galaxy-error`**        | `galaxyDataStore === 'error'`                                                                              | `LoadFailurePage` + Retry                                                                                                                                                                |
-| **`index-loading`**       | `ready` 且索引 hydrate 未达终态                                                                            | `Loading`（第四行 index 动画）                                                                                                                                                           |
-| **`cover-loading-today`** | 索引已达 **`ready` / `skipped` / `error`**，且 **`today.json`**（或 manifest **`today_url`**）解析尚未完成 | `Loading`（四阶段已视觉上完成，仍占全屏直至 today 决议）                                                                                                                                 |
-| **`started`**             | **`resolveTodayMovieId`** 完成并已 **`setCover(movieId)`**                                                 | **`mountGalaxyScene`** 执行；主画布 + Cover 文案层（`CoverBackdrop`）+ 可选 **The Movie Today** 焦点陷阱；**`coverMode === true`** 时隐藏 SearchBar / Timeline / Drawer 等直至进入 focus |
+**路由与 mount 时序**：场景只依赖 `movies[]` 和 galaxy/search assets。`/` 进入无选中状态的 galaxy idle；`/movie/:id` 解析有效影片并进入 focus；未知或非法 id `replaceState('/')`。清除 selection 或关闭 Drawer 回到 `/` idle，同时保留允许的 `lang`、`theme` 与 `timeline` query。没有 Today JSON、manifest 字段、fallback、Cover、Start gate 或按日选择分支。
 
-**Hydrate 与 3D mount 时序（实现契约）**：**`galaxyDataStore.status === 'ready'`** 后 **`useSearchIndexStore.hydrateFromGalaxyMeta`** 与第四阶段 UI **并行**。**`mountGalaxyScene`** 在 **`started`** 相位触发（**无** Phase 15 的 **`started` 本地门闩 / Start 按钮）：**必须先**有 **`movies[]`** 与 **today `movie_id`**（或 fallback id），以便写入 **`uCoverTodayInstanceId`** 与 **`coverModeStore`**。Cover 阶段 **WebGL 已挂载**；非今日实例由 shader + pick mask 屏蔽。
+#### **1.4.7a 回归验收（Phase 40）**
 
-**today.json**：字段与 nightly 写入见 Data Pipeline §11.1；前端 **`frontend/src/data/loadToday.ts`**；manifest 扩展 **`today_url`**（`galaxyAssetUrls.ts`）。失败 / 陈旧 / id 不在 **`movies[]`** 时 **silent fallback**（控制台 `warn`），不进入 `LoadFailurePage`。
-
-**失败处理**：
-
-* **`galaxy_data`** 的 download / decompress / parse **任一失败** → **错误页 + Retry**；**不**进入 Cover / today。  
-* **`galaxy_search_index`** 失败 → 第四阶段 **`Failed`**，仍进入 **today** 与场景挂载；入场后搜索 **disabled**（Phase 12 §4.8）。
-
-#### **1.4.7a 回归验收（Phase 23）**
-
-* **主路径**：刷新 → 四阶段 Loading → **`cover-loading-today`**（通常极短）→ 场景自动挂载 + Cover（**无 Start**）→ Perlin 入口 → **focus**（drawer 展开，相机 orbit **沿用** Cover）。  
-* **`galaxy_data` 失败**：仅错误页 + **Retry**。  
-* **搜索索引**：**`skipped`** / **`error`** 下仍可完成 today + 入场；搜索 **disabled** 行为不变。  
-* **历史导航**：无路由 SPA；整页重载重新走加载链。
+* 刷新 `/`：data 加载与搜索索引终态后直接显示 galaxy idle，且无选中电影；
+* 刷新 `/movie/:id`：同一 hydration 后进入该影片 focus；无效 id 回到 `/`；
+* 数据失败：仅错误页与 Retry；搜索索引失败：场景仍挂载且搜索 disabled；
+* `/today`、任意 `/today?*` 与 `/og/today.png` 是 404，不能由 SPA fallback 或静态资源命中；
+* 构建产物和 assets manifest 不含 `today.json`、`today_url` 或 Today R2 key。
 
 #### **1.4.8 HUD i18n 架构（Phase 21.2）**
 
@@ -215,13 +202,12 @@ HUD 文案由 **多语言 JSON + Zustand store + React hook** 自管，**不**�
   * `getStrings()` 返回当前 store 的快照，供**非 React 路径**使用（`loadGalaxyGzip` 错误页文案、`scene.ts` WebGL2 必须断言、`drawerDetailsLayout`、Three.js Sprite 文案等）。
   * **`STRINGS`**（静态 EN）保留为 Storybook 与一次性模块级 fallback；新增调用点必须使用 `useStrings` / `getStrings`。
 * **Three.js 文案订阅**：[`frontend/src/three/FocusSizeReferenceRings.ts`](../../frontend/src/three/FocusSizeReferenceRings.ts) 订阅 `useLocaleStore`，locale 变更时重绘 `CanvasTexture` Sprite（`getStrings().focusVoteReference.tierLabels`）；阿拉伯语绘制时 `ctx.direction = 'rtl'`。`dispose` 必须先取消订阅再释放几何 / 纹理。
-* **HUD 右上工具条顺序**：`App.tsx` 中从左到右为 **`FeedbackButton` → `SupportButton` → `InfoButton` →（有今日片源时）`ShareMovieTodayButton` → `LanguageSwitch` → `FullscreenButton`**（容器 `pointer-events-none`，子控件 `pointer-events-auto`）。**`LanguageSwitch`** 实现见 [`frontend/src/hud/LanguageSwitch.tsx`](../../frontend/src/hud/LanguageSwitch.tsx)：Lucide `Languages` 图标 + 下拉菜单，`role="menu"` / `menuitemradio`；菜单 `<ul>` 显式 `dir="ltr"`，使 RTL 主界面下勾选 ✓ 仍位于选项右侧。
+* **HUD 右上工具条顺序**：`App.tsx` 中从左到右为 **`FeedbackButton` → `SupportButton` → `InfoButton` → `LanguageSwitch` → `FullscreenButton`**（容器 `pointer-events-none`，子控件 `pointer-events-auto`）。`LanguageSwitch` 实现见 [`frontend/src/hud/LanguageSwitch.tsx`](../../frontend/src/hud/LanguageSwitch.tsx)：Lucide `Languages` 图标 + 下拉菜单，`role="menu"` / `menuitemradio`；菜单 `<ul>` 显式 `dir="ltr"`，使 RTL 主界面下勾选 ✓ 仍位于选项右侧。
 * **控制台日志**：项目惯例保留**英文前缀**（如 `'[Search] genre AND filter'`），**不**进 `STRINGS`，避免 hook 在非 React 路径上的误用。
 
-#### **1.4.9 The Movie Today 分享与生产 OG 图 URL（P27.1 / P27.1a）**
+#### **1.4.9 分享与 OG（Phase 40）**
 
-* **HUD**：**`ShareMovieTodayButton`**（[`frontend/src/hud/ShareMovieTodayButton.tsx`](../../frontend/src/hud/ShareMovieTodayButton.tsx)）在具备今日片元数据时由 `App.tsx` 挂载；**复制链接**为 `navigator.clipboard.writeText` 写入站点根 URL（失败仅 `console.error`）；成功展示短时 toast（文案键 **`hud.shareTheMovieTodayLinkCopied`**，经 **`useStrings()`**）。下拉另含 X / Reddit / Discord / Facebook / Mail / Telegram 的 **`target="_blank"`** composer URL；标题与描述经 **`useStrings()`** 模板 **`shareTheMovieTodayTitle` / `shareTheMovieTodayText`**。**Discord** 行目标 URL 与 **`VITE_DISCORD_INVITE_URL`** 见 **§5.3**。当前实现**未**调用 **`navigator.share`**。
-* **OG / Twitter 卡片图 cache-bust**：**`frontend/vite.config.ts`** 内 **`ogTodayImageCacheBustPlugin`** 在 **`transformIndexHtml`** 中将 **`https://themoviecosmos.com/data/og-today.png`** 替换为带 query 的 **`...?v=YYYY-MM-DD`**。日期 **`v`** 的解析顺序：**`process.env.VITE_OG_TODAY_V`**（须匹配 `^\d{4}-\d{2}-\d{2}$`）→ 读取 **`frontend/public/data/today.json`** 的 **`date`** → 否则 **UTC 当天**（`toISOString().slice(0,10)`）。源码 **`frontend/index.html`** 仍为无 query 的基 URL，避免手改两处日期；构建日志含 **`[og-today-image-cache-bust]`**。
+前端没有 Today 分享按钮、Today 分享文案或 Today OG cache-bust 插件。品牌首页 OG 与 `/movie/:id` 的动态 OG 由各自的静态 meta 和 Worker 路径维护；它们不读取 `today.json`、日期 query 或 Today KV。`/today` 与 `/og/today.png` 不提供替代资源，均应返回 404。
 
 ### **1.5 交互拾取（Phase 8.4：active `InstancedMesh` + 世界球；Phase 12：search 多选与 mask 对齐）**
 
@@ -540,7 +526,7 @@ galaxy_data.json.gz  +  galaxy_search_index.json.gz
 Browser
     ├── fetch app                    →  Cloudflare Pages（生产主域 **themoviecosmos.com**；默认 **`*.pages.dev`** 可 **301** 到主域，见 `frontend/functions/_middleware.js`）
     ├── fetch galaxy_*.json.gz     →  Cloudflare R2（manifest 解析；可被 VITE_* 与 ?dataset= 覆盖）
-    └── fetch today.json / og-today.png  →  R2 或同源 `public/data/`（manifest **`today_url`**；**OG** 见 `frontend/index.html` + **Vite `transformIndexHtml`** 为 `og:image`/`twitter:image` 追加 **`?v=YYYY-MM-DD`**，与 **§1.4.9** 一致；`public/_headers` 短 TTL 为辅）
+    └── fetch galaxy_*.json.gz     →  Cloudflare R2（manifest 解析；可被 VITE_* 与 ?dataset= 覆盖）
 ```
 
 * **P23.6 自定义域 + R2 CORS**：Bucket **AllowedOrigins** 须包含 **`https://themoviecosmos.com`**、**`https://www.themoviecosmos.com`**（若绑定）及备线 **`https://the-movie-cosmos.pages.dev`**；运维清单见 **`docs/guides/P23.6 自定义域名上线后运维清单.md`**。
@@ -549,29 +535,28 @@ Browser
 * **月度任务（P18.5 + P18.5b）** 重算 dynamic threshold + 全量 `fit_transform` + Procrustes 对齐 `galaxy_v1_reference`；锚点采用 **软闸**（`MONTHLY_ANCHOR_MODE` 默认 `soft`），仅极端残差或结构性错误 fail；产出 `monthly_refit_meta.json` artifact 供 P95 收紧观测。
 * **维度漂移守卫（P20.2 / Phase 37）**：nightly 在 frozen-threshold cleaning 后、写库前统一调用 `assert_no_dim_drift`。monthly 先计算一份 `thresholds_json`，以其过滤出 final membership；pre-threshold drift 只记录，**仅** final membership 可在 UMAP/写库前阻断。两条路径均校验 `genre_palette_version` 与 active `lang_palette_version`；默认 fail-loud，`DIM_DRIFT_FORCE_SKIP` 仅用于明确的排障记录，不能作为生产恢复的通过条件。
 * **Cloudflare Pages** 仅托管前端 bundle；Pages 侧 Git 自动构建已 Disconnect，发布主链路为 GitHub Actions Direct Upload。
-* **Cloudflare R2** 托管 `galaxy_*.json.gz` 及 **`today.json` / `og-today.png`**（与 gzip 同 nightly 发布节奏）；galaxy 包 URL 通过 `frontend/src/lib/galaxyAssetUrls.ts` 按「`VITE_*` → `?dataset=` → manifest → 同源默认」解析；**`today_url`** 见 manifest 与 `loadToday.ts`。
+* **Cloudflare R2** 托管 `galaxy_*.json.gz`；galaxy 包 URL 通过 `frontend/src/lib/galaxyAssetUrls.ts` 按「`VITE_*` → `?dataset=` → manifest → 同源默认」解析。manifest 只声明 galaxy/search assets。
 * **GitHub Pages** 通过 `.github/workflows/deploy-pages.yml` 在 push 到 `main` 时部署，作为 1–2 周灰度备线；该路径仍走同源 gzip，不依赖 R2。
 * **Vite `base`** 在仓库内默认为 `process.env.VITE_BASE_PATH ?? '/'`；GitHub Pages 子路径部署由 `deploy-pages.yml` 注入对应 `VITE_BASE_PATH`，CF Pages 根路径部署直接使用默认值。
 * **国内访问优化** 不属于 Phase 18 出口；规划为 Phase 19+。
 
 ### **5.3 Phase 28 — 支持、反馈与 Discord（`import.meta.env` / Vite）**
 
-以下为 **构建期注入** 的前端环境变量（`frontend/vite-env.d.ts` 有注释 SSOT；实现见 **`frontend/src/lib/kofiSupport.ts`**、**`frontend/src/lib/tallyFeedback.ts`**、**`frontend/src/hud/ShareMovieTodayButton.tsx`**）。**不得**将私密 webhook 或密钥写入仓库；Discord / Tally 的展示文案与 thank you 页在**各平台后台**维护。
+以下为 **构建期注入** 的前端环境变量（`frontend/vite-env.d.ts` 有注释 SSOT；实现见 **`frontend/src/lib/kofiSupport.ts`**、**`frontend/src/lib/tallyFeedback.ts`**）。不得将私密 webhook 或密钥写入仓库；Discord / Tally 的展示文案与 thank you 页在各平台后台维护。
 
 | 变量                              | 作用                                                                           | 未设置时的行为（以实现为准）                                                                                                                                                      |
 | :-------------------------------- | :----------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **`VITE_KOFI_URL`**               | 自愿支持页（默认语义为 **Ko-fi**；可为任意合法 `http:`/`https:` 收款或说明页） | **未设置**：使用代码内建的默认 Ko-fi URL（可覆盖的维护者页）。**`''` / `'0'` / `'false'`** 或非法 URL：**隐藏** HUD **Support** 按钮。                                            |
 | **`VITE_TALLY_FEEDBACK_FORM_ID`** | Tally 表单的 **form id**（供 **`data-tally-open`** 使用）                      | **未设置**：使用代码内建的默认 form id。**`''` / `'0'` / `'false'`**：**隐藏** HUD **Feedback** 按钮。                                                                            |
-| **`VITE_DISCORD_INVITE_URL`**     | 「The Movie Today」**分享下拉**里 Discord 图标的跳转目标（**可选**）           | **未设置或非 `http(s)`**：分享行仍显示 Discord 图标，但链接退化为 **`https://discord.com/`**（通用入口占位，**非**项目服务器邀请）。配置了合法 HTTPS 邀请链接时，该行指向该邀请。 |
 
-**Discord 社区 — 职责边界**：**主路径**为维护者在 **Tally 表单 thank you page** 配置的 Discord 邀请（用户完成反馈后可见）；链接失效时在 **Tally / Discord 后台** 更换即可，**通常无需发版**。应用内 **`VITE_DISCORD_INVITE_URL`** 仅服务「今日分享」下拉中的可选快捷入口，与 thank you 页策略**并行可选**，不是唯一触达方式。
+**Discord 社区 — 职责边界**：维护者在 **Tally 表单 thank you page** 配置 Discord 邀请（用户完成反馈后可见）；链接失效时在 **Tally / Discord 后台** 更换即可，通常无需发版。
 
 ### **5.4 Phase 29 — 发布门槛：HDR 与深链预检（P29.0 spec）**
 
 Phase 29 **不**在本阶段交付完整路由或 HDR 生产；条文 SSOT 为 **[`Phase 29 发布门槛与技术判定 spec.md`](./Phase%2029%20发布门槛与技术判定%20spec.md)**。本节为交叉引用摘要。
 
 * **HDR（D1–D4）**：当前生产为 **`THREE.SRGBColorSpace`** + **SDR WebGL**（§1.1）；**Bloom 默认关**（§1.2）。「真实 HDR」须可证扩展亮度，**不得**用 Bloom 或 SDR 提亮冒充。**支持矩阵（P29.1）**：P0 = Win11 HDR + Chrome/Edge + **WebGPU extended** + HDR 屏；P1 = macOS HDR + Safari + 同 API；WebGL2 主路径恒 **SDR**。详见 Phase 29 spec **§4**。capability probe、最小 proof 与 Phase 33 go/no-go 见 §7–§10。
-* **深链（D5–D9，P29.5 已锁定）**：Phase 30 采用**轻量 path parser**（**不**引入 React Router）。路径契约 **`/`**、**`/movie/:id`**、**`/today`**；`selectedMovieId` / `coverModeStore` 为状态 SSOT；`lang` / `theme` / `timeline` query **须保留**。非法/未知 id → **`replace '/'`**；cover→focus → **`push /movie/:todayId`**；清 focus/关 Drawer → **`replace '/'`**；`/movie/:id` 冷启动 **跳过** cover boot。条文见 Phase 29 spec **§5**；ESC 栈与 Design Spec §4.6 一致。
+* **深链（Phase 40）**：使用轻量 path parser（不引入 React Router）。当前公开路径只有 **`/`** 与 **`/movie/:id`**；`selectedMovieId` 是 focus 状态 SSOT，`lang` / `theme` / `timeline` query 须保留。非法/未知 id → **`replace '/'`**；清 focus/关 Drawer → **`replace '/'`**。`/today`（含 query）与 `/og/today.png` 保持 404，且不得由 SPA fallback 接管。
 * **静态托管（§6）**：仓库**无**显式 `vercel.json` / `_redirects`；**Cloudflare Pages** 因无顶层 `404.html` 已启用**隐式 SPA**（`/movie/*` 刷新→`index.html`）。**GitHub Pages 备线**仍须 `404.html` 技巧。Phase 29.6 已锁定 D8 原则与 30.7 配置片段；实施归 **Phase 30.7**，须豁免 **`/data/*`**、**`/fonts/*`** 与构建 assets。
 
 ## **6\. 项目目录结构**

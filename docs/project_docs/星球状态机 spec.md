@@ -80,7 +80,7 @@ inFocus = smoothstep(zLo - W, zLo, aZ) × (1 - smoothstep(zHi, zHi + W, aZ))
 |------|------|
 | **z 范围** | 相机与目标 world 位置对齐；**Phase 13 起**：focus 会话中 **active** 可视/可拾取子集由 **`uSelectionMode = 2`** 球形邻域 mask 决定（见 **§3.4.5**），**不再**由 viswindow 条带单独承担「邻域探索」语义；时间轴读数与 **`zCurrent`** 对齐见 Tech Spec §1.4.1 |
 | **大小** | 双 mesh 上该 instance **零尺度**；Perlin 球 **detail = 8**（P11.3；取代早期文档中的 detail 6） |
-| **色彩** | Perlin **K 档**（≤8）噪声阈值分区 + **OKLab（L/C/hue）**；**Phase 11.4**：**`uPerlinL`** 与 **`vote_average`** 经 **P10.1** 与宏观一致；**主 genre** 优先 **`movie.genre_hue`**；**vote_count** 在 focus 态仍通过 **worldRadius** 影响球尺度；**小 vote 片 focus 后视觉偏小为 intended**（产品接受） |
+| **色彩** | Perlin **K 档**（≤8）噪声阈值分区 + **固定 OKLab Lightness/Chroma**（当前 `0.55 / 0.15`）；评分不再写入 `uPerlinL` 或 Key，而是经版本化 power curve 只驱动逐片元局部底色 Emission。固定 Key `0.35` 只塑形；**主 genre** 优先 **`movie.genre_hue`**；**vote_count** 在 focus 态仍通过 **worldRadius** 影响球尺度；**小 vote 片 focus 后视觉偏小为 intended**（产品接受） |
 | **可交互性** | 抽屉/详情；**邻域内 active** 可点击**切换 focus**（仍经 Phase 11.6 拾取分流与 Perlin 球优先级）；**退出 focus** 仅 **ESC**、档案抽屉关闭、搜索栏清除（**X**）——**不**再支持「点击画布空白」退出（与 Design Spec §4.6 一致） |
 | **进入/退出** | 相机动画时长沿用现 `SELECT_MS` / `DESELECT_MS`（数值以《视觉参数总表》为准）；P8.4 起 `flyToFocus` 使用**物理距离常数** `FOCUS_CAM_DIST`；**Phase 13 起**进出 focus 的相机位姿与 **`uFocusCameraBlend`** 等通道由统一 **`transitionDriver`**（`focusDriver.progress`）驱动；**selected** 段为**轨道相机**（§3.4.6） |
 
@@ -145,13 +145,18 @@ Perlin focus 球在片元侧按 **`vNoise`** 与 **`uThresh[0..K−2]`**（**K**
 
 **参数上限**：`uStepHeight` 由 Leva 与产品上限约束（须与 `near`、`FOCUS_PERLIN_CAMERA_STANDOFF` 相容）；具体数值定稿见《视觉参数总表》与 Phase 11 实施说明。
 
-#### 3.5.1 Perlin 片元着色与光照（Phase 11.4 · **已实装**）
+#### 3.5.1 Perlin 片元着色、Emission 与固定 Key（Phase 39 · **当前生产合同**）
 
-- **法线**：屏幕空间 **`cross(dFdx(vWorldPos), dFdy(vWorldPos))`** 与顶点输出的 **`vGeomNormalWorld`** 按 **`uFlatShadingMix`** 混合，再算 Lambert **`dot(N, uLightDir)`**。
-- **底色**：每档 **`uHue[i]`** + 运行时 **`uPerlinL`** + **`uPerlinChroma`**，在 OKLab 平面用 **cos/sin(hue)** 配 **L**（与 idle/active 语义一致）；线性 RGB **clamp** 至 **[0,1]** 后再 **sRGB**，避免低 **L** / 高 **C** 出色域导致片元异常着色。**Phase 17**：在合成 `hueToOkSrgb(...)` 前可先令 **`C_new = uPerlinChroma × clamp(uPerlinL / uLMax, 0, 1)^γ`**（`γ` = **`uHuntGamma`**，与双 mesh 共享）；**仅当 `uHuntApplyMask` 的 Perlin 位（约定：bit 2，即 `mask & 4 != 0`）置位时**应用 Hunt；idle / active 分别为 **bit 0 / bit 1**，彼此独立可调。
-- **vote→L**：**`vote_average`** 经与 **`galaxyIdle.vert.glsl`** 相同的 **P10.1** 映射写入 **`uPerlinL`**；入场系数快照来自 **`galaxy.idleMaterial.uniforms`**（与 `scene.ts` **`beginSelect`** 一致）。
+- **法线**：屏幕空间 **`cross(dFdx(vWorldPos), dFdy(vWorldPos))`** 与顶点输出的 **`vGeomNormalWorld`** 按 **`uFlatShadingMix=0.8`** 混合，再计算 Lambert **`dot(N, uLightDir)`**。
+- **局部底色**：每档 **`uHue[i]`** 使用固定 **`uPerlinL=0.55`** 与 **`uPerlinChroma=0.15`**。OKLab/OKLCH 转换后仅将负通道归零，保留正 HDR 值；Perlin/genre band 合成后的最终逐片元颜色为 **`baseLinear`**。Phase 17 Hunt 仍可按 Perlin bit 应用，但 Focus 的 L/C 不再跟随宏观 uniform 快照。
+- **评分 → Emission**：有限 **`vote_average`** 先 clamp 到 `0…10`，令 `t=rating/10`，再计算 **`E = 0.06 + t² × 0.54`**。评分只写 **`uEmissionIntensity`**；不写 `uPerlinL`、`uPerlinChroma`、`uKeyLightIntensity`、genre band、geometry、seed、pose 或 camera。
+- **线性合成**：逐片元计算 **`emissiveLinear = baseLinear × uEmissionIntensity`** 与 **`keyLitLinear = baseLinear × 0.35 × lambert`**，再相加为 `litLinear`。无独立 ambient 项；Key 对所有评分固定。
+- **输出边界**：正 HDR 值在 selective Bloom 前不截断；片元末端只执行一次 linear → sRGB。`uLightingEnabled=0` 的诊断路径与生产光照路径共用同一输出边界。
 - **hue**：**主 genre**（`movie.genres` 首个非空）若 JSON 含 **`movie.genre_hue`** 则该档直接用；其余档用 **`genreHueForGenreName`**。palette / `genre_hue` 的生成顺序以 [`TMDB 电影宇宙 Data Pipeline.md`](./TMDB%20电影宇宙%20Data%20Pipeline.md) 的 frozen palette 为准，前端不得自行重排。
-- **光照定稿**：**`uLightDir = normalize(0.5, 0.5, -0.1)`**，**`uAmbient = 0.95`**，**`uDiffuse = 0.55`**，**`uFlatShadingMix = 0.8`**（详见《视觉参数总表》§4）。
+- **固定 Key**：**`uLightDir = normalize(0.7, 0.7, -0.14)`**，**`uKeyLightIntensity = 0.35`**，**`uFlatShadingMix = 0.8`**。最终参数以 `planetVisualDefaults.ts` 为准。
+- **Perlin selective Bloom**：Focus、Cover 与静态导出共用 **`pure-bloom-delta-v1`**；当前 `threshold=0`、`radius=1`、`strength=0.01`。基础场景只出现一次，附加项为 `max(composite - isolatedBase, 0)`；planet-only layer 使用 HalfFloat target，不包含宏观 idle/active。
+
+**Phase 39 人工 Gate**：最终结论为 Go，含一项保留——生产数据评分 `5.1` 与 `8.482` 的亮度差异目测不明确；其他项目无目测问题。Go 表示接受当前 Phase 结果并结束，不表示评分亮度层级已经解决；后续手调在 Phase 39 之外进行。
 
 **不透明化（P11.5 · 已实装）**：Perlin 材质现为 **`transparent: false`**、**`depthWrite: true`**、**`alphaTest: 0.01`**；`uAlpha` 在 `setOpacity()` 中按可见性走 **0/1 二态**，避免 focus 球在 bloom / 叠片场景出现透明边缘泄漏。
 
@@ -222,3 +227,4 @@ Perlin focus 球在片元侧按 **`vNoise`** 与 **`uThresh[0..K−2]`**（**K**
 | 2026-05-03 | **Phase 17 P17.4**：§3.3 补 GPU hover 与邻域 alpha 分工；§3.4.3 补 **`uHoveredInstanceId` / `uFocusHoveredActiveAlpha`**；§3.4.5 补与 hover uniform 关系；基线见 **`docs/benchmarks/Phase 8 基线 P8.0 性能与 P8.4 准入.md`** **`## P17 出口`** |
 | 2026-05-03 | **Phase 19 P19**：§3.2.1 路径 **A** = **`selectionPhase === 'idle'` ∧ `selectedMovieId === null`**（宏观默认 opaque）；路径 **B** = focus 特例；演进说明 **Phase 16 → 19**（收敛 **`searchMode`** 矩阵口径） |
 | 2026-05-13 | **Phase 26 P26.4**：§3.1 idle 材质 **P26.3** 运行时透明路径与色彩链分工；§3.2 **active** 可交互性补 **idle 近距 fade** 下 CPU 拾取门限（对齐 Tech Spec §1.5） |
+| 2026-07-19 | **Phase 39 收口**：§3.4 与 §3.5.1 将 Focus 从评分→`uPerlinL` 迁移为固定 L/C + 评分→局部底色 Emission + 固定 Key；补 linear RGB 单次 sRGB、`pure-bloom-delta-v1` 三端合同与最终参数。P39.8 以带保留项的 Go 结束：生产数据评分 `5.1` 与 `8.482` 亮度差异目测不明确，后续手调不属于 Phase 39。 |

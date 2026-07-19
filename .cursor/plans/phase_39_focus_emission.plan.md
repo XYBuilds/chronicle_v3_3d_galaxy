@@ -34,7 +34,7 @@ todos:
     status: complete
   - id: p39-visual-gate
     content: 39.8 [需人工验收] 使用最终参数完成三端与宏观层综合视觉 Gate、参数固化及文档报告
-    status: pending
+    status: complete
 isProject: false
 ---
 
@@ -47,7 +47,7 @@ isProject: false
 - Emission 使用 Perlin/genre band 合成后的逐片元局部底色：蓝色区域发蓝光，黄色区域发黄光，不叠加白色 Emission 改写局部色相。
 - 不引入 Three.js `PointLight` / `DirectionalLight`；固定 Key Light 仍由 [`frontend/src/three/shaders/perlin.frag.glsl`](frontend/src/three/shaders/perlin.frag.glsl) 的中性 Lambert uniform 模型实现，只负责球体、地形和 band 塑形。
 - 网站 focus、Cover 今日星球、静态星球导出继续共同消费 [`createSelectionPlanet()`](frontend/src/three/planet.ts)，不得形成三套参数或分支。
-- [`FocusLReference`](frontend/src/hud/FocusLReference.tsx) 与 [`FocusSizeReferenceRings`](frontend/src/three/FocusSizeReferenceRings.ts) 完整退役，不保留隐藏渲染、每帧同步、Store 快照、locale 接口或旋转命名依赖。
+- `FocusLReference` 与 `FocusSizeReferenceRings` 完整退役，不保留隐藏渲染、每帧同步、Store 快照、locale 接口或旋转命名依赖。
 
 ```mermaid
 flowchart LR
@@ -144,17 +144,17 @@ vec3 litLinear = emissiveLinear + keyLitLinear;
 - Phase 39 的唯一生产候选是 `E(rating) + KFixed`，不同时实现 `K(rating)`，避免在同一轮引入两条评分曲线和四个可调端点。
 - 若 39.8 仅发现亮度范围或 Bloom 问题，继续一次只调整一个 Emission 端点、固定 Key 或既有 Bloom 参数，不以评分 Key 掩盖问题。
 - 2026-07-18 首轮 39.8 人工 Gate 为 No-Go：低分星球过亮，低分与高分的直觉亮度差异不足。后续 P39.9 先隔离固定 Key，再验证 cubic Emission；只有排除 Key 与曲线后仍偏亮，才评估固定 OKLab Lightness。
-- 若受控矩阵证明高 Emission 必然抬平地形、而固定 Key 无法同时满足低/高评分，39.8 保持 pending：尚未交付时新增明确的后续 TODO 评估 E+K；若当前视觉契约已经交付或需要重新定义，则另开后续 Phase。
+- 若受控矩阵证明高 Emission 必然抬平地形、而固定 Key 无法同时满足低/高评分，当时应让 39.8 保持 pending：尚未交付时新增明确的后续 TODO 评估 E+K；若视觉契约已交付或需要重新定义，则另开后续 Phase。实际执行中 P39.9–P39.11 未引入评分 Key，最终 P39.8 以带保留项的 Go 闭合。
 - 后续 E+K 必须有自己的纯函数、hash 版本和人工 Gate，不在本 Phase 预留隐藏运行时分支。
 
 ### D6 · Reference 完整退役，但不误删自转
 
-- 删除 [`frontend/src/hud/FocusLReference.tsx`](frontend/src/hud/FocusLReference.tsx)、[`frontend/src/three/FocusSizeReferenceRings.ts`](frontend/src/three/FocusSizeReferenceRings.ts) 及专属测试。
+- 删除 `frontend/src/hud/FocusLReference.tsx`、`frontend/src/three/FocusSizeReferenceRings.ts` 及专属测试。
 - 从 [`frontend/src/App.tsx`](frontend/src/App.tsx) 移除 HUD 挂载；从 [`frontend/src/three/scene.ts`](frontend/src/three/scene.ts) 移除 ring 创建、scene 挂载、每帧更新、dispose 和 `focusLightnessSnap` 写入。
 - 从 [`frontend/src/store/galaxyInteractionStore.ts`](frontend/src/store/galaxyInteractionStore.ts) 删除 `FocusLightnessSnap` 与 `focusLightnessSnap`。
 - 从 [`frontend/src/lib/strings.ts`](frontend/src/lib/strings.ts) 和所有 locale bundle 删除 `focusLReference` / `focusVoteReference`；运行 locale schema parity 测试。
 - 删除 [`frontend/src/index.css`](frontend/src/index.css) 的专属 `--hud-focus-ref-*` token。
-- 若 [`frontend/src/lib/galaxyVoteSize.ts`](frontend/src/lib/galaxyVoteSize.ts) 的 tier/ring helpers 已无消费者，则连同专属测试删除；不删除仍被真实粒子尺寸逻辑消费的代码。
+- 若 `frontend/src/lib/galaxyVoteSize.ts` 的 tier/ring helpers 已无消费者，则连同专属测试删除；不删除仍被真实粒子尺寸逻辑消费的代码。
 - [`frontend/src/three/selectionPlanetRotation.ts`](frontend/src/three/selectionPlanetRotation.ts) 保留确定性姿态、自转轴、自转速度和 quaternion 行为，但将 `REFERENCE_RING_*` / `RingPlane` 术语改为 planet-local spin/base-orientation 术语，并用测试锁定数值行为不变。
 
 ### D7 · Bloom 是纯增量后处理，正确性先于视觉调参
@@ -164,6 +164,13 @@ vec3 litLinear = emissiveLinear + keyLitLinear;
 - Perlin Bloom 参数必须有限，且满足 `strength >= 0`、`radius ∈ [0,1]`、`threshold >= 0`；当前 `radius=2` 超出 Three.js `UnrealBloomPass` 契约，39.10 先恢复合法诊断基线，39.11 再做视觉择优。
 - 执行顺序固定为 `39.9 → 39.10 → 39.11 → 39.8`：39.10 只修正确性，39.11 按 Key、Emission 曲线、Bloom、Emission 端点的顺序单变量收敛，39.8 只验收最终参数。
 - 39.10/39.11 生成的候选与修复证据写入独立 ignored 目录，不覆盖 39.7/39.9 原始 PNG、sidecar 或联系表；旧证据保留为问题发现与行为对照。
+
+### D8 · P39.8 以带保留项的 Go 闭合 Phase 39
+
+- 最终生产配置保持 P39.11 选定值，不在 P39.8 现场调参：固定 Key `0.35`；Emission `Emin=0.06`、`Emax=0.60`、exponent `2`；Bloom `threshold=0`、`radius=1`、`strength=0.01`。
+- 受控 `rating 0/4/5/10` 的 Bloom ON 平均亮度按 `0.173 / 0.236 / 0.265 / 0.424` 单调上升；visual hash、透明边界、重复导出、生产参数与纯 Bloom 增量合同通过结构化校验。
+- 生产数据人工验收中，评分 `5.1` 与 `8.482` 的亮度差异目测不明确；其他项目无目测问题。该项作为验收保留项记录，不改写为“评分层级已解决”。
+- 人工 Gate 结论为 Go，语义是接受当前 Phase 结果并结束 Phase 39。后续视觉手调由用户在 Phase 39 之外自行进行，本 Phase 不再新增 P39.x 调参或替用户选择参数。
 
 ## 工作拆分
 
@@ -360,7 +367,13 @@ vec3 litLinear = emissiveLinear + keyLitLinear;
 6. 39.8 不再现场调参；若任一项 No-Go，返回 39.11 对应 checkpoint 重新做单变量候选，不在 Gate 中临时 patch。
 7. 人工 Go 后固化最终参数与 visual hash，更新 [`docs/project_docs/星球状态机 spec.md`](docs/project_docs/星球状态机%20spec.md) 及实际受影响的视觉映射说明，并写入 [`docs/reports/Phase 39 P39 Focus 评分自发光与颜色空间统一 实施报告.md`](docs/reports/Phase%2039%20P39%20Focus%20评分自发光与颜色空间统一%20实施报告.md)。
 
-未获人工 Go 前，不将 39.8 标为 complete，不宣称 Phase 39 参数定稿，不写最终实施报告或执行发布交付。
+**最终人工验收（Go，带保留项）：**
+
+- 结构化与静态证据通过：生产 visual hash、透明边界、重复导出、生产参数合同和 `pure-bloom-delta-v1` 合同一致；受控 `rating 0/4/5/10` 的 Bloom ON 平均亮度单调上升。
+- 正常生产数据与生产参数下，用户确认除评分层级外无目测问题；评分 `5.1` 与 `8.482` 的亮度差异目测不明确。
+- Go 表示接受当前 Phase 结果并结束 Phase 39，不表示上述评分亮度差异已经解决。后续手调由用户在 Phase 39 之外自行进行；39.8 不返回 39.11，也不继续新增 P39.x 调参。
+
+人工 Go 已取得。39.8 标记为 complete，最终参数与 hash 保持 P39.11 生产值，并执行文档、报告和发布收尾。
 
 ## Phase 39 验收标准
 
@@ -373,9 +386,14 @@ vec3 litLinear = emissiveLinear + keyLitLinear;
 - Perlin Bloom 参数全部有限，且满足 `strength >= 0`、`radius ∈ [0,1]`、`threshold >= 0`；非法参数快速失败。
 - visual hash 能识别 Emission 曲线、固定 Key、最终 Bloom 参数与颜色流程，旧导出不会误复用。
 - `FocusLReference`、`FocusSizeReferenceRings` 及其运行时状态/更新/文案/测试契约彻底消失。
-- 确定性姿态与自转保留；受控评分矩阵可复现，Key 只塑形、Emission 决定评分层级、Bloom 只增加光晕。
-- 自动化检查、3000×3000 导出矩阵、三入口一致性和人工 Gate 全部通过。
-- Phase 39 不包含评分驱动 Key；若固定 Key 模型 No-Go，按 D5 独立规划 E+K。
+- 确定性姿态与自转保留；受控评分矩阵可复现，Key 只塑形、Emission 按合同控制评分输入、Bloom 只增加光晕。
+- 自动化检查、3000×3000 导出矩阵和三入口配置合同通过；人工 Gate 以带保留项的 Go 闭合。
+- 验收保留项：生产数据中评分 `5.1` 与 `8.482` 的亮度差异目测不明确；Phase 39 不宣称评分层级已解决。
+- Phase 39 不包含评分驱动 Key，也不再追加 P39.x 调参；用户后续手调属于 Phase 39 外工作。
+
+## Phase 39 最终状态
+
+Phase 39 已完成并接受当前生产配置。最终状态是“Go，带亮度区分保留项”，不是“所有视觉目标均已解决”。P39.8 之后不再回到 P39.11 checkpoint；后续参数手调由用户在本 Phase 之外自行处理。
 
 ## Phase 39 交付物
 
@@ -385,4 +403,4 @@ vec3 litLinear = emissiveLinear + keyLitLinear;
 - 三入口共用的 planet appearance/uniform、纯 Bloom 增量合成链与 visual hash。
 - 两个 Reference 的完整退役 diff。
 - 39.7/39.9 原始证据，以及 39.10 合成修复矩阵、39.11 单变量收敛矩阵和最终真实样本导出。
-- 聚焦测试、状态机 spec、视觉映射说明与 Phase 39 最终实施报告。
+- 聚焦测试、状态机 spec、视觉映射说明、带保留项的人工验收记录与 Phase 39 最终实施报告。

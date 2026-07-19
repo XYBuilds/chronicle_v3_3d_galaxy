@@ -31,6 +31,19 @@ function main() {
     !fs.existsSync(path.join(DIST_DIR, '404.html')),
     'dist/404.html must not exist after default build (CF Pages uses implicit SPA + _redirects)',
   )
+  assert(
+    !fs.existsSync(path.join(DIST_DIR, 'data', 'today.json')),
+    'dist/data/today.json must not be published',
+  )
+
+  const manifestPath = path.join(DIST_DIR, 'data', 'galaxy_assets_manifest.json')
+  assert(fs.existsSync(manifestPath), 'missing dist/data/galaxy_assets_manifest.json')
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'))
+  assert(!('today_url' in manifest), 'assets manifest must not contain today_url')
+  assert(
+    !('today' in (manifest.r2_object_keys ?? {})),
+    'assets manifest r2_object_keys must not contain today',
+  )
 
   assert(fs.existsSync(path.join(DIST_DIR, '_headers')), 'missing dist/_headers')
   assert(fs.existsSync(path.join(DIST_DIR, 'fonts')), 'missing dist/fonts/')

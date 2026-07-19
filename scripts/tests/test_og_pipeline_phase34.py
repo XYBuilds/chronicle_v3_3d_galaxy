@@ -33,6 +33,14 @@ class TestOgPipelinePhase34(unittest.TestCase):
                 self.assertNotIn("render_og_today", text)
                 self.assertNotIn("sync_og_index_kv", text)
 
+    def test_retired_today_scripts_are_not_present(self) -> None:
+        for retired_script in (
+            _REPO_ROOT / "scripts" / "cron" / "pick_movie_today.py",
+            _REPO_ROOT / "scripts" / "cron" / "render_og_today.py",
+        ):
+            with self.subTest(script=retired_script.name):
+                self.assertFalse(retired_script.exists())
+
     def test_workflows_use_the_same_fail_closed_incremental_sync_before_r2_upload(self) -> None:
         for workflow in (_NIGHTLY_WORKFLOW, _MONTHLY_WORKFLOW):
             with self.subTest(workflow=workflow.name):

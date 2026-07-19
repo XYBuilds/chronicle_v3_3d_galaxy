@@ -24,7 +24,7 @@
 为了平衡漫游的流畅感与数据阅读的深度，前端展示采用三层渐进式交互机制：
 
 * **层级零：自由漫游 (Default Roaming)**  
-  * **入场**：应用完成 **四阶段 gzip + 搜索索引 hydrate** 与 **`today.json` / Cover 数据决议**后，**自动**挂载 WebGL 并进入 **Cover**（The Movie Today 高亮 + 中心 Perlin 入口）；**无**「先点 Start 再进宇宙」门闩（Phase 23 已移除 Start）。**同一会话内**不重复整包加载链。阶段划分、失败回退与 **WebGL** 挂载契约见《Tech Spec》**§1.4.7**。  
+  * **入场**：应用完成 **四阶段 gzip + 搜索索引 hydrate** 后，自动挂载 WebGL 并进入无选中电影的 **galaxy idle**；无「先点 Start 再进宇宙」门闩，也不请求 `today.json`。同一会话内不重复整包加载链。阶段划分、失败回退与 WebGL 挂载契约见《Tech Spec》**§1.4.7**。
   * **触发**：默认状态，无特定星体被悬停或选中。  
   * **行为**：用户随意控制摄像机（如滚轮穿梭、拖拽平移），在 3D 宇宙中自由航行。  
   * **内容**：HUD 界面保持极简（或完全隐藏），仅提供全局时间轴或基本操作提示，将视觉中心彻底让位给 3D 宇宙景观。  
@@ -47,11 +47,11 @@
 
 **ESC 出栈**（详见 Design Spec §4.6）：搜索框失焦 → 关抽屉 → 取消 focus（保留 select 上下文）→ 退出搜索 select。
 
-**The Movie Today 分享与社交预览（Phase 27）**：在具备当日推荐片源时，HUD 提供轻量分享入口（复制站点首页 URL、跳转各平台发帖 / 写信 composer）。生产构建为 **`og:image` / `twitter:image`** 中的 **`og-today.png`** 基 URL 追加 **`?v=YYYY-MM-DD`**（与 `today.json.date` 或构建日对齐），减轻社交平台对固定图片 URL 的长期预览缓存。可选 **`VITE_DISCORD_INVITE_URL`** 仅服务分享菜单内 Discord 行；**主要 Discord 触达路径仍为 §3.4 Tally thank-you 页**。
+**电影深链与社交预览**：电影档案抽屉分享对应的 **`/movie/:id`**；该深链继续打开该片 focus。OG Worker 保留品牌首页与电影动态 OG。首页 **`/`** 是 galaxy idle，不再代表每日影片；`/today` 与 `/og/today.png` 已退役并在服务边界返回 **404**。
 
 **从档案抽屉进入人名高亮（Phase 27）**：详情抽屉中 cast / crew 等展示名在搜索索引可解析时表现为可点击控件，语义与上条路径 2「搜人名 → person select」一致（同一 **`selectionIds` / `selectionPersonKey`** 驱动的星座高亮）；无法解析为索引 key 时保持纯文本，不阻断阅读。
 
-**首次引导（first-time onboarding）**：Phase 27 曾规划基于 `localStorage` 的多步轻引导，**当前仓库未交付**；若未来重启，须与 Cover、搜索与 focus 协议一并走 PRD—Design Spec 联审。
+**首次引导（first-time onboarding）**：Phase 27 曾规划基于 `localStorage` 的多步轻引导，**当前仓库未交付**；若未来重启，须与 galaxy idle、搜索与 focus 协议一并走 PRD—Design Spec 联审。
 
 ### **3.3 数据更新与同步**
 
@@ -66,7 +66,7 @@
 
 * **自愿支持（Ko-fi）**：主 HUD 提供打开 Ko-fi（或部署配置的同类 `https:` 支持页）的入口；未配置或显式关闭时可隐藏按钮。产品不使用 Buy Me a Coffee。  
 * **用户反馈（Tally）**：主 HUD 提供打开 Tally 表单的入口（嵌入弹层 / 外链由实现决定）；用于功能建议、问题报告与主观体验等。提交的数据由 **Tally** 处理；**Info** 模态内需有简短隐私提示（勿在表单中提交密码或高度敏感信息）。  
-* **社区（Discord）**：**主路径**为维护者在 **Tally 表单 thank you page** 配置的 Discord 邀请（用户提交反馈后可见）；**可选**：在「The Movie Today」分享下拉里通过环境变量配置生产用邀请链接（见《Tech Spec》§5.3）。社区用于讨论与跟进，**非** TMDB 官方渠道、**无** SLA。
+* **社区（Discord）**：**主路径**为维护者在 **Tally 表单 thank you page** 配置的 Discord 邀请（用户提交反馈后可见）。社区用于讨论与跟进，**非** TMDB 官方渠道、**无** SLA。
 
 ## **4\. 未来计划 (Future Roadmap)**
 

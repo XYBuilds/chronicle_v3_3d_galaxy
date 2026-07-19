@@ -19,7 +19,7 @@ todos:
     status: complete
   - id: p40-tests-docs
     content: 40.6 完成回归测试、locale parity、现行 SSOT 与中英文 README 对齐
-    status: pending
+    status: complete
   - id: p40-integration-verification
     content: 40.7 完成本地集成、迁移 dry-run 与 Daily Stargazing 深链验证
     status: pending

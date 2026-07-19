@@ -22,7 +22,7 @@ todos:
     status: complete
   - id: p40-integration-verification
     content: 40.7 完成本地集成、迁移 dry-run 与 Daily Stargazing 深链验证
-    status: pending
+    status: complete
   - id: p40-production-gate
     content: 40.8 [需人工验收] 完成生产发布、v2 迁移、线上清理与 scheduled Gate
     status: pending

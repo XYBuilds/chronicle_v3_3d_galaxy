@@ -247,7 +247,9 @@ def kv_bulk_get(
         raise KvAdapterError(operation="bulk-get", status="invalid-result", context=context)
     values: dict[str, str | None] = {key: None for key in normalized}
     for key, value in values_payload.items():
-        if not isinstance(key, str) or key not in values or not isinstance(value, str):
+        if not isinstance(key, str) or key not in values:
+            raise KvAdapterError(operation="bulk-get", status="invalid-result", context=context)
+        if value is not None and not isinstance(value, str):
             raise KvAdapterError(operation="bulk-get", status="invalid-result", context=context)
         values[key] = value
     return values

@@ -253,10 +253,56 @@ class TestKvAdapterTransfers(unittest.TestCase):
                 kv_bulk_put(account_id="a", namespace_id="n", api_token="hidden", batch=[{"key": "k", "value": "v"}])
         self.assertIn("invalid-json", str(ctx.exception))
 
+    def test_bulk_get_accepts_explicit_null_for_requested_keys(self) -> None:
+        from cron.og_index_kv import kv_bulk_get
+
+        payloads = [
+            {"success": True, "result": {"values": {"today": None}}},
+            {
+                "success": True,
+                "result": {"values": {"movie:1": "one", "today": None}},
+            },
+        ]
+        with mock.patch("cron.og_index_kv.urllib.request.urlopen", self._urlopen(payloads)):
+            self.assertEqual(
+                kv_bulk_get(account_id="a", namespace_id="n", api_token="x", keys=["today"]),
+                {"today": None},
+            )
+            self.assertEqual(
+                kv_bulk_get(
+                    account_id="a",
+                    namespace_id="n",
+                    api_token="x",
+                    keys=["movie:1", "today"],
+                ),
+                {"movie:1": "one", "today": None},
+            )
+
+    def test_absent_readback_accepts_explicit_null_from_bulk_get(self) -> None:
+        from cron.og_index_kv import verify_kv_absent
+
+        response = {"success": True, "result": {"values": {"today": None}}}
+        with mock.patch("cron.og_index_kv.urllib.request.urlopen", self._urlopen([response])):
+            verify_kv_absent(
+                account_id="a",
+                namespace_id="n",
+                api_token="hidden",
+                keys=["today"],
+                retry_delays_s=(),
+            )
+
     def test_bulk_get_rejects_unknown_or_invalid_value(self) -> None:
         from cron.og_index_kv import KvAdapterError, kv_bulk_get
 
-        for values in ({"other": "value"}, {"movie:1": 7}):
+        invalid_values = (
+            {"other": "value"},
+            {"other": None},
+            {"movie:1": True},
+            {"movie:1": 7},
+            {"movie:1": []},
+            {"movie:1": {}},
+        )
+        for values in invalid_values:
             with mock.patch(
                 "cron.og_index_kv.urllib.request.urlopen",
                 self._urlopen([{"success": True, "result": {"values": values}}]),

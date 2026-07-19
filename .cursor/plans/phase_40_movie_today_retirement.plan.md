@@ -7,7 +7,7 @@ todos:
     status: complete
   - id: p40-frontend-retirement
     content: 40.2 将首页收敛为 galaxy idle 并完整退役 Today cover/WebGL 状态
-    status: pending
+    status: complete
   - id: p40-pipeline-retirement
     content: 40.3 移除每日选片、today.json 上传与 manifest today_url 生产链
     status: pending

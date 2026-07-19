@@ -1,6 +1,5 @@
 import * as THREE from 'three'
 
-import { useCoverModeStore } from '@/store/coverModeStore'
 import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
 import type { Movie } from '@/types/galaxy'
 
@@ -128,25 +127,12 @@ export function attachGalaxyActiveMeshInteraction(options: {
     camera.getWorldPosition(_pickCameraWorldPos)
   }
 
-  /**
-   * Perlin + hover ring anchor: same as focus (`selectedMovieId`), or cover “today” when not yet in focus.
-   * Reuses main-app planet UI logic without cover-only branches in callers.
-   */
-  const planetAnchorMovieId = (): number | null => {
-    const st = useGalaxyInteractionStore.getState()
-    const cov = useCoverModeStore.getState()
-    if (st.selectedMovieId !== null) return st.selectedMovieId
-    if (cov.coverMode && cov.todayMovieId !== null) return cov.todayMovieId
-    return null
-  }
+  /** Perlin + hover ring anchor follows the selected focus movie. */
+  const planetAnchorMovieId = (): number | null => useGalaxyInteractionStore.getState().selectedMovieId
 
   const buildActivePickOptions = (ray: THREE.Ray, requireSlabInteraction: boolean) => {
     syncCameraWorldForPick()
     const st = useGalaxyInteractionStore.getState()
-    const cov = useCoverModeStore.getState()
-    const covIdx =
-      cov.coverMode && cov.todayMovieId !== null ? movies.findIndex((m) => m.id === cov.todayMovieId) : null
-    const covBoost = (activeMaterial.uniforms.uCoverActiveSizeBoost as THREE.Uniform<number>).value
     const macroFadeBlend = getIdleMacroFadesBlend?.() ?? 1
     return {
       ray,
@@ -157,20 +143,12 @@ export function attachGalaxyActiveMeshInteraction(options: {
       requireSlabInteraction,
       selectionMaskPickSet: maskPickFromState(),
       cameraWorldPos: _pickCameraWorldPos,
-      idleNearFadeExemptMovieId:
-        cov.coverMode && cov.todayMovieId !== null ? cov.todayMovieId : st.selectedMovieId,
+      idleNearFadeExemptMovieId: st.selectedMovieId,
       idleMacroFadesBlend: macroFadeBlend,
-      coverTodayInstanceIndex: cov.coverMode && covIdx !== null && covIdx >= 0 ? covIdx : null,
-      coverActiveSizeBoost: cov.coverMode ? covBoost : 1,
-      coverTodayWorldPickRadius:
-        cov.coverMode && cov.todayMovieId !== null && selectionPlanet ? selectionPlanet.lastRadius : null,
     }
   }
 
-  /**
-   * P11.6 — When the Perlin shell is the nearer hit than the active pick sphere, use planet hover (same as focus).
-   * Cover: CPU pick uses `coverTodayWorldPickRadius` so the comparison matches the main `tFocus < pickedActive.t` path.
-   */
+  /** P11.6 — When the Perlin shell is nearer than an active pick sphere, use planet hover. */
   const focusPlanetBeatsActiveAlongRay = (
     clientX: number,
     clientY: number,
@@ -246,7 +224,6 @@ export function attachGalaxyActiveMeshInteraction(options: {
     _worldProject.set(m.x, m.y, m.z)
     const anchor = worldToScreenCss(_worldProject, camera, domElement)
     const selectionMaskPickSet = maskPickFromState()
-    const cov = useCoverModeStore.getState()
     const anchorId = planetAnchorMovieId()
     const usePerlinRingCss = anchorId === m.id && selectionPlanet?.mesh.visible
     let rCss: number
@@ -260,9 +237,6 @@ export function attachGalaxyActiveMeshInteraction(options: {
         domElement,
       })
     } else {
-      const covBoost = (activeMaterial.uniforms.uCoverActiveSizeBoost as THREE.Uniform<number>).value
-      const extraWorldScale =
-        cov.coverMode && cov.todayMovieId === m.id ? covBoost : 1
       rCss = computeActiveMeshScreenRadiusCss({
         movie: m,
         camera,
@@ -271,7 +245,6 @@ export function attachGalaxyActiveMeshInteraction(options: {
         zCurrent: st.zCurrent,
         zVisWindow: st.zVisWindow,
         selectionMaskPickSet,
-        extraWorldScale,
       })
     }
     const planetRadiusCss = rCss > 0 ? rCss : null
@@ -292,22 +265,10 @@ export function attachGalaxyActiveMeshInteraction(options: {
     window.removeEventListener('pointercancel', onWindowPointerCancel, true)
     primaryPressActive = false
     if (dragExceededDuringPress) return
-    const cov = useCoverModeStore.getState()
     if (focusPlanetBeatsActiveAlongRay(e.clientX, e.clientY, true)) {
-      if (cov.coverMode && cov.todayMovieId !== null) {
-        console.log('[Interaction] cover click on perlin sphere → focus today')
-        cov.exitCoverIntoFocus()
-      }
       return
     }
     const picked = pickAlongRay(e.clientX, e.clientY, true)
-    if (cov.coverMode && cov.todayMovieId !== null) {
-      if (picked !== null && movies[picked.index]?.id === cov.todayMovieId) {
-        console.log('[Interaction] cover click → focus today')
-        cov.exitCoverIntoFocus()
-      }
-      return
-    }
     // P13.3 — blank click in focus: do not clear selectedMovieId (only ESC / drawer / search X).
     if (picked === null && useGalaxyInteractionStore.getState().selectedMovieId !== null) {
       return

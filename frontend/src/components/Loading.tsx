@@ -49,11 +49,7 @@ function computeLoadingDisplay(
   return { percent: 0, stageKey: 'download' }
 }
 
-/**
- * Full-screen loading overlay: gzip + search-index progress (four steps).
- * P23.4b — Cosmos tokens: light field, universe ink for the/movie/cosmos, brand-muted for today;
- * no staged fade before unload; cover entry animation lives on {@link CoverBackdrop}.
- */
+/** Full-screen loading overlay: gzip + search-index progress (four steps). */
 export function Loading({
   className,
   label: labelProp,
@@ -76,9 +72,6 @@ export function Loading({
 
   const brandTypeSizeClass = 'font-butler text-[120px] tracking-[-0.02em] sm:text-[180px] lg:text-[240px]'
   const brandLineHeightClass = 'leading-[0.6]'
-  /** P23.4b — the/movie/cosmos share universe ink on the light field; today uses brand-muted (SSOT). */
-  const brandInkClass = 'text-[color:var(--cosmos-universe-bg)]'
-  const todayClass = 'text-[color:var(--cosmos-brand-muted)]'
 
   return (
     <div
@@ -86,7 +79,7 @@ export function Loading({
       aria-busy={busy}
       aria-label={label}
       className={cn(
-        'fixed inset-0 z-50 flex min-h-0 flex-col overflow-hidden bg-[color:var(--cosmos-brand-muted)]',
+        'fixed inset-0 z-50 flex min-h-0 flex-col overflow-hidden bg-[color:var(--cosmos-universe-bg)]',
         className,
       )}
     >
@@ -94,25 +87,13 @@ export function Loading({
         aria-hidden
         className="pointer-events-none absolute left-8 top-1/2 -translate-y-1/2 lowercase sm:left-12"
       >
-        <p className={cn(brandTypeSizeClass, brandLineHeightClass, brandInkClass)}>the</p>
-        <p className={cn(brandTypeSizeClass, brandLineHeightClass, brandInkClass)}>movie</p>
-        <p className={cn(brandTypeSizeClass, brandLineHeightClass, brandInkClass)}>cosmos</p>
+        <p className={cn(brandTypeSizeClass, brandLineHeightClass, 'text-white/90')}>the</p>
+        <p className={cn(brandTypeSizeClass, brandLineHeightClass, 'text-white/90')}>movie</p>
+        <p className={cn(brandTypeSizeClass, brandLineHeightClass, 'text-white/90')}>cosmos</p>
       </div>
 
       <p
-        aria-hidden
-        className={cn(
-          'pointer-events-none absolute right-8 top-1/2 -translate-y-1/2 lowercase sm:right-12',
-          brandTypeSizeClass,
-          brandLineHeightClass,
-          todayClass,
-        )}
-      >
-        today
-      </p>
-
-      <p
-        className="absolute bottom-8 left-8 max-w-[min(100vw-4rem,28rem)] text-left text-[18px] font-normal text-[color:var(--cosmos-universe-bg)]/55 sm:bottom-10 sm:left-12 sm:text-[20px]"
+        className="absolute bottom-8 left-8 max-w-[min(100vw-4rem,28rem)] text-left text-[18px] font-normal text-white/55 sm:bottom-10 sm:left-12 sm:text-[20px]"
         aria-live="polite"
       >
         {percent}% {stageLabel}

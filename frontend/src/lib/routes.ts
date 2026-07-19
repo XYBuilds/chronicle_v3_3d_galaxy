@@ -3,7 +3,7 @@
  * SSOT: Phase 29 spec §5 — no React Router; paths respect `import.meta.env.BASE_URL`.
  */
 
-export type RouteKind = 'home' | 'movie' | 'today' | 'unknown'
+export type RouteKind = 'home' | 'movie' | 'unknown'
 
 export interface ParsedRoute {
   kind: RouteKind
@@ -84,16 +84,12 @@ function normalizeLogicalPath(path: string): string {
   return trimmed === '' ? '/' : trimmed
 }
 
-/** Parse logical pathname (no deploy base): `/`, `/movie/:id`, `/today`, or `unknown`. */
+/** Parse logical pathname (no deploy base): `/`, `/movie/:id`, or `unknown`. */
 export function parseLogicalPath(logicalPathname: string): ParsedRoute {
   const path = normalizeLogicalPath(logicalPathname)
 
   if (path === '/') {
     return { kind: 'home' }
-  }
-
-  if (path === '/today') {
-    return { kind: 'today' }
   }
 
   const movieMatch = /^\/movie\/([^/]+)$/.exec(path)
@@ -136,12 +132,6 @@ export function buildMoviePath(
 ): string {
   assertBuildMovieId(id)
   const pathname = withAppBasePath(`/movie/${id}`, options?.basePath)
-  return mergePathAndSearch(pathname, currentSearch)
-}
-
-/** `/today` with query preserved. */
-export function buildTodayPath(currentSearch = '', options?: BuildPathOptions): string {
-  const pathname = withAppBasePath('/today', options?.basePath)
   return mergePathAndSearch(pathname, currentSearch)
 }
 

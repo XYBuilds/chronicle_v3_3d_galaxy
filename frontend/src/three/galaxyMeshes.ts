@@ -151,11 +151,6 @@ function makeSharedUniforms(
       uIdleZFadeOutsideAlpha: { value: IDLE_Z_FADE_DEFAULTS.outsideAlpha },
       /** P32.3 — 0…1 macro-fade blend for P26.3 + P27.4 (scene.ts RAF + focusDriver). */
       uIdleMacroFadesBlend: { value: 1 },
-      /** P23.3 — cover mode: draw only today instance; matched with `uCoverTodayInstanceId`. */
-      uCoverMode: { value: 0 },
-      uCoverTodayInstanceId: { value: -1 },
-      /** P23.3 — scales idle + active shell for low vote_count visibility on cover (matches CPU pick). */
-      uCoverActiveSizeBoost: { value: 1 },
     },
   }
 }

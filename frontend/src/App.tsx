@@ -1,32 +1,28 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 
 import { MovieDetailDrawer } from '@/components/Drawer'
-import { SearchBar } from '@/components/SearchBar'
-import { useLocaleFromQuery } from '@/hooks/useLocaleFromQuery'
-import { useThemeFromQuery } from '@/hooks/useThemeFromQuery'
-import { useTimelineOrientationFromQuery } from '@/hooks/useTimelineOrientationFromQuery'
 import { LoadFailurePage } from '@/components/LoadFailurePage'
 import { Loading } from '@/components/Loading'
 import { MovieTooltip } from '@/components/MovieTooltip'
+import { SearchBar } from '@/components/SearchBar'
 import { Timeline } from '@/components/Timeline'
-import { CoverBackdrop } from '@/hud/CoverBackdrop'
-import { HoverRing } from '@/hud/HoverRing'
-import { FocusExitButton } from '@/hud/FocusExitButton'
+import { useLocaleFromQuery } from '@/hooks/useLocaleFromQuery'
+import { useThemeFromQuery } from '@/hooks/useThemeFromQuery'
+import { useTimelineOrientationFromQuery } from '@/hooks/useTimelineOrientationFromQuery'
 import { FeedbackButton } from '@/hud/FeedbackButton'
-import { SupportButton } from '@/hud/SupportButton'
-import { FullscreenButton } from '@/hud/FullscreenButton'
-import { InfoButton } from '@/hud/InfoButton'
-import { TmdbAttribution } from '@/hud/TmdbAttribution'
-import { LanguageSwitch } from '@/hud/LanguageSwitch'
+import { FocusExitButton } from '@/hud/FocusExitButton'
 import { isGalaxyFullscreenAvailable, toggleGalaxyFullscreen } from '@/hud/fullscreenApi'
-import { resolveTodayMovieId } from '@/data/loadToday'
+import { FullscreenButton } from '@/hud/FullscreenButton'
+import { HoverRing } from '@/hud/HoverRing'
+import { InfoButton } from '@/hud/InfoButton'
+import { LanguageSwitch } from '@/hud/LanguageSwitch'
+import { SupportButton } from '@/hud/SupportButton'
+import { TmdbAttribution } from '@/hud/TmdbAttribution'
+import { useRouteController } from '@/lib/useRouteController'
+import { useStrings } from '@/lib/strings'
 import { clearSearch, useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
-import { useCoverModeStore } from '@/store/coverModeStore'
 import { useGalaxyDataStore } from '@/store/galaxyDataStore'
 import { useSearchIndexStore } from '@/store/searchIndexStore'
-import { useStrings } from '@/lib/strings'
-import { cn } from '@/lib/utils'
-import { useRouteController, type InitialRouteBootKind } from '@/lib/useRouteController'
 import { mountGalaxyScene } from '@/three/scene'
 
 import './App.css'
@@ -50,66 +46,32 @@ function App() {
 
   const indexHydrationTerminal =
     indexStatus === 'ready' || indexStatus === 'skipped' || indexStatus === 'error'
-
   const routeReady = status === 'ready' && data !== null && indexHydrationTerminal
 
   useEffect(() => {
     void fetchGalaxyData()
   }, [fetchGalaxyData])
 
-  /** P34.7 — React HUD footer replaces static index.html attribution. */
   useEffect(() => {
     document.getElementById('tmdb-attribution-static')?.remove()
-  }, [])
-
-  /** P23.3 — today.json resolved + cover store seeded; scene may mount. */
-  const [coverBootReady, setCoverBootReady] = useState(false)
-  /** Phase 30.3 — `movie` deep link skips standard cover boot (R4). */
-  const [initialRouteBootKind, setInitialRouteBootKind] = useState<InitialRouteBootKind>('pending')
-
-  const onInitialRouteBootKind = useCallback((kind: Exclude<InitialRouteBootKind, 'pending'>) => {
-    setInitialRouteBootKind(kind)
   }, [])
 
   useRouteController({
     routeReady,
     movies: data?.movies ?? null,
-    coverBootReady,
-    setCoverBootReady,
-    onInitialRouteBootKind,
   })
 
-  const coverMode = useCoverModeStore((s) => s.coverMode)
-  const todayMovieId = useCoverModeStore((s) => s.todayMovieId)
-  const todayMovie = useMemo(() => {
-    if (!data || todayMovieId == null) return null
-    return data.movies.find((m) => m.id === todayMovieId) ?? null
-  }, [data, todayMovieId])
-
-  /** P23.4 — keep cover shell mounted through opacity fade after exitCoverIntoFocus. */
-  const [coverBrandEverShown, setCoverBrandEverShown] = useState(false)
-  if (coverMode && !coverBrandEverShown) {
-    setCoverBrandEverShown(true)
+  type AppLoadPhase = 'galaxy-loading' | 'galaxy-error' | 'index-loading' | 'started'
+  let phase: AppLoadPhase
+  if (status === 'loading' || status === 'idle') {
+    phase = 'galaxy-loading'
+  } else if (status === 'error') {
+    phase = 'galaxy-error'
+  } else if (status === 'ready' && data !== null && !indexHydrationTerminal) {
+    phase = 'index-loading'
+  } else {
+    phase = 'started'
   }
-  const coverBrandMounted = coverMode || coverBrandEverShown
-
-  type AppLoadPhase =
-    | 'galaxy-loading'
-    | 'galaxy-error'
-    | 'index-loading'
-    | 'cover-loading-today'
-    | 'started'
-
-  const phase: AppLoadPhase = useMemo(() => {
-    if (status === 'loading' || status === 'idle') return 'galaxy-loading'
-    if (status === 'error') return 'galaxy-error'
-    if (status === 'ready' && data !== null && !indexHydrationTerminal) return 'index-loading'
-    if (status === 'ready' && data !== null && indexHydrationTerminal && !coverBootReady) {
-      return 'cover-loading-today'
-    }
-    if (status === 'ready' && data !== null && indexHydrationTerminal && coverBootReady) return 'started'
-    return 'galaxy-loading'
-  }, [status, data, indexHydrationTerminal, coverBootReady])
 
   useEffect(() => {
     if (phase !== 'index-loading' || !data) return
@@ -119,24 +81,8 @@ function App() {
     })
   }, [phase, data, indexStatus])
 
-  /** P23.3 — resolve The Movie Today before mounting WebGL (deterministic id + fallback). */
   useEffect(() => {
-    if (!routeReady || coverBootReady || initialRouteBootKind !== 'cover') return
-    let cancelled = false
-    void (async () => {
-      const { movieId } = await resolveTodayMovieId(data!.movies)
-      if (cancelled) return
-      console.log('[App] today resolved → cover + scene gate', { movieId })
-      useCoverModeStore.getState().setCover(movieId)
-      setCoverBootReady(true)
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [routeReady, data, coverBootReady, initialRouteBootKind])
-
-  useEffect(() => {
-    if (phase !== 'started' || !data || !indexHydrationTerminal) return
+    if (!routeReady || !data) return
     const el = canvasHostRef.current
     if (!el) return
     const mount = mountGalaxyScene(el, data.meta, data.movies)
@@ -145,39 +91,15 @@ function App() {
       animateZCurrentRef.current = null
       mount.dispose()
     }
-  }, [phase, data, indexHydrationTerminal])
+  }, [routeReady, data])
 
   useEffect(() => {
     if (status !== 'ready' || !data) return
     void useSearchIndexStore.getState().hydrateFromGalaxyMeta(data.meta)
   }, [status, data])
 
-  /** Design Spec §4.6 — ESC 焦点栈；§P14.4 — F 全屏；§P14.5 — Cmd/Ctrl+K 聚焦搜索。 */
   useEffect(() => {
     const onKeyDownCapture = (e: KeyboardEvent) => {
-      const cov = useCoverModeStore.getState()
-      if (cov.coverMode && cov.todayMovieId !== null) {
-        if (e.key === 'Escape') {
-          e.preventDefault()
-          e.stopPropagation()
-          return
-        }
-        if (e.key === 'Enter' || e.key === ' ') {
-          const ae = document.activeElement
-          if (
-            ae instanceof HTMLInputElement ||
-            ae instanceof HTMLTextAreaElement ||
-            (ae instanceof HTMLElement && ae.isContentEditable)
-          ) {
-            return
-          }
-          e.preventDefault()
-          e.stopPropagation()
-          cov.exitCoverIntoFocus()
-          return
-        }
-      }
-
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         const searchInput = document.querySelector<HTMLInputElement>('input[data-galaxy-search-input]')
         if (!searchInput || searchInput.disabled) return
@@ -228,12 +150,9 @@ function App() {
       }
 
       const { selectedMovieId, searchMode } = useGalaxyInteractionStore.getState()
-
       if (selectedMovieId !== null) {
         useGalaxyInteractionStore.setState({ selectedMovieId: null })
-        console.log('[ESC] clear selectedMovieId (keep search select session if any)', {
-          searchMode,
-        })
+        console.log('[ESC] clear selectedMovieId (keep search select session if any)', { searchMode })
         e.preventDefault()
         e.stopPropagation()
         return
@@ -252,56 +171,20 @@ function App() {
   }, [])
 
   if (phase === 'galaxy-loading') {
-    return (
-      <Loading
-        label={strings.loading.title}
-        progress={loadProgress}
-        gzipDone={false}
-        indexStatus="pending"
-      />
-    )
+    return <Loading label={strings.loading.title} progress={loadProgress} gzipDone={false} indexStatus="pending" />
   }
 
   if (phase === 'galaxy-error') {
-    return (
-      <LoadFailurePage errorMessage={errorMessage} onRetry={() => void fetchGalaxyData()} />
-    )
+    return <LoadFailurePage errorMessage={errorMessage} onRetry={() => void fetchGalaxyData()} />
   }
 
   if (phase === 'index-loading' && data !== null) {
-    return (
-      <Loading
-        label={strings.searchBar.indexLoading}
-        progress={null}
-        gzipDone
-        indexStatus="loading"
-      />
-    )
-  }
-
-  if (phase === 'cover-loading-today' && data !== null) {
-    const coverIndexStatus =
-      indexStatus === 'skipped' ? 'skipped' : indexStatus === 'error' ? 'error' : 'ready'
-    return (
-      <Loading
-        label={strings.loading.title}
-        progress={null}
-        gzipDone
-        indexStatus={coverIndexStatus}
-      />
-    )
+    return <Loading label={strings.searchBar.indexLoading} progress={null} gzipDone indexStatus="loading" />
   }
 
   if (phase !== 'started' || data === null) {
     console.warn('[App] unexpected branch before main scene', { phase, status, hasData: data !== null })
-    return (
-      <Loading
-        label={strings.loading.title}
-        progress={loadProgress}
-        gzipDone={false}
-        indexStatus="pending"
-      />
-    )
+    return <Loading label={strings.loading.title} progress={loadProgress} gzipDone={false} indexStatus="pending" />
   }
 
   const hasSearchIndex = data.meta.has_search_index === true
@@ -313,47 +196,9 @@ function App() {
         className="fixed inset-0 h-dvh w-full bg-[color:var(--cosmos-universe-bg)]"
         aria-label="Galaxy WebGL canvas host"
       />
-      {coverBrandMounted ? (
-        <>
-          {/*
-            Stable mount: do NOT key this on `todayMovieId`. `exitCoverIntoFocus` clears `todayMovieId`
-            before the opacity fade ends — a key change would remount the veil and replay the 1000ms
-            `#f2f2f2` → transparent animation (full-screen pale flash).
-          */}
-          <div
-            aria-hidden
-            className="pointer-events-none fixed inset-0 z-[var(--z-hud-cover-veil)] cosmos-cover-entry-page-shade"
-          />
-          <div
-            className={cn(
-              'pointer-events-none fixed inset-0 z-[var(--z-hud-cover-brand)] transition-opacity duration-300 ease-out',
-              coverMode ? 'opacity-100' : 'opacity-0',
-            )}
-            aria-hidden
-            onTransitionEnd={(ev) => {
-              if (ev.propertyName !== 'opacity') return
-              if (ev.target !== ev.currentTarget) return
-              if (!useCoverModeStore.getState().coverMode) {
-                setCoverBrandEverShown(false)
-              }
-            }}
-          >
-            {/*
-              Same as veil: keying on `todayMovieId` remounts on exit when id becomes null and can
-              restart entry motion mid-fade.
-            */}
-            <CoverBackdrop
-              todayFocusAriaLabel={strings.cover.todayFocusAriaLabel(todayMovie?.title ?? '')}
-              showTodayFocusTrap={coverMode && todayMovieId !== null}
-            />
-          </div>
-        </>
-      ) : null}
       <HoverRing />
       <MovieTooltip />
-      <TmdbAttribution
-        className="pointer-events-none fixed z-[var(--z-hud-attribution)] bottom-[max(var(--hud-inset-sm),env(safe-area-inset-bottom,0px))] right-[max(var(--hud-inset-sm),env(safe-area-inset-right,0px))] sm:bottom-[max(var(--hud-inset-md),env(safe-area-inset-bottom,0px))] sm:right-[max(var(--hud-inset-md),env(safe-area-inset-right,0px))] [&_a]:pointer-events-auto"
-      />
+      <TmdbAttribution className="pointer-events-none fixed z-[var(--z-hud-attribution)] bottom-[max(var(--hud-inset-sm),env(safe-area-inset-bottom,0px))] right-[max(var(--hud-inset-sm),env(safe-area-inset-right,0px))] sm:bottom-[max(var(--hud-inset-md),env(safe-area-inset-bottom,0px))] sm:right-[max(var(--hud-inset-md),env(safe-area-inset-right,0px))] [&_a]:pointer-events-auto" />
       <div
         dir="ltr"
         className="pointer-events-none fixed z-[var(--z-hud-top-tools)] flex items-center gap-[var(--hud-gap-stack)] right-[max(var(--hud-inset-sm),env(safe-area-inset-right,0px))] top-[max(var(--hud-inset-sm),env(safe-area-inset-top,0px))] sm:right-[max(var(--hud-inset-md),env(safe-area-inset-right,0px))] sm:top-[max(var(--hud-inset-md),env(safe-area-inset-top,0px))]"
@@ -364,14 +209,10 @@ function App() {
         <LanguageSwitch />
         <FullscreenButton />
       </div>
-      {!coverMode ? (
-        <>
-          <SearchBar hasSearchIndex={hasSearchIndex} movies={data.movies} animateZCurrentTo={animateZCurrentTo} />
-          <Timeline orientation={timelineOrientation} />
-          <FocusExitButton />
-          <MovieDetailDrawer animateZCurrentTo={animateZCurrentTo} hasSearchIndex={hasSearchIndex} />
-        </>
-      ) : null}
+      <SearchBar hasSearchIndex={hasSearchIndex} movies={data.movies} animateZCurrentTo={animateZCurrentTo} />
+      <Timeline orientation={timelineOrientation} />
+      <FocusExitButton />
+      <MovieDetailDrawer animateZCurrentTo={animateZCurrentTo} hasSearchIndex={hasSearchIndex} />
     </main>
   )
 }

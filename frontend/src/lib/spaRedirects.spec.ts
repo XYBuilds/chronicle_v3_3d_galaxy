@@ -10,10 +10,10 @@ const REDIRECTS_PATH = path.resolve(
 )
 
 describe('SPA _redirects (P30.7 / §6.3)', () => {
-  it('includes movie and today fallbacks without rewriting /data', () => {
+  it('includes only movie fallback without rewriting /data', () => {
     const raw = fs.readFileSync(REDIRECTS_PATH, 'utf-8')
     expect(raw).toContain('/movie/*  /index.html  200')
-    expect(raw).toContain('/today    /index.html  200')
+    expect(raw).not.toMatch(/\/today\b/)
     expect(raw).not.toMatch(/\/data\//)
     expect(raw).not.toMatch(/\/fonts\//)
     expect(raw).not.toMatch(/\/assets\//)

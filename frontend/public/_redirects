@@ -1,3 +1,2 @@
 # Phase 30 SPA fallback (D8: static files on disk are served first)
 /movie/*  /index.html  200
-/today    /index.html  200

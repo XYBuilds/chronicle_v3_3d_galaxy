@@ -11,15 +11,10 @@ import { parseRoute, type ParsedRoute } from '@/lib/routes'
 import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
 import type { Movie } from '@/types/galaxy'
 
-export type InitialRouteBootKind = 'pending' | 'movie' | 'cover'
-
 export interface UseRouteControllerOptions {
   /** `galaxyData` ready and search index hydration terminal. */
   routeReady: boolean
   movies: Movie[] | null
-  coverBootReady: boolean
-  setCoverBootReady: (ready: boolean) => void
-  onInitialRouteBootKind: (kind: Exclude<InitialRouteBootKind, 'pending'>) => void
 }
 
 function withStoreToUrlSuppressed<T>(fn: () => T): T {
@@ -31,20 +26,11 @@ function withStoreToUrlSuppressed<T>(fn: () => T): T {
   }
 }
 
-async function withStoreToUrlSuppressedAsync<T>(fn: () => Promise<T>): Promise<T> {
-  routeSyncGuard.suppressStoreToUrl = true
-  try {
-    return await fn()
-  } finally {
-    routeSyncGuard.suppressStoreToUrl = false
-  }
-}
-
 /**
  * URL → Zustand (30.3) + store → URL (30.4 B1–B6) via `selectedMovieId` subscription.
  */
 export function useRouteController(options: UseRouteControllerOptions): void {
-  const { routeReady, movies, coverBootReady, setCoverBootReady, onInitialRouteBootKind } = options
+  const { routeReady, movies } = options
 
   const pendingRouteRef = useRef<ParsedRoute | null>(null)
   const initialBootHandledRef = useRef(false)
@@ -57,12 +43,12 @@ export function useRouteController(options: UseRouteControllerOptions): void {
     console.log('[route] pendingRoute cached', cached)
   }, [])
 
-  const applyRouteToStore = useCallback(async (rawRoute: ParsedRoute, ctx: { movies: Movie[] }) => {
+  const applyRouteToStore = useCallback((rawRoute: ParsedRoute, ctx: { movies: Movie[] }) => {
     routeSyncGuard.lastAppliedPath = `${window.location.pathname}${window.location.search}`
-    await applyParsedRouteToStores(rawRoute, { movies: ctx.movies })
+    applyParsedRouteToStores(rawRoute, { movies: ctx.movies })
   }, [])
 
-  /** Initial boot: R4 movie deep link skips App `resolveToday → setCover`. */
+  /** Initial boot applies home idle or a valid movie focus after data and index readiness. */
   useEffect(() => {
     if (!routeReady || !movies?.length || initialBootHandledRef.current) return
 
@@ -73,35 +59,31 @@ export function useRouteController(options: UseRouteControllerOptions): void {
     pendingRouteRef.current = route
     routeSyncGuard.lastAppliedPath = `${window.location.pathname}${window.location.search}`
 
-    const bootKind = withStoreToUrlSuppressed(() => runInitialRouteBoot(route, movies, search))
-    onInitialRouteBootKind(bootKind)
-    if (bootKind === 'movie') {
-      setCoverBootReady(true)
-    }
-  }, [routeReady, movies, onInitialRouteBootKind, setCoverBootReady])
+    withStoreToUrlSuppressed(() => runInitialRouteBoot(route, movies, search))
+  }, [routeReady, movies])
 
   /** `popstate` — URL → store only; no push (R7/R8). */
   useEffect(() => {
-    if (!routeReady || !movies?.length || !coverBootReady) return
+    if (!routeReady || !movies?.length) return
 
     const onPopstate = () => {
       const route = parseRoute(window.location)
       console.log('[route] popstate', route)
       routeSyncGuard.isPopstate = true
-      void withStoreToUrlSuppressedAsync(async () => {
-        await applyRouteToStore(route, { movies })
-      }).finally(() => {
+      try {
+        withStoreToUrlSuppressed(() => applyRouteToStore(route, { movies }))
+      } finally {
         routeSyncGuard.isPopstate = false
-      })
+      }
     }
 
     window.addEventListener('popstate', onPopstate)
     return () => window.removeEventListener('popstate', onPopstate)
-  }, [routeReady, movies, coverBootReady, applyRouteToStore])
+  }, [routeReady, movies, applyRouteToStore])
 
   /** Store → URL (B1–B6): focus changes from user actions, not URL→store or popstate. */
   useEffect(() => {
-    if (!routeReady || !coverBootReady) return
+    if (!routeReady) return
 
     return useGalaxyInteractionStore.subscribe((state, prev) => {
       const next = state.selectedMovieId
@@ -117,5 +99,5 @@ export function useRouteController(options: UseRouteControllerOptions): void {
         replaceHomeRoute()
       }
     })
-  }, [routeReady, coverBootReady])
+  }, [routeReady])
 }

@@ -8,10 +8,7 @@ import path from 'node:path'
 const DIST_DIR = path.resolve(import.meta.dirname, '..', 'dist')
 const REDIRECTS_PATH = path.join(DIST_DIR, '_redirects')
 
-const REQUIRED_REDIRECT_LINES = [
-  '/movie/*  /index.html  200',
-  '/today    /index.html  200',
-]
+const REQUIRED_REDIRECT_LINES = ['/movie/*  /index.html  200']
 
 function assert(cond, msg) {
   if (!cond) {
@@ -42,16 +39,9 @@ function main() {
   const assetEntries = fs.readdirSync(assetsDir)
   assert(assetEntries.length > 0, 'dist/assets/ must contain built chunks')
 
-  const dataToday = path.join(DIST_DIR, 'data', 'today.json')
-  if (fs.existsSync(dataToday)) {
-    const raw = fs.readFileSync(dataToday, 'utf-8')
-    assert(raw.trim().startsWith('{'), 'dist/data/today.json must be JSON, not HTML fallback')
-  }
-
   console.log('[spa-fallback-dist] ok', {
     redirects: REQUIRED_REDIRECT_LINES.length,
     assets: assetEntries.length,
-    hasTodayJson: fs.existsSync(dataToday),
   })
 }
 

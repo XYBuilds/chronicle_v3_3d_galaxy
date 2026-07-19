@@ -8,12 +8,6 @@
     "phaseIndexSkipped": "Search index — skipped",
     "phaseIndexFailed": "Search index — failed"
   },
-  "cover": {
-    "title": "the movie cosmos",
-    "start": "Start",
-    "startAriaLabel": "Start — enter the galaxy and initialize graphics",
-    "todayFocusAriaLabel": "The Movie Today: {{title}}"
-  },
   "galaxyData": {
     "downloadProgress": "Downloaded {{downloadedMb}} / {{totalMb}}",
     "downloadProgressPartial": "Downloaded {{downloadedMb}}",
@@ -90,7 +84,7 @@
       },
       {
         "heading": "Usage",
-        "body": "After loading: cover → tap the center globe for The Movie Today (one pick per UTC day).\n\nDrag to orbit. Without Space: scroll wheel or timeline moves you along release-year depth. In macro roam, hold Space and scroll to dolly in; release Space to reset distance. Hover shows a one-line preview.\n\nSearch titles, people, or genres in the bar; ESC unwinds search, side sheet, then focus. Click a film for focus and the side sheet; click neighbors to switch."
+        "body": "After loading: drag to orbit. Without Space: scroll wheel or timeline moves you along release-year depth. In macro roam, hold Space and scroll to dolly in; release Space to reset distance. Hover shows a one-line preview.\n\nSearch titles, people, or genres in the bar; ESC unwinds search, side sheet, then focus. Click a film for focus and the side sheet; click neighbors to switch."
       },
       {
         "heading": "Data & device",

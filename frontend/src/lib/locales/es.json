@@ -8,12 +8,6 @@
     "phaseIndexSkipped": "Índice de búsqueda — omitido",
     "phaseIndexFailed": "Índice de búsqueda — error"
   },
-  "cover": {
-    "title": "the movie cosmos",
-    "start": "Entrar",
-    "startAriaLabel": "Entrar — ir a la galaxia e inicializar los gráficos",
-    "todayFocusAriaLabel": "The Movie Today: {{title}}"
-  },
   "galaxyData": {
     "downloadProgress": "Descargado {{downloadedMb}} / {{totalMb}}",
     "downloadProgressPartial": "Descargado {{downloadedMb}}",
@@ -90,7 +84,7 @@
       },
       {
         "heading": "Uso",
-        "body": "Tras la carga: portada → toca el globo central para The Movie Today (un título al día, UTC).\n\nArrastra para orbitar. Sin Espacio: rueda o línea de tiempo te mueven en profundidad por año. En recorrido macro, mantén Espacio y rueda para acercarte; suelta Espacio para restablecer la distancia. Pasa el cursor para una vista previa de una línea.\n\nBusca títulos, personas o géneros arriba; ESC retrocede búsqueda, panel y foco. Clic en una película para el foco y la hoja lateral; clic en vecinas para cambiar."
+        "body": "Tras la carga, puedes explorar directamente.\n\nArrastra para orbitar. Sin Espacio: rueda o línea de tiempo te mueven en profundidad por año. En recorrido macro, mantén Espacio y rueda para acercarte; suelta Espacio para restablecer la distancia. Pasa el cursor para una vista previa de una línea.\n\nBusca títulos, personas o géneros arriba; ESC retrocede búsqueda, panel y foco. Clic en una película para el foco y la hoja lateral; clic en vecinas para cambiar."
       },
       {
         "heading": "Datos y tu equipo",

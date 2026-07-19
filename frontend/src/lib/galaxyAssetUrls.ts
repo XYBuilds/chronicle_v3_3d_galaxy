@@ -4,8 +4,6 @@ import { experimentDatasetGalaxyUrl } from '@/utils/loadGalaxyData'
 export interface GalaxyAssetsManifest {
   galaxy_data_gzip_url: string
   galaxy_search_index_gzip_url?: string
-  /** P23.1: absolute public URL for ``today.json`` on R2 (cache-busted ``?v=``). */
-  today_url?: string
   data_version: string
   exported_at?: string
 }
@@ -31,10 +29,6 @@ export function parseGalaxyAssetsManifest(raw: unknown): GalaxyAssetsManifest | 
   }
   if (typeof si === 'string' && si.trim()) {
     out.galaxy_search_index_gzip_url = si.trim()
-  }
-  const tu = o.today_url
-  if (typeof tu === 'string' && tu.trim()) {
-    out.today_url = tu.trim()
   }
   if (typeof o.exported_at === 'string' && o.exported_at.trim()) {
     out.exported_at = o.exported_at.trim()
@@ -77,26 +71,6 @@ function fetchManifestOnce(): Promise<GalaxyAssetsManifest | null> {
 /** Singleton manifest fetch (same cache as ``resolveGalaxyDataGzipUrl``). */
 export function getGalaxyAssetsManifest(): Promise<GalaxyAssetsManifest | null> {
   return fetchManifestOnce()
-}
-
-/**
- * Resolve URL for ``today.json``: ``VITE_TODAY_JSON_URL``; else bundled path when ``?dataset=`` experiment;
- * else manifest ``today_url``; else Vite ``/data/today.json``.
- */
-export async function resolveTodayJsonUrl(defaultRelativePath = 'data/today.json'): Promise<string> {
-  const viteToday = import.meta.env.VITE_TODAY_JSON_URL
-  if (typeof viteToday === 'string' && viteToday.trim()) {
-    console.log('[GalaxyAssets] using VITE_TODAY_JSON_URL')
-    return viteToday.trim()
-  }
-  if (experimentDatasetGalaxyUrl() !== null) {
-    return withBase(defaultRelativePath)
-  }
-  const man = await fetchManifestOnce()
-  if (man?.today_url?.trim()) {
-    return man.today_url.trim()
-  }
-  return withBase(defaultRelativePath)
 }
 
 /** Absolute ``VITE_*`` override wins; then ``?dataset=`` experiments; then R2 manifest; then bundled gzip. */

@@ -109,8 +109,6 @@ export function computeActiveWorldRadius(
   zVisWindow: number,
   activeMaterial: THREE.ShaderMaterial,
   selectionMaskPickSet: Set<number> | null = null,
-  /** P23.3 — multiply CPU pick/hover radius when cover boosts `uCoverActiveSizeBoost` in the shader. */
-  extraWorldScale = 1,
 ): number {
   const inF = selectionMaskPickSet
     ? selectionMaskPickSet.has(movie.id)
@@ -125,7 +123,6 @@ export function computeActiveWorldRadius(
     uSizeScale,
     uActiveSizeMul,
     inF,
-    extraWorldScale,
   )
 }
 
@@ -161,11 +158,8 @@ export type ActiveRayPickResult = { index: number; hitPoint: THREE.Vector3; t: n
  * @param requireSlabInteraction — if true, require `movieZInFocusFactor > 0.5` (P8.4 click gate); hover passes false.
  * @param selectionMaskPickSet — if set (person/genre search), only these ids use full active radius; others skipped.
  * @param cameraWorldPos — P26.3 full camera world position; must match `uCameraWorldPos` for idle near-fade pick gate.
- * @param idleNearFadeExemptMovieId — focus or cover “today” film id exempt from idle near-fade / Z-fade pick skip (matches shader exemptions).
+ * @param idleNearFadeExemptMovieId — focused film id exempt from idle near-fade / Z-fade pick skip (matches shader exemption).
  * @param idleMacroFadesBlend — 0…1 macro-fade blend; 0 skips idle fade pick gate (matches `uIdleMacroFadesBlend`).
- * @param coverTodayInstanceIndex — P23.3 when set (≥0), only this instance can be picked (matches cover shader cull).
- * @param coverActiveSizeBoost — P23.3 must match `uCoverActiveSizeBoost` when picking the cover instance.
- * @param coverTodayWorldPickRadius — when cover picks only today: use Perlin `lastRadius` for ray–sphere (same as focus vs planet UI).
  */
 export function pickClosestActiveMovieAlongRay(options: {
   ray: THREE.Ray
@@ -179,9 +173,6 @@ export function pickClosestActiveMovieAlongRay(options: {
   idleNearFadeExemptMovieId: number | null
   /** 0…1 macro-fade blend for idle near/Z pick gate (matches `uIdleMacroFadesBlend`). Default 1. */
   idleMacroFadesBlend?: number
-  coverTodayInstanceIndex?: number | null
-  coverActiveSizeBoost?: number
-  coverTodayWorldPickRadius?: number | null
 }): ActiveRayPickResult | null {
   const {
     ray,
@@ -194,9 +185,6 @@ export function pickClosestActiveMovieAlongRay(options: {
     cameraWorldPos,
     idleNearFadeExemptMovieId,
     idleMacroFadesBlend = 1,
-    coverTodayInstanceIndex,
-    coverActiveSizeBoost = 1,
-    coverTodayWorldPickRadius = null,
   } = options
   const u = activeMaterial.uniforms
   const uSizeScale = (u.uSizeScale as THREE.Uniform<number>).value
@@ -204,13 +192,8 @@ export function pickClosestActiveMovieAlongRay(options: {
   let bestT = Infinity
   let bestIdx = -1
   const slabGate = 0.5
-  const covIdx =
-    coverTodayInstanceIndex !== undefined && coverTodayInstanceIndex !== null && coverTodayInstanceIndex >= 0
-      ? coverTodayInstanceIndex
-      : null
 
   for (let i = 0; i < movies.length; i++) {
-    if (covIdx !== null && i !== covIdx) continue
     const m = movies[i]
     let inF: number
     if (selectionMaskPickSet && selectionMaskPickSet.size > 0) {
@@ -257,18 +240,7 @@ export function pickClosestActiveMovieAlongRay(options: {
       }
     }
 
-    let R: number
-    if (
-      covIdx !== null &&
-      i === covIdx &&
-      coverTodayWorldPickRadius !== null &&
-      coverTodayWorldPickRadius > 0
-    ) {
-      R = coverTodayWorldPickRadius
-    } else {
-      const boost = covIdx !== null && i === covIdx ? coverActiveSizeBoost : 1
-      R = inF * uSizeScale * uActiveSizeMul * m.size * boost
-    }
+    const R = inF * uSizeScale * uActiveSizeMul * m.size
     if (R < 1e-6) continue
 
     const t = rayFirstPositiveSphereT(ray, m.x, m.y, m.z, R)
@@ -296,18 +268,14 @@ export function computeActiveMeshScreenRadiusCss(options: {
   zCurrent: number
   zVisWindow: number
   selectionMaskPickSet?: Set<number> | null
-  /** P23.3 — match cover shader size boost for hover ring / tooltip. */
-  extraWorldScale?: number
 }): number {
-  const { movie, camera, domElement, activeMaterial, zCurrent, zVisWindow, selectionMaskPickSet, extraWorldScale = 1 } =
-    options
+  const { movie, camera, domElement, activeMaterial, zCurrent, zVisWindow, selectionMaskPickSet } = options
   const rWorld = computeActiveWorldRadius(
     movie,
     zCurrent,
     zVisWindow,
     activeMaterial,
     selectionMaskPickSet ?? null,
-    extraWorldScale,
   )
   if (rWorld <= 1e-6) return 0
 

@@ -315,9 +315,8 @@ describe('planet export request and sizing', () => {
     handle.dispose()
   })
 
-  it('routes website Focus, Cover today, and static export through the shared three-argument planet setter', () => {
+  it('routes website focus and static export through the shared three-argument planet setter', () => {
     expect(sceneSource.match(/planet\.setFromMovie\(movie, meta\.genre_palette, r\)/g)).toHaveLength(1)
-    expect(sceneSource.match(/planet\.setFromMovie\(tm, meta\.genre_palette, r\)/g)).toHaveLength(1)
     expect(sceneSource).toMatch(/perlinBloom\.renderFrame\(\{/)
     expect(sceneSource).not.toContain('perlinBloom.renderFrame(renderer, scene, camera')
     expect(exportRendererSource).toContain("from '@/three/perlinBloomContract'")

@@ -25,7 +25,7 @@ todos:
     status: complete
   - id: p40-production-gate
     content: 40.8 [需人工验收] 完成生产发布、v2 迁移、线上清理与 nightly production Gate
-    status: pending
+    status: complete
 isProject: false
 ---
 

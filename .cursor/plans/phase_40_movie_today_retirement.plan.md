@@ -4,7 +4,7 @@ overview: Phase 40 彻底退役 The Movie Today：移除每日选片、Today cov
 todos:
   - id: p40-contract-baseline
     content: 40.1 锁定三仓库基线、生产遗留对象与退役路由/状态契约
-    status: pending
+    status: complete
   - id: p40-frontend-retirement
     content: 40.2 将首页收敛为 galaxy idle 并完整退役 Today cover/WebGL 状态
     status: pending

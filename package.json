@@ -14,6 +14,12 @@
     "storybook": "npm run storybook -w frontend",
     "build-storybook": "npm run build-storybook -w frontend",
     "test": "npm run test -w frontend",
-    "planet:export": "tsx tools/planet-exporter/src/cli.ts"
+    "planet:export": "tsx tools/planet-exporter/src/cli.ts",
+    "evidence:p39.11:a": "npm run evidence:p39.11:a -w planet-exporter",
+    "evidence:p39.11:b": "npm run evidence:p39.11:b -w planet-exporter",
+    "evidence:p39.11:c:threshold": "npm run evidence:p39.11:c:threshold -w planet-exporter",
+    "evidence:p39.11:c:radius": "npm run evidence:p39.11:c:radius -w planet-exporter",
+    "evidence:p39.11:c:strength": "npm run evidence:p39.11:c:strength -w planet-exporter",
+    "evidence:p39.11:final": "npm run evidence:p39.11:final -w planet-exporter"
   }
 }

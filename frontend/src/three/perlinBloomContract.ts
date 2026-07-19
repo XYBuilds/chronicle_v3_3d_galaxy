@@ -10,7 +10,7 @@ export const PERLIN_BLOOM_LAYER = 1
 
 export const PERLIN_BLOOM_DEFAULTS = {
   enabled: true,
-  strength: 0.005,
+  strength: 0.01,
   radius: 1.0,
   threshold: 0,
 } as const

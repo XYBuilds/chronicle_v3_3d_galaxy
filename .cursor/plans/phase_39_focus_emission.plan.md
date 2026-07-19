@@ -31,7 +31,7 @@ todos:
     status: complete
   - id: p39-visual-parameter-convergence
     content: 39.11 [需人工验收] 按 Key、Emission exponent、Bloom、Emission 端点顺序完成单变量视觉收敛
-    status: pending
+    status: complete
   - id: p39-visual-gate
     content: 39.8 [需人工验收] 使用最终参数完成三端与宏观层综合视觉 Gate、参数固化及文档报告
     status: pending

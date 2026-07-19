@@ -44,8 +44,6 @@ from feature_engineering.text_embedding import (  # noqa: E402
 )
 from pipeline.cleaning import load_raw_csv, run_cleaning_pipeline  # noqa: E402
 
-from cron.pick_movie_today import write_today_json_after_galaxy_export  # noqa: E402
-
 
 def _env_dim_drift_force_skip() -> bool:
     v = os.environ.get("DIM_DRIFT_FORCE_SKIP", "").strip().lower()
@@ -503,8 +501,6 @@ def main(argv: list[str] | None = None) -> int:
             )
             if val.returncode != 0:
                 raise SystemExit(val.returncode)
-
-            write_today_json_after_galaxy_export(_REPO_ROOT)
 
         print(f"[P18.4 nightly] completed at {now_iso}", flush=True)
         return 0

@@ -10,7 +10,7 @@ todos:
     status: complete
   - id: p40-pipeline-retirement
     content: 40.3 移除每日选片、today.json 上传与 manifest today_url 生产链
-    status: pending
+    status: complete
   - id: p40-og-state-v2
     content: 40.4 实现 OG Index snapshot v1→v2 与一次性 KV today 删除协议
     status: pending

@@ -48,6 +48,17 @@ def _snapshot(movies: list[dict[str, object]], *, today_id: int = 1, version: st
     return build_snapshot(source_data_version=version, committed_at="2026-01-01T00:00:00Z", movies=movies, today_payload={"date": "2026-01-01", "movie_id": today_id})
 
 
+def _legacy_remote(*, movies: list[dict[str, object]] | None = None) -> RemoteAuditState:
+    source_movies = [_movie(1)] if movies is None else movies
+    snapshot = _snapshot(source_movies)
+    control = snapshot["control"]
+    return RemoteAuditState(
+        movie_hashes=dict(snapshot["movie_hashes"]),
+        today_value=control["today_value"],
+        meta_g_value=control["meta_g_value"],
+    )
+
+
 class TestPlans(unittest.TestCase):
     def test_movie_diff_and_controls_are_independent(self) -> None:
         old_movies = [_movie(1), _movie(2), _movie(3)]
@@ -354,7 +365,6 @@ class TestApplication(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory()
         path = Path(tmp.name)
         path.joinpath("galaxy_data.json").write_text(json.dumps({"meta": {"version": "v1"}, "movies": [_movie(1)]}), encoding="utf-8")
-        path.joinpath("today.json").write_text(json.dumps({"date": "2026-01-01", "movie_id": 1}), encoding="utf-8")
         return tmp
 
     def test_missing_and_corrupt_stop_without_full(self) -> None:
@@ -370,12 +380,28 @@ class TestApplication(unittest.TestCase):
     def test_bootstrap_dry_run_only_reads(self) -> None:
         tmp = self._data()
         self.addCleanup(tmp.cleanup)
-        remote = RemoteAuditState(movie_hashes={}, today_value=None, meta_g_value=None)
+        remote = _legacy_remote()
         with mock.patch("cron.sync_og_index_kv.load_snapshot", side_effect=SnapshotMissingError("missing")), mock.patch("cron.sync_og_index_kv.read_remote_audit_state", return_value=remote) as audit, mock.patch("cron.sync_og_index_kv.execute_plan") as execute:
             plan = run_sync(public_data=Path(tmp.name), r2_client=object(), r2_bucket="b", kv_env=_ENV, dry_run=True, bootstrap_remote_audit=True, max_puts=10)
         self.assertTrue(plan.bootstrap)
         audit.assert_called_once()
         execute.assert_not_called()
+
+    def test_incremental_reuses_committed_v1_control_without_local_today_file(self) -> None:
+        tmp = self._data()
+        self.addCleanup(tmp.cleanup)
+        previous = _snapshot([_movie(1)])
+        with mock.patch("cron.sync_og_index_kv.load_snapshot", return_value=previous):
+            plan = run_sync(
+                public_data=Path(tmp.name),
+                r2_client=object(),
+                r2_bucket="b",
+                kv_env=_ENV,
+                dry_run=True,
+            )
+        self.assertEqual(plan.movie_puts, ())
+        self.assertIsNone(plan.today_put)
+        self.assertIsNone(plan.meta_put)
 
     def test_bootstrap_rejects_existing_checkpoint_without_audit_or_execution(self) -> None:
         tmp = self._data()
@@ -411,7 +437,8 @@ class TestApplication(unittest.TestCase):
                 )
         execute.assert_not_called()
 
-        remote = RemoteAuditState(movie_hashes={}, today_value=None, meta_g_value=None)
+        legacy = _legacy_remote()
+        remote = RemoteAuditState(movie_hashes={}, today_value=legacy.today_value, meta_g_value=legacy.meta_g_value)
         with mock.patch("cron.sync_og_index_kv.load_snapshot", side_effect=SnapshotMissingError("missing")), \
              mock.patch("cron.sync_og_index_kv.read_remote_audit_state", return_value=remote), \
              mock.patch("cron.sync_og_index_kv.execute_plan") as execute:
@@ -448,7 +475,7 @@ class TestApplication(unittest.TestCase):
         tmp = self._data()
         self.addCleanup(tmp.cleanup)
         with mock.patch("cron.sync_og_index_kv.load_snapshot") as load, \
-             mock.patch("cron.sync_og_index_kv.read_remote_movie_keys", return_value=("movie:2",)), \
+             mock.patch("cron.sync_og_index_kv.read_remote_audit_state", return_value=_legacy_remote(movies=[_movie(2)])) as audit, \
              mock.patch("cron.sync_og_index_kv.execute_plan") as execute:
             plan = run_sync(
                 public_data=Path(tmp.name),
@@ -468,7 +495,7 @@ class TestApplication(unittest.TestCase):
         tmp = self._data()
         self.addCleanup(tmp.cleanup)
         with mock.patch("cron.sync_og_index_kv.load_snapshot", side_effect=SnapshotCorruptError("bad")) as load, \
-             mock.patch("cron.sync_og_index_kv.read_remote_movie_keys", return_value=()):
+             mock.patch("cron.sync_og_index_kv.read_remote_audit_state", return_value=_legacy_remote(movies=[])):
             plan = run_sync(
                 public_data=Path(tmp.name),
                 r2_client=object(),

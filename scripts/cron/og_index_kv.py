@@ -462,17 +462,13 @@ def kv_list_movie_keys(
         cursor = next_cursor
 
 
-def load_galaxy_and_today(
+def load_galaxy_movies(
     public_data: Path,
-) -> tuple[str, dict[str, Any], list[dict[str, Any]]]:
+) -> tuple[str, list[dict[str, Any]]]:
     galaxy_path = public_data / "galaxy_data.json"
-    today_path = public_data / "today.json"
     assert galaxy_path.is_file(), f"missing {galaxy_path}"
-    assert today_path.is_file(), f"missing {today_path}"
     galaxy = json.loads(galaxy_path.read_text(encoding="utf-8"))
-    today_raw = json.loads(today_path.read_text(encoding="utf-8"))
     assert isinstance(galaxy, dict), "galaxy_data.json root must be object"
-    assert isinstance(today_raw, dict), "today.json root must be object"
     meta = galaxy.get("meta")
     assert isinstance(meta, dict), "galaxy_data.json missing meta"
     version = meta.get("version")
@@ -480,7 +476,7 @@ def load_galaxy_and_today(
     movies = galaxy.get("movies")
     assert isinstance(movies, list), "galaxy_data.json movies must be array"
     assert len(movies) > 0, "movies must be non-empty"
-    return version.strip(), today_raw, movies
+    return version.strip(), movies
 
 
 def sync_entries_to_kv(

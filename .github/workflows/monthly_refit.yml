@@ -17,10 +17,6 @@ on:
         type: boolean
         default: false
         description: "P20.2 Skip dimension drift check (emergency unblock only; bump palettes for real fixes)."
-      bootstrap_og_index:
-        type: boolean
-        default: false
-        description: "P38 one-time manual remote audit bootstrap; scheduled runs always use committed snapshot incremental mode."
 
 permissions:
   contents: read
@@ -156,14 +152,9 @@ jobs:
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           R2_BUCKET: ${{ secrets.R2_BUCKET }}
-          OG_INDEX_BOOTSTRAP_REMOTE_AUDIT: ${{ github.event_name == 'workflow_dispatch' && inputs.bootstrap_og_index || false }}
         run: |
           set -euo pipefail
-          args=(--scope incremental)
-          if [ "${OG_INDEX_BOOTSTRAP_REMOTE_AUDIT}" = "true" ]; then
-            args+=(--bootstrap-remote-audit)
-          fi
-          python scripts/cron/sync_og_index_kv.py "${args[@]}"
+          python scripts/cron/sync_og_index_kv.py --scope incremental
 
       # P18.6b: large gzip → R2; Pages bundle keeps a small manifest only (when secrets are set).
       - name: Upload galaxy gzip to R2 (P18.6b)

@@ -11,7 +11,7 @@ _MONTHLY = _REPO_ROOT / "scripts" / "cron" / "monthly_refit.py"
 _NIGHTLY_WORKFLOW = _REPO_ROOT / ".github" / "workflows" / "nightly_vote_refresh.yml"
 _MONTHLY_WORKFLOW = _REPO_ROOT / ".github" / "workflows" / "monthly_refit.yml"
 _SYNC_STEP = "Sync OG index KV incrementally"
-_SYNC_COMMAND = 'python scripts/cron/sync_og_index_kv.py "${args[@]}"'
+_SYNC_COMMAND = "python scripts/cron/sync_og_index_kv.py --scope incremental"
 _SYNC_ENV = (
     "CLOUDFLARE_ACCOUNT_ID",
     "OG_INDEX_KV_NAMESPACE_ID",
@@ -42,11 +42,10 @@ class TestOgPipelinePhase34(unittest.TestCase):
                 sync_end = text.index("      # P18.6b:", sync_start)
                 sync_block = text[sync_start:sync_end]
                 compute_block = text[:sync_start]
-                self.assertIn("bootstrap_og_index:", text)
-                self.assertIn("github.event_name == 'workflow_dispatch' && inputs.bootstrap_og_index || false", sync_block)
-                self.assertIn("args=(--scope incremental)", sync_block)
-                self.assertIn("--bootstrap-remote-audit", sync_block)
+                self.assertNotIn("bootstrap_og_index:", text)
+                self.assertNotIn("bootstrap-remote-audit", text)
                 self.assertIn(_SYNC_COMMAND, sync_block)
+                self.assertNotIn("--migrate-v1", sync_block)
                 self.assertNotIn("--scope full", sync_block)
                 self.assertNotIn("--scope daily", sync_block)
                 self.assertNotIn("today.json", text)
@@ -68,7 +67,8 @@ class TestOgPipelinePhase34(unittest.TestCase):
                 sync_start = text.index(f"name: {_SYNC_STEP}")
                 sync_end = text.index("      # P18.6b:", sync_start)
                 sync_block = text[sync_start:sync_end]
-                self.assertIn("github.event_name == 'workflow_dispatch'", sync_block)
+                self.assertNotIn("workflow_dispatch", sync_block)
+                self.assertNotIn("--migrate-v1", sync_block)
                 self.assertNotIn("--allow-full-recovery", sync_block)
                 self.assertNotIn("--allow-over-quota", sync_block)
                 self.assertNotIn("--scope full", sync_block)

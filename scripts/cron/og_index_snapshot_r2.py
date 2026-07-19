@@ -8,10 +8,16 @@ import json
 from collections.abc import Mapping
 from typing import Any
 
-from cron.og_index_state import SnapshotValidationError, parse_snapshot_json, validate_snapshot
+from cron.og_index_state import (
+    SnapshotValidationError,
+    parse_snapshot_json,
+    parse_v1_snapshot_json,
+    validate_snapshot,
+)
 from cron.upload_galaxy_r2 import _required_r2_credentials
 
-DEFAULT_SNAPSHOT_KEY = "ops/og-index/state-v1.json.gz"
+DEFAULT_SNAPSHOT_KEY = "ops/og-index/state-v2.json.gz"
+LEGACY_SNAPSHOT_KEY = "ops/og-index/state-v1.json.gz"
 SNAPSHOT_CONTENT_TYPE = "application/json"
 SNAPSHOT_CONTENT_ENCODING = "gzip"
 SNAPSHOT_CACHE_CONTROL = "no-store"
@@ -102,11 +108,38 @@ def load_snapshot(
         raise SnapshotCorruptError(f"R2 snapshot gzip or JSON invalid key={key!r}") from exc
 
 
+def load_v1_snapshot_for_migration(
+    *,
+    client: Any,
+    bucket: str,
+    key: str = LEGACY_SNAPSHOT_KEY,
+) -> dict[str, Any]:
+    """Read v1 only when an explicitly requested migration asks for it."""
+    try:
+        response = client.get_object(Bucket=bucket, Key=key)
+    except Exception as exc:
+        if _is_not_found(exc):
+            raise SnapshotMissingError(f"legacy R2 snapshot missing key={key!r}") from exc
+        raise SnapshotRepositoryError(f"legacy R2 snapshot GET failed key={key!r}") from exc
+    try:
+        return parse_v1_snapshot_json(gzip.decompress(_read_body(response)).decode("utf-8"))
+    except SnapshotValidationError as exc:
+        raise SnapshotCorruptError(f"legacy R2 snapshot schema invalid key={key!r}") from exc
+    except (OSError, EOFError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise SnapshotCorruptError(f"legacy R2 snapshot gzip or JSON invalid key={key!r}") from exc
+
+
 def snapshot_gzip(snapshot: Mapping[str, Any]) -> bytes:
     """Return deterministic gzip bytes after validating the deletion-safe schema."""
     try:
         validate_snapshot(snapshot)
-        raw = json.dumps(snapshot, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
+        raw = json.dumps(
+            snapshot,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+            allow_nan=False,
+        ).encode("utf-8")
     except (SnapshotValidationError, TypeError, ValueError) as exc:
         raise SnapshotCorruptError("candidate snapshot is invalid") from exc
     output = io.BytesIO()
@@ -139,6 +172,7 @@ def commit_snapshot(
 
 __all__ = [
     "DEFAULT_SNAPSHOT_KEY",
+    "LEGACY_SNAPSHOT_KEY",
     "SNAPSHOT_CACHE_CONTROL",
     "SNAPSHOT_CONTENT_ENCODING",
     "SNAPSHOT_CONTENT_TYPE",
@@ -149,5 +183,6 @@ __all__ = [
     "commit_snapshot",
     "create_r2_client",
     "load_snapshot",
+    "load_v1_snapshot_for_migration",
     "snapshot_gzip",
 ]

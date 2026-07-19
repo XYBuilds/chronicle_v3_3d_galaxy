@@ -36,7 +36,7 @@ from cron.og_index_kv import (  # noqa: E402
     kv_bulk_put,
     kv_list_movie_keys,
     kv_read_many,
-    load_galaxy_and_today,
+    load_galaxy_movies,
     movie_kv_key,
     today_kv_value,
     verify_kv_absent,
@@ -573,14 +573,48 @@ def read_remote_audit_state(*, kv_env: Mapping[str, str]) -> RemoteAuditState:
     return RemoteAuditState(movie_hashes=hashes, today_value=today, meta_g_value=meta)
 
 
-def _current_snapshot(public_data: Path, *, committed_at: str | None = None) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+def _current_snapshot(
+    public_data: Path,
+    *,
+    legacy_today_payload: Mapping[str, Any],
+    committed_at: str | None = None,
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """Project current movies while retaining the committed v1 control until 40.4."""
     try:
-        version, today, movies = load_galaxy_and_today(public_data)
+        version, movies = load_galaxy_movies(public_data)
     except (AssertionError, json.JSONDecodeError, OSError) as exc:
         raise SnapshotValidationError(f"current OG export is invalid: {exc}") from exc
     timestamp = committed_at or datetime.now(timezone.utc).isoformat()
-    current = build_snapshot(source_data_version=version, committed_at=timestamp, movies=movies, today_payload=today)
+    current = build_snapshot(
+        source_data_version=version,
+        committed_at=timestamp,
+        movies=movies,
+        today_payload=legacy_today_payload,
+    )
     return current, movies
+
+
+def _legacy_today_payload(snapshot: Mapping[str, Any]) -> dict[str, Any]:
+    """Reuse the committed v1 control without reading or writing ``today.json``."""
+    validate_snapshot(snapshot)
+    control = snapshot["control"]
+    assert isinstance(control, Mapping)
+    return _legacy_today_payload_value(control["today_value"])
+
+
+def _legacy_today_payload_from_remote(remote: RemoteAuditState) -> dict[str, Any]:
+    """Use the audited legacy control only for explicit bootstrap/recovery paths."""
+    return _legacy_today_payload_value(remote.today_value)
+
+
+def _legacy_today_payload_value(today_value: str | None) -> dict[str, Any]:
+    if today_value is None:
+        raise SnapshotValidationError("committed v1 today control is missing; complete the explicit 40.4 migration")
+    try:
+        _validate_today_control(today_value, label="committed v1 today")
+        return _parse_json_object(today_value, label="committed v1 today")
+    except RemoteAuditError as exc:
+        raise SnapshotValidationError(str(exc)) from exc
 
 
 def run_sync(*, public_data: Path, scope: str = "incremental", dry_run: bool = False, bootstrap_remote_audit: bool = False, allow_full_recovery: bool = False, allow_over_quota: bool = False, max_puts: int = DEFAULT_MAX_PUTS, max_deletes: int = DEFAULT_MAX_DELETES, batch_size: int = DEFAULT_BULK_BATCH_SIZE, r2_client: Any | None = None, r2_bucket: str | None = None, kv_env: Mapping[str, str] | None = None) -> MutationPlan:
@@ -603,7 +637,10 @@ def run_sync(*, public_data: Path, scope: str = "incremental", dry_run: bool = F
         raise PermissionError("--scope full requires --allow-full-recovery")
     if bootstrap_remote_audit and scope != "incremental":
         raise ValueError("--bootstrap-remote-audit only supports incremental scope")
-    current, movies = _current_snapshot(public_data)
+    try:
+        load_galaxy_movies(public_data)
+    except (AssertionError, json.JSONDecodeError, OSError) as exc:
+        raise SnapshotValidationError(f"current OG export is invalid: {exc}") from exc
     if (r2_client is None) != (r2_bucket is None):
         raise CredentialsError("r2_client and r2_bucket must be provided together")
     if r2_client is None:
@@ -611,11 +648,16 @@ def run_sync(*, public_data: Path, scope: str = "incremental", dry_run: bool = F
     if not isinstance(r2_bucket, str) or not r2_bucket.strip():
         raise CredentialsError("R2 snapshot bucket is required")
     r2_bucket = r2_bucket.strip()
+
     if scope == "full":
         if kv_env is None:
             raise CredentialsError("full recovery requires KV read/write credentials")
-        remote_movie_keys = read_remote_movie_keys(kv_env=kv_env)
-        plan = build_full_recovery_plan(current, movies, remote_movie_keys)
+        remote = read_remote_audit_state(kv_env=kv_env)
+        current, movies = _current_snapshot(
+            public_data,
+            legacy_today_payload=_legacy_today_payload_from_remote(remote),
+        )
+        plan = build_full_recovery_plan(current, movies, tuple(remote.movie_hashes))
     else:
         try:
             previous = load_snapshot(client=r2_client, bucket=r2_bucket)
@@ -624,12 +666,21 @@ def run_sync(*, public_data: Path, scope: str = "incremental", dry_run: bool = F
                 raise SnapshotMissingError("R2 snapshot missing; run explicit --bootstrap-remote-audit after remote review") from exc
             if kv_env is None:
                 raise CredentialsError("bootstrap remote audit requires KV read credentials")
-            plan = build_bootstrap_plan(read_remote_audit_state(kv_env=kv_env), current, movies)
+            remote = read_remote_audit_state(kv_env=kv_env)
+            current, movies = _current_snapshot(
+                public_data,
+                legacy_today_payload=_legacy_today_payload_from_remote(remote),
+            )
+            plan = build_bootstrap_plan(remote, current, movies)
         except SnapshotCorruptError:
             raise
         else:
             if bootstrap_remote_audit:
                 raise RuntimeError("R2 committed snapshot already exists; use normal incremental mode")
+            current, movies = _current_snapshot(
+                public_data,
+                legacy_today_payload=_legacy_today_payload(previous),
+            )
             plan = build_incremental_plan(previous, current, movies)
     enforce_quota(
         plan,

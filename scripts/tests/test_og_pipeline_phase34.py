@@ -24,15 +24,14 @@ _SYNC_ENV = (
 
 
 class TestOgPipelinePhase34(unittest.TestCase):
-    def test_calculation_scripts_have_no_kv_publication_responsibility(self) -> None:
+    def test_calculation_scripts_only_export_and_validate(self) -> None:
         for script in (_NIGHTLY, _MONTHLY):
             with self.subTest(script=script.name):
                 text = script.read_text(encoding="utf-8")
-                self.assertIn("write_today_json_after_galaxy_export", text)
-                self.assertNotIn("sync_og_index_after_galaxy_export", text)
+                self.assertNotIn("pick_movie_today", text)
+                self.assertNotIn("write_today_json_after_galaxy_export", text)
+                self.assertNotIn("render_og_today", text)
                 self.assertNotIn("sync_og_index_kv", text)
-                self.assertNotIn("render_og_today_after_galaxy_export", text)
-                self.assertNotIn("from cron.render_og_today", text)
 
     def test_workflows_use_the_same_fail_closed_incremental_sync_before_r2_upload(self) -> None:
         for workflow in (_NIGHTLY_WORKFLOW, _MONTHLY_WORKFLOW):
@@ -50,6 +49,8 @@ class TestOgPipelinePhase34(unittest.TestCase):
                 self.assertIn(_SYNC_COMMAND, sync_block)
                 self.assertNotIn("--scope full", sync_block)
                 self.assertNotIn("--scope daily", sync_block)
+                self.assertNotIn("today.json", text)
+                self.assertNotIn("today_url", text)
                 self.assertIn("set -euo pipefail", sync_block)
                 self.assertNotIn("exit 0", sync_block)
                 self.assertNotIn("skip", sync_block.lower())

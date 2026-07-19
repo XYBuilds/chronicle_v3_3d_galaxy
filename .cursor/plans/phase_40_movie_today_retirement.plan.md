@@ -13,7 +13,7 @@ todos:
     status: complete
   - id: p40-og-state-v2
     content: 40.4 实现 OG Index snapshot v1→v2 与一次性 KV today 删除协议
-    status: pending
+    status: complete
   - id: p40-worker-retirement
     content: 40.5 退役 OG Worker Today KV/meta/PNG 路由并固定旧 URL 为 404
     status: pending

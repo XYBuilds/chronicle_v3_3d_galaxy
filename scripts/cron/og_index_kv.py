@@ -3,7 +3,6 @@
 
 Keys (SSOT for Worker repo):
   - ``meta:G`` — ``data_version`` string (``galaxy_data.json`` → ``meta.version``)
-  - ``today`` — ``{"date": "YYYY-MM-DD", "movie_id": number}``
   - ``movie:{id}`` — ``{title, release_date, genres, poster_url}`` (minimal OG fields)
 """
 from __future__ import annotations
@@ -136,31 +135,6 @@ def movie_og_record(movie: dict[str, Any]) -> dict[str, Any]:
         "genres": genres,
         "poster_url": str(movie.get("poster_url", "")).strip(),
     }
-
-
-def today_kv_value(today_payload: dict[str, Any]) -> dict[str, Any]:
-    date_s = str(today_payload.get("date", "")).strip()
-    movie_id = today_payload.get("movie_id")
-    assert date_s, "today.json missing date"
-    assert isinstance(movie_id, int), f"today movie_id must be int, got {movie_id!r}"
-    return {"date": date_s, "movie_id": movie_id}
-
-
-def iter_og_index_entries(
-    *,
-    data_version: str,
-    today_payload: dict[str, Any],
-    movies: list[dict[str, Any]] | None,
-) -> Iterator[tuple[str, str]]:
-    """Yield ``(key, value)`` pairs for KV bulk put (values are UTF-8 strings)."""
-    assert data_version.strip(), "data_version must be non-empty"
-    yield META_G_KEY, data_version.strip()
-    yield TODAY_KEY, json.dumps(today_kv_value(today_payload), ensure_ascii=False, separators=(",", ":"))
-    if movies is None:
-        return
-    for movie in movies:
-        rec = movie_og_record(movie)
-        yield movie_kv_key(int(movie["id"])), json.dumps(rec, ensure_ascii=False, separators=(",", ":"))
 
 
 def chunk_entries(entries: list[tuple[str, str]], batch_size: int) -> Iterator[list[dict[str, str]]]:

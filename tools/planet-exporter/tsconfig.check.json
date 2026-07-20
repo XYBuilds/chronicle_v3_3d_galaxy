@@ -18,6 +18,7 @@
     "src/p3911CheckpointCRadius.ts",
     "src/p3911CheckpointCStrength.ts",
     "src/phase39Fixtures.ts",
+    "src/phase41Baseline.ts",
     "src/png.ts"
   ],
   "include": ["scripts/**/*.ts"]

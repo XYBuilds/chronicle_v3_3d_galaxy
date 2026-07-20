@@ -4,13 +4,13 @@ overview: 将 Focus 星球的评分语义、固定造型和 Bloom 后期分层�
 todos:
   - id: p41.1-baseline-and-fixtures
     content: 41.1 · 冻结权威 gzip 基线、评分统计和代表性受控/真实 fixtures
-    status: complete
+    status: completed
   - id: p41.2-contact-sheet-tool
     content: 41.2 · 实现带标签、严格校验和机器 manifest 的通用 contact-sheet 工具
-    status: complete
+    status: completed
   - id: p41.3-diagnostic-profile
     content: 41.3 · 建立隔离的通用视觉诊断 profile、完整 sidecar 与单变量不变量
-    status: complete
+    status: completed
   - id: p41.4-fixed-shaping-gate
     content: 41.4 · [需人工验收] 在 Bloom OFF 下依次锁定光线方向、Lightness 和 Key
     status: pending

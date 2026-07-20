@@ -7,7 +7,7 @@ todos:
     status: complete
   - id: p41.2-contact-sheet-tool
     content: 41.2 · 实现带标签、严格校验和机器 manifest 的通用 contact-sheet 工具
-    status: pending
+    status: complete
   - id: p41.3-diagnostic-profile
     content: 41.3 · 建立隔离的通用视觉诊断 profile、完整 sidecar 与单变量不变量
     status: pending

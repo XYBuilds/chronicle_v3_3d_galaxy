@@ -11,6 +11,8 @@
     "src/bloomProof.ts",
     "src/browser.ts",
     "src/cli.ts",
+    "src/contactSheet.ts",
+    "src/contactSheetCommand.ts",
     "src/data-source.ts",
     "src/p3911CheckpointA.ts",
     "src/p3911CheckpointB.ts",

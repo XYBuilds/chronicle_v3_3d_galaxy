@@ -24,6 +24,8 @@ import { createGalaxyDualMeshes } from './galaxyMeshes'
 import { computeIdleMacroFadesBlendForPhase, IDLE_NEAR_FADE_DEFAULTS } from './idleNearFade'
 import { IDLE_Z_FADE_DEFAULTS } from './idleZFade'
 import { createPerlinSelectiveBloom, type PerlinBloomDebugControls } from './perlinSelectiveBloom'
+import { focusEmissionIntensityFromVoteAverage } from './planetAppearance'
+import { PLANET_VISUAL_DEFAULTS } from './planetVisualDefaults'
 import {
   applyIdleNearFadeDefaults,
   applyIdleZFadeDefaults,
@@ -170,6 +172,30 @@ interface SdrRuntimeTuningDebug {
   resetAll(): void
 }
 
+/** Dev console: `window.__focusAppearance` — runtime-only Focus emission/key/Bloom tuning. */
+interface FocusAppearanceDebug {
+  /** Runtime override of the vote-average power exponent; must be finite and > 0. */
+  exponent: number
+  /** Runtime Emission lower endpoint; must be finite, non-negative and <= intensityMax. */
+  intensityMin: number
+  /** Runtime Emission upper endpoint; must be finite, non-negative and >= intensityMin. */
+  intensityMax: number
+  /** Runtime Focus OKLab Lightness; must be finite. */
+  lightness: number
+  /** Runtime fixed Lambert Key intensity; must be finite and non-negative. */
+  keyLightIntensity: number
+  /** Runtime world-space direction from the surface toward the Key source; normalized on set. */
+  direction: readonly [number, number, number]
+  /** Runtime derivative/geometry normal mix, clamped to [0, 1]. */
+  flatShadingMix: number
+  /** The existing Focus-only pure-Bloom debug controls. */
+  readonly bloom: PerlinBloomDebugControls
+  /** Restore every runtime override and Focus Bloom parameter to shipped defaults. */
+  reset(): void
+  /** Log active overrides, derived Emission and current Focus Bloom parameters. */
+  log(): void
+}
+
 /** Dev console: `window.__planetTerrace` — Perlin focus sphere terrace + P11.4 lighting uniforms. */
 interface SelectionPlanetTerraceDebug {
   /** Unit-sphere extrusion per band step; world radius uses `× (1 + cuts × stepHeight)`. Clamped to [0, 0.25] on set. */
@@ -207,6 +233,7 @@ declare global {
     __galaxyUniverseBg?: GalaxyUniverseBgDebug
     __sdrTuning?: SdrRuntimeTuningDebug
     __galaxyInteraction?: GalaxyInteractionDebug
+    __focusAppearance?: FocusAppearanceDebug
     __planetTerrace?: SelectionPlanetTerraceDebug
   }
 }
@@ -625,6 +652,75 @@ export function mountGalaxyScene(
     }
   }
 
+  const focusRuntime: {
+    exponent: number
+    intensityMin: number
+    intensityMax: number
+    lightness: number
+    keyLightIntensity: number
+    direction: [number, number, number]
+    flatShadingMix: number
+  } = {
+    exponent: PLANET_VISUAL_DEFAULTS.focus.emission.exponent,
+    intensityMin: PLANET_VISUAL_DEFAULTS.focus.emission.intensityMin,
+    intensityMax: PLANET_VISUAL_DEFAULTS.focus.emission.intensityMax,
+    lightness: PLANET_VISUAL_DEFAULTS.focus.lightness,
+    keyLightIntensity: PLANET_VISUAL_DEFAULTS.lighting.keyLightIntensity,
+    direction: [...PLANET_VISUAL_DEFAULTS.lighting.direction],
+    flatShadingMix: PLANET_VISUAL_DEFAULTS.lighting.flatShadingMix,
+  }
+
+  const activeFocusMovie = (): Movie | null => {
+    if (pendingSelectInstanceIndex < 0 || pendingSelectInstanceIndex >= movies.length) return null
+    return movies[pendingSelectInstanceIndex] ?? null
+  }
+
+  const applyFocusAppearanceRuntime = (): void => {
+    const movie = activeFocusMovie()
+    if (!movie) return
+    const emissionIntensity = focusEmissionIntensityFromVoteAverage(
+      movie.vote_average,
+      focusRuntime.intensityMin,
+      focusRuntime.intensityMax,
+      focusRuntime.exponent,
+    )
+    const uniforms = planet.material.uniforms
+    uniforms.uPerlinL.value = focusRuntime.lightness
+    uniforms.uEmissionIntensity.value = emissionIntensity
+    uniforms.uKeyLightIntensity.value = focusRuntime.keyLightIntensity
+    const lightDirection = uniforms.uLightDir.value as THREE.Vector3
+    lightDirection.set(...focusRuntime.direction).normalize()
+    uniforms.uFlatShadingMix.value = focusRuntime.flatShadingMix
+    if (planet.lastAppearance) {
+      planet.lastAppearance = {
+        ...planet.lastAppearance,
+        lightness: focusRuntime.lightness,
+        emissionIntensity,
+        emissionExponent: focusRuntime.exponent,
+        emissionIntensityMin: focusRuntime.intensityMin,
+        emissionIntensityMax: focusRuntime.intensityMax,
+        keyLightIntensity: focusRuntime.keyLightIntensity,
+      }
+    }
+    console.log(
+      `[FocusAppearance] movie=${movie.id} rating=${movie.vote_average.toFixed(3)} emission=${emissionIntensity.toFixed(4)} exponent=${focusRuntime.exponent} endpoints=${focusRuntime.intensityMin}…${focusRuntime.intensityMax} lightness=${focusRuntime.lightness} key=${focusRuntime.keyLightIntensity} direction=(${focusRuntime.direction.join(',')}) flatMix=${focusRuntime.flatShadingMix}`,
+    )
+  }
+
+  const setFiniteFocusRuntime = (name: string, value: number): void => {
+    if (!Number.isFinite(value)) throw new Error(`[FocusAppearance] ${name} must be finite; received ${value}`)
+  }
+
+  const normalizedFocusDirection = (value: readonly number[]): [number, number, number] => {
+    if (value.length !== 3 || value.some((component) => !Number.isFinite(component))) {
+      throw new Error('[FocusAppearance] direction must be three finite numbers')
+    }
+    const direction = new THREE.Vector3(value[0], value[1], value[2])
+    if (direction.lengthSq() <= 1e-12) throw new Error('[FocusAppearance] direction must be non-zero')
+    direction.normalize()
+    return [direction.x, direction.y, direction.z]
+  }
+
   const syncSelectionPlanetWorldScale = () => {
     if (selectionPhase !== 'selecting' && selectionPhase !== 'selected') return
     if (!planet.mesh.visible) return
@@ -682,6 +778,7 @@ export function mountGalaxyScene(
       selectingEndQuat.copy(selectingQuatHelper.quaternion)
     }
     planet.setFromMovie(movie, meta.genre_palette, r)
+    applyFocusAppearanceRuntime()
     bindSelectionPlanetSpin(movie.id, performance.now())
     uFocused.value = -1
     const zSnap = useGalaxyInteractionStore.getState().zCurrent
@@ -798,6 +895,84 @@ export function mountGalaxyScene(
   perlinBloom.assignBloomLayer(planet.mesh)
   window.__perlinBloom = perlinBloom.debug
   perlinBloom.debug.log()
+
+  const focusAppearanceDebug: FocusAppearanceDebug = {
+    get exponent() { return focusRuntime.exponent },
+    set exponent(value: number) {
+      setFiniteFocusRuntime('exponent', value)
+      if (value <= 0) throw new Error(`[FocusAppearance] exponent must be > 0; received ${value}`)
+      focusRuntime.exponent = value
+      applyFocusAppearanceRuntime()
+    },
+    get intensityMin() { return focusRuntime.intensityMin },
+    set intensityMin(value: number) {
+      setFiniteFocusRuntime('intensityMin', value)
+      if (value < 0 || value > focusRuntime.intensityMax) {
+        throw new Error(`[FocusAppearance] intensityMin must be in [0, intensityMax]; received ${value}`)
+      }
+      focusRuntime.intensityMin = value
+      applyFocusAppearanceRuntime()
+    },
+    get intensityMax() { return focusRuntime.intensityMax },
+    set intensityMax(value: number) {
+      setFiniteFocusRuntime('intensityMax', value)
+      if (value < focusRuntime.intensityMin) {
+        throw new Error(`[FocusAppearance] intensityMax must be >= intensityMin; received ${value}`)
+      }
+      focusRuntime.intensityMax = value
+      applyFocusAppearanceRuntime()
+    },
+    get lightness() { return focusRuntime.lightness },
+    set lightness(value: number) {
+      setFiniteFocusRuntime('lightness', value)
+      if (value < 0 || value > 1) throw new Error(`[FocusAppearance] lightness must be in [0, 1]; received ${value}`)
+      focusRuntime.lightness = value
+      applyFocusAppearanceRuntime()
+    },
+    get keyLightIntensity() { return focusRuntime.keyLightIntensity },
+    set keyLightIntensity(value: number) {
+      setFiniteFocusRuntime('keyLightIntensity', value)
+      if (value < 0) throw new Error(`[FocusAppearance] keyLightIntensity must be >= 0; received ${value}`)
+      focusRuntime.keyLightIntensity = value
+      applyFocusAppearanceRuntime()
+    },
+    get direction() { return [...focusRuntime.direction] as [number, number, number] },
+    set direction(value: readonly [number, number, number]) {
+      focusRuntime.direction = normalizedFocusDirection(value)
+      applyFocusAppearanceRuntime()
+    },
+    get flatShadingMix() { return focusRuntime.flatShadingMix },
+    set flatShadingMix(value: number) {
+      setFiniteFocusRuntime('flatShadingMix', value)
+      if (value < 0 || value > 1) throw new Error(`[FocusAppearance] flatShadingMix must be in [0, 1]; received ${value}`)
+      focusRuntime.flatShadingMix = value
+      applyFocusAppearanceRuntime()
+    },
+    get bloom() { return perlinBloom.debug },
+    reset() {
+      Object.assign(focusRuntime, {
+        exponent: PLANET_VISUAL_DEFAULTS.focus.emission.exponent,
+        intensityMin: PLANET_VISUAL_DEFAULTS.focus.emission.intensityMin,
+        intensityMax: PLANET_VISUAL_DEFAULTS.focus.emission.intensityMax,
+        lightness: PLANET_VISUAL_DEFAULTS.focus.lightness,
+        keyLightIntensity: PLANET_VISUAL_DEFAULTS.lighting.keyLightIntensity,
+        direction: [...PLANET_VISUAL_DEFAULTS.lighting.direction],
+        flatShadingMix: PLANET_VISUAL_DEFAULTS.lighting.flatShadingMix,
+      })
+      perlinBloom.debug.reset()
+      applyFocusAppearanceRuntime()
+      this.log()
+    },
+    log() {
+      const movie = activeFocusMovie()
+      const emission = planet.material.uniforms.uEmissionIntensity.value as number
+      console.log(
+        `[FocusAppearance] movie=${movie?.id ?? 'none'} rating=${movie?.vote_average.toFixed(3) ?? 'n/a'} emission=${emission.toFixed(4)} | exponent=${focusRuntime.exponent} min=${focusRuntime.intensityMin} max=${focusRuntime.intensityMax} lightness=${focusRuntime.lightness} key=${focusRuntime.keyLightIntensity} direction=(${focusRuntime.direction.join(',')}) flatMix=${focusRuntime.flatShadingMix} | bloom strength=${perlinBloom.debug.strength} radius=${perlinBloom.debug.radius} threshold=${perlinBloom.debug.threshold}`,
+      )
+    },
+  }
+  window.__focusAppearance = focusAppearanceDebug
+  focusAppearanceDebug.log()
 
   const uSizeScale = galUniforms.uSizeScale as THREE.Uniform<number>
   const uActiveSizeMul = galUniforms.uActiveSizeMul as THREE.Uniform<number>
@@ -1400,6 +1575,9 @@ export function mountGalaxyScene(
     }
     if (window.__bloom === bloomDebug) {
       delete window.__bloom
+    }
+    if (window.__focusAppearance === focusAppearanceDebug) {
+      delete window.__focusAppearance
     }
     if (window.__perlinBloom === perlinBloom.debug) {
       delete window.__perlinBloom

@@ -1,4 +1,3 @@
-import { validatePerlinBloomParams, type PerlinBloomParams } from '@/three/perlinBloomContract'
 import type { GalaxyData } from '@/types/galaxy'
 
 export type PlanetExportRenderMode = 'basic' | 'shader'
@@ -11,11 +10,9 @@ export type PlanetExportRequest = {
   bloom: boolean
   sizeRoot: 2 | 3 | 4
   renderMode: PlanetExportRenderMode
-  /** Offline proof only; absent in production requests. */
-  bloomParamsOverride?: PerlinBloomParams
 }
 
-const REQUEST_PARAMS = new Set(['movieId', 'dataUrl', 'resolution', 'padding', 'bloom', 'sizeRoot', 'renderMode', 'bloomStrength'])
+const REQUEST_PARAMS = new Set(['movieId', 'dataUrl', 'resolution', 'padding', 'bloom', 'sizeRoot', 'renderMode'])
 
 function requiredUniqueParam(params: URLSearchParams, name: string): string {
   const values = params.getAll(name)
@@ -90,22 +87,6 @@ export function parsePlanetExportRequest(search: string): PlanetExportRequest {
     throw new Error('[PlanetExport] basic renderMode requires bloom=off')
   }
 
-  const bloomStrengthText = params.has('bloomStrength') ? requiredUniqueParam(params, 'bloomStrength') : undefined
-  if (
-    bloomStrengthText !== undefined
-    && (!/^(?:0|(?:[1-9]\d*|0)\.\d+|[1-9]\d*)$/.test(bloomStrengthText) || bloomText !== 'on')
-  ) {
-    throw new Error('[PlanetExport] bloomStrength must be a finite non-negative decimal and requires bloom=on')
-  }
-  const bloomParamsOverride = bloomStrengthText === undefined
-    ? undefined
-    : validatePerlinBloomParams({
-      enabled: true,
-      strength: Number(bloomStrengthText),
-      radius: 1,
-      threshold: 0,
-    })
-
   return {
     movieId,
     dataUrl,
@@ -114,7 +95,6 @@ export function parsePlanetExportRequest(search: string): PlanetExportRequest {
     bloom: bloomText === 'on',
     sizeRoot: sizeRoot as 2 | 3 | 4,
     renderMode,
-    ...(bloomParamsOverride === undefined ? {} : { bloomParamsOverride }),
   }
 }
 export function indexGalaxyMovies(data: GalaxyData): Map<number, GalaxyData['movies'][number]> {

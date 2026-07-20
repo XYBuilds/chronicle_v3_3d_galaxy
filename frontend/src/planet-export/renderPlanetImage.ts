@@ -10,6 +10,12 @@ import {
 } from '@/three/perlinBloomContract'
 import { createSelectionPlanet, type SelectionPlanetHandle } from '@/three/planet'
 import { planetNoiseSeed } from '@/three/planetAppearance'
+import {
+  PHASE41_DIAGNOSTIC_MARKER,
+  phase41EmissionForRating,
+  type Phase41EmissionCurve,
+  type Phase41RenderOverride,
+} from './phase41DiagnosticProfile'
 import { selectionPlanetRotationAxisForMovie } from '@/three/selectionPlanetRotation'
 import type { Meta, Movie } from '@/types/galaxy'
 import { computeExportWorldRadius, computeOrthographicHalfExtent } from './sizing'
@@ -25,7 +31,15 @@ export type PlanetRenderOptions = {
   bloom: boolean
   renderMode: PlanetExportRenderMode
   sizeRoot: 2 | 3 | 4
-  /** Offline diagnostics only; page and production CLI always use shared defaults. */
+}
+
+export type Phase41DiagnosticPlanetRenderOptions = PlanetRenderOptions & {
+  diagnostic_only: typeof PHASE41_DIAGNOSTIC_MARKER
+  diagnosticOverride: Phase41RenderOverride
+  bloomParamsOverride: PerlinBloomParams
+}
+
+type OfflineDiagnosticPlanetRenderOptions = PlanetRenderOptions & {
   bloomParamsOverride?: PerlinBloomParams
 }
 
@@ -39,12 +53,26 @@ export type PlanetRenderDiagnostics = {
   size_root: 2 | 3 | 4
   padding: number
   emission: number
-  emission_curve: {
-    model_version: string
-    exponent: number
-    intensity_min: number
-    intensity_max: number
-  }
+  emission_curve:
+    | {
+      model_version: 'vote-average-power-clamped-v1'
+      exponent: number
+      intensity_min: number
+      intensity_max: number
+    }
+    | {
+      model_version: 'vote-average-anchored-smoothstep-v1'
+      rating_low_anchor: number
+      rating_high_anchor: number
+      intensity_min: number
+      intensity_max: number
+    }
+    | {
+      model_version: 'p39.11-checkpoint-b-emission-exponent-v1'
+      exponent: number
+      intensity_min: number
+      intensity_max: number
+    }
   fixed_lightness: number
   fixed_chroma: number
   bloom: {
@@ -109,6 +137,24 @@ function quaternionTuple(quaternion: THREE.Quaternion, label: string): [number, 
   return [serializableNumber(quaternion.x, `${label}[0]`), serializableNumber(quaternion.y, `${label}[1]`), serializableNumber(quaternion.z, `${label}[2]`), serializableNumber(quaternion.w, `${label}[3]`)]
 }
 
+function diagnosticsEmissionCurve(curve: Phase41EmissionCurve): PlanetRenderDiagnostics['emission_curve'] {
+  if (curve.modelVersion === 'vote-average-power-clamped-v1') {
+    return {
+      model_version: curve.modelVersion,
+      exponent: serializableNumber(curve.exponent, 'emission exponent'),
+      intensity_min: serializableNumber(curve.intensityMin, 'emission minimum'),
+      intensity_max: serializableNumber(curve.intensityMax, 'emission maximum'),
+    }
+  }
+  return {
+    model_version: curve.modelVersion,
+    rating_low_anchor: serializableNumber(curve.ratingLowAnchor, 'emission low anchor'),
+    rating_high_anchor: serializableNumber(curve.ratingHighAnchor, 'emission high anchor'),
+    intensity_min: serializableNumber(curve.intensityMin, 'emission minimum'),
+    intensity_max: serializableNumber(curve.intensityMax, 'emission maximum'),
+  }
+}
+
 function positive(value: number, label: string): number {
   const result = serializableNumber(value, label)
   if (result <= 0) throw new Error(`[PlanetExport] ${label} must be > 0`)
@@ -119,7 +165,7 @@ export function capturePlanetRenderDiagnostics(
   movie: Movie,
   planet: SelectionPlanetHandle,
   camera: THREE.OrthographicCamera,
-  options: Pick<PlanetRenderOptions, 'sizeRoot' | 'padding' | 'bloomParamsOverride'> & { bloom?: boolean },
+  options: Pick<PlanetRenderOptions, 'sizeRoot' | 'padding'> & { bloomParamsOverride?: PerlinBloomParams; bloom?: boolean; emissionCurveOverride?: Phase41EmissionCurve },
 ): PlanetRenderDiagnostics {
   if (!Number.isSafeInteger(movie.id) || movie.id <= 0) {
     throw new Error('[PlanetExport] movie id must be a positive integer')
@@ -189,12 +235,12 @@ export function capturePlanetRenderDiagnostics(
     size_root: options.sizeRoot,
     padding: serializableNumber(options.padding, 'padding'),
     emission: serializableNumber(uniforms.uEmissionIntensity.value as number, 'emission'),
-    emission_curve: {
-      model_version: appearance.emissionModelVersion,
-      exponent: serializableNumber(appearance.emissionExponent, 'emission exponent'),
-      intensity_min: serializableNumber(appearance.emissionIntensityMin, 'emission minimum'),
-      intensity_max: serializableNumber(appearance.emissionIntensityMax, 'emission maximum'),
-    },
+    emission_curve: diagnosticsEmissionCurve(options.emissionCurveOverride ?? {
+      modelVersion: appearance.emissionModelVersion,
+      exponent: appearance.emissionExponent,
+      intensityMin: appearance.emissionIntensityMin,
+      intensityMax: appearance.emissionIntensityMax,
+    }),
     fixed_lightness: serializableNumber(uniforms.uPerlinL.value as number, 'lightness'),
     fixed_chroma: serializableNumber(uniforms.uPerlinChroma.value as number, 'chroma'),
     bloom: {
@@ -289,7 +335,14 @@ export function positionExportCamera(camera: THREE.OrthographicCamera, halfExten
   camera.updateMatrixWorld(true)
 }
 
-export function renderPlanetImage(options: PlanetRenderOptions): PlanetRenderResult {
+function applyPhase41DiagnosticOverride(planet: SelectionPlanetHandle, movie: Movie, override: Phase41RenderOverride): void {
+  planet.material.uniforms.uEmissionIntensity.value = phase41EmissionForRating(movie.vote_average, override.curve)
+  planet.material.uniforms.uPerlinL.value = override.lightness
+  planet.material.uniforms.uKeyLightIntensity.value = override.keyLightIntensity
+  ;(planet.material.uniforms.uLightDir.value as THREE.Vector3).set(...override.direction).normalize()
+}
+
+function renderPlanetImageInternal(options: OfflineDiagnosticPlanetRenderOptions, diagnosticOverride?: Phase41RenderOverride): PlanetRenderResult {
   const { canvas, movie, meta, globalRadius, resolution, padding, bloom, renderMode, sizeRoot, bloomParamsOverride } = options
   const bloomParams = validatePerlinBloomParams(bloomParamsOverride ?? PERLIN_BLOOM_DEFAULTS)
   const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, preserveDrawingBuffer: true })
@@ -305,7 +358,11 @@ export function renderPlanetImage(options: PlanetRenderOptions): PlanetRenderRes
   positionExportCamera(camera, half)
 
   const planet = prepareExportPlanet(movie, meta, renderMode, sizeRoot)
-  const diagnostics = capturePlanetRenderDiagnostics(movie, planet, camera, options)
+  if (diagnosticOverride !== undefined) applyPhase41DiagnosticOverride(planet, movie, diagnosticOverride)
+  const diagnostics = capturePlanetRenderDiagnostics(movie, planet, camera, {
+    ...options,
+    ...(diagnosticOverride === undefined ? {} : { emissionCurveOverride: diagnosticOverride.curve }),
+  })
   scene.add(planet.mesh)
   if (bloom) {
     renderAlphaPreservingBloom(renderer, scene, camera, planet.mesh, resolution, bloomParams)
@@ -314,4 +371,22 @@ export function renderPlanetImage(options: PlanetRenderOptions): PlanetRenderRes
   }
   console.assert(planet.mesh.visible, '[PlanetExport] planet must be visible before rendering')
   return { renderer, visible: planet.mesh.visible, renderMode, diagnostics }
+}
+
+/** Production renderer: no visual override can enter through its public options. */
+export function renderPlanetImage(options: PlanetRenderOptions): PlanetRenderResult {
+  return renderPlanetImageInternal(options)
+}
+
+/** Explicit historical-diagnostic boundary for the P39 checkpoint renderers. */
+export function renderP3911DiagnosticPlanetImage(options: OfflineDiagnosticPlanetRenderOptions): PlanetRenderResult {
+  return renderPlanetImageInternal(options)
+}
+
+/** Explicit offline boundary for the Phase 41 profile only. */
+export function renderPhase41DiagnosticPlanetImage(options: Phase41DiagnosticPlanetRenderOptions): PlanetRenderResult {
+  if (options.diagnostic_only !== PHASE41_DIAGNOSTIC_MARKER) {
+    throw new Error(`[Phase41 diagnostic] diagnostic_only must equal ${PHASE41_DIAGNOSTIC_MARKER}`)
+  }
+  return renderPlanetImageInternal(options, options.diagnosticOverride)
 }

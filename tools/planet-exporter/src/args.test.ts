@@ -21,9 +21,9 @@ describe('parseArgs', () => {
   it('accepts explicit basic mode with Bloom disabled', () => {
     expect(parseArgs(['--movie-id', '1', '--output', 'planet.png', '--render-mode', 'basic'], resolvePath).renderMode).toBe('basic')
   })
-  it('accepts a non-negative diagnostic Bloom strength only with Bloom enabled', () => {
-    expect(parseArgs(['--movie-id', '1', '--output', 'planet.png', '--bloom', 'on', '--bloom-strength', '0'], resolvePath).bloomStrength).toBe(0)
+  it('rejects diagnostic visual parameters at the normal CLI boundary', () => {
     expect(() => parseArgs(['--movie-id', '1', '--output', 'planet.png', '--bloom-strength', '0'], resolvePath)).toThrow(CliError)
+    expect(() => parseArgs(['--movie-id', '1', '--output', 'planet.png', '--diagnostic-only', 'phase41-visual-diagnostic-v1'], resolvePath)).toThrow(CliError)
   })
 
   it('preserves both data selectors so file priority can be applied later', () => {

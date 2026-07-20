@@ -1,0 +1,246 @@
+import { PERLIN_BLOOM_DEFAULTS, validatePerlinBloomParams, type PerlinBloomParams } from '@/three/perlinBloomContract'
+import { PLANET_VISUAL_DEFAULTS, planetVisualConfigHashInput } from '@/three/planetVisualDefaults'
+
+export const PHASE41_DIAGNOSTIC_MARKER = 'phase41-visual-diagnostic-v1' as const
+export const PHASE41_FIXED_FLAT_SHADING_MIX = 0.8 as const
+
+export type Phase41EmissionCurve =
+  | {
+    modelVersion: 'vote-average-power-clamped-v1'
+    exponent: number
+    intensityMin: number
+    intensityMax: number
+  }
+  | {
+    modelVersion: 'vote-average-anchored-smoothstep-v1'
+    ratingLowAnchor: number
+    ratingHighAnchor: number
+    intensityMin: number
+    intensityMax: number
+  }
+
+export type Phase41DiagnosticOverride = {
+  diagnostic_only: typeof PHASE41_DIAGNOSTIC_MARKER
+  emissionCurve?: Phase41EmissionCurve
+  lightness?: number
+  keyLightIntensity?: number
+  direction?: [number, number, number]
+  bloom?: PerlinBloomParams
+}
+
+export type ResolvedPhase41VisualProfile = {
+  curve: Phase41EmissionCurve
+  lightness: number
+  chroma: number
+  keyLightIntensity: number
+  direction: [number, number, number]
+  flatShadingMix: typeof PHASE41_FIXED_FLAT_SHADING_MIX
+  bloom: PerlinBloomParams
+  productionSource: 'PLANET_VISUAL_DEFAULTS'
+  productionVisualConfigInput: string
+  resolvedVisualConfigInput: string
+  overrideProvenance: 'none' | 'phase41-diagnostic-override'
+}
+
+export type Phase41RenderOverride = Pick<ResolvedPhase41VisualProfile, 'curve' | 'lightness' | 'keyLightIntensity' | 'direction' | 'bloom'>
+
+const overrideKeys = new Set(['diagnostic_only', 'emissionCurve', 'lightness', 'keyLightIntensity', 'direction', 'bloom'])
+
+function object(value: unknown, label: string): Record<string, unknown> {
+  if (value === null || Array.isArray(value) || typeof value !== 'object') throw new Error(`[Phase41 diagnostic] ${label} must be an object`)
+  return value as Record<string, unknown>
+}
+
+function finite(value: unknown, label: string): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) throw new Error(`[Phase41 diagnostic] ${label} must be a finite number`)
+  return value
+}
+
+function nonNegative(value: unknown, label: string): number {
+  const result = finite(value, label)
+  if (result < 0) throw new Error(`[Phase41 diagnostic] ${label} must be >= 0`)
+  return result
+}
+
+function unit(value: unknown, label: string): number {
+  const result = finite(value, label)
+  if (result < 0 || result > 1) throw new Error(`[Phase41 diagnostic] ${label} must be in [0, 1]`)
+  return result
+}
+
+function exactKeys(record: Record<string, unknown>, allowed: ReadonlySet<string>, label: string): void {
+  for (const key of Object.keys(record)) {
+    if (!allowed.has(key)) throw new Error(`[Phase41 diagnostic] ${label} has unknown field ${key}`)
+  }
+}
+
+function vector(value: unknown, label: string): [number, number, number] {
+  if (!Array.isArray(value) || value.length !== 3) throw new Error(`[Phase41 diagnostic] ${label} must be a 3-vector`)
+  const result: [number, number, number] = [finite(value[0], `${label}[0]`), finite(value[1], `${label}[1]`), finite(value[2], `${label}[2]`)]
+  const magnitude = Math.hypot(...result)
+  if (magnitude === 0) throw new Error(`[Phase41 diagnostic] ${label} must not be a zero vector`)
+  return [result[0] / magnitude, result[1] / magnitude, result[2] / magnitude]
+}
+
+function curve(value: unknown, label: string): Phase41EmissionCurve {
+  const record = object(value, label)
+  if (record.modelVersion === 'vote-average-power-clamped-v1') {
+    exactKeys(record, new Set(['modelVersion', 'exponent', 'intensityMin', 'intensityMax']), label)
+    const exponent = finite(record.exponent, `${label}.exponent`)
+    const intensityMin = nonNegative(record.intensityMin, `${label}.intensityMin`)
+    const intensityMax = nonNegative(record.intensityMax, `${label}.intensityMax`)
+    if (exponent <= 0) throw new Error(`[Phase41 diagnostic] ${label}.exponent must be > 0`)
+    if (intensityMin > intensityMax) throw new Error(`[Phase41 diagnostic] ${label}.intensityMin must be <= intensityMax`)
+    return { modelVersion: 'vote-average-power-clamped-v1', exponent, intensityMin, intensityMax }
+  }
+  if (record.modelVersion === 'vote-average-anchored-smoothstep-v1') {
+    exactKeys(record, new Set(['modelVersion', 'ratingLowAnchor', 'ratingHighAnchor', 'intensityMin', 'intensityMax']), label)
+    const ratingLowAnchor = finite(record.ratingLowAnchor, `${label}.ratingLowAnchor`)
+    const ratingHighAnchor = finite(record.ratingHighAnchor, `${label}.ratingHighAnchor`)
+    const intensityMin = nonNegative(record.intensityMin, `${label}.intensityMin`)
+    const intensityMax = nonNegative(record.intensityMax, `${label}.intensityMax`)
+    if (ratingLowAnchor < 0 || ratingHighAnchor > 10 || ratingLowAnchor >= ratingHighAnchor) {
+      throw new Error(`[Phase41 diagnostic] ${label} requires 0 <= ratingLowAnchor < ratingHighAnchor <= 10`)
+    }
+    if (intensityMin > intensityMax) throw new Error(`[Phase41 diagnostic] ${label}.intensityMin must be <= intensityMax`)
+    return { modelVersion: 'vote-average-anchored-smoothstep-v1', ratingLowAnchor, ratingHighAnchor, intensityMin, intensityMax }
+  }
+  throw new Error(`[Phase41 diagnostic] ${label}.modelVersion is invalid`)
+}
+
+function bloom(value: unknown): PerlinBloomParams {
+  const record = object(value, 'bloom')
+  exactKeys(record, new Set(['enabled', 'strength', 'radius', 'threshold']), 'bloom')
+  if (typeof record.enabled !== 'boolean') throw new Error('[Phase41 diagnostic] bloom.enabled must be boolean')
+  return validatePerlinBloomParams({
+    enabled: record.enabled,
+    strength: nonNegative(record.strength, 'bloom.strength'),
+    radius: unit(record.radius, 'bloom.radius'),
+    threshold: nonNegative(record.threshold, 'bloom.threshold'),
+  })
+}
+
+function productionCurve(): Phase41EmissionCurve {
+  const emission = PLANET_VISUAL_DEFAULTS.focus.emission
+  return curve({
+    modelVersion: emission.modelVersion,
+    exponent: emission.exponent,
+    intensityMin: emission.intensityMin,
+    intensityMax: emission.intensityMax,
+  }, 'PLANET_VISUAL_DEFAULTS.focus.emission')
+}
+
+export function parsePhase41DiagnosticOverride(value: unknown): Phase41DiagnosticOverride {
+  const record = object(value, 'override')
+  exactKeys(record, overrideKeys, 'override')
+  if (record.diagnostic_only !== PHASE41_DIAGNOSTIC_MARKER) {
+    throw new Error(`[Phase41 diagnostic] diagnostic_only must equal ${PHASE41_DIAGNOSTIC_MARKER}`)
+  }
+  if (Object.keys(record).length === 1) {
+    throw new Error('[Phase41 diagnostic] override must declare at least one visual field')
+  }
+  const result: Phase41DiagnosticOverride = { diagnostic_only: PHASE41_DIAGNOSTIC_MARKER }
+  if ('emissionCurve' in record) result.emissionCurve = curve(record.emissionCurve, 'override.emissionCurve')
+  if ('lightness' in record) result.lightness = unit(record.lightness, 'override.lightness')
+  if ('keyLightIntensity' in record) result.keyLightIntensity = nonNegative(record.keyLightIntensity, 'override.keyLightIntensity')
+  if ('direction' in record) result.direction = vector(record.direction, 'override.direction')
+  if ('bloom' in record) result.bloom = bloom(record.bloom)
+  return result
+}
+
+export function resolvePhase41VisualProfile(override?: Phase41DiagnosticOverride): ResolvedPhase41VisualProfile {
+  const parsed = override === undefined ? undefined : parsePhase41DiagnosticOverride(override)
+  if (PLANET_VISUAL_DEFAULTS.lighting.flatShadingMix !== PHASE41_FIXED_FLAT_SHADING_MIX) {
+    throw new Error('[Phase41 diagnostic] production flatShadingMix must remain fixed at 0.8')
+  }
+  const productionVisualConfigInput = planetVisualConfigHashInput()
+  const profile = {
+    curve: parsed?.emissionCurve ?? productionCurve(),
+    lightness: parsed?.lightness ?? PLANET_VISUAL_DEFAULTS.focus.lightness,
+    chroma: PLANET_VISUAL_DEFAULTS.focus.chroma,
+    keyLightIntensity: parsed?.keyLightIntensity ?? PLANET_VISUAL_DEFAULTS.lighting.keyLightIntensity,
+    direction: vector(parsed?.direction ?? PLANET_VISUAL_DEFAULTS.lighting.direction, 'resolved direction'),
+    flatShadingMix: PHASE41_FIXED_FLAT_SHADING_MIX,
+    bloom: parsed?.bloom ?? validatePerlinBloomParams(PERLIN_BLOOM_DEFAULTS),
+    productionSource: 'PLANET_VISUAL_DEFAULTS' as const,
+    productionVisualConfigInput,
+    overrideProvenance: parsed === undefined ? 'none' as const : 'phase41-diagnostic-override' as const,
+  }
+  const resolvedVisualConfigInput = parsed === undefined
+    ? productionVisualConfigInput
+    : JSON.stringify({ phase41Diagnostic: PHASE41_DIAGNOSTIC_MARKER, profile })
+  return { ...profile, resolvedVisualConfigInput }
+}
+
+export function phase41EmissionForRating(rating: number, emission: Phase41EmissionCurve): number {
+  const value = finite(rating, 'rating')
+  if (emission.modelVersion === 'vote-average-power-clamped-v1') {
+    const t = Math.min(10, Math.max(0, value)) / 10
+    return emission.intensityMin + Math.pow(t, emission.exponent) * (emission.intensityMax - emission.intensityMin)
+  }
+  const t = Math.min(1, Math.max(0, (value - emission.ratingLowAnchor) / (emission.ratingHighAnchor - emission.ratingLowAnchor)))
+  return emission.intensityMin + (t * t * (3 - 2 * t)) * (emission.intensityMax - emission.intensityMin)
+}
+
+export function toPhase41RenderOverride(profile: ResolvedPhase41VisualProfile): Phase41RenderOverride {
+  return { curve: profile.curve, lightness: profile.lightness, keyLightIntensity: profile.keyLightIntensity, direction: profile.direction, bloom: profile.bloom }
+}
+
+export type Phase41MatrixVariable = 'rating' | 'emission' | 'curve' | 'lightness' | 'keyLightIntensity' | 'direction' | 'bloom' | 'camera' | 'seed' | 'rotation'
+
+export type Phase41MatrixSnapshot = {
+  rating: number
+  emission: number
+  profile: ResolvedPhase41VisualProfile
+  camera: unknown
+  seed: unknown
+  rotation: unknown
+}
+
+function stable(value: unknown): string {
+  return JSON.stringify(value)
+}
+
+export function assertPhase41MatrixTransition(
+  baseline: Phase41MatrixSnapshot,
+  candidate: Phase41MatrixSnapshot,
+  allowedVariables: readonly Phase41MatrixVariable[],
+): void {
+  const known = new Set<Phase41MatrixVariable>(['rating', 'emission', 'curve', 'lightness', 'keyLightIntensity', 'direction', 'bloom', 'camera', 'seed', 'rotation'])
+  const allowed = new Set(allowedVariables)
+  if (allowed.size !== allowedVariables.length || allowed.size === 0) {
+    throw new Error('[Phase41 diagnostic] matrix must declare one or more unique allowed variables')
+  }
+  for (const field of allowed) {
+    if (!known.has(field)) throw new Error(`[Phase41 diagnostic] matrix declares unknown variable ${field}`)
+  }
+  if (
+    baseline.profile.chroma !== candidate.profile.chroma
+    || baseline.profile.flatShadingMix !== candidate.profile.flatShadingMix
+    || baseline.profile.productionSource !== candidate.profile.productionSource
+    || baseline.profile.productionVisualConfigInput !== candidate.profile.productionVisualConfigInput
+  ) {
+    throw new Error('[Phase41 diagnostic] matrix changed a fixed production field')
+  }
+  const changed: Phase41MatrixVariable[] = []
+  if (baseline.rating !== candidate.rating) changed.push('rating')
+  if (baseline.emission !== candidate.emission) changed.push('emission')
+  if (stable(baseline.profile.curve) !== stable(candidate.profile.curve)) changed.push('curve')
+  if (baseline.profile.lightness !== candidate.profile.lightness) changed.push('lightness')
+  if (baseline.profile.keyLightIntensity !== candidate.profile.keyLightIntensity) changed.push('keyLightIntensity')
+  if (stable(baseline.profile.direction) !== stable(candidate.profile.direction)) changed.push('direction')
+  if (stable(baseline.profile.bloom) !== stable(candidate.profile.bloom)) changed.push('bloom')
+  if (stable(baseline.camera) !== stable(candidate.camera)) changed.push('camera')
+  if (stable(baseline.seed) !== stable(candidate.seed)) changed.push('seed')
+  if (stable(baseline.rotation) !== stable(candidate.rotation)) changed.push('rotation')
+  for (const field of changed) {
+    if (!allowed.has(field)) throw new Error(`[Phase41 diagnostic] matrix changed undeclared variable ${field}`)
+  }
+}
+
+export function assertPhase41RatingRow(baseline: Phase41MatrixSnapshot, candidate: Phase41MatrixSnapshot): void {
+  assertPhase41MatrixTransition(baseline, candidate, ['rating', 'emission'])
+  if (baseline.rating === candidate.rating || baseline.emission === candidate.emission) {
+    throw new Error('[Phase41 diagnostic] rating rows must change both rating and resolved emission')
+  }
+}

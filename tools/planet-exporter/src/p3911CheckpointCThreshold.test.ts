@@ -13,7 +13,6 @@ describe('P39.11 Checkpoint C1 threshold diagnostics boundary', () => {
   it.each([
     ['wrong movieId', { ...args, movieId: 1 }],
     ['basic renderMode', { ...args, renderMode: 'basic' as const }],
-    ['explicit bloomStrength', { ...args, bloomStrength: 0 }],
   ])('rejects %s before browser startup', async (_label, invalidArgs) => {
     await expect(renderP3911CheckpointCThresholdInBrowser(invalidArgs, { kind: 'file', label: 'fixture', bytes: Buffer.from('{}') }, process.cwd(), 0.05))
       .rejects.toMatchObject({ exitCode: EXIT_CODES.arguments })

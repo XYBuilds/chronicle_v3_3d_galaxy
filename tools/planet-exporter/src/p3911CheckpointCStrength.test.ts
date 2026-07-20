@@ -15,7 +15,6 @@ describe('P39.11 Checkpoint C3 strength diagnostics boundary', () => {
     ['wrong movieId', { ...args, movieId: 1 }],
     ['Bloom OFF', { ...args, bloom: 'off' as const }],
     ['basic renderMode', { ...args, renderMode: 'basic' as const }],
-    ['standard bloomStrength override', { ...args, bloomStrength: 0.005 }],
   ])('rejects %s before browser startup', async (_label, invalidArgs) => {
     await expect(renderP3911CheckpointCStrengthInBrowser(invalidArgs, source, process.cwd(), 0.005))
       .rejects.toMatchObject({ exitCode: EXIT_CODES.arguments })

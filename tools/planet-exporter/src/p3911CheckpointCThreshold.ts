@@ -19,8 +19,8 @@ export function assertP3911CheckpointCThreshold(value: number): void {
 /** The only threshold-override browser boundary; standard CLI and site cannot call it. */
 export async function renderP3911CheckpointCThresholdInBrowser(args: ExportArgs, source: DataSource, root: string, threshold: number): Promise<BrowserRender> {
   assertP3911CheckpointCThreshold(threshold)
-  if (args.movieId !== 157336 || args.bloom !== 'on' || args.renderMode !== 'shader' || args.bloomStrength !== undefined) {
-    throw new CliError('P39.11 Checkpoint C1 requires TMDB 157336, Bloom ON without strength override, and shader mode', EXIT_CODES.arguments)
+  if (args.movieId !== 157336 || args.bloom !== 'on' || args.renderMode !== 'shader') {
+    throw new CliError('P39.11 Checkpoint C1 requires TMDB 157336, Bloom ON, and shader mode', EXIT_CODES.arguments)
   }
   let server: ViteDevServer | undefined
   let browser: Browser | undefined

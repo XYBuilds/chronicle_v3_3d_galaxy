@@ -10,7 +10,7 @@ todos:
     status: complete
   - id: p41.3-diagnostic-profile
     content: 41.3 · 建立隔离的通用视觉诊断 profile、完整 sidecar 与单变量不变量
-    status: pending
+    status: complete
   - id: p41.4-fixed-shaping-gate
     content: 41.4 · [需人工验收] 在 Bloom OFF 下依次锁定光线方向、Lightness 和 Key
     status: pending

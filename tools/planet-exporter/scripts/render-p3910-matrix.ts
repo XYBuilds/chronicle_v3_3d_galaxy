@@ -1,8 +1,13 @@
 import { access, mkdir } from 'node:fs/promises'
 import path from 'node:path'
 
-import { main as writePhase39Fixtures } from '../src/phase39Fixtures.js'
+import { writeArtifactsAtomically } from '../src/artifacts.js'
+import { getGitCommit, metadataFor } from '../src/browser.js'
 import { run } from '../src/cli.js'
+import { chooseDataSource, outputMetadataPath } from '../src/data-source.js'
+import { assertPngSafe } from '../src/png.js'
+import { renderP3910BloomStrengthZeroInBrowser } from '../src/p3910BloomStrengthZero.js'
+import { main as writePhase39Fixtures } from '../src/phase39Fixtures.js'
 
 const root = path.resolve(import.meta.dirname, '../../..')
 const output = path.join(root, 'data/runs/phase39-p39.10')
@@ -16,12 +21,36 @@ async function exportFixture(
   rating: number,
   bloom: 'on' | 'off',
   suffix: string,
-  bloomStrength?: number,
 ): Promise<void> {
   const fixture = path.join(output, 'fixtures', `controlled-rating-${rating}.json`)
   const png = path.join(output, `planet-rating-${rating}-${suffix}.png`)
   await assertFile(fixture)
-  const argv = [
+  const args = {
+    movieId: 157336,
+    output: png,
+    resolution: 3000,
+    padding: 0.08,
+    bloom,
+    sizeRoot: 3 as const,
+    renderMode: 'shader' as const,
+    dataFile: fixture,
+  }
+  const source = await chooseDataSource(args, path.join(root, 'frontend/public/data/galaxy_assets_manifest.json'))
+  const render = await renderP3910BloomStrengthZeroInBrowser(args, source, root)
+  assertPngSafe(render.png, args.resolution)
+  const metadata = metadataFor(args, source, render, getGitCommit(root))
+  await writeArtifactsAtomically({ png, metadata: outputMetadataPath(png) }, render.png, metadata)
+}
+
+async function exportNormalFixture(
+  rating: number,
+  bloom: 'on' | 'off',
+  suffix: string,
+): Promise<void> {
+  const fixture = path.join(output, 'fixtures', `controlled-rating-${rating}.json`)
+  const png = path.join(output, `planet-rating-${rating}-${suffix}.png`)
+  await assertFile(fixture)
+  const exitCode = await run([
     '--movie-id', '157336',
     '--output', png,
     '--resolution', '3000',
@@ -29,10 +58,8 @@ async function exportFixture(
     '--bloom', bloom,
     '--render-mode', 'shader',
     '--data-file', fixture,
-    ...(bloomStrength === undefined ? [] : ['--bloom-strength', String(bloomStrength)]),
-  ]
-  const exitCode = await run(argv)
-  if (exitCode !== 0) throw new Error(`[P39.10] export failed for rating=${rating} bloom=${bloom} strength=${bloomStrength ?? 'default'}`)
+  ])
+  if (exitCode !== 0) throw new Error(`[P39.10] export failed for rating=${rating} bloom=${bloom}`)
 }
 
 async function main(): Promise<void> {
@@ -43,9 +70,9 @@ async function main(): Promise<void> {
   // cannot accidentally inherit evidence from a prior run.
   await writePhase39Fixtures(['--baseline-file', baseline, '--output-dir', fixtureDirectory])
   for (const rating of ratings) {
-    await exportFixture(rating, 'off', 'bloom-off')
-    await exportFixture(rating, 'on', 'bloom-on')
-    await exportFixture(rating, 'on', 'bloom-on-strength-zero', 0)
+    await exportNormalFixture(rating, 'off', 'bloom-off')
+    await exportNormalFixture(rating, 'on', 'bloom-on')
+    await exportFixture(rating, 'on', 'bloom-on-strength-zero')
   }
   console.log(JSON.stringify({ output, ratings, matrix: 'rating 0/4/5/10 × bloom off/on plus strength=0 proof' }))
 }

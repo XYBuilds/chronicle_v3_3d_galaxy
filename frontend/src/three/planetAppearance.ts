@@ -14,7 +14,7 @@ export interface PlanetAppearance {
   lightness: number
   chroma: number
   emissionIntensity: number
-  emissionModelVersion: string
+  emissionModelVersion: 'vote-average-power-clamped-v1'
   emissionExponent: number
   emissionIntensityMin: number
   emissionIntensityMax: number

@@ -46,7 +46,6 @@ async function main(): Promise<void> {
     const productionVisualConfig = planetExportVisualConfigInput(
       planetVisualConfigHashInput(),
       request.sizeRoot,
-      request.bloomParamsOverride,
     )
     document.body.dataset.visualHash = p3911CheckpointAVisualConfigInput(productionVisualConfig, request.keyLightIntensity)
     document.body.dataset.visualDiagnostics = JSON.stringify(result.diagnostics)

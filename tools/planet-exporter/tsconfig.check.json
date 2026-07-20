@@ -14,6 +14,7 @@
     "src/contactSheet.ts",
     "src/contactSheetCommand.ts",
     "src/data-source.ts",
+    "src/p3910BloomStrengthZero.ts",
     "src/p3911CheckpointA.ts",
     "src/p3911CheckpointB.ts",
     "src/p3911CheckpointCThreshold.ts",
@@ -21,6 +22,7 @@
     "src/p3911CheckpointCStrength.ts",
     "src/phase39Fixtures.ts",
     "src/phase41Baseline.ts",
+    "src/phase41Diagnostic.ts",
     "src/png.ts"
   ],
   "include": ["scripts/**/*.ts"]

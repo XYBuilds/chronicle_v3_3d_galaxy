@@ -1,7 +1,7 @@
 import { PERLIN_BLOOM_COMPOSITION, PERLIN_BLOOM_DEFAULTS, type PerlinBloomParams } from '@/three/perlinBloomContract'
 import { PLANET_VISUAL_DEFAULTS } from '@/three/planetVisualDefaults'
 import { parsePlanetExportRequest, type PlanetExportRequest } from './request'
-import { renderPlanetImage, type PlanetRenderOptions, type PlanetRenderResult } from './renderPlanetImage'
+import { renderP3911DiagnosticPlanetImage, type PlanetRenderOptions, type PlanetRenderResult } from './renderPlanetImage'
 
 export const P3911_CHECKPOINT_C_RADIUS = {
   checkpoint: 'C2-radius',
@@ -84,5 +84,5 @@ export function p3911CheckpointCRadiusOffReferenceVisualConfigInput(productionVi
 export function renderP3911CheckpointCRadiusPlanetImage(options: PlanetRenderOptions & { diagnosticsBloomRadius: number }): PlanetRenderResult {
   const params = p3911CheckpointCRadiusBloomParams(options.diagnosticsBloomRadius)
   if (!options.bloom || options.renderMode !== 'shader') throw new Error('[P39.11 diagnostics] Checkpoint C2 requires Bloom ON shader rendering')
-  return renderPlanetImage({ ...options, bloom: true, bloomParamsOverride: params })
+  return renderP3911DiagnosticPlanetImage({ ...options, bloom: true, bloomParamsOverride: params })
 }

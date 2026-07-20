@@ -81,11 +81,18 @@ export function parseVisualDiagnostics(value: string): Record<string, unknown> {
     throw new CliError('visual diagnostics bloom parameters are invalid', EXIT_CODES.render)
   }
   const emissionCurve = diagnosticsObject(root.emission_curve, 'emission_curve')
-  if (typeof emissionCurve.model_version !== 'string' || emissionCurve.model_version.length === 0) {
-    throw new CliError('visual diagnostics emission_curve.model_version must be non-empty string', EXIT_CODES.render)
+  if (emissionCurve.model_version === 'vote-average-power-clamped-v1') {
+    const exponent = diagnosticsNumber(emissionCurve.exponent, 'emission_curve.exponent')
+    if (exponent <= 0) throw new CliError('visual diagnostics emission_curve.exponent must be > 0', EXIT_CODES.render)
+  } else if (emissionCurve.model_version === 'vote-average-anchored-smoothstep-v1') {
+    const low = diagnosticsNumber(emissionCurve.rating_low_anchor, 'emission_curve.rating_low_anchor')
+    const high = diagnosticsNumber(emissionCurve.rating_high_anchor, 'emission_curve.rating_high_anchor')
+    if (low < 0 || high > 10 || low >= high) {
+      throw new CliError('visual diagnostics emission_curve anchors are invalid', EXIT_CODES.render)
+    }
+  } else {
+    throw new CliError('visual diagnostics emission_curve.model_version is invalid', EXIT_CODES.render)
   }
-  const exponent = diagnosticsNumber(emissionCurve.exponent, 'emission_curve.exponent')
-  if (exponent <= 0) throw new CliError('visual diagnostics emission_curve.exponent must be > 0', EXIT_CODES.render)
   const intensityMin = diagnosticsNumber(emissionCurve.intensity_min, 'emission_curve.intensity_min')
   const intensityMax = diagnosticsNumber(emissionCurve.intensity_max, 'emission_curve.intensity_max')
   if (intensityMin < 0 || intensityMax < intensityMin) {
@@ -146,6 +153,59 @@ export function parseVisualDiagnostics(value: string): Record<string, unknown> {
     throw new CliError('visual diagnostics camera frustum is invalid', EXIT_CODES.render)
   }
 
+  return root
+}
+
+/** Validates the Phase 41 sidecar's resolved profile against the actual renderer state. */
+export function parsePhase41VisualDiagnostics(value: string): Record<string, unknown> {
+  const root = parseVisualDiagnostics(value)
+  const profile = diagnosticsObject(root.phase41_resolved_profile, 'phase41_resolved_profile')
+  if (typeof profile.resolvedVisualConfigInput !== 'string' || profile.resolvedVisualConfigInput.length === 0) {
+    throw new CliError('visual diagnostics phase41 resolved visual-config input is invalid', EXIT_CODES.render)
+  }
+  if (typeof profile.productionVisualConfigInput !== 'string' || profile.productionVisualConfigInput.length === 0) {
+    throw new CliError('visual diagnostics phase41 production visual-config input is invalid', EXIT_CODES.render)
+  }
+  if (profile.overrideProvenance !== 'none' && profile.overrideProvenance !== 'phase41-diagnostic-override') {
+    throw new CliError('visual diagnostics phase41 override provenance is invalid', EXIT_CODES.render)
+  }
+  const curve = diagnosticsObject(profile.curve, 'phase41_resolved_profile.curve')
+  const emittedCurve = diagnosticsObject(root.emission_curve, 'emission_curve')
+  const normalizedCurve = curve.modelVersion === 'vote-average-power-clamped-v1'
+    ? {
+      model_version: curve.modelVersion,
+      exponent: curve.exponent,
+      intensity_min: curve.intensityMin,
+      intensity_max: curve.intensityMax,
+    }
+    : {
+      model_version: curve.modelVersion,
+      rating_low_anchor: curve.ratingLowAnchor,
+      rating_high_anchor: curve.ratingHighAnchor,
+      intensity_min: curve.intensityMin,
+      intensity_max: curve.intensityMax,
+    }
+  if (JSON.stringify(normalizedCurve) !== JSON.stringify(emittedCurve)) {
+    throw new CliError('visual diagnostics phase41 curve disagrees with rendered emission curve', EXIT_CODES.render)
+  }
+  const profileBloom = diagnosticsObject(profile.bloom, 'phase41_resolved_profile.bloom')
+  const renderedBloom = diagnosticsObject(root.bloom, 'bloom')
+  for (const field of ['enabled', 'strength', 'radius', 'threshold']) {
+    if (profileBloom[field] !== renderedBloom[field]) {
+      throw new CliError('visual diagnostics phase41 Bloom disagrees with rendered Bloom', EXIT_CODES.render)
+    }
+  }
+  if (profile.lightness !== root.fixed_lightness || profile.chroma !== root.fixed_chroma || profile.keyLightIntensity !== diagnosticsObject(root.key_light, 'key_light').intensity) {
+    throw new CliError('visual diagnostics phase41 fixed shaping disagrees with renderer state', EXIT_CODES.render)
+  }
+  if (
+    JSON.stringify(profile.direction) !== JSON.stringify(diagnosticsObject(root.key_light, 'key_light').direction)
+    || JSON.stringify(profile.camera) !== JSON.stringify(root.camera)
+    || profile.seed !== diagnosticsObject(root.noise, 'noise').seed
+    || JSON.stringify(profile.rotation) !== JSON.stringify(root.rotation)
+  ) {
+    throw new CliError('visual diagnostics phase41 pose data disagrees with renderer state', EXIT_CODES.render)
+  }
   return root
 }
 
@@ -215,7 +275,6 @@ export async function renderInBrowser(args: ExportArgs, source: DataSource, root
       bloom: args.bloom,
       sizeRoot: String(args.sizeRoot),
       renderMode: args.renderMode,
-      ...(args.bloomStrength === undefined ? {} : { bloomStrength: String(args.bloomStrength) }),
     })
     await page.goto(new URL(`planet-export.html?${query.toString()}`, serverUrl).toString(), { waitUntil: 'networkidle', timeout: 120_000 })
     await page.waitForFunction(() => document.body.dataset.exportReady === '1' || document.body.dataset.exportError !== undefined, undefined, { timeout: 120_000 })

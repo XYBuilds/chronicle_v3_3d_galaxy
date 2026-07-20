@@ -110,24 +110,16 @@ describe('Playwright Chromium planet export', () => {
     expect(stats.positive_luma_fraction).toBeGreaterThanOrEqual(BLOOM_CORE_PROOF.minPositiveCoreLumaFraction)
   }, 120_000)
 
-  it('exports Bloom ON strength=0 with byte-identical visible RGB to Bloom OFF', async () => {
-    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'planet-export-browser-zero-bloom-'))
+  it('rejects normal CLI diagnostic Bloom parameters before browser startup', async () => {
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'planet-export-browser-diagnostic-reject-'))
     temporaryDirectories.push(directory)
-    const fixture = path.resolve(import.meta.dirname, '../fixtures/galaxy.minimal.json')
-    const off = path.join(directory, 'off.png')
-    const zero = path.join(directory, 'zero.png')
+    const output = path.join(directory, 'rejected.png')
 
-    for (const argv of [
-      ['--movie-id', '1', '--output', off, '--resolution', '128', '--padding', '0.08', '--bloom', 'off', '--render-mode', 'shader', '--data-file', fixture],
-      ['--movie-id', '1', '--output', zero, '--resolution', '128', '--padding', '0.08', '--bloom', 'on', '--bloom-strength', '0', '--render-mode', 'shader', '--data-file', fixture],
-    ]) {
-      expect(await run(argv)).toBe(0)
-    }
-
-    expect(await fs.readFile(zero)).toEqual(await fs.readFile(off))
-    const metadata = JSON.parse(await fs.readFile(`${zero}.render.json`, 'utf8')) as { visual_diagnostics: { bloom: unknown } }
-    expect(metadata.visual_diagnostics.bloom).toEqual({ enabled: true, composition: 'pure-bloom-delta-v1', strength: 0, radius: 1, threshold: 0 })
-  }, 120_000)
+    expect(await run([
+      '--movie-id', '1', '--output', output, '--resolution', '128', '--bloom', 'on', '--bloom-strength', '0', '--render-mode', 'shader',
+    ])).toBe(2)
+    await expect(fs.stat(output)).rejects.toMatchObject({ code: 'ENOENT' })
+  })
 
   it('classifies an unknown movie as a data failure without artifacts', async () => {
     const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'planet-export-browser-failure-'))

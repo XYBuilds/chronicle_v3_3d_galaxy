@@ -2,7 +2,6 @@ import { createHash } from 'node:crypto'
 
 import { describe, expect, it } from 'vitest'
 
-import { perlinBloomVisualConfigInput } from '@/three/perlinBloomContract'
 import { planetVisualConfigHashInput } from '@/three/planetVisualDefaults'
 import { planetExportVisualConfigInput } from './visualConfig'
 
@@ -22,21 +21,15 @@ function parsePlanetVisualConfig(input: string): MutableVisualConfig {
 }
 
 describe('planet export visual configuration', () => {
-  it('builds a stable page input from the planet visual SSOT and export size root', () => {
+  it('returns the shared production config unchanged across exporter framing choices', () => {
     const planetConfigInput = planetVisualConfigHashInput()
 
-    expect(planetExportVisualConfigInput).toHaveLength(3)
-    expect(JSON.parse(planetExportVisualConfigInput(planetConfigInput, 3))).toEqual({
-      planet: planetConfigInput,
-      perlinBloom: perlinBloomVisualConfigInput(),
-      exportSizeRoot: 3,
-      supportedExportSizeRoots: [2, 3, 4],
-    })
+    expect(planetExportVisualConfigInput).toHaveLength(2)
+    expect(planetExportVisualConfigInput(planetConfigInput, 3)).toBe(planetConfigInput)
+    expect(planetExportVisualConfigInput(planetConfigInput, 2)).toBe(planetConfigInput)
+    expect(planetExportVisualConfigInput(planetConfigInput, 4)).toBe(planetConfigInput)
     expect(planetExportVisualConfigInput(planetConfigInput, 3)).toBe(
       planetExportVisualConfigInput(planetVisualConfigHashInput(), 3),
-    )
-    expect(planetExportVisualConfigInput(planetConfigInput, 3, { enabled: true, strength: 0, radius: 1, threshold: 0 })).not.toBe(
-      planetExportVisualConfigInput(planetConfigInput, 3),
     )
   })
 
@@ -51,14 +44,6 @@ describe('planet export visual configuration', () => {
 
     expect(repeatedHash).toBe(currentHash)
     expect(currentHash).not.toBe('28407a6ebef33b2749fdd5531158540f2c7ff5214f647f0a7de464b087185dcb')
-
-    for (const bloomChanged of [
-      { enabled: true, strength: 0.005, radius: 1, threshold: 0 },
-      { enabled: true, strength: 0.01, radius: 0.5, threshold: 0 },
-      { enabled: true, strength: 0.01, radius: 1, threshold: 0.05 },
-    ]) {
-      expect(sha256(planetExportVisualConfigInput(currentPlanetConfig, 3, bloomChanged))).not.toBe(currentHash)
-    }
 
     const schemaChanged = parsePlanetVisualConfig(currentPlanetConfig)
     schemaChanged.schemaVersion = 4

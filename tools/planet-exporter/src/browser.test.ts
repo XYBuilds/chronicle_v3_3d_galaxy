@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
 
 import type { ExportArgs } from './args.js'
-import { metadataFor, parseVisualDiagnostics, type BrowserRender } from './browser.js'
+import { metadataFor, parsePhase41VisualDiagnostics, parseVisualDiagnostics, type BrowserRender } from './browser.js'
 import type { DataSource } from './data-source.js'
 
 const args: ExportArgs = {
@@ -100,6 +100,50 @@ describe('visual diagnostics parser', () => {
 
   it('rejects malformed JSON', () => {
     expect(() => parseVisualDiagnostics('{')).toThrow('invalid visual diagnostics JSON')
+  })
+})
+
+describe('Phase 41 visual diagnostics parser', () => {
+  const phase41 = {
+    ...visualDiagnostics,
+    phase41_resolved_profile: {
+      curve: { modelVersion: 'vote-average-power-clamped-v1', exponent: 3, intensityMin: 0.06, intensityMax: 0.6 },
+      lightness: 0.55,
+      chroma: 0.15,
+      keyLightIntensity: 1,
+      direction: [0.7, 0.7, -0.14],
+      flatShadingMix: 0.8,
+      bloom: visualDiagnostics.bloom,
+      productionVisualConfigInput: 'production-input',
+      resolvedVisualConfigInput: 'resolved-input',
+      overrideProvenance: 'none',
+      camera: visualDiagnostics.camera,
+      seed: visualDiagnostics.noise.seed,
+      rotation: visualDiagnostics.rotation,
+    },
+  }
+
+  it('requires the resolved profile to agree with renderer-owned values', () => {
+    expect(parsePhase41VisualDiagnostics(JSON.stringify(phase41))).toEqual(phase41)
+    expect(() => parsePhase41VisualDiagnostics(JSON.stringify({
+      ...phase41,
+      phase41_resolved_profile: { ...phase41.phase41_resolved_profile, curve: { ...phase41.phase41_resolved_profile.curve, exponent: 2 } },
+    }))).toThrow(/curve disagrees/)
+    expect(() => parsePhase41VisualDiagnostics(JSON.stringify({
+      ...phase41,
+      phase41_resolved_profile: { ...phase41.phase41_resolved_profile, bloom: { ...visualDiagnostics.bloom, strength: 0 } },
+    }))).toThrow(/Bloom disagrees/)
+    const anchored = {
+      ...phase41,
+      emission: 0.3,
+      emission_curve: { model_version: 'vote-average-anchored-smoothstep-v1', rating_low_anchor: 4.5, rating_high_anchor: 8.2, intensity_min: 0.005, intensity_max: 0.65 },
+      phase41_resolved_profile: {
+        ...phase41.phase41_resolved_profile,
+        curve: { modelVersion: 'vote-average-anchored-smoothstep-v1', ratingLowAnchor: 4.5, ratingHighAnchor: 8.2, intensityMin: 0.005, intensityMax: 0.65 },
+        overrideProvenance: 'phase41-diagnostic-override',
+      },
+    }
+    expect(parsePhase41VisualDiagnostics(JSON.stringify(anchored))).toEqual(anchored)
   })
 })
 

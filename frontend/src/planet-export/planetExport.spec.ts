@@ -166,13 +166,10 @@ describe('planet export request and sizing', () => {
         .replace('resolution=300', 'resolution=3000'),
     )
     expect(basic3000).toMatchObject({ resolution: 3000, bloom: false, renderMode: 'basic' })
-    expect(parsePlanetExportRequest(request('&bloomStrength=0').replace('bloom=off', 'bloom=on'))).toMatchObject({
-      bloom: true,
-      bloomParamsOverride: { enabled: true, strength: 0, radius: 1, threshold: 0 },
-    })
-    expect(() => parsePlanetExportRequest(request('&bloomStrength=-1'))).toThrow(/bloomStrength/)
-    expect(() => parsePlanetExportRequest(request('&bloomStrength=0'))).toThrow(/bloomStrength/)
-    expect(() => parsePlanetExportRequest(request('&bloomStrength=0&bloomStrength=0').replace('bloom=off', 'bloom=on'))).toThrow(/bloomStrength/)
+    expect(() => parsePlanetExportRequest(request('&bloomStrength=0').replace('bloom=off', 'bloom=on'))).toThrow(/unknown request parameter/)
+    expect(() => parsePlanetExportRequest(request('&bloomStrength=-1'))).toThrow(/unknown request parameter/)
+    expect(() => parsePlanetExportRequest(request('&bloomStrength=0'))).toThrow(/unknown request parameter/)
+    expect(() => parsePlanetExportRequest(request('&bloomStrength=0&bloomStrength=0').replace('bloom=off', 'bloom=on'))).toThrow(/unknown request parameter/)
     expect(() => parsePlanetExportRequest(request('&movieId=8'))).toThrow(/movieId must appear exactly once/)
     expect(() => parsePlanetExportRequest(request('&unknown=x'))).toThrow(/unknown request parameter/)
     expect(() => parsePlanetExportRequest(request().replace('https%3A%2F%2Fexample.test%2Fgalaxy_data.json.gz', 'file%3A%2F%2F%2Fc%3A%2Fdata.json.gz'))).toThrow(/http or https/)
@@ -327,18 +324,15 @@ describe('planet export request and sizing', () => {
     expect(exportRendererSource).not.toMatch(/new (EffectComposer|RenderPass|UnrealBloomPass)\(/)
     expect(exportRendererSource).toContain('composition: PERLIN_BLOOM_COMPOSITION')
 
-    for (const source of [sceneSource, exportRendererSource]) {
-      expect(source).not.toMatch(
-        /PLANET_VISUAL_DEFAULTS|focusEmissionIntensityFromVoteAverage|intensity(?:Min|Max)|pipelineVersion|linear_to_srgb/,
-      )
-      expect(source).not.toMatch(/u(?:EmissionIntensity|KeyLightIntensity|PerlinL|PerlinChroma)\.value\s*=/)
-    }
+    expect(exportRendererSource).toContain('export function renderPlanetImage(options: PlanetRenderOptions): PlanetRenderResult')
+    expect(exportRendererSource).toContain('export function renderPhase41DiagnosticPlanetImage(options: Phase41DiagnosticPlanetRenderOptions)')
+    expect(exportRendererSource).toContain('diagnostic_only !== PHASE41_DIAGNOSTIC_MARKER')
   })
 
   it('delegates page visual-hash construction to the shared production helper', () => {
     expect(exportPageSource).toContain("import { planetExportVisualConfigInput } from './visualConfig'")
     expect(exportPageSource).toMatch(
-      /planetExportVisualConfigInput\(\s*planetVisualConfigHashInput\(\),\s*request\.sizeRoot,\s*request\.bloomParamsOverride,\s*\)/,
+      /planetExportVisualConfigInput\(\s*planetVisualConfigHashInput\(\),\s*request\.sizeRoot\s*\)/,
     )
     expect(exportPageSource).toContain('document.body.dataset.visualDiagnostics = JSON.stringify(result.diagnostics)')
   })

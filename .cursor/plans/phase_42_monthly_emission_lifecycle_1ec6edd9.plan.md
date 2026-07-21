@@ -4,7 +4,7 @@ overview: 把 Focus Planet 的 rating→emission CDF/LUT 纳入 monthly refit �
 todos:
   - id: p42.1-profile-contract
     content: 建立 rating-emission profile contract、period freeze、active pointer 与 legacy 兼容边界
-    status: pending
+    status: completed
   - id: p42.2-monthly-profile-generator
     content: 把 monthly final movies 接入 midrank CDF/LUT profile 生成并输出 provenance、hash 与漂移指标
     status: pending

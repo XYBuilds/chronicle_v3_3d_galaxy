@@ -16,6 +16,10 @@ import { PLANET_VISUAL_DEFAULTS } from '../../../frontend/src/three/planetVisual
 import { PHASE41_CONTROLLED_RATINGS, AUTHORITATIVE_GZIP_RELATIVE_PATH } from './phase41Baseline.js'
 
 export const P41_EMISSION_EVIDENCE_RELATIVE_DIRECTORY = 'data/runs/phase41/p41.5-emission-curve-bloom-off' as const
+export const P41_MIDRANK_CDF_LUT_EVIDENCE_RELATIVE_DIRECTORY = 'data/runs/phase41/p41.5-midrank-cdf-lut-bloom-off' as const
+
+/** Dense diagnostic-only matrix; historical anchored baseline columns remain unchanged. */
+export const P41_MIDRANK_CDF_LUT_CONTROLLED_RATINGS = [4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0, 8.2, 9.5] as const
 
 /**
  * Frozen source for both P41.5 candidates. The diagnostic candidate must read movies from
@@ -124,7 +128,7 @@ function assert(condition: unknown, message: string): asserts condition {
 }
 
 function equal(left: unknown, right: unknown): boolean {
-  return JSON.stringify(left) === JSON.stringify(right)
+  return stableJson(left) === stableJson(right)
 }
 
 type StableJson = null | boolean | number | string | readonly StableJson[] | { readonly [key: string]: StableJson }
@@ -230,6 +234,7 @@ export function assertP41EmissionRatingOnlyVariation(
 
 export function assertP41EmissionEvidenceContract(): void {
   assert(equal(PHASE41_CONTROLLED_RATINGS, [4.0, 4.5, 5.5, 6.5, 7.5, 8.2, 9.5]), 'controlled rating columns drifted')
+  assert(equal(P41_MIDRANK_CDF_LUT_CONTROLLED_RATINGS, [4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0, 8.2, 9.5]), 'CDF/LUT controlled rating columns drifted')
   assert(P41_EMISSION_FIXTURE_ROWS.length === new Set(P41_EMISSION_FIXTURE_ROWS).size, 'fixture rows must be unique')
   assert(P41_EMISSION_FIXTURE_ROWS.includes('high-rating-low-votes'), 'fixture rows must include the high-rating/low-votes anomaly')
   assert(P41_EMISSION_AUTHORITATIVE_DATA.relativePath === 'frontend/public/data/galaxy_data.json.gz', 'authoritative gzip path drifted')

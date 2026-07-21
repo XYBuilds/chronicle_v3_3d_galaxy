@@ -8,7 +8,7 @@ import {
   validatePerlinBloomParams,
   withCameraLayer,
 } from '@/three/perlinBloomContract'
-import { focusEmissionIntensityFromVoteAverage } from '@/three/focusEmission'
+import { focusEmissionIntensityFromProfile } from '@/three/focusEmission'
 import { createSelectionPlanet, type SelectionPlanetHandle } from '@/three/planet'
 import { planetNoiseSeed } from '@/three/planetAppearance'
 import {
@@ -64,6 +64,15 @@ export type PlanetRenderDiagnostics = {
       model_version: 'vote-average-anchored-smoothstep-v1'
       rating_low_anchor: number
       rating_high_anchor: number
+      intensity_min: number
+      intensity_max: number
+    }
+    | {
+      model_version: 'rating-midrank-cdf-lut-v1'
+      rating_min: number
+      rating_max: number
+      sample_step: number
+      sample_count: number
       intensity_min: number
       intensity_max: number
     }
@@ -138,6 +147,17 @@ function quaternionTuple(quaternion: THREE.Quaternion, label: string): [number, 
 }
 
 function diagnosticsEmissionCurve(curve: Phase41EmissionCurve): PlanetRenderDiagnostics['emission_curve'] {
+  if (curve.modelVersion === 'rating-midrank-cdf-lut-v1') {
+    return {
+      model_version: curve.modelVersion,
+      rating_min: serializableNumber(curve.ratingMin, 'emission rating minimum'),
+      rating_max: serializableNumber(curve.ratingMax, 'emission rating maximum'),
+      sample_step: serializableNumber(curve.sampleStep, 'emission sample step'),
+      sample_count: curve.samples.length,
+      intensity_min: serializableNumber(curve.intensityMin, 'emission minimum'),
+      intensity_max: serializableNumber(curve.intensityMax, 'emission maximum'),
+    }
+  }
   return {
     model_version: curve.modelVersion,
     rating_low_anchor: serializableNumber(curve.ratingLowAnchor, 'emission low anchor'),
@@ -323,7 +343,7 @@ export function positionExportCamera(camera: THREE.OrthographicCamera, halfExten
 }
 
 function applyPhase41DiagnosticOverride(planet: SelectionPlanetHandle, movie: Movie, override: Phase41RenderOverride): void {
-  planet.material.uniforms.uEmissionIntensity.value = focusEmissionIntensityFromVoteAverage(movie.vote_average, override.curve)
+  planet.material.uniforms.uEmissionIntensity.value = focusEmissionIntensityFromProfile(movie.vote_average, override.curve)
   planet.material.uniforms.uPerlinL.value = override.lightness
   planet.material.uniforms.uKeyLightIntensity.value = override.keyLightIntensity
   ;(planet.material.uniforms.uLightDir.value as THREE.Vector3).set(...override.direction).normalize()

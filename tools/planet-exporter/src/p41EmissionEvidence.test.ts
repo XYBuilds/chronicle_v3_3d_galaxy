@@ -18,6 +18,8 @@ import {
   P41_EMISSION_FIXTURE_ROWS,
   P41_EMISSION_HISTORICAL_BASELINE_CANDIDATE,
   P41_EMISSION_MIDRANK_CDF_LUT_DIAGNOSTIC_CANDIDATE,
+  P41_MIDRANK_CDF_LUT_CONTROLLED_RATINGS,
+  P41_MIDRANK_CDF_LUT_EVIDENCE_RELATIVE_DIRECTORY,
   assertP41EmissionCurveInvariants,
   assertP41EmissionEvidenceContract,
   assertP41EmissionRatingOnlyVariation,
@@ -38,6 +40,8 @@ describe('P41.5 emission evidence contract', () => {
   it('freezes required matrix axes and approved Bloom-OFF shaping', () => {
     assertP41EmissionEvidenceContract()
     expect(PHASE41_CONTROLLED_RATINGS).toEqual([4, 4.5, 5.5, 6.5, 7.5, 8.2, 9.5])
+    expect(P41_MIDRANK_CDF_LUT_CONTROLLED_RATINGS).toEqual([4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.2, 9.5])
+    expect(P41_MIDRANK_CDF_LUT_EVIDENCE_RELATIVE_DIRECTORY).toBe('data/runs/phase41/p41.5-midrank-cdf-lut-bloom-off')
     expect(P41_EMISSION_FIXTURE_ROWS).toContain('high-rating-low-votes')
     expect(P41_EMISSION_BLOOM_OFF.enabled).toBe(false)
     expect(P41_EMISSION_FIXED_PROFILE).toMatchObject({ lightness: 0.66, keyLightIntensity: 0.45, flatShadingMix: 0.8 })
@@ -75,6 +79,7 @@ describe('P41.5 emission evidence contract', () => {
     const second = createP41MidrankCdfLutEvidenceManifest(fixtureLutProfile(), FIXTURE_GIT_COMMIT)
 
     assertP41MidrankCdfLutEvidenceManifest(first)
+    assertP41MidrankCdfLutEvidenceManifest(JSON.parse(serializeP41MidrankCdfLutEvidenceManifest(first)))
     expect(serializeP41MidrankCdfLutEvidenceManifest(first)).toBe(serializeP41MidrankCdfLutEvidenceManifest(second))
     expect(first).toMatchObject({
       candidateId: RATING_MIDRANK_CDF_LUT_MODEL_VERSION,

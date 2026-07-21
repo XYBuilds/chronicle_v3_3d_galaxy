@@ -17,6 +17,7 @@
     "evidence:p41.1": "tsx scripts/generate-p41-baseline.ts",
     "evidence:p41.4": "tsx scripts/generate-p41-fixed-shaping-evidence.ts",
     "evidence:p41.5": "tsx scripts/generate-p41-emission-evidence.ts",
+    "evidence:p41.5:cdf-lut": "tsx scripts/generate-p41-midrank-cdf-lut-evidence.ts",
     "contact-sheet": "tsx scripts/generate-contact-sheet.ts"
   },
   "dependencies": {

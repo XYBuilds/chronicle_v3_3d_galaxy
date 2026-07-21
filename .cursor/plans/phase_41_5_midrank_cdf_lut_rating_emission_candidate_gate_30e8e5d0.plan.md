@@ -13,7 +13,7 @@ todos:
     status: complete
   - id: p41.5.4-bloom-off-evidence
     content: 41.5.4 [evidence] 生成密集 rating 区间的 Bloom OFF contact sheet 与完整 sidecar 证据
-    status: pending
+    status: complete
   - id: p41.5.5-human-gate
     content: 41.5.5 [需人工验收] 完成人工 Go/No-Go，并根据结果决定 41.5 pass 或保留后续候选
     status: pending

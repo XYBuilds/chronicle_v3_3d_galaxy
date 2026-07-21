@@ -90,6 +90,13 @@ export function parseVisualDiagnostics(value: string): Record<string, unknown> {
     if (low < 0 || high > 10 || low >= high) {
       throw new CliError('visual diagnostics emission_curve anchors are invalid', EXIT_CODES.render)
     }
+  } else if (emissionCurve.model_version === 'rating-midrank-cdf-lut-v1') {
+    const ratingMin = diagnosticsNumber(emissionCurve.rating_min, 'emission_curve.rating_min')
+    const ratingMax = diagnosticsNumber(emissionCurve.rating_max, 'emission_curve.rating_max')
+    const sampleStep = diagnosticsNumber(emissionCurve.sample_step, 'emission_curve.sample_step')
+    if (ratingMin !== 0 || ratingMax !== 10 || sampleStep !== 0.05 || emissionCurve.sample_count !== 201) {
+      throw new CliError('visual diagnostics emission_curve LUT grid is invalid', EXIT_CODES.render)
+    }
   } else {
     throw new CliError('visual diagnostics emission_curve.model_version is invalid', EXIT_CODES.render)
   }
@@ -178,13 +185,23 @@ export function parsePhase41VisualDiagnostics(value: string): Record<string, unk
       intensity_min: curve.intensityMin,
       intensity_max: curve.intensityMax,
     }
-    : {
-      model_version: curve.modelVersion,
-      rating_low_anchor: curve.ratingLowAnchor,
-      rating_high_anchor: curve.ratingHighAnchor,
-      intensity_min: curve.intensityMin,
-      intensity_max: curve.intensityMax,
-    }
+    : curve.modelVersion === 'rating-midrank-cdf-lut-v1'
+      ? {
+        model_version: curve.modelVersion,
+        rating_min: curve.ratingMin,
+        rating_max: curve.ratingMax,
+        sample_step: curve.sampleStep,
+        sample_count: Array.isArray(curve.samples) ? curve.samples.length : undefined,
+        intensity_min: curve.intensityMin,
+        intensity_max: curve.intensityMax,
+      }
+      : {
+        model_version: curve.modelVersion,
+        rating_low_anchor: curve.ratingLowAnchor,
+        rating_high_anchor: curve.ratingHighAnchor,
+        intensity_min: curve.intensityMin,
+        intensity_max: curve.intensityMax,
+      }
   if (JSON.stringify(normalizedCurve) !== JSON.stringify(emittedCurve)) {
     throw new CliError('visual diagnostics phase41 curve disagrees with rendered emission curve', EXIT_CODES.render)
   }

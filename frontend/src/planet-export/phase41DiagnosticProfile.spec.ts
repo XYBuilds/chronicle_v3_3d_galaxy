@@ -76,6 +76,16 @@ describe('Phase 41 diagnostic profile', () => {
     expect(PLANET_VISUAL_DEFAULTS.focus.emission.modelVersion).toBe('vote-average-anchored-smoothstep-v1')
   })
 
+  it('accepts the isolated CDF/LUT diagnostic profile without touching production defaults', () => {
+    const lut = Array.from({ length: 201 }, (_, index) => 0.005 + index / 200 * 0.645)
+    const profile = parsePhase41DiagnosticOverride({
+      diagnostic_only: PHASE41_DIAGNOSTIC_MARKER,
+      emissionCurve: { modelVersion: 'rating-midrank-cdf-lut-v1', ratingMin: 0, ratingMax: 10, sampleStep: 0.05, samples: lut, intensityMin: 0.005, intensityMax: 0.65 },
+    }).emissionCurve!
+    expect(profile.modelVersion).toBe('rating-midrank-cdf-lut-v1')
+    expect(phase41EmissionForRating(6.0, profile)).toBe(lut[120])
+    expect(PLANET_VISUAL_DEFAULTS.focus.emission.modelVersion).toBe('vote-average-anchored-smoothstep-v1')
+  })
   it('enforces declared matrix variables and rating-row isolation', () => {
     const baseline = snapshot(4.5, 0.1)
     const rating = snapshot(5.5, 0.2)

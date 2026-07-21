@@ -7,7 +7,7 @@ todos:
     status: complete
   - id: p41.5.2-midrank-cdf-lut
     content: 41.5.2 [domain+frontend] 实现 rating-midrank-cdf-lut-v1 的生成、校验和运行时插值纯函数
-    status: pending
+    status: complete
   - id: p41.5.3-contract-and-tests
     content: 41.5.3 [tests+contract] 增加 CDF/LUT 自动测试、不变量和可复现证据契约
     status: pending

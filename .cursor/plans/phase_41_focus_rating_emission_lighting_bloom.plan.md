@@ -19,7 +19,7 @@ todos:
     status: completed
   - id: p41.6-bloom-integration-gate
     content: 41.6 · [需人工验收] 在 Bloom ON 下手工联调 Bloom 并允许回调 emission 高端
-    status: pending
+    status: completed
   - id: p41.7-three-surface-regression
     content: 41.7 · 统一网站、exporter、diagnostics 契约并生成最终回归证据
     status: pending

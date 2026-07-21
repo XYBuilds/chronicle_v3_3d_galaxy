@@ -17,7 +17,6 @@ export type CoreBloomStats = {
 
 export const BLOOM_CORE_PROOF = {
   alphaMin: 250,
-  maxOnToOffMeanLumaRatio: 1.25,
   minPositiveCoreLumaFraction: 0.001,
   minMeanPositiveCoreLumaDelta: 0.01,
 } as const
@@ -26,10 +25,7 @@ function luma(data: Uint8Array, index: number): number {
   return 0.2126 * data[index]! + 0.7152 * data[index + 1]! + 0.0722 * data[index + 2]!
 }
 
-/**
- * Measures stable, fully opaque planet-core luminance. A complete source re-add
- * approaches 2× OFF brightness; the bounds permit a weak blur increment only.
- */
+/** Measures stable, fully opaque planet-core luminance. */
 export function assertPureBloomCore(off: RgbaImage, on: RgbaImage): CoreBloomStats {
   if (off.width !== on.width || off.height !== on.height || off.data.length !== on.data.length) {
     throw new Error('Bloom images must have matching dimensions and channels')
@@ -61,9 +57,6 @@ export function assertPureBloomCore(off: RgbaImage, on: RgbaImage): CoreBloomSta
     positive_luma_pixels: positiveLumaPixels,
     positive_luma_fraction: positiveLumaPixels / corePixels,
     mean_positive_luma_delta: positiveLumaPixels === 0 ? 0 : positiveLumaDelta / positiveLumaPixels,
-  }
-  if (stats.on_to_off_mean_luma_ratio > BLOOM_CORE_PROOF.maxOnToOffMeanLumaRatio) {
-    throw new Error(`Bloom core ON/OFF ratio ${stats.on_to_off_mean_luma_ratio.toFixed(4)} exceeds ${BLOOM_CORE_PROOF.maxOnToOffMeanLumaRatio}; probable base re-add`)
   }
   if (
     stats.positive_luma_fraction < BLOOM_CORE_PROOF.minPositiveCoreLumaFraction

@@ -21,6 +21,7 @@ import {
   type RatingMidrankCdfLutProfile,
 } from './focusEmission'
 import { resolvePlanetAppearance, resolvePlanetAppearanceWithEmissionProfile } from './planetAppearance'
+import { PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE } from './productionFocusEmissionProfile'
 import type { Movie } from '@/types/galaxy'
 
 const curve: FocusEmissionCurve = {
@@ -93,9 +94,9 @@ describe('Focus anchored smoothstep emission', () => {
 })
 
 describe('planet appearance emission profiles', () => {
-  it('keeps the two-argument production resolver on the production curve', () => {
+  it('keeps the two-argument production resolver on the approved CDF/LUT profile', () => {
     expect(resolvePlanetAppearance).toHaveLength(2)
-    expect(resolvePlanetAppearance(appearanceMovie, { Drama: '#336699' }).emissionCurve).toEqual(curve)
+    expect(resolvePlanetAppearance(appearanceMovie, { Drama: '#336699' }).emissionCurve).toEqual(PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE)
   })
 
   it('changes only emission intensity across diagnostic ratings', () => {

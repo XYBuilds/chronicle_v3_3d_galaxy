@@ -48,17 +48,15 @@ describe('Phase 41 diagnostic profile', () => {
     expect(() => parsePhase41DiagnosticRequest(`${request}&diagnostic_only=${PHASE41_DIAGNOSTIC_MARKER}&profile=${encodeURIComponent(JSON.stringify({ diagnostic_only: PHASE41_DIAGNOSTIC_MARKER, bloom: { enabled: true, strength: 0.01, radius: 1, threshold: 0 } }))}`)).toThrow(/bloom.enabled/)
   })
 
-  it('uses the anchored smoothstep production model and matches the resolved Bloom state across all three surfaces', () => {
+  it('uses the approved CDF/LUT production model and matches the resolved Bloom state across all three surfaces', () => {
     const production = resolvePhase41VisualProfile()
     const diagnostic = resolvePhase41DiagnosticRequest(parsePhase41DiagnosticRequest(`${request}&diagnostic_only=${PHASE41_DIAGNOSTIC_MARKER}`))
     const normalExporter = planetExportVisualConfigInput(planetVisualConfigHashInput(false), 3)
     expect(PLANET_VISUAL_DEFAULTS.focus.emission).toMatchObject({
-      modelVersion: 'vote-average-anchored-smoothstep-v1',
-      ratingLowAnchor: 4.5,
-      ratingHighAnchor: 8.2,
-      intensityMin: 0.005,
-      intensityMax: 0.65,
+      modelVersion: 'rating-midrank-cdf-lut-v1', ratingMin: 0, ratingMax: 10, sampleStep: 0.05, intensityMin: 0.005, intensityMax: 0.65,
     })
+    expect(PLANET_VISUAL_DEFAULTS.focus.emission.samples).toHaveLength(201)
+    expect(production.curve).toEqual(PLANET_VISUAL_DEFAULTS.focus.emission)
     expect(production.overrideProvenance).toBe('none')
     expect(production.resolvedVisualConfigInput).toBe(planetVisualConfigHashInput(true))
     expect(diagnostic.resolvedVisualConfigInput).toBe(planetVisualConfigHashInput(false))
@@ -67,17 +65,18 @@ describe('Phase 41 diagnostic profile', () => {
     expect(planetVisualConfigHashInput(true)).not.toBe(planetVisualConfigHashInput(false))
   })
 
-  it('maps the production curve and preserves its isolated diagnostic override boundary', () => {
+  it('keeps historical smoothstep and alternate CDF profiles isolated behind the diagnostic marker', () => {
     const curve = parsePhase41DiagnosticOverride({
       diagnostic_only: PHASE41_DIAGNOSTIC_MARKER,
       emissionCurve: { modelVersion: 'vote-average-anchored-smoothstep-v1', ratingLowAnchor: 4.5, ratingHighAnchor: 8.2, intensityMin: 0.005, intensityMax: 0.65 },
     }).emissionCurve!
     expect(phase41EmissionForRating(4.5, curve)).toBe(0.005)
     expect(phase41EmissionForRating(8.2, curve)).toBe(0.65)
-    expect(PLANET_VISUAL_DEFAULTS.focus.emission.modelVersion).toBe('vote-average-anchored-smoothstep-v1')
+    expect(resolvePhase41VisualProfile({ diagnostic_only: PHASE41_DIAGNOSTIC_MARKER, emissionCurve: curve }).overrideProvenance).toBe('phase41-diagnostic-override')
+    expect(PLANET_VISUAL_DEFAULTS.focus.emission.modelVersion).toBe('rating-midrank-cdf-lut-v1')
   })
 
-  it('accepts the isolated CDF/LUT diagnostic profile without touching production defaults', () => {
+  it('accepts an isolated CDF/LUT diagnostic profile without replacing production defaults', () => {
     const lut = Array.from({ length: 201 }, (_, index) => 0.005 + index / 200 * 0.645)
     const profile = parsePhase41DiagnosticOverride({
       diagnostic_only: PHASE41_DIAGNOSTIC_MARKER,
@@ -85,7 +84,7 @@ describe('Phase 41 diagnostic profile', () => {
     }).emissionCurve!
     expect(profile.modelVersion).toBe('rating-midrank-cdf-lut-v1')
     expect(phase41EmissionForRating(6.0, profile)).toBe(lut[120])
-    expect(PLANET_VISUAL_DEFAULTS.focus.emission.modelVersion).toBe('vote-average-anchored-smoothstep-v1')
+    expect(PLANET_VISUAL_DEFAULTS.focus.emission.modelVersion).toBe('rating-midrank-cdf-lut-v1')
   })
   it('enforces declared matrix variables and rating-row isolation', () => {
     const baseline = snapshot(4.5, 0.1)

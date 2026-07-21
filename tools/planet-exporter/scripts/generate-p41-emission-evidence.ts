@@ -9,7 +9,7 @@ import { generateContactSheet, type ContactSheetInput } from '../src/contactShee
 import type { DataSource } from '../src/data-source.js'
 import {
   P41_EMISSION_BLOOM_OFF,
-  P41_EMISSION_CURVE,
+  P41_EMISSION_HISTORICAL_CURVE,
   P41_EMISSION_EVIDENCE_RELATIVE_DIRECTORY,
   P41_EMISSION_FIXED_PROFILE,
   P41_EMISSION_FIXTURE_ROWS,
@@ -84,7 +84,7 @@ function ratingLabel(rating: number): string {
 function profileOverride(): Phase41DiagnosticOverride {
   return {
     diagnostic_only: PHASE41_DIAGNOSTIC_MARKER,
-    emissionCurve: { ...P41_EMISSION_CURVE },
+    emissionCurve: { ...P41_EMISSION_HISTORICAL_CURVE },
     lightness: P41_EMISSION_FIXED_PROFILE.lightness,
     keyLightIntensity: P41_EMISSION_FIXED_PROFILE.keyLightIntensity,
     direction: [...P41_EMISSION_FIXED_PROFILE.direction],
@@ -127,8 +127,8 @@ function controlledFixtureBytes(original: Buffer, fixture: string, rating: numbe
 function expectedEmission(rating: number): number {
   // The production pure function is exercised by the shared invariant helper;
   // values here are independently reconstructed from the versioned contract for sidecar checks.
-  const t = Math.max(0, Math.min(1, (rating - P41_EMISSION_CURVE.ratingLowAnchor) / (P41_EMISSION_CURVE.ratingHighAnchor - P41_EMISSION_CURVE.ratingLowAnchor)))
-  return P41_EMISSION_CURVE.intensityMin + (t * t * (3 - 2 * t)) * (P41_EMISSION_CURVE.intensityMax - P41_EMISSION_CURVE.intensityMin)
+  const t = Math.max(0, Math.min(1, (rating - P41_EMISSION_HISTORICAL_CURVE.ratingLowAnchor) / (P41_EMISSION_HISTORICAL_CURVE.ratingHighAnchor - P41_EMISSION_HISTORICAL_CURVE.ratingLowAnchor)))
+  return P41_EMISSION_HISTORICAL_CURVE.intensityMin + (t * t * (3 - 2 * t)) * (P41_EMISSION_HISTORICAL_CURVE.intensityMax - P41_EMISSION_HISTORICAL_CURVE.intensityMin)
 }
 
 function assertedProfile(artifact: Artifact): JsonRecord {
@@ -155,17 +155,17 @@ function assertArtifact(artifact: Artifact): void {
   assert(equal(key.direction, P41_EMISSION_FIXED_PROFILE.direction), `${artifact.png} direction drifted`)
   const curve = record(diagnostics.emission_curve, `${artifact.png} emission curve`)
   assert(equal(curve, {
-    model_version: P41_EMISSION_CURVE.modelVersion,
-    rating_low_anchor: P41_EMISSION_CURVE.ratingLowAnchor,
-    rating_high_anchor: P41_EMISSION_CURVE.ratingHighAnchor,
-    intensity_min: P41_EMISSION_CURVE.intensityMin,
-    intensity_max: P41_EMISSION_CURVE.intensityMax,
+    model_version: P41_EMISSION_HISTORICAL_CURVE.modelVersion,
+    rating_low_anchor: P41_EMISSION_HISTORICAL_CURVE.ratingLowAnchor,
+    rating_high_anchor: P41_EMISSION_HISTORICAL_CURVE.ratingHighAnchor,
+    intensity_min: P41_EMISSION_HISTORICAL_CURVE.intensityMin,
+    intensity_max: P41_EMISSION_HISTORICAL_CURVE.intensityMax,
   }), `${artifact.png} production curve drifted`)
   const profile = assertedProfile(artifact)
   assert(profile.overrideProvenance === 'phase41-diagnostic-override', `${artifact.png} must record diagnostic-only provenance`)
   assert(profile.productionSource === 'PLANET_VISUAL_DEFAULTS', `${artifact.png} must retain production provenance`)
   assert(text(profile.productionVisualConfigInput, `${artifact.png} production config`) !== text(profile.resolvedVisualConfigInput, `${artifact.png} resolved config`), `${artifact.png} must not claim an override as production configuration`)
-  assert(equal(profile.curve, P41_EMISSION_CURVE), `${artifact.png} resolved curve drifted`)
+  assert(equal(profile.curve, P41_EMISSION_HISTORICAL_CURVE), `${artifact.png} resolved curve drifted`)
   assert(profile.lightness === P41_EMISSION_FIXED_PROFILE.lightness && profile.keyLightIntensity === P41_EMISSION_FIXED_PROFILE.keyLightIntensity, `${artifact.png} fixed profile drifted`)
   assert(equal(profile.direction, P41_EMISSION_FIXED_PROFILE.direction), `${artifact.png} profile direction drifted`)
   assert(equal(profile.bloom, P41_EMISSION_BLOOM_OFF), `${artifact.png} profile Bloom drifted`)
@@ -284,7 +284,7 @@ async function renderCell(fixture: string, rating: number): Promise<Artifact> {
         fixture_seed: seed,
         diagnostic_only: PHASE41_DIAGNOSTIC_MARKER,
         override: profileOverride(),
-        production_curve: P41_EMISSION_CURVE,
+        production_curve: P41_EMISSION_HISTORICAL_CURVE,
         fixed_profile: P41_EMISSION_FIXED_PROFILE,
       },
     },
@@ -338,7 +338,7 @@ function contactSheetInput(artifacts: readonly Artifact[]): ContactSheetInput {
         emission: diagnosticsEmission(artifact),
         png: artifact.png,
         sidecar: artifact.sidecar,
-        curve: P41_EMISSION_CURVE,
+        curve: P41_EMISSION_HISTORICAL_CURVE,
         fixed_profile: P41_EMISSION_FIXED_PROFILE,
       },
     })),
@@ -408,7 +408,7 @@ async function main(): Promise<void> {
       columns: PHASE41_CONTROLLED_RATINGS,
       expected_cells: P41_EMISSION_FIXTURE_ROWS.length * PHASE41_CONTROLLED_RATINGS.length,
     },
-    curve: P41_EMISSION_CURVE,
+    curve: P41_EMISSION_HISTORICAL_CURVE,
     fixed_profile: P41_EMISSION_FIXED_PROFILE,
     assertions: {
       curve_endpoints: 'pass',

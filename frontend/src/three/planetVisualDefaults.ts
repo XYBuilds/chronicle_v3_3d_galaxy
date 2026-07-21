@@ -2,6 +2,7 @@ import {
   DEFAULT_GALAXY_U_ACTIVE_SIZE_MUL,
   DEFAULT_GALAXY_U_SIZE_SCALE,
 } from './galaxyUniformDefaults.js'
+import { PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE } from './productionFocusEmissionProfile.js'
 
 const PHI = (1 + Math.sqrt(5)) / 2
 
@@ -16,7 +17,7 @@ export const PERLIN_LIGHTING_ENABLED_DEFAULT = true
  * Keep vectors as tuples so the same object can be hashed into render metadata.
  */
 export const PLANET_VISUAL_DEFAULTS = {
-  schemaVersion: 8,
+  schemaVersion: 9,
   geometry: {
     detail: 8,
   },
@@ -47,13 +48,7 @@ export const PLANET_VISUAL_DEFAULTS = {
   focus: {
     lightness: 0.66,
     chroma: 0.15,
-    emission: {
-      modelVersion: 'vote-average-anchored-smoothstep-v1',
-      ratingLowAnchor: 4.5,
-      ratingHighAnchor: 8.2,
-      intensityMin: 0.005,
-      intensityMax: 0.65,
-    },
+    emission: PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE,
     bloom: {
       composition: 'pure-bloom-delta-v1',
       enabled: true,

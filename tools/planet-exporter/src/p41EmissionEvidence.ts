@@ -5,13 +5,17 @@ import {
   RATING_MIDRANK_CDF_LUT_MODEL_VERSION,
   RATING_MIDRANK_CDF_LUT_SAMPLE_COUNT,
   RATING_MIDRANK_CDF_LUT_SAMPLE_STEP,
-  focusEmissionIntensityFromVoteAverage,
-  validateFocusEmissionCurve,
+  focusEmissionIntensityFromProfile,
   validateRatingMidrankCdfLutProfile,
   type FocusEmissionCurve,
+  type FocusEmissionProfile,
   type RatingMidrankCdfLutProfile,
 } from '../../../frontend/src/three/focusEmission.js'
 import { PLANET_VISUAL_DEFAULTS } from '../../../frontend/src/three/planetVisualDefaults.js'
+import {
+  PRODUCTION_FOCUS_EMISSION_CDF_LUT_CONTRACT,
+  PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE,
+} from '../../../frontend/src/three/productionFocusEmissionProfile.js'
 
 import { PHASE41_CONTROLLED_RATINGS, AUTHORITATIVE_GZIP_RELATIVE_PATH } from './phase41Baseline.js'
 
@@ -48,14 +52,28 @@ export const P41_EMISSION_HISTORICAL_BASELINE_CANDIDATE = {
   allowedVariationFields: P41_EMISSION_ALLOWED_VARIATION_FIELDS,
 } as const
 
+export const P41_EMISSION_HISTORICAL_CURVE: FocusEmissionCurve = {
+  modelVersion: FOCUS_EMISSION_MODEL_VERSION,
+  ratingLowAnchor: 4.5,
+  ratingHighAnchor: 8.2,
+  intensityMin: 0.005,
+  intensityMax: 0.65,
+}
+
 /**
- * Diagnostic-only candidate metadata. Its LUT contract is validated in 41.5.3;
- * rendering and human evidence remain deferred to 41.5.4 and 41.5.5.
+ * Historical P41.5 CDF/LUT diagnostic provenance. The marker-bound override used to
+ * create this evidence remains isolated from normal startup; the same approved LUT
+ * is now the production profile declared by P41_PRODUCTION_EMISSION_PROFILE.
  */
 export const P41_EMISSION_MIDRANK_CDF_LUT_DIAGNOSTIC_CANDIDATE = {
   candidateId: RATING_MIDRANK_CDF_LUT_MODEL_VERSION,
-  status: 'contract-ready',
-  scope: 'diagnostic-only',
+  status: 'historical-evidence-promoted-to-production',
+  scope: 'p41.5-diagnostic-provenance',
+  productionProfileId: RATING_MIDRANK_CDF_LUT_MODEL_VERSION,
+  diagnosticOverride: {
+    requiredMarker: 'phase41-visual-diagnostic-v1',
+    productionDefaults: 'isolated',
+  },
   curveModelVersion: RATING_MIDRANK_CDF_LUT_MODEL_VERSION,
   input: P41_EMISSION_AUTHORITATIVE_DATA,
   ratingMin: 0,
@@ -73,14 +91,6 @@ export const P41_EMISSION_MIDRANK_CDF_LUT_DIAGNOSTIC_CANDIDATE = {
   intensityMin: 0.005,
   intensityMax: 0.65,
   allowedVariationFields: P41_EMISSION_ALLOWED_VARIATION_FIELDS,
-  prohibitedUntilLaterPhase: [
-    'production PLANET_VISUAL_DEFAULTS change',
-    'runtime LUT lookup',
-    'frontend Meta schema change',
-    'shader change',
-    'monthly refit',
-    'ordinary website entry point',
-  ],
 } as const
 
 /** Baseline fixtures selected deterministically from the authoritative gzip in P41.1. */
@@ -119,7 +129,10 @@ export const P41_EMISSION_FIXED_PROFILE = {
   },
 } as const
 
-export const P41_EMISSION_CURVE: FocusEmissionCurve = {
+/** P41.8 production profile: frozen approved LUT, embedded for normal website/exporter startup. */
+export const P41_PRODUCTION_EMISSION_PROFILE = PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE
+
+export const P41_EMISSION_CURVE: FocusEmissionProfile = {
   ...PLANET_VISUAL_DEFAULTS.focus.emission,
 }
 
@@ -244,8 +257,17 @@ export function assertP41EmissionEvidenceContract(): void {
   assert(P41_EMISSION_HISTORICAL_BASELINE_CANDIDATE.status === 'candidate-no-go', 'anchored smoothstep must remain the candidate-no-go history')
   assert(P41_EMISSION_HISTORICAL_BASELINE_CANDIDATE.modelVersion === FOCUS_EMISSION_MODEL_VERSION, 'historical baseline model drifted')
   assert(P41_EMISSION_HISTORICAL_BASELINE_CANDIDATE.evidenceDirectory === P41_EMISSION_EVIDENCE_RELATIVE_DIRECTORY, 'historical baseline evidence directory drifted')
-  assert(P41_EMISSION_MIDRANK_CDF_LUT_DIAGNOSTIC_CANDIDATE.status === 'contract-ready', 'CDF/LUT candidate contract must be ready')
-  assert(P41_EMISSION_MIDRANK_CDF_LUT_DIAGNOSTIC_CANDIDATE.scope === 'diagnostic-only', 'CDF/LUT candidate must remain diagnostic-only')
+  assert(P41_EMISSION_MIDRANK_CDF_LUT_DIAGNOSTIC_CANDIDATE.status === 'historical-evidence-promoted-to-production', 'CDF/LUT historical evidence must record its production promotion')
+  assert(P41_EMISSION_MIDRANK_CDF_LUT_DIAGNOSTIC_CANDIDATE.scope === 'p41.5-diagnostic-provenance', 'CDF/LUT historical provenance scope drifted')
+  assert(P41_EMISSION_MIDRANK_CDF_LUT_DIAGNOSTIC_CANDIDATE.productionProfileId === RATING_MIDRANK_CDF_LUT_MODEL_VERSION, 'CDF/LUT production profile link drifted')
+  assert(P41_EMISSION_MIDRANK_CDF_LUT_DIAGNOSTIC_CANDIDATE.diagnosticOverride.requiredMarker === 'phase41-visual-diagnostic-v1', 'historical diagnostic override marker drifted')
+  assert(P41_EMISSION_MIDRANK_CDF_LUT_DIAGNOSTIC_CANDIDATE.diagnosticOverride.productionDefaults === 'isolated', 'historical diagnostic override must stay isolated from production defaults')
+  assert(P41_PRODUCTION_EMISSION_PROFILE.modelVersion === RATING_MIDRANK_CDF_LUT_MODEL_VERSION, 'production profile model drifted')
+  assert(equal(P41_PRODUCTION_EMISSION_PROFILE, PLANET_VISUAL_DEFAULTS.focus.emission), 'production SSOT must be shared by website and exporter')
+  assert(PRODUCTION_FOCUS_EMISSION_CDF_LUT_CONTRACT.authoritativeData.sha256 === P41_EMISSION_AUTHORITATIVE_DATA.sha256, 'production profile source hash drifted')
+  assert(PRODUCTION_FOCUS_EMISSION_CDF_LUT_CONTRACT.authoritativeData.dataVersion === P41_EMISSION_AUTHORITATIVE_DATA.dataVersion, 'production profile data version drifted')
+  assert(PRODUCTION_FOCUS_EMISSION_CDF_LUT_CONTRACT.authoritativeData.movieCount === P41_EMISSION_AUTHORITATIVE_DATA.movieCount, 'production profile movie count drifted')
+  assert(PRODUCTION_FOCUS_EMISSION_CDF_LUT_CONTRACT.interpolation === 'linear', 'production LUT interpolation drifted')
   assert(P41_EMISSION_MIDRANK_CDF_LUT_DIAGNOSTIC_CANDIDATE.curveModelVersion === RATING_MIDRANK_CDF_LUT_MODEL_VERSION, 'CDF/LUT candidate model drifted')
   assert(P41_EMISSION_MIDRANK_CDF_LUT_DIAGNOSTIC_CANDIDATE.ratingMin === 0 && P41_EMISSION_MIDRANK_CDF_LUT_DIAGNOSTIC_CANDIDATE.ratingMax === 10, 'CDF/LUT rating domain must remain 0..10')
   assert(P41_EMISSION_MIDRANK_CDF_LUT_DIAGNOSTIC_CANDIDATE.lut.sampleStep === 0.05 && P41_EMISSION_MIDRANK_CDF_LUT_DIAGNOSTIC_CANDIDATE.lut.sampleCount === 201, 'CDF/LUT grid must remain 201 samples at 0.05')
@@ -261,26 +283,27 @@ export function assertP41EmissionEvidenceContract(): void {
   assertP41EmissionCurveInvariants(P41_EMISSION_CURVE)
 }
 
-/** Machine-only curve checks; visual review remains explicitly pending. */
-export function assertP41EmissionCurveInvariants(curve: FocusEmissionCurve): void {
-  const validated = validateFocusEmissionCurve(curve)
-  assert(validated.modelVersion === FOCUS_EMISSION_MODEL_VERSION, 'production curve model must be anchored smoothstep v1')
-  assert(validated.ratingLowAnchor === 4.5 && validated.ratingHighAnchor === 8.2, 'production curve anchors must be 4.5/8.2')
-  assert(validated.intensityMin === 0.005 && validated.intensityMax === 0.65, 'production curve intensity range must be 0.005/0.65')
+/** Machine-only checks for the embedded production LUT; visual review remains explicitly pending. */
+export function assertP41EmissionCurveInvariants(curve: FocusEmissionProfile): void {
+  assert(curve.modelVersion === RATING_MIDRANK_CDF_LUT_MODEL_VERSION, 'production curve model must be rating-midrank-cdf-lut-v1')
+  const validated = validateRatingMidrankCdfLutProfile(curve)
+  assert(equal(validated, PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE), 'production LUT samples drifted from the approved profile')
+  assert(validated.samples.length === 201, 'production LUT must have 201 samples')
+  assert(sha256(validated) === PRODUCTION_FOCUS_EMISSION_CDF_LUT_CONTRACT.curveSha256, 'production LUT hash drifted')
 
-  const atLow = focusEmissionIntensityFromVoteAverage(validated.ratingLowAnchor, validated)
-  const atHigh = focusEmissionIntensityFromVoteAverage(validated.ratingHighAnchor, validated)
-  assert(atLow === validated.intensityMin, 'low anchor must map exactly to intensityMin')
-  assert(atHigh === validated.intensityMax, 'high anchor must map exactly to intensityMax')
-  assert(focusEmissionIntensityFromVoteAverage(-1, validated) === validated.intensityMin, 'ratings below the low anchor must clamp')
-  assert(focusEmissionIntensityFromVoteAverage(11, validated) === validated.intensityMax, 'ratings above the high anchor must clamp')
+  const atLow = focusEmissionIntensityFromProfile(validated.ratingMin, validated)
+  const atHigh = focusEmissionIntensityFromProfile(validated.ratingMax, validated)
+  assert(atLow === validated.intensityMin, 'low endpoint must map exactly to intensityMin')
+  assert(atHigh === validated.intensityMax, 'high endpoint must map exactly to intensityMax')
+  assert(focusEmissionIntensityFromProfile(-1, validated) === validated.intensityMin, 'ratings below the LUT domain must clamp')
+  assert(focusEmissionIntensityFromProfile(11, validated) === validated.intensityMax, 'ratings above the LUT domain must clamp')
 
-  const sampled = Array.from({ length: 101 }, (_, index) => 4 + index * 0.06)
-  const emissions = sampled.map((rating) => focusEmissionIntensityFromVoteAverage(rating, validated))
+  const sampled = Array.from({ length: 101 }, (_, index) => index * 0.1)
+  const emissions = sampled.map((rating) => focusEmissionIntensityFromProfile(rating, validated))
   for (let index = 1; index < emissions.length; index += 1) {
-    assert(emissions[index]! >= emissions[index - 1]!, `curve is not monotonic at sample ${index}`)
+    assert(emissions[index]! >= emissions[index - 1]!, `production LUT is not monotonic at sample ${index}`)
   }
-  const dense = [4.5, 5.5, 6.5, 7.5].map((rating) => focusEmissionIntensityFromVoteAverage(rating, validated))
+  const dense = [4.5, 5.5, 6.5, 7.5].map((rating) => focusEmissionIntensityFromProfile(rating, validated))
   for (let index = 1; index < dense.length; index += 1) {
     assert(dense[index]! > dense[index - 1]!, `dense rating range is not distinguishable at ${index}`)
   }

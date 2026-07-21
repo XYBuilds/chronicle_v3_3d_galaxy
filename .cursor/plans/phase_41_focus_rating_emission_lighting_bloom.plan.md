@@ -25,7 +25,7 @@ todos:
     status: completed
   - id: p41.8-production-gate
     content: 41.8 · [需人工验收] 完成最终生产 Go/No-Go、参数锁定和实施报告
-    status: pending
+    status: completed
 isProject: false
 ---
 

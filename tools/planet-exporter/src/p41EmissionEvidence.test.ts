@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+
 import { describe, expect, it } from 'vitest'
 
 import {
@@ -18,6 +21,7 @@ import {
   P41_EMISSION_FIXTURE_ROWS,
   P41_EMISSION_HISTORICAL_BASELINE_CANDIDATE,
   P41_EMISSION_MIDRANK_CDF_LUT_DIAGNOSTIC_CANDIDATE,
+  P41_PRODUCTION_EMISSION_PROFILE,
   P41_MIDRANK_CDF_LUT_CONTROLLED_RATINGS,
   P41_MIDRANK_CDF_LUT_EVIDENCE_RELATIVE_DIRECTORY,
   assertP41EmissionCurveInvariants,
@@ -29,12 +33,22 @@ import {
   serializeP41MidrankCdfLutEvidenceManifest,
 } from './p41EmissionEvidence.js'
 import { PHASE41_CONTROLLED_RATINGS } from './phase41Baseline.js'
+import { PLANET_VISUAL_DEFAULTS } from '../../../frontend/src/three/planetVisualDefaults.js'
+import {
+  PRODUCTION_FOCUS_EMISSION_CDF_LUT_CONTRACT,
+  PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE,
+} from '../../../frontend/src/three/productionFocusEmissionProfile.js'
+
 
 function fixtureLutProfile() {
   return generateRatingMidrankCdfLutProfile([4, 5.5, 6, 6, 6.5, 7.5, 8.5])
 }
 
 const FIXTURE_GIT_COMMIT = 'a'.repeat(40)
+const historicalEvidenceScript = readFileSync(
+  fileURLToPath(new URL('../scripts/generate-p41-emission-evidence.ts', import.meta.url)),
+  'utf8',
+)
 
 describe('P41.5 emission evidence contract', () => {
   it('freezes required matrix axes and approved Bloom-OFF shaping', () => {
@@ -47,7 +61,21 @@ describe('P41.5 emission evidence contract', () => {
     expect(P41_EMISSION_FIXED_PROFILE).toMatchObject({ lightness: 0.66, keyLightIntensity: 0.45, flatShadingMix: 0.8 })
   })
 
-  it('pins the historical baseline and declares the diagnostic CDF/LUT boundary', () => {
+  it('embeds the human-approved CDF/LUT production profile without a gzip runtime dependency', () => {
+    expect(P41_PRODUCTION_EMISSION_PROFILE).toEqual(PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE)
+    expect(PLANET_VISUAL_DEFAULTS.focus.emission).toEqual(PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE)
+    expect(P41_PRODUCTION_EMISSION_PROFILE).toMatchObject({
+      modelVersion: 'rating-midrank-cdf-lut-v1', ratingMin: 0, ratingMax: 10, sampleStep: 0.05, intensityMin: 0.005, intensityMax: 0.65,
+    })
+    expect(P41_PRODUCTION_EMISSION_PROFILE.samples).toHaveLength(201)
+    expect(PRODUCTION_FOCUS_EMISSION_CDF_LUT_CONTRACT).toMatchObject({
+      profileManifest: 'data/runs/phase41/p41.5-midrank-cdf-lut-bloom-off/profile.manifest.json',
+      curveSha256: 'd3c434c9ccb4e2e520edc4d5a8e1cb7a2d7842d42800cd225ab6482fbaa91d6d',
+      interpolation: 'linear',
+      authoritativeData: P41_EMISSION_AUTHORITATIVE_DATA,
+    })
+  })
+  it('pins the historical baseline and records the CDF/LUT promotion separately from its diagnostic provenance', () => {
     expect(P41_EMISSION_HISTORICAL_BASELINE_CANDIDATE).toMatchObject({
       candidateId: 'anchored-smoothstep-historical-baseline',
       status: 'candidate-no-go',
@@ -62,8 +90,13 @@ describe('P41.5 emission evidence contract', () => {
     expect(P41_EMISSION_MIDRANK_CDF_LUT_DIAGNOSTIC_CANDIDATE).toMatchObject({
       candidateId: 'rating-midrank-cdf-lut-v1',
       curveModelVersion: 'rating-midrank-cdf-lut-v1',
-      status: 'contract-ready',
-      scope: 'diagnostic-only',
+      status: 'historical-evidence-promoted-to-production',
+      scope: 'p41.5-diagnostic-provenance',
+      productionProfileId: 'rating-midrank-cdf-lut-v1',
+      diagnosticOverride: {
+        requiredMarker: 'phase41-visual-diagnostic-v1',
+        productionDefaults: 'isolated',
+      },
       ratingMin: 0,
       ratingMax: 10,
       lut: { sampleStep: 0.05, sampleCount: 201, interpolation: 'linear' },
@@ -71,7 +104,7 @@ describe('P41.5 emission evidence contract', () => {
       intensityMax: 0.65,
     })
     expect(P41_EMISSION_ALLOWED_VARIATION_FIELDS).toEqual(['rating', 'emission'])
-    expect(P41_EMISSION_MIDRANK_CDF_LUT_DIAGNOSTIC_CANDIDATE.prohibitedUntilLaterPhase).toContain('production PLANET_VISUAL_DEFAULTS change')
+    expect(P41_PRODUCTION_EMISSION_PROFILE.modelVersion).toBe('rating-midrank-cdf-lut-v1')
   })
 
   it('creates a byte-stable manifest that binds the LUT, source, fixed profile, and hashes', () => {
@@ -136,8 +169,14 @@ describe('P41.5 emission evidence contract', () => {
     expect(() => assertP41EmissionRatingOnlyVariation(baseline, { ...candidate, bloom: { ...P41_EMISSION_BLOOM_OFF, enabled: true } })).toThrow(/undeclared variation in bloom/)
   })
 
-  it('rejects curve drift and leaves only declared row variables comparable', () => {
-    expect(() => assertP41EmissionCurveInvariants({ ...P41_EMISSION_CURVE, ratingHighAnchor: 8.3 })).toThrow('anchors must be 4.5/8.2')
+  it('keeps the P41.5 smoothstep evidence entry explicitly bound to the historical curve', () => {
+    expect(historicalEvidenceScript).toContain('P41_EMISSION_HISTORICAL_CURVE')
+    expect(historicalEvidenceScript).toContain('emissionCurve: { ...P41_EMISSION_HISTORICAL_CURVE }')
+    expect(historicalEvidenceScript).not.toContain('PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE')
+  })
+
+  it('rejects a production LUT profile drift and leaves only declared row variables comparable', () => {
+    expect(() => assertP41EmissionCurveInvariants({ ...P41_EMISSION_CURVE, samples: P41_EMISSION_CURVE.samples.slice(1) })).toThrow(/samples length|production LUT/)
     expect(profileWithoutRatingAndEmission({ rating: 4.5, emission: 0.005, camera: 'fixed' })).toEqual({ camera: 'fixed' })
   })
 })

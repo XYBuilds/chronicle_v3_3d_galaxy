@@ -10,11 +10,16 @@ import type { DataSource } from '../src/data-source.js'
 import { loadAuthoritativeGalaxy, type JsonRecord, type Phase41Movie } from '../src/phase41Baseline.js'
 import { assertPngSafe } from '../src/png.js'
 import { PLANET_VISUAL_DEFAULTS, planetVisualConfigHashInput } from '../../../frontend/src/three/planetVisualDefaults.js'
+import { focusEmissionIntensityFromProfile } from '../../../frontend/src/three/focusEmission.js'
+import {
+  PRODUCTION_FOCUS_EMISSION_CDF_LUT_CONTRACT,
+  PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE,
+} from '../../../frontend/src/three/productionFocusEmissionProfile.js'
 
 const root = path.resolve(import.meta.dirname, '../../..')
 const controlledDirectory = path.join(root, 'data/runs/phase41/p41.7-final-controlled-bloom-off-on')
 const realDirectory = path.join(root, 'data/runs/phase41/p41.7-final-real-bloom-on')
-const resolution = 1024
+const productionGateResolution = 3000
 const padding = 0.35
 const sizeRoot = 3 as const
 const controlledRatings = [4.0, 4.5, 5.5, 6.5, 7.5, 8.2, 9.5] as const
@@ -85,6 +90,16 @@ function bloomDiagnostics(value: JsonRecord, expected: Bloom): void {
   assert(bloom.threshold === PLANET_VISUAL_DEFAULTS.focus.bloom.threshold, 'Bloom threshold drifted')
 }
 
+function productionEmissionDiagnostics(value: JsonRecord, rating: number): void {
+  const curve = record(value.emission_curve, 'render diagnostics emission curve')
+  assert(curve.model_version === PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE.modelVersion, 'rendered emission model must be the approved production CDF/LUT')
+  assert(curve.rating_min === PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE.ratingMin, 'rendered CDF/LUT rating minimum drifted')
+  assert(curve.rating_max === PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE.ratingMax, 'rendered CDF/LUT rating maximum drifted')
+  assert(curve.sample_step === PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE.sampleStep, 'rendered CDF/LUT step drifted')
+  assert(curve.sample_count === PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE.samples.length, 'rendered CDF/LUT sample count drifted')
+  assert(value.emission === focusEmissionIntensityFromProfile(rating, PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE), 'rendered production CDF/LUT emission drifted')
+}
+
 async function renderArtifact(
   directory: string,
   row: string,
@@ -101,20 +116,22 @@ async function renderArtifact(
   const args: ExportArgs = {
     movieId: movie.id,
     output: path.join(directory, 'cells', fileName),
-    resolution,
+    resolution: productionGateResolution,
     padding,
     bloom,
     sizeRoot,
     renderMode: 'shader',
   }
   const render = await renderInBrowser(args, source, root)
-  assertPngSafe(render.png, resolution)
+  assertPngSafe(render.png, productionGateResolution)
   const expectedVisualHash = planetVisualConfigHashInput(bloom === 'on')
   assert(render.visualHash === expectedVisualHash, `${fileName} did not use the resolved production visual hash`)
   const diagnostics = render.visualDiagnostics
   bloomDiagnostics(diagnostics, bloom)
   const renderedRating = diagnostics.rating
+  assert(typeof renderedRating === 'number' && Number.isFinite(renderedRating), `${fileName} rating must be finite`)
   assert(renderedRating === (controlledRating ?? movie.vote_average), `${fileName} rating drifted`)
+  productionEmissionDiagnostics(diagnostics, renderedRating)
   const sidecar = metadataFor(args, source, render, getGitCommit(root))
   delete sidecar.generated_at
   const pngSha256 = sha256(render.png)
@@ -126,12 +143,19 @@ async function renderArtifact(
       p41_7_final_evidence: {
         schema_version: 'p41.7-final-evidence-v1',
         reproduction_command: command,
+        resolution: productionGateResolution,
         source: 'frontend/public/data/galaxy_data.json.gz',
         source_movie_id: movie.id,
         controlled_rating: controlledRating ?? null,
         bloom,
         production_visual_config_input: expectedVisualHash,
         production_visual_config_sha256: sha256(expectedVisualHash),
+        production_emission_profile: {
+          model_version: PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE.modelVersion,
+          curve_sha256: PRODUCTION_FOCUS_EMISSION_CDF_LUT_CONTRACT.curveSha256,
+          profile_manifest_sha256: PRODUCTION_FOCUS_EMISSION_CDF_LUT_CONTRACT.profileManifestSha256,
+          source_sha256: PRODUCTION_FOCUS_EMISSION_CDF_LUT_CONTRACT.authoritativeData.sha256,
+        },
         diagnostic_override: null,
         png_sha256: pngSha256,
       },
@@ -158,9 +182,10 @@ function contactCell(artifact: Artifact): ContactSheetCell {
     rowKey: artifact.row,
     columnKey: artifact.column,
     input: artifact.png,
-    caption: `${artifact.movie.title}\nid=${artifact.movie.id} rating=${String(artifact.diagnostics.rating)} emission=${emission.toFixed(6)}\nBloom ${artifact.bloom.toUpperCase()} · votes=${artifact.movie.vote_count}`,
+    caption: `${artifact.movie.title}\nid=${artifact.movie.id} rating=${String(artifact.diagnostics.rating)} emission=${emission.toFixed(6)}\n${productionGateResolution}×${productionGateResolution} · Bloom ${artifact.bloom.toUpperCase()} · votes=${artifact.movie.vote_count}`,
     parameters: {
       movie_id: artifact.movie.id,
+      resolution: productionGateResolution,
       rating: artifact.diagnostics.rating as number,
       vote_count: artifact.movie.vote_count,
       emission,
@@ -182,6 +207,7 @@ async function writeValidation(directory: string, title: string, artifacts: read
     assert(!keys.has(key), `${title} duplicate cell ${key}`)
     keys.add(key)
     const png = await fs.readFile(path.join(directory, artifact.png))
+    assertPngSafe(png, productionGateResolution)
     assert(sha256(png) === artifact.pngSha256, `${artifact.png} PNG hash drifted`)
     assert(artifact.visualHash === planetVisualConfigHashInput(artifact.bloom === 'on'), `${artifact.png} config hash drifted`)
   }
@@ -189,12 +215,20 @@ async function writeValidation(directory: string, title: string, artifacts: read
     schema_version: 'p41.7-final-evidence-validation-v1',
     title,
     status: 'pending-human-review',
+    raw_png_resolution: productionGateResolution,
     source: { relative_path: 'frontend/public/data/galaxy_data.json.gz', sha256: sourceSha256 },
+    production_emission_profile: {
+      model_version: PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE.modelVersion,
+      curve_sha256: PRODUCTION_FOCUS_EMISSION_CDF_LUT_CONTRACT.curveSha256,
+      profile_manifest_sha256: PRODUCTION_FOCUS_EMISSION_CDF_LUT_CONTRACT.profileManifestSha256,
+      source_sha256: PRODUCTION_FOCUS_EMISSION_CDF_LUT_CONTRACT.authoritativeData.sha256,
+    },
     reproduction_command: command,
     assertions: {
       normal_exporter_only: 'pass',
       diagnostic_override: 'absent',
       resolved_production_visual_hash: 'pass',
+      raw_png_resolution: `${productionGateResolution}x${productionGateResolution}`,
       cell_hashes: 'pass',
       contact_sheet_complete: 'pass',
     },
@@ -206,7 +240,7 @@ async function writeValidation(directory: string, title: string, artifacts: read
 async function assertRepeatStable(movie: Phase41Movie, meta: JsonRecord): Promise<void> {
   const fixture = createFixture(movie, meta, 'repeat-stability-control', 7.5)
   const source: DataSource = { kind: 'file', label: 'p41.7:repeat-stability-control', bytes: fixture }
-  const args: ExportArgs = { movieId: movie.id, output: path.join(controlledDirectory, 'repeat.png'), resolution, padding, bloom: 'on', sizeRoot, renderMode: 'shader' }
+  const args: ExportArgs = { movieId: movie.id, output: path.join(controlledDirectory, 'repeat.png'), resolution: productionGateResolution, padding, bloom: 'on', sizeRoot, renderMode: 'shader' }
   const [first, second] = await Promise.all([renderInBrowser(args, source, root), renderInBrowser(args, source, root)])
   assert(sha256(first.png) === sha256(second.png), 'repeat control renderer output is not byte-stable')
   assert(first.visualHash === second.visualHash && first.visualHash === planetVisualConfigHashInput(true), 'repeat control visual hash drifted')
@@ -232,6 +266,8 @@ function selectRealSamples(movies: readonly Phase41Movie[]): Array<{ key: string
 }
 
 async function main(): Promise<void> {
+  assert(PLANET_VISUAL_DEFAULTS.focus.emission.modelVersion === PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE.modelVersion, 'production SSOT must use the approved CDF/LUT')
+  assert(JSON.stringify(PLANET_VISUAL_DEFAULTS.focus.emission) === JSON.stringify(PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE), 'production CDF/LUT profile drifted before evidence generation')
   const { galaxy, sourceSha256 } = await loadAuthoritativeGalaxy(root)
   assert(galaxy.meta.version === '2026.07.18.daily.113' && galaxy.movies.length === 61531, 'authoritative data version or count drifted')
   await fs.rm(controlledDirectory, { recursive: true, force: true })

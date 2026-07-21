@@ -11,7 +11,8 @@ import {
   planetNoiseSeed,
   resolvePlanetAppearance,
 } from './planetAppearance'
-import { focusEmissionIntensityFromVoteAverage } from './focusEmission'
+import { focusEmissionIntensityFromProfile } from './focusEmission'
+import { PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE } from './productionFocusEmissionProfile'
 import {
   computeActiveShellWorldRadius,
   computeMoviePlanetOuterRadius,
@@ -70,7 +71,7 @@ const palette: Meta['genre_palette'] = {
 describe('planet visual defaults', () => {
   it('serializes the versioned Focus visual configuration for metadata hashing', () => {
     expect(PLANET_VISUAL_DEFAULTS).toEqual({
-      schemaVersion: 8,
+      schemaVersion: 9,
       geometry: { detail: 8 },
       activeShell: { sizeScale: 0.5, activeSizeMultiplier: 0.012 },
       noise: { scale: 2.35, octaves: 4, persistence: 0.52 },
@@ -90,13 +91,7 @@ describe('planet visual defaults', () => {
       focus: {
         lightness: 0.66,
         chroma: 0.15,
-        emission: {
-          modelVersion: 'vote-average-anchored-smoothstep-v1',
-          ratingLowAnchor: 4.5,
-          ratingHighAnchor: 8.2,
-          intensityMin: 0.005,
-          intensityMax: 0.65,
-        },
+        emission: PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE,
         bloom: {
           composition: 'pure-bloom-delta-v1',
           enabled: true,
@@ -131,25 +126,23 @@ describe('planet visual defaults', () => {
   })
 })
 
-describe('Focus emission curve', () => {
+describe('Focus production CDF/LUT emission', () => {
   const curve = PLANET_VISUAL_DEFAULTS.focus.emission
 
-  it('clamps finite ratings and uses anchored smoothstep endpoints', () => {
-    expect(focusEmissionIntensityFromVoteAverage(4.5, curve)).toBe(0.005)
-    expect(focusEmissionIntensityFromVoteAverage(8.2, curve)).toBe(0.65)
-    expect(focusEmissionIntensityFromVoteAverage(-1, curve)).toBe(0.005)
-    expect(focusEmissionIntensityFromVoteAverage(11, curve)).toBe(0.65)
+  it('clamps finite ratings to the exact approved endpoints', () => {
+    expect(focusEmissionIntensityFromProfile(0, curve)).toBe(0.005)
+    expect(focusEmissionIntensityFromProfile(10, curve)).toBe(0.65)
+    expect(focusEmissionIntensityFromProfile(-1, curve)).toBe(0.005)
+    expect(focusEmissionIntensityFromProfile(11, curve)).toBe(0.65)
   })
 
-  it('is strictly monotonic throughout the unclamped anchor interval', () => {
-    const values = Array.from({ length: 38 }, (_, index) =>
-      focusEmissionIntensityFromVoteAverage(4.5 + index * 0.1, curve),
-    )
-    values.slice(1).forEach((value, index) => expect(value).toBeGreaterThan(values[index]!))
+  it('is monotonic across the production LUT domain', () => {
+    const values = Array.from({ length: 101 }, (_, index) => focusEmissionIntensityFromProfile(index * 0.1, curve))
+    values.slice(1).forEach((value, index) => expect(value).toBeGreaterThanOrEqual(values[index]!))
   })
 
   it.each([Number.NaN, Number.POSITIVE_INFINITY])('fails fast for rating %s', (invalidRating) => {
-    expect(() => focusEmissionIntensityFromVoteAverage(invalidRating, curve)).toThrow(/voteAverage.*finite/)
+    expect(() => focusEmissionIntensityFromProfile(invalidRating, curve)).toThrow(/voteAverage.*finite/)
   })
 })
 
@@ -161,7 +154,7 @@ describe('planet appearance', () => {
     expect(appearance.lightness).toBe(PLANET_VISUAL_DEFAULTS.focus.lightness)
     expect(appearance.chroma).toBe(PLANET_VISUAL_DEFAULTS.focus.chroma)
     expect(appearance.keyLightIntensity).toBe(PLANET_VISUAL_DEFAULTS.lighting.keyLightIntensity)
-    expect(appearance.emissionIntensity).toBe(PLANET_VISUAL_DEFAULTS.focus.emission.intensityMax)
+    expect(appearance.emissionIntensity).toBe(focusEmissionIntensityFromProfile(movie.vote_average, PLANET_VISUAL_DEFAULTS.focus.emission))
   })
 
   it('is deterministic for noise, genres, hues, fixed appearance, emission, and base pose', () => {
@@ -193,7 +186,7 @@ describe('planet appearance', () => {
       expect(handle.material.uniforms.uCutCount.value).toBe(2)
       expect(handle.material.uniforms.uPerlinL.value).toBe(PLANET_VISUAL_DEFAULTS.focus.lightness)
       expect(handle.material.uniforms.uPerlinChroma.value).toBe(PLANET_VISUAL_DEFAULTS.focus.chroma)
-      expect(handle.material.uniforms.uEmissionIntensity.value).toBe(PLANET_VISUAL_DEFAULTS.focus.emission.intensityMax)
+      expect(handle.material.uniforms.uEmissionIntensity.value).toBe(focusEmissionIntensityFromProfile(movie.vote_average, PLANET_VISUAL_DEFAULTS.focus.emission))
       expect(handle.material.uniforms.uKeyLightIntensity.value).toBe(PLANET_VISUAL_DEFAULTS.lighting.keyLightIntensity)
       expect(handle.material.uniforms).not.toHaveProperty('uAmbient')
       expect(handle.material.uniforms).not.toHaveProperty('uDiffuse')
@@ -233,12 +226,10 @@ describe('planet appearance', () => {
       expect(uniforms.map(({ key }) => key)).toEqual(Array(7).fill(0.45))
       expect(uniforms.map(({ direction }) => direction)).toEqual(Array(7).fill(PLANET_VISUAL_DEFAULTS.lighting.direction))
       expect(uniforms.map(({ flat }) => flat)).toEqual(Array(7).fill(0.8))
+      const ratings = [4, 4.5, 5.5, 6.5, 7.5, 8.2, 9.5]
       const emissions = uniforms.map(({ emission }) => emission)
-      expect(emissions[0]).toBe(0.005)
-      expect(emissions[1]).toBe(0.005)
-      expect(emissions[5]).toBe(0.65)
-      expect(emissions[6]).toBe(0.65)
-      emissions.slice(2, 5).forEach((value, index) => expect(value).toBeGreaterThan(emissions[index + 1]!))
+      expect(emissions).toEqual(ratings.map((rating) => focusEmissionIntensityFromProfile(rating, PLANET_VISUAL_DEFAULTS.focus.emission)))
+      emissions.slice(1).forEach((value, index) => expect(value).toBeGreaterThan(emissions[index]!))
     } finally {
       handle.dispose()
     }

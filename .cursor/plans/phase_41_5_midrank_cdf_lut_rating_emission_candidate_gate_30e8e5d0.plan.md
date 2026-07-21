@@ -1,22 +1,22 @@
 ---
-name: Phase 41.5 · Focus Rating Emission: Midrank CDF + LUT Diagnostic Gate
-overview: 在现有 Phase 41.5 内将 anchored smoothstep 保留为历史基线候选，新增基于权威 60K 数据的 midrank CDF + LUT 诊断候选，并通过 Bloom OFF 的自动不变量与人工 contact-sheet Gate 决定是否通过 41.5。monthly refit 生产化、数据 schema 和三端发布契约明确留到后续 Phase。
+name: "Phase 41.5 · Focus Rating Emission: Midrank CDF + LUT Diagnostic Gate "
+overview: "在现有 Phase 41.5 内将 anchored smoothstep 保留为历史基线候选，新增基于权威 60K 数据的 midrank CDF + LUT 诊断候选，并通过 Bloom OFF 的自动不变量与人工 contact-sheet Gate 决定是否通过 41.5。monthly refit 生产化、数据 schema 和三端发布契约明确留到后续 Phase。 "
 todos:
   - id: p41.5.1-baseline-and-boundary
-    content: 41.5.1 [contract] 封存 anchored smoothstep 基线，冻结 CDF + LUT 候选边界与固定视觉 profile
+    content: "41.5.1 [contract] 封存 anchored smoothstep 基线，冻结 CDF + LUT 候选边界与固定视觉 profile "
     status: complete
   - id: p41.5.2-midrank-cdf-lut
-    content: 41.5.2 [domain+frontend] 实现 rating-midrank-cdf-lut-v1 的生成、校验和运行时插值纯函数
+    content: "41.5.2 [domain+frontend] 实现 rating-midrank-cdf-lut-v1 的生成、校验和运行时插值纯函数 "
     status: complete
   - id: p41.5.3-contract-and-tests
-    content: 41.5.3 [tests+contract] 增加 CDF/LUT 自动测试、不变量和可复现证据契约
+    content: "41.5.3 [tests+contract] 增加 CDF/LUT 自动测试、不变量和可复现证据契约 "
     status: complete
   - id: p41.5.4-bloom-off-evidence
-    content: 41.5.4 [evidence] 生成密集 rating 区间的 Bloom OFF contact sheet 与完整 sidecar 证据
+    content: "41.5.4 [evidence] 生成密集 rating 区间的 Bloom OFF contact sheet 与完整 sidecar 证据 "
     status: complete
   - id: p41.5.5-human-gate
-    content: 41.5.5 [需人工验收] 完成人工 Go/No-Go，并根据结果决定 41.5 pass 或保留后续候选
-    status: pending
+    content: "41.5.5 [需人工验收] 完成人工 Go/No-Go，并根据结果决定 41.5 pass 或保留后续候选 "
+    status: completed
 isProject: false
 ---
 

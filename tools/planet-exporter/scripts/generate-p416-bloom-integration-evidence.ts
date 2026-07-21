@@ -7,7 +7,7 @@ import sharp from 'sharp'
 import type { ExportArgs } from '../src/args.js'
 import { writeArtifactsAtomically } from '../src/artifacts.js'
 import { getGitCommit, metadataFor } from '../src/browser.js'
-import { generateContactSheet, type ContactSheetInput } from '../src/contactSheet.js'
+import { generateContactSheet, type ContactSheetInput, type ContactSheetParameters } from '../src/contactSheet.js'
 import { type DataSource } from '../src/data-source.js'
 import {
   P416_BLOOM_CANDIDATES,
@@ -134,6 +134,11 @@ function sourceCellName(fixture: string, rating: number): string {
   return `${fixture}__rating-${ratingLabel(rating)}.png`
 }
 
+/** The contact-sheet manifest is an evidence record, so retain each cell's full renderer diagnostics. */
+function contactSheetDiagnostics(diagnostics: JsonRecord): ContactSheetParameters {
+  return JSON.parse(stable(diagnostics)) as ContactSheetParameters
+}
+
 function sidecarProfile(sidecar: JsonRecord): JsonRecord {
   return record(record(sidecar.visual_diagnostics, 'sidecar visual diagnostics').phase41_resolved_profile, 'resolved Phase 41 profile')
 }
@@ -195,7 +200,7 @@ async function renderOn(fixture: string, rating: number, profile: RatingMidrankC
   const render = await renderPhase41DiagnosticInBrowser(args, source, root, createP416BloomOverride(candidate.bloomOn, profile))
   assert(render.png.byteLength > 0, `${fileName} PNG is empty`)
   const diagnostics = render.visualDiagnostics as JsonRecord
-  assert(diagnostics.rating === rating && diagnostics.emission === focusEmissionIntensityFromProfile(rating, profile), `${fileName} ON renderer drifted`) 
+  assert(diagnostics.rating === rating && diagnostics.emission === focusEmissionIntensityFromProfile(rating, profile), `${fileName} ON renderer drifted`)
   const bloom = record(diagnostics.bloom, `${fileName} Bloom`)
   assert(equal(bloom, { enabled: true, composition: 'pure-bloom-delta-v1', strength: candidate.bloomOn.strength, radius: candidate.bloomOn.radius, threshold: candidate.bloomOn.threshold }), `${fileName} Bloom ON drifted`)
   return {
@@ -227,7 +232,15 @@ function contactSheetInput(artifacts: readonly Artifact[]): ContactSheetInput {
       columnKey: `${ratingLabel(artifact.rating)}-${artifact.mode}`,
       input: artifact.png,
       caption: `rating=${ratingLabel(artifact.rating)} emission=${number(artifact.diagnostics.emission, 'emission').toFixed(6)}\nBloom=${artifact.mode.toUpperCase()} · explicit candidate=${candidate.candidateId}`,
-      parameters: { fixture: artifact.fixture, rating: artifact.rating, bloom: artifact.mode, emission: number(artifact.diagnostics.emission, 'emission'), png: artifact.png, sidecar: artifact.sidecar },
+      parameters: {
+        fixture: artifact.fixture,
+        rating: artifact.rating,
+        bloom: artifact.mode,
+        emission: number(artifact.diagnostics.emission, 'emission'),
+        png: artifact.png,
+        sidecar: artifact.sidecar,
+        visual_diagnostics: contactSheetDiagnostics(artifact.diagnostics),
+      },
     })),
   }
 }
@@ -258,6 +271,15 @@ async function verify(artifacts: readonly Artifact[], profile: RatingMidrankCdfL
   }
   const contactManifest = record(JSON.parse(await fs.readFile(path.join(directory, 'contact-sheet.manifest.json'), 'utf8')) as unknown, 'contact sheet manifest')
   assert(Array.isArray(contactManifest.sources) && contactManifest.sources.length === expected, 'contact sheet matrix incomplete')
+  for (const artifact of artifacts) {
+    const source = contactManifest.sources.find((entry) => {
+      const cell = record(entry, 'contact sheet source')
+      return cell.row_key === artifact.fixture && cell.column_key === `${ratingLabel(artifact.rating)}-${artifact.mode}`
+    })
+    assert(source !== undefined, `contact sheet source missing ${artifact.png}`)
+    const parameters = record(record(source, `contact sheet source ${artifact.png}`).parameters, `${artifact.png} manifest parameters`)
+    assert(equal(parameters.visual_diagnostics, artifact.diagnostics), `${artifact.png} manifest diagnostics drifted`)
+  }
   const validation = { schema_version: candidate.schemaVersion, status: 'pending-human-review', human_review_required: true, evidence_directory: candidate.evidenceDirectory, reproduction_command: command, candidate_key: selectedCandidate.name, candidate_id: candidate.candidateId, candidate, diagnostic_only: 'phase41-visual-diagnostic-v1', authoritative_data: P41_EMISSION_AUTHORITATIVE_DATA, source_sha256: sourceSha256, profile, profile_sha256: p416Sha256({ curve: profile, bloom_off: candidate.bloomOff, bloom_on: candidate.bloomOn }), matrix: { rows: P41_EMISSION_FIXTURE_ROWS, ratings: P41_MIDRANK_CDF_LUT_CONTROLLED_RATINGS, bloom_modes: P416_BLOOM_MATRIX_COLUMNS, expected_cells: expected }, assertions: { authoritative_gzip: 'pass', fixture_movie_camera_seed_rotation_fixed: 'pass', lightness_key_direction_flat_shading_fixed: 'pass', rating_emission_only_by_row: 'pass', off_on_only_declared_bloom_variation: 'pass', pure_bloom_delta_core: 'pass', cell_hashes: 'pass', contact_sheet_complete: 'pass' }, hashes: { contact_sheet_sha256: sha256(await fs.readFile(path.join(directory, 'contact-sheet.png'))), contact_sheet_manifest_sha256: sha256(await fs.readFile(path.join(directory, 'contact-sheet.manifest.json'))) }, cells: artifacts.map((artifact) => ({ fixture: artifact.fixture, rating: artifact.rating, bloom: artifact.mode, png: artifact.png, sidecar: artifact.sidecar, png_sha256: artifact.pngSha256 })) }
   await fs.writeFile(path.join(directory, 'validation.json'), `${stable(validation)}\n`, 'utf8')
 }

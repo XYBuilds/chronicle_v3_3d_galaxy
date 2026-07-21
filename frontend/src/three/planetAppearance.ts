@@ -3,7 +3,11 @@ import * as THREE from 'three'
 import type { Meta, Movie } from '@/types/galaxy'
 import { genreHueForGenreName, hueFromGenreColor, primaryGenreHueRad } from '@/utils/genreHue'
 
-import { focusEmissionIntensityFromVoteAverage, type FocusEmissionCurve } from './focusEmission'
+import {
+  focusEmissionIntensityFromProfile,
+  type FocusEmissionCurve,
+  type FocusEmissionProfile,
+} from './focusEmission'
 import { PLANET_MAX_BANDS, PLANET_VISUAL_DEFAULTS } from './planetVisualDefaults'
 import { selectionPlanetBaseQuaternion } from './selectionPlanetRotation'
 
@@ -15,6 +19,7 @@ export interface PlanetAppearance {
   lightness: number
   chroma: number
   emissionIntensity: number
+  emissionProfile: FocusEmissionProfile
   emissionCurve: FocusEmissionCurve
   keyLightIntensity: number
   bandCount: number
@@ -46,6 +51,10 @@ export function createPlanetRandom(seed: number): () => number {
   }
 }
 
+export function resolvePlanetAppearance(movie: Movie, palette: Meta['genre_palette']): PlanetAppearance {
+  return resolvePlanetAppearanceWithEmissionProfile(movie, palette, PLANET_VISUAL_DEFAULTS.focus.emission)
+}
+
 /** Genre display order with golden-ratio decay weights. */
 export function planetGenreDisplayWeights(
   genres: string[],
@@ -59,7 +68,11 @@ export function planetGenreDisplayWeights(
   return { genres: list, weights: raw.map((weight) => weight / sum) }
 }
 
-export function resolvePlanetAppearance(movie: Movie, palette: Meta['genre_palette']): PlanetAppearance {
+export function resolvePlanetAppearanceWithEmissionProfile(
+  movie: Movie,
+  palette: Meta['genre_palette'],
+  emissionProfile: FocusEmissionProfile,
+): PlanetAppearance {
   const { genres } = planetGenreDisplayWeights(movie.genres)
   const fallbackHue =
     movie.genre_hue ??
@@ -70,15 +83,15 @@ export function resolvePlanetAppearance(movie: Movie, palette: Meta['genre_palet
     genre === primaryGenreName ? primaryHue : genreHueForGenreName(genre, palette, fallbackHue),
   )
   const { focus } = PLANET_VISUAL_DEFAULTS
-  const { emission } = focus
 
   return {
     genres,
     hues,
     lightness: focus.lightness,
     chroma: focus.chroma,
-    emissionIntensity: focusEmissionIntensityFromVoteAverage(movie.vote_average, emission),
-    emissionCurve: emission,
+    emissionIntensity: focusEmissionIntensityFromProfile(movie.vote_average, emissionProfile),
+    emissionProfile,
+    emissionCurve: PLANET_VISUAL_DEFAULTS.focus.emission,
     keyLightIntensity: PLANET_VISUAL_DEFAULTS.lighting.keyLightIntensity,
     bandCount: genres.length,
     cutCount: Math.max(0, genres.length - 1),

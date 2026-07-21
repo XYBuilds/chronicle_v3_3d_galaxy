@@ -10,10 +10,18 @@ import { lightnessFromVoteAverage } from '@/lib/colorMath'
 
 import {
   FOCUS_EMISSION_MODEL_VERSION,
+  RATING_MIDRANK_CDF_LUT_INTENSITY_MAX,
+  RATING_MIDRANK_CDF_LUT_INTENSITY_MIN,
+  RATING_MIDRANK_CDF_LUT_MODEL_VERSION,
+  RATING_MIDRANK_CDF_LUT_SAMPLE_COUNT,
+  RATING_MIDRANK_CDF_LUT_SAMPLE_STEP,
   focusEmissionIntensityFromVoteAverage,
   validateFocusEmissionCurve,
   type FocusEmissionCurve,
+  type RatingMidrankCdfLutProfile,
 } from './focusEmission'
+import { resolvePlanetAppearance, resolvePlanetAppearanceWithEmissionProfile } from './planetAppearance'
+import type { Movie } from '@/types/galaxy'
 
 const curve: FocusEmissionCurve = {
   modelVersion: FOCUS_EMISSION_MODEL_VERSION,
@@ -21,6 +29,23 @@ const curve: FocusEmissionCurve = {
   ratingHighAnchor: 8.2,
   intensityMin: 0.005,
   intensityMax: 0.65,
+}
+
+const appearanceMovie = {
+  id: 1,
+  genres: ['Drama'],
+  genre_color: [0.2, 0.4, 0.6],
+  vote_average: 5,
+} as Movie
+
+const diagnosticProfile: RatingMidrankCdfLutProfile = {
+  modelVersion: RATING_MIDRANK_CDF_LUT_MODEL_VERSION,
+  ratingMin: 0,
+  ratingMax: 10,
+  sampleStep: RATING_MIDRANK_CDF_LUT_SAMPLE_STEP,
+  samples: Array.from({ length: RATING_MIDRANK_CDF_LUT_SAMPLE_COUNT }, (_, index) => index / 200 * 0.645 + 0.005),
+  intensityMin: RATING_MIDRANK_CDF_LUT_INTENSITY_MIN,
+  intensityMax: RATING_MIDRANK_CDF_LUT_INTENSITY_MAX,
 }
 
 describe('Focus anchored smoothstep emission', () => {
@@ -64,5 +89,23 @@ describe('Focus anchored smoothstep emission', () => {
     expect(focusEmissionIntensityFromVoteAverage).toHaveLength(2)
     expect(focusEmissionIntensityFromVoteAverage(6.5, curve)).toBeTypeOf('number')
     expect(lightnessFromVoteAverage).not.toHaveBeenCalled()
+  })
+})
+
+describe('planet appearance emission profiles', () => {
+  it('keeps the two-argument production resolver on the production curve', () => {
+    expect(resolvePlanetAppearance).toHaveLength(2)
+    expect(resolvePlanetAppearance(appearanceMovie, { Drama: '#336699' }).emissionCurve).toEqual(curve)
+  })
+
+  it('uses a supplied diagnostic profile without calculating distribution statistics', () => {
+    const appearance = resolvePlanetAppearanceWithEmissionProfile(
+      appearanceMovie,
+      { Drama: '#336699' },
+      diagnosticProfile,
+    )
+
+    expect(appearance.emissionProfile).toBe(diagnosticProfile)
+    expect(appearance.emissionIntensity).toBe(diagnosticProfile.samples[100])
   })
 })

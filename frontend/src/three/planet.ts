@@ -10,6 +10,11 @@ import {
   type PlanetAppearance,
 } from './planetAppearance'
 import { computePlanetOuterRadius } from './planetSizing'
+import {
+  remapFocusEmissionIntensity,
+  type FocusEmissionRuntimeTuning,
+  validateFocusEmissionRuntimeTuning,
+} from './focusEmissionTuning'
 import { PLANET_MAX_BANDS, PLANET_VISUAL_DEFAULTS } from './planetVisualDefaults'
 import perlinFragmentShader from './shaders/perlin.frag.glsl'
 import perlinVertexShader from './shaders/perlin.vert.glsl'
@@ -123,8 +128,12 @@ export interface SelectionPlanetHandle {
     palette: Meta['genre_palette'],
     worldRadius: number,
   ) => void
-  /** P8.3 — Recompute CPU noise + quantile thresholds after Leva changes uScale / octaves / persistence / uAreaRatio. */
+  /** Reapplies deterministic CPU noise + quantile thresholds after noise uniform changes. */
   syncCpuNoiseFromUniforms: () => void
+  /** Runtime-only focus emission remap, reapplied to the current and later selected movies. */
+  setFocusEmissionTuning: (tuning: FocusEmissionRuntimeTuning) => void
+  /** Runtime focus L/key overrides, reapplied to the current and later selected movies. */
+  setFocusVisualTuning: (tuning: { lightness: number; keyLightIntensity: number }) => void
   setOpacity: (alpha: number) => void
   dispose: () => void
 }
@@ -224,6 +233,11 @@ export function createSelectionPlanet(): SelectionPlanetHandle {
   mesh.renderOrder = 1
 
   let lastMovie: Movie | null = null
+  let emissionTuning: FocusEmissionRuntimeTuning = validateFocusEmissionRuntimeTuning(defaults.focus.emissionTuning)
+  let focusVisualTuning: { lightness: number; keyLightIntensity: number } = {
+    lightness: defaults.focus.lightness,
+    keyLightIntensity: defaults.lighting.keyLightIntensity,
+  }
 
   const scratchNoise = new Float32Array(vCount)
   const sortedScratch = new Float32Array(vCount)
@@ -312,6 +326,8 @@ export function createSelectionPlanet(): SelectionPlanetHandle {
     lastAppearance: null,
     setFromMovie: () => { },
     syncCpuNoiseFromUniforms: () => { },
+    setFocusEmissionTuning: () => { },
+    setFocusVisualTuning: () => { },
     setOpacity: () => { },
     dispose: () => { },
   }
@@ -346,10 +362,14 @@ export function createSelectionPlanet(): SelectionPlanetHandle {
       hueArr[i] = i < hues.length ? hues[i]! : padHue
     }
 
-    u.uPerlinL.value = lightness
+    u.uPerlinL.value = focusVisualTuning.lightness
     u.uPerlinChroma.value = chroma
-    u.uEmissionIntensity.value = emissionIntensity
-    u.uKeyLightIntensity.value = keyLightIntensity
+    u.uEmissionIntensity.value = remapFocusEmissionIntensity(
+      emissionIntensity,
+      appearance.emissionProfile,
+      emissionTuning,
+    )
+    u.uKeyLightIntensity.value = focusVisualTuning.keyLightIntensity
     u.uBandCount.value = bandCount
     u.uCutCount.value = cutCount
 
@@ -372,6 +392,27 @@ export function createSelectionPlanet(): SelectionPlanetHandle {
     recomputeNoiseAndThresholds(lastMovie.id)
   }
 
+  const setFocusEmissionTuning = (next: FocusEmissionRuntimeTuning): void => {
+    emissionTuning = validateFocusEmissionRuntimeTuning(next)
+    if (handle.lastAppearance === null) return
+    material.uniforms.uEmissionIntensity.value = remapFocusEmissionIntensity(
+      handle.lastAppearance.emissionIntensity,
+      handle.lastAppearance.emissionProfile,
+      emissionTuning,
+    )
+  }
+
+  const setFocusVisualTuning = (next: { lightness: number; keyLightIntensity: number }): void => {
+    const lightness = next.lightness
+    const keyLightIntensity = next.keyLightIntensity
+    if (!Number.isFinite(lightness) || !Number.isFinite(keyLightIntensity)) {
+      throw new Error('[Planet] runtime focus lightness and key light intensity must be finite')
+    }
+    focusVisualTuning = { lightness, keyLightIntensity }
+    material.uniforms.uPerlinL.value = lightness
+    material.uniforms.uKeyLightIntensity.value = keyLightIntensity
+  }
+
   const setOpacity = (alpha: number) => {
     const a = THREE.MathUtils.clamp(alpha, 0, 1)
     material.uniforms.uAlpha.value = a > 0.001 ? 1 : 0
@@ -385,6 +426,8 @@ export function createSelectionPlanet(): SelectionPlanetHandle {
 
   handle.setFromMovie = setFromMovie
   handle.syncCpuNoiseFromUniforms = syncCpuNoiseFromUniforms
+  handle.setFocusEmissionTuning = setFocusEmissionTuning
+  handle.setFocusVisualTuning = setFocusVisualTuning
   handle.setOpacity = setOpacity
   handle.dispose = dispose
   return handle

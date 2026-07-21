@@ -44,6 +44,8 @@ import {
   parseP3911CheckpointCStrengthRequest,
 } from './p3911CheckpointCStrengthDiagnostics'
 import { planetNoiseSeed } from '@/three/planetAppearance'
+import { focusEmissionIntensityFromProfile } from '@/three/focusEmission'
+import { remapFocusEmissionIntensity } from '@/three/focusEmissionTuning'
 import { PLANET_VISUAL_DEFAULTS } from '@/three/planetVisualDefaults'
 import type { GalaxyData, Movie } from '@/types/galaxy'
 
@@ -211,7 +213,15 @@ describe('planet export request and sizing', () => {
     })
 
     expect(snapshots.map((snapshot) => snapshot.rating)).toEqual([0, 4, 5, 10])
-    expect(snapshots.map((snapshot) => snapshot.emission)).toEqual([0.005, 0.01762619655133185, 0.07283763468820595, 0.65])
+    expect(snapshots.map((snapshot) => snapshot.emission)).toEqual([0, 4, 5, 10].map((rating) =>
+      remapFocusEmissionIntensity(
+        focusEmissionIntensityFromProfile(rating, PLANET_VISUAL_DEFAULTS.focus.emission),
+        PLANET_VISUAL_DEFAULTS.focus.emission,
+        PLANET_VISUAL_DEFAULTS.focus.emissionTuning,
+      ),
+    ))
+    expect(snapshots[0]!.emission).toBe(0.005)
+    expect(snapshots[3]!.emission).toBe(0.66)
     expect(snapshots[2]!.emission).toBeGreaterThan(snapshots[1]!.emission)
     for (const snapshot of snapshots) {
       expect(snapshot.emission_curve).toEqual({

@@ -12,6 +12,7 @@ import {
   resolvePlanetAppearance,
 } from './planetAppearance'
 import { focusEmissionIntensityFromProfile } from './focusEmission'
+import { remapFocusEmissionIntensity } from './focusEmissionTuning'
 import { PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE } from './productionFocusEmissionProfile'
 import {
   computeActiveShellWorldRadius,
@@ -71,7 +72,7 @@ const palette: Meta['genre_palette'] = {
 describe('planet visual defaults', () => {
   it('serializes the versioned Focus visual configuration for metadata hashing', () => {
     expect(PLANET_VISUAL_DEFAULTS).toEqual({
-      schemaVersion: 9,
+      schemaVersion: 10,
       geometry: { detail: 8 },
       activeShell: { sizeScale: 0.5, activeSizeMultiplier: 0.012 },
       noise: { scale: 2.35, octaves: 4, persistence: 0.52 },
@@ -92,12 +93,13 @@ describe('planet visual defaults', () => {
         lightness: 0.66,
         chroma: 0.15,
         emission: PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE,
+        emissionTuning: { exponent: 3, intensityMin: 0.005, intensityMax: 0.66 },
         bloom: {
           composition: 'pure-bloom-delta-v1',
           enabled: true,
-          strength: 0.01,
+          strength: 1,
           radius: 1,
-          threshold: 0,
+          threshold: 10,
         },
       },
       galaxyColor: {
@@ -111,8 +113,8 @@ describe('planet visual defaults', () => {
       lighting: {
         enabled: true,
         direction: [0.700665949127905, 0.4003805423588029, 0.5905612999792342],
-        keyLightIntensity: 0.45,
-        flatShadingMix: 0.8,
+        keyLightIntensity: 10,
+        flatShadingMix: 1,
       },
       material: {
         alpha: 0,
@@ -186,7 +188,13 @@ describe('planet appearance', () => {
       expect(handle.material.uniforms.uCutCount.value).toBe(2)
       expect(handle.material.uniforms.uPerlinL.value).toBe(PLANET_VISUAL_DEFAULTS.focus.lightness)
       expect(handle.material.uniforms.uPerlinChroma.value).toBe(PLANET_VISUAL_DEFAULTS.focus.chroma)
-      expect(handle.material.uniforms.uEmissionIntensity.value).toBe(focusEmissionIntensityFromProfile(movie.vote_average, PLANET_VISUAL_DEFAULTS.focus.emission))
+      expect(handle.material.uniforms.uEmissionIntensity.value).toBe(
+        remapFocusEmissionIntensity(
+          focusEmissionIntensityFromProfile(movie.vote_average, PLANET_VISUAL_DEFAULTS.focus.emission),
+          PLANET_VISUAL_DEFAULTS.focus.emission,
+          PLANET_VISUAL_DEFAULTS.focus.emissionTuning,
+        ),
+      )
       expect(handle.material.uniforms.uKeyLightIntensity.value).toBe(PLANET_VISUAL_DEFAULTS.lighting.keyLightIntensity)
       expect(handle.material.uniforms).not.toHaveProperty('uAmbient')
       expect(handle.material.uniforms).not.toHaveProperty('uDiffuse')
@@ -223,12 +231,18 @@ describe('planet appearance', () => {
 
       expect(uniforms.map(({ lightness }) => lightness)).toEqual(Array(7).fill(0.66))
       expect(uniforms.map(({ chroma }) => chroma)).toEqual(Array(7).fill(0.15))
-      expect(uniforms.map(({ key }) => key)).toEqual(Array(7).fill(0.45))
+      expect(uniforms.map(({ key }) => key)).toEqual(Array(7).fill(10))
       expect(uniforms.map(({ direction }) => direction)).toEqual(Array(7).fill(PLANET_VISUAL_DEFAULTS.lighting.direction))
-      expect(uniforms.map(({ flat }) => flat)).toEqual(Array(7).fill(0.8))
+      expect(uniforms.map(({ flat }) => flat)).toEqual(Array(7).fill(1))
       const ratings = [4, 4.5, 5.5, 6.5, 7.5, 8.2, 9.5]
       const emissions = uniforms.map(({ emission }) => emission)
-      expect(emissions).toEqual(ratings.map((rating) => focusEmissionIntensityFromProfile(rating, PLANET_VISUAL_DEFAULTS.focus.emission)))
+      expect(emissions).toEqual(ratings.map((rating) =>
+        remapFocusEmissionIntensity(
+          focusEmissionIntensityFromProfile(rating, PLANET_VISUAL_DEFAULTS.focus.emission),
+          PLANET_VISUAL_DEFAULTS.focus.emission,
+          PLANET_VISUAL_DEFAULTS.focus.emissionTuning,
+        ),
+      ))
       emissions.slice(1).forEach((value, index) => expect(value).toBeGreaterThan(emissions[index]!))
     } finally {
       handle.dispose()

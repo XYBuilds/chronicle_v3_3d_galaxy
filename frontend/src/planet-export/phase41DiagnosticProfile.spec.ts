@@ -55,6 +55,15 @@ describe('Phase 41 diagnostic profile', () => {
     expect(PLANET_VISUAL_DEFAULTS.focus.emission).toMatchObject({
       modelVersion: 'rating-midrank-cdf-lut-v1', ratingMin: 0, ratingMax: 10, sampleStep: 0.05, intensityMin: 0.005, intensityMax: 0.65,
     })
+    expect(PLANET_VISUAL_DEFAULTS.focus.emissionTuning).toEqual({ exponent: 3, intensityMin: 0.005, intensityMax: 0.66 })
+    expect(PLANET_VISUAL_DEFAULTS.focus.lightness).toBe(0.66)
+    expect(PLANET_VISUAL_DEFAULTS.lighting).toMatchObject({
+      keyLightIntensity: 10,
+      flatShadingMix: 1,
+      direction: [0.700665949127905, 0.4003805423588029, 0.5905612999792342],
+    })
+    expect(PLANET_VISUAL_DEFAULTS.focus.bloom).toMatchObject({ strength: 1, radius: 1, threshold: 10 })
+    expect(production.flatShadingMix).toBe(PLANET_VISUAL_DEFAULTS.lighting.flatShadingMix)
     expect(PLANET_VISUAL_DEFAULTS.focus.emission.samples).toHaveLength(201)
     expect(production.curve).toEqual(PLANET_VISUAL_DEFAULTS.focus.emission)
     expect(production.overrideProvenance).toBe('none')

@@ -9,8 +9,6 @@ export const P3911_CHECKPOINT_C_THRESHOLD = {
   ratings: [0, 4, 5, 10] as const,
   thresholdCandidates: [0, 0.05, 0.1] as const,
   bloom: { enabled: true, strength: 0.005, radius: 1 },
-  production: { keyLightIntensity: 0.45, emissionExponent: 2, intensityMin: 0.06, intensityMax: 0.6 },
-  productionBloom: { enabled: true, strength: 0.01, radius: 1, threshold: 0 },
 } as const
 
 export type P3911CheckpointCThresholdRequest = PlanetExportRequest & { bloomThreshold: number }
@@ -47,17 +45,17 @@ export function assertP3911CheckpointCThresholdProductionContract(): void {
   const bloom = PERLIN_BLOOM_DEFAULTS
   const expected = P3911_CHECKPOINT_C_THRESHOLD
   const historicalBloom = p3911CheckpointCThresholdBloomParams(0)
+  const productionBloom = PLANET_VISUAL_DEFAULTS.focus.bloom
   if (
     historicalBloom.enabled !== expected.bloom.enabled
     || historicalBloom.strength !== expected.bloom.strength
     || historicalBloom.radius !== expected.bloom.radius
     || historicalBloom.threshold !== 0
-    || PLANET_VISUAL_DEFAULTS.lighting.keyLightIntensity !== expected.production.keyLightIntensity
-    || bloom.enabled !== expected.productionBloom.enabled
-    || bloom.strength !== expected.productionBloom.strength
-    || bloom.radius !== expected.productionBloom.radius
-    || bloom.threshold !== expected.productionBloom.threshold
-  ) throw new Error('[P39.11 diagnostics] Checkpoint C1 requires its historical fixed Bloom value and the selected production Bloom defaults')
+    || bloom.enabled !== productionBloom.enabled
+    || bloom.strength !== productionBloom.strength
+    || bloom.radius !== productionBloom.radius
+    || bloom.threshold !== productionBloom.threshold
+  ) throw new Error('[P39.11 diagnostics] Checkpoint C1 historical Bloom or production Bloom contract is invalid')
 }
 
 export function p3911CheckpointCThresholdBloomParams(threshold: number): PerlinBloomParams {

@@ -17,7 +17,7 @@ export const PERLIN_LIGHTING_ENABLED_DEFAULT = true
  * Keep vectors as tuples so the same object can be hashed into render metadata.
  */
 export const PLANET_VISUAL_DEFAULTS = {
-  schemaVersion: 9,
+  schemaVersion: 10,
   geometry: {
     detail: 8,
   },
@@ -49,12 +49,18 @@ export const PLANET_VISUAL_DEFAULTS = {
     lightness: 0.66,
     chroma: 0.15,
     emission: PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE,
+    /** Final rating-response shaping applied after the immutable production CDF/LUT. */
+    emissionTuning: {
+      exponent: 3,
+      intensityMin: 0.005,
+      intensityMax: 0.66,
+    },
     bloom: {
       composition: 'pure-bloom-delta-v1',
       enabled: true,
-      strength: 0.01,
-      radius: 1.0,
-      threshold: 0,
+      strength: 1,
+      radius: 1,
+      threshold: 10,
     },
   },
   galaxyColor: {
@@ -68,8 +74,8 @@ export const PLANET_VISUAL_DEFAULTS = {
   lighting: {
     enabled: PERLIN_LIGHTING_ENABLED_DEFAULT,
     direction: [0.700665949127905, 0.4003805423588029, 0.5905612999792342] as const,
-    keyLightIntensity: 0.45,
-    flatShadingMix: 0.8,
+    keyLightIntensity: 10,
+    flatShadingMix: 1,
   },
   material: {
     alpha: 0,

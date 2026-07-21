@@ -8,7 +8,6 @@ import { validatePerlinBloomParams, type PerlinBloomParams } from '@/three/perli
 import { PLANET_VISUAL_DEFAULTS, planetVisualConfigHashInput, productionPlanetBloomParams } from '@/three/planetVisualDefaults'
 
 export const PHASE41_DIAGNOSTIC_MARKER = 'phase41-visual-diagnostic-v1' as const
-export const PHASE41_FIXED_FLAT_SHADING_MIX = 0.8 as const
 
 export type Phase41EmissionCurve = FocusEmissionProfile
 
@@ -27,7 +26,7 @@ export type ResolvedPhase41VisualProfile = {
   chroma: number
   keyLightIntensity: number
   direction: [number, number, number]
-  flatShadingMix: typeof PHASE41_FIXED_FLAT_SHADING_MIX
+  flatShadingMix: typeof PLANET_VISUAL_DEFAULTS.lighting.flatShadingMix
   bloom: PerlinBloomParams
   productionSource: 'PLANET_VISUAL_DEFAULTS'
   productionVisualConfigInput: string
@@ -154,9 +153,6 @@ export function resolvePhase41VisualProfile(
   if (parsed?.bloom !== undefined && parsed.bloom.enabled !== bloomEnabled) {
     throw new Error('[Phase41 diagnostic] override Bloom state must match the request')
   }
-  if (PLANET_VISUAL_DEFAULTS.lighting.flatShadingMix !== PHASE41_FIXED_FLAT_SHADING_MIX) {
-    throw new Error('[Phase41 diagnostic] production flatShadingMix must remain fixed at 0.8')
-  }
   const bloom = parsed?.bloom ?? validatePerlinBloomParams(productionPlanetBloomParams(bloomEnabled))
   const productionVisualConfigInput = planetVisualConfigHashInput(bloom.enabled)
   const profile = {
@@ -165,7 +161,7 @@ export function resolvePhase41VisualProfile(
     chroma: PLANET_VISUAL_DEFAULTS.focus.chroma,
     keyLightIntensity: parsed?.keyLightIntensity ?? PLANET_VISUAL_DEFAULTS.lighting.keyLightIntensity,
     direction: vector(parsed?.direction ?? PLANET_VISUAL_DEFAULTS.lighting.direction, 'resolved direction'),
-    flatShadingMix: PHASE41_FIXED_FLAT_SHADING_MIX,
+    flatShadingMix: PLANET_VISUAL_DEFAULTS.lighting.flatShadingMix,
     bloom,
     productionSource: 'PLANET_VISUAL_DEFAULTS' as const,
     productionVisualConfigInput,

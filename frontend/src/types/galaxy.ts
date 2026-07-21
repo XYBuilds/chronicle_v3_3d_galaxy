@@ -102,3 +102,22 @@ export interface GalaxyData {
   meta: Meta
   movies: Movie[]
 }
+
+/** Minimal immutable provenance referenced by manifests and diagnostics; the LUT itself is never HUD state. */
+export interface FocusEmissionProfileProvenance {
+  profile_id: string
+  period: string
+  model_version: string
+  curve_sha256: string
+  source_data_version: string
+  source_movie_count: number
+}
+
+/**
+ * The active resource is a pointer to a previously validated immutable profile artifact.
+ * `legacy-fallback` is explicit: callers must surface it instead of treating it as a monthly profile.
+ */
+export interface ActiveFocusEmissionProfilePointer extends FocusEmissionProfileProvenance {
+  status: 'active' | 'legacy-fallback'
+  activated_at: string
+}

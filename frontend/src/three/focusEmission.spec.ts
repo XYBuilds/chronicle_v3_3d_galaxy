@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto'
+
 import { describe, expect, it } from 'vitest'
 
 import {
@@ -6,11 +8,18 @@ import {
   RATING_MIDRANK_CDF_LUT_MODEL_VERSION,
   RATING_MIDRANK_CDF_LUT_SAMPLE_COUNT,
   RATING_MIDRANK_CDF_LUT_SAMPLE_STEP,
+  createActiveFocusEmissionProfilePointer,
+  decideFocusEmissionActivation,
+  parseProductionRatingEmissionProfile,
+  profileCurveHashInput,
+  serializeProductionRatingEmissionProfile,
+  validateProductionRatingEmissionProfileHash,
   emissionIntensityFromValidatedRatingMidrankCdfLut,
   generateRatingMidrankCdfLutProfile,
   midrankCdfForSortedFinalRenderRatings,
   validateRatingMidrankCdfLutProfile,
   type RatingMidrankCdfLutProfile,
+  type ProductionRatingEmissionProfile,
 } from './focusEmission'
 
 function linearProfile(): RatingMidrankCdfLutProfile {
@@ -110,5 +119,68 @@ describe('rating midrank CDF LUT', () => {
     expect(() => generateRatingMidrankCdfLutProfile([])).toThrow(/must not be empty/)
     expect(() => generateRatingMidrankCdfLutProfile([6, 4])).toThrow(/must be sorted/)
     expect(() => generateRatingMidrankCdfLutProfile([4, 10.1])).toThrow(/within \[0, 10\]/)
+  })
+})
+
+function sha256(input: string): string {
+  return createHash('sha256').update(input).digest('hex')
+}
+
+function productionProfile(overrides: Partial<ProductionRatingEmissionProfile> = {}): ProductionRatingEmissionProfile {
+  const base = {
+    schema_version: 'rating-emission-profile-v1',
+    profile_id: 'rating-emission-2026-07-a',
+    period: '2026-07',
+    model_version: RATING_MIDRANK_CDF_LUT_MODEL_VERSION,
+    method: 'midrank-cdf-linear-lut-v1',
+    rating_domain: { min: 0, max: 10 },
+    sample_step: RATING_MIDRANK_CDF_LUT_SAMPLE_STEP,
+    samples: linearProfile().samples,
+    emission_endpoints: { min: RATING_MIDRANK_CDF_LUT_INTENSITY_MIN, max: RATING_MIDRANK_CDF_LUT_INTENSITY_MAX },
+    source_data_version: '2026.07.22.monthly.1',
+    source_data_sha256: 'a'.repeat(64),
+    source_movie_count: 61531,
+    source_threshold_version: 'dynamic-vote-count-v1',
+    curve_sha256: '0'.repeat(64),
+    generated_at: '2026-07-22T00:00:00.000Z',
+    git_commit: '0123456789abcdef',
+  } as ProductionRatingEmissionProfile
+  const candidate = { ...base, ...overrides }
+  return { ...candidate, curve_sha256: sha256(profileCurveHashInput(candidate)) }
+}
+
+describe('production rating-emission profile contract', () => {
+  it('parses, validates its curve hash, and serializes canonically', () => {
+    const profile = productionProfile()
+    const parsed = parseProductionRatingEmissionProfile(JSON.parse(JSON.stringify(profile)))
+
+    expect(validateProductionRatingEmissionProfileHash(parsed, sha256)).toEqual(parsed)
+    expect(serializeProductionRatingEmissionProfile(parsed)).toBe(serializeProductionRatingEmissionProfile({ ...parsed, samples: [...parsed.samples] }))
+    expect(serializeProductionRatingEmissionProfile(parsed)).toContain('"samples"')
+    expect(parsed.samples).toHaveLength(201)
+  })
+
+  it.each([
+    { samples: productionProfile().samples.slice(1) },
+    { rating_domain: { min: 0, max: 9 } },
+    { emission_endpoints: { min: 0, max: 0.65 } },
+    { samples: productionProfile().samples.map((sample, index) => index === 100 ? Number.NaN : sample) },
+    { samples: productionProfile().samples.map((sample, index) => index === 100 ? 0.1 : sample) },
+  ])('fails closed for malformed production profile %#', (overrides) => {
+    expect(() => parseProductionRatingEmissionProfile({ ...productionProfile(), ...overrides })).toThrow()
+  })
+
+  it('rejects a curve hash mismatch before a profile can become active', () => {
+    const profile = productionProfile()
+    expect(() => validateProductionRatingEmissionProfileHash({ ...profile, curve_sha256: 'b'.repeat(64) }, sha256)).toThrow(/curve_sha256/)
+    expect(() => createActiveFocusEmissionProfilePointer({ ...profile, curve_sha256: 'b'.repeat(64) }, '2026-07-22T01:00:00.000Z', sha256)).toThrow(/curve_sha256/)
+  })
+
+  it('freezes same-month ordinary candidates but allows explicit force activation', () => {
+    const active = productionProfile()
+    const candidate = productionProfile({ profile_id: 'rating-emission-2026-07-b' })
+
+    expect(decideFocusEmissionActivation(active, candidate)).toMatchObject({ activeProfileId: active.profile_id, activated: false, reason: 'same-period-frozen' })
+    expect(decideFocusEmissionActivation(active, candidate, true)).toMatchObject({ activeProfileId: candidate.profile_id, activated: true, reason: 'force-activation' })
   })
 })

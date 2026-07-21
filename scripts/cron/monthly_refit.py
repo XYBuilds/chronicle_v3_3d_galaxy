@@ -148,6 +148,23 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     p.add_argument("--dry-run", action="store_true", help="No Supabase writes / no export subprocess")
     p.add_argument("--skip-export", action="store_true", help="Do not run export_from_supabase.py after refit")
+    p.add_argument(
+        "--skip-emission-profile",
+        action="store_true",
+        help="Do not generate the p42.2 candidate rating-emission profile after final export validation",
+    )
+    p.add_argument(
+        "--emission-profile-output-dir",
+        type=Path,
+        default=_REPO_ROOT / "data" / "output" / "monthly_profiles",
+        help="Versioned p42.2 candidate profile artifact directory (never an active-pointer path)",
+    )
+    p.add_argument(
+        "--previous-active-emission-profile",
+        type=Path,
+        default=None,
+        help="Optional validated prior active profile JSON used only to write drift evidence",
+    )
     return p.parse_args(argv)
 
 
@@ -871,6 +888,38 @@ def main(argv: list[str] | None = None) -> int:
                 }
                 _write_monthly_meta(meta_val)
                 raise SystemExit(val.returncode)
+
+            if not args.skip_emission_profile:
+                profile_py = _SCRIPTS_DIR / "cron" / "monthly_profile_generator.py"
+                profile_cmd = [
+                    sys.executable,
+                    str(profile_py),
+                    "--input",
+                    str(_REPO_ROOT / "frontend" / "public" / "data" / "galaxy_data.json"),
+                    "--output-dir",
+                    str(args.emission_profile_output_dir.expanduser().resolve()),
+                    "--source-threshold-version",
+                    ver_label,
+                ]
+                if args.previous_active_emission_profile is not None:
+                    profile_cmd.extend(
+                        ["--previous-active-profile", str(args.previous_active_emission_profile.expanduser().resolve())]
+                    )
+                profile_run = subprocess.run(
+                    profile_cmd,
+                    cwd=str(_REPO_ROOT),
+                    env={**os.environ, "PYTHONUNBUFFERED": "1"},
+                )
+                if profile_run.returncode != 0:
+                    _write_monthly_meta(
+                        {
+                            **kv_obs,
+                            **drift_reports,
+                            "status": "aborted_emission_profile",
+                            "threshold_version": ver_label,
+                        }
+                    )
+                    raise SystemExit(profile_run.returncode)
 
         meta_ok = {
             **kv_obs,

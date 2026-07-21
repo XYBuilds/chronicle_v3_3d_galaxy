@@ -98,6 +98,24 @@ describe('planet appearance emission profiles', () => {
     expect(resolvePlanetAppearance(appearanceMovie, { Drama: '#336699' }).emissionCurve).toEqual(curve)
   })
 
+  it('changes only emission intensity across diagnostic ratings', () => {
+    const low = resolvePlanetAppearanceWithEmissionProfile(
+      { ...appearanceMovie, vote_average: 4.5 },
+      { Drama: '#336699' },
+      diagnosticProfile,
+    )
+    const high = resolvePlanetAppearanceWithEmissionProfile(
+      { ...appearanceMovie, vote_average: 7.5 },
+      { Drama: '#336699' },
+      diagnosticProfile,
+    )
+    const { emissionIntensity: lowEmission, ...lowStatic } = low
+    const { emissionIntensity: highEmission, ...highStatic } = high
+
+    expect(highEmission).toBeGreaterThan(lowEmission)
+    expect(highStatic).toEqual(lowStatic)
+  })
+
   it('uses a supplied diagnostic profile without calculating distribution statistics', () => {
     const appearance = resolvePlanetAppearanceWithEmissionProfile(
       appearanceMovie,

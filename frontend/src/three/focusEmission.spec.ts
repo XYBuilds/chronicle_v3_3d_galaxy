@@ -45,6 +45,30 @@ describe('rating midrank CDF LUT', () => {
     profile.samples.slice(1).forEach((sample, index) => expect(sample).toBeGreaterThanOrEqual(profile.samples[index]!))
   })
 
+  it('is byte-stable for the same sorted ratings and preserves monotonic finite samples', () => {
+    const ratings = [4, 5.5, 6, 6, 6.5, 7, 8.5]
+    const first = generateRatingMidrankCdfLutProfile(ratings)
+    const second = generateRatingMidrankCdfLutProfile(ratings)
+
+    expect(JSON.stringify(first)).toBe(JSON.stringify(second))
+    expect(first.samples.every(Number.isFinite)).toBe(true)
+    first.samples.slice(1).forEach((sample, index) => expect(sample).toBeGreaterThanOrEqual(first.samples[index]!))
+  })
+
+  it('keeps duplicate-rating midranks below the raw cumulative jump', () => {
+    const ratings = [4, 6, 6, 6, 8]
+
+    expect(midrankCdfForSortedFinalRenderRatings(6, ratings)).toBe(0.5)
+    expect(midrankCdfForSortedFinalRenderRatings(6, ratings)).not.toBe(4 / ratings.length)
+  })
+
+  it('rejects non-finite profile fields as well as non-finite samples', () => {
+    const profile = linearProfile()
+
+    expect(() => validateRatingMidrankCdfLutProfile({ ...profile, ratingMin: NaN })).toThrow()
+    expect(() => validateRatingMidrankCdfLutProfile({ ...profile, intensityMax: Infinity })).toThrow()
+  })
+
   it('returns deterministic exact sample values for grid-node ratings', () => {
     const profile = validateRatingMidrankCdfLutProfile(linearProfile())
 

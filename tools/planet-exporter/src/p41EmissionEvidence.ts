@@ -1,8 +1,15 @@
+import { createHash } from 'node:crypto'
+
 import {
   FOCUS_EMISSION_MODEL_VERSION,
+  RATING_MIDRANK_CDF_LUT_MODEL_VERSION,
+  RATING_MIDRANK_CDF_LUT_SAMPLE_COUNT,
+  RATING_MIDRANK_CDF_LUT_SAMPLE_STEP,
   focusEmissionIntensityFromVoteAverage,
   validateFocusEmissionCurve,
+  validateRatingMidrankCdfLutProfile,
   type FocusEmissionCurve,
+  type RatingMidrankCdfLutProfile,
 } from '../../../frontend/src/three/focusEmission.js'
 import { PLANET_VISUAL_DEFAULTS } from '../../../frontend/src/three/planetVisualDefaults.js'
 
@@ -38,13 +45,14 @@ export const P41_EMISSION_HISTORICAL_BASELINE_CANDIDATE = {
 } as const
 
 /**
- * Metadata boundary for the next diagnostic-only candidate. 41.5.1 deliberately declares no
- * midrank/CDF/LUT generator, evaluator, runtime lookup, production default, or schema change.
+ * Diagnostic-only candidate metadata. Its LUT contract is validated in 41.5.3;
+ * rendering and human evidence remain deferred to 41.5.4 and 41.5.5.
  */
 export const P41_EMISSION_MIDRANK_CDF_LUT_DIAGNOSTIC_CANDIDATE = {
-  candidateId: 'rating-midrank-cdf-lut-v1',
-  status: 'declared-not-implemented',
+  candidateId: RATING_MIDRANK_CDF_LUT_MODEL_VERSION,
+  status: 'contract-ready',
   scope: 'diagnostic-only',
+  curveModelVersion: RATING_MIDRANK_CDF_LUT_MODEL_VERSION,
   input: P41_EMISSION_AUTHORITATIVE_DATA,
   ratingMin: 0,
   ratingMax: 10,
@@ -54,8 +62,8 @@ export const P41_EMISSION_MIDRANK_CDF_LUT_DIAGNOSTIC_CANDIDATE = {
     samples: 'authoritative movies only',
   },
   lut: {
-    sampleStep: 0.05,
-    sampleCount: 201,
+    sampleStep: RATING_MIDRANK_CDF_LUT_SAMPLE_STEP,
+    sampleCount: RATING_MIDRANK_CDF_LUT_SAMPLE_COUNT,
     interpolation: 'linear',
   },
   intensityMin: 0.005,
@@ -119,6 +127,107 @@ function equal(left: unknown, right: unknown): boolean {
   return JSON.stringify(left) === JSON.stringify(right)
 }
 
+type StableJson = null | boolean | number | string | readonly StableJson[] | { readonly [key: string]: StableJson }
+
+function stableJson(value: unknown): string {
+  if (value === null) return 'null'
+  if (typeof value === 'string' || typeof value === 'boolean') return JSON.stringify(value)
+  if (typeof value === 'number') {
+    assert(Number.isFinite(value), 'manifest values must be finite')
+    return JSON.stringify(value)
+  }
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`
+  assert(typeof value === 'object', 'manifest values must be JSON-compatible')
+  const record = value as Record<string, unknown>
+  return `{${Object.keys(record).sort().map((key) => `${JSON.stringify(key)}:${stableJson(record[key])}`).join(',')}}`
+}
+
+function sha256(value: StableJson): string {
+  return createHash('sha256').update(stableJson(value)).digest('hex')
+}
+
+export type P41MidrankCdfLutEvidenceManifest = {
+  schemaVersion: 'p41.5-midrank-cdf-lut-evidence-v1'
+  candidateId: typeof RATING_MIDRANK_CDF_LUT_MODEL_VERSION
+  authoritativeData: typeof P41_EMISSION_AUTHORITATIVE_DATA
+  movieCount: number
+  gitCommit: string
+  curve: RatingMidrankCdfLutProfile
+  fixedProfile: typeof P41_EMISSION_FIXED_PROFILE
+  allowedVariationFields: typeof P41_EMISSION_ALLOWED_VARIATION_FIELDS
+  hashes: {
+    authoritativeDataSha256: string
+    curveSha256: string
+    fixedProfileSha256: string
+  }
+}
+
+export function createP41MidrankCdfLutEvidenceManifest(
+  profile: RatingMidrankCdfLutProfile,
+  gitCommit: string,
+): P41MidrankCdfLutEvidenceManifest {
+  assert(/^[a-f0-9]{7,40}$/i.test(gitCommit), 'Git commit must be a 7..40 character hexadecimal revision')
+  const curve = validateRatingMidrankCdfLutProfile(profile)
+  const fixedProfile = JSON.parse(JSON.stringify(P41_EMISSION_FIXED_PROFILE)) as typeof P41_EMISSION_FIXED_PROFILE
+  const authoritativeData = { ...P41_EMISSION_AUTHORITATIVE_DATA }
+  return {
+    schemaVersion: 'p41.5-midrank-cdf-lut-evidence-v1',
+    candidateId: RATING_MIDRANK_CDF_LUT_MODEL_VERSION,
+    authoritativeData,
+    movieCount: authoritativeData.movieCount,
+    gitCommit,
+    curve,
+    fixedProfile,
+    allowedVariationFields: [...P41_EMISSION_ALLOWED_VARIATION_FIELDS],
+    hashes: {
+      authoritativeDataSha256: sha256(authoritativeData),
+      curveSha256: sha256(curve),
+      fixedProfileSha256: sha256(fixedProfile),
+    },
+  }
+}
+
+export function serializeP41MidrankCdfLutEvidenceManifest(
+  manifest: P41MidrankCdfLutEvidenceManifest,
+): string {
+  assertP41MidrankCdfLutEvidenceManifest(manifest)
+  return `${stableJson(manifest)}\n`
+}
+
+export function assertP41MidrankCdfLutEvidenceManifest(manifest: P41MidrankCdfLutEvidenceManifest): void {
+  assert(manifest.schemaVersion === 'p41.5-midrank-cdf-lut-evidence-v1', 'manifest schema version drifted')
+  assert(manifest.candidateId === RATING_MIDRANK_CDF_LUT_MODEL_VERSION, 'manifest candidate model drifted')
+  assert(equal(manifest.authoritativeData, P41_EMISSION_AUTHORITATIVE_DATA), 'manifest authoritative data drifted')
+  assert(manifest.movieCount === P41_EMISSION_AUTHORITATIVE_DATA.movieCount, 'manifest movie count drifted')
+  assert(/^[a-f0-9]{7,40}$/i.test(manifest.gitCommit), 'manifest Git commit must be a 7..40 character hexadecimal revision')
+  assert(equal(manifest.allowedVariationFields, P41_EMISSION_ALLOWED_VARIATION_FIELDS), 'manifest allowed variations drifted')
+  assertP41EmissionFixedProfile(manifest.fixedProfile)
+  const curve = validateRatingMidrankCdfLutProfile(manifest.curve)
+  assert(curve.modelVersion === RATING_MIDRANK_CDF_LUT_MODEL_VERSION, 'manifest curve model drifted')
+  assert(curve.sampleStep === RATING_MIDRANK_CDF_LUT_SAMPLE_STEP, 'manifest LUT step drifted')
+  assert(manifest.hashes.authoritativeDataSha256 === sha256(manifest.authoritativeData), 'manifest authoritative data hash drifted')
+  assert(manifest.hashes.curveSha256 === sha256(curve), 'manifest curve hash drifted')
+  assert(manifest.hashes.fixedProfileSha256 === sha256(manifest.fixedProfile), 'manifest fixed profile hash drifted')
+}
+
+export function assertP41EmissionFixedProfile(profile: typeof P41_EMISSION_FIXED_PROFILE): void {
+  assert(equal(profile, P41_EMISSION_FIXED_PROFILE), 'fixed visual profile drifted')
+  assert(profile.bloom.enabled === false, 'P41.5 evidence must render with Bloom OFF')
+}
+
+export function assertP41EmissionRatingOnlyVariation(
+  baseline: Record<string, unknown>,
+  candidate: Record<string, unknown>,
+): void {
+  assert('rating' in baseline && 'emission' in baseline, 'baseline row must declare rating and emission')
+  assert('rating' in candidate && 'emission' in candidate, 'candidate row must declare rating and emission')
+  const fields = new Set([...Object.keys(baseline), ...Object.keys(candidate)])
+  for (const field of fields) {
+    if ((P41_EMISSION_ALLOWED_VARIATION_FIELDS as readonly string[]).includes(field)) continue
+    assert(equal(baseline[field], candidate[field]), `undeclared variation in ${field}`)
+  }
+}
+
 export function assertP41EmissionEvidenceContract(): void {
   assert(equal(PHASE41_CONTROLLED_RATINGS, [4.0, 4.5, 5.5, 6.5, 7.5, 8.2, 9.5]), 'controlled rating columns drifted')
   assert(P41_EMISSION_FIXTURE_ROWS.length === new Set(P41_EMISSION_FIXTURE_ROWS).size, 'fixture rows must be unique')
@@ -130,8 +239,9 @@ export function assertP41EmissionEvidenceContract(): void {
   assert(P41_EMISSION_HISTORICAL_BASELINE_CANDIDATE.status === 'candidate-no-go', 'anchored smoothstep must remain the candidate-no-go history')
   assert(P41_EMISSION_HISTORICAL_BASELINE_CANDIDATE.modelVersion === FOCUS_EMISSION_MODEL_VERSION, 'historical baseline model drifted')
   assert(P41_EMISSION_HISTORICAL_BASELINE_CANDIDATE.evidenceDirectory === P41_EMISSION_EVIDENCE_RELATIVE_DIRECTORY, 'historical baseline evidence directory drifted')
-  assert(P41_EMISSION_MIDRANK_CDF_LUT_DIAGNOSTIC_CANDIDATE.status === 'declared-not-implemented', 'CDF/LUT candidate must not be implemented in 41.5.1')
+  assert(P41_EMISSION_MIDRANK_CDF_LUT_DIAGNOSTIC_CANDIDATE.status === 'contract-ready', 'CDF/LUT candidate contract must be ready')
   assert(P41_EMISSION_MIDRANK_CDF_LUT_DIAGNOSTIC_CANDIDATE.scope === 'diagnostic-only', 'CDF/LUT candidate must remain diagnostic-only')
+  assert(P41_EMISSION_MIDRANK_CDF_LUT_DIAGNOSTIC_CANDIDATE.curveModelVersion === RATING_MIDRANK_CDF_LUT_MODEL_VERSION, 'CDF/LUT candidate model drifted')
   assert(P41_EMISSION_MIDRANK_CDF_LUT_DIAGNOSTIC_CANDIDATE.ratingMin === 0 && P41_EMISSION_MIDRANK_CDF_LUT_DIAGNOSTIC_CANDIDATE.ratingMax === 10, 'CDF/LUT rating domain must remain 0..10')
   assert(P41_EMISSION_MIDRANK_CDF_LUT_DIAGNOSTIC_CANDIDATE.lut.sampleStep === 0.05 && P41_EMISSION_MIDRANK_CDF_LUT_DIAGNOSTIC_CANDIDATE.lut.sampleCount === 201, 'CDF/LUT grid must remain 201 samples at 0.05')
   assert(P41_EMISSION_MIDRANK_CDF_LUT_DIAGNOSTIC_CANDIDATE.intensityMin === 0.005 && P41_EMISSION_MIDRANK_CDF_LUT_DIAGNOSTIC_CANDIDATE.intensityMax === 0.65, 'CDF/LUT intensity range must remain 0.005/0.65')

@@ -10,7 +10,7 @@ todos:
     status: complete
   - id: p41.5.3-contract-and-tests
     content: 41.5.3 [tests+contract] 增加 CDF/LUT 自动测试、不变量和可复现证据契约
-    status: pending
+    status: complete
   - id: p41.5.4-bloom-off-evidence
     content: 41.5.4 [evidence] 生成密集 rating 区间的 Bloom OFF contact sheet 与完整 sidecar 证据
     status: pending

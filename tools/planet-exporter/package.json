@@ -18,6 +18,7 @@
     "evidence:p41.4": "tsx scripts/generate-p41-fixed-shaping-evidence.ts",
     "evidence:p41.5": "tsx scripts/generate-p41-emission-evidence.ts",
     "evidence:p41.5:cdf-lut": "tsx scripts/generate-p41-midrank-cdf-lut-evidence.ts",
+    "evidence:p41.6": "tsx scripts/generate-p416-bloom-integration-evidence.ts",
     "contact-sheet": "tsx scripts/generate-contact-sheet.ts"
   },
   "dependencies": {

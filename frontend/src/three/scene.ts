@@ -24,7 +24,7 @@ import { createGalaxyDualMeshes } from './galaxyMeshes'
 import { computeIdleMacroFadesBlendForPhase, IDLE_NEAR_FADE_DEFAULTS } from './idleNearFade'
 import { IDLE_Z_FADE_DEFAULTS } from './idleZFade'
 import { createPerlinSelectiveBloom, type PerlinBloomDebugControls } from './perlinSelectiveBloom'
-import { focusEmissionIntensityFromVoteAverage } from './planetAppearance'
+import { focusEmissionIntensityFromVoteAverage, validateFocusEmissionCurve, type FocusEmissionCurve } from './focusEmission'
 import { PLANET_VISUAL_DEFAULTS } from './planetVisualDefaults'
 import {
   applyIdleNearFadeDefaults,
@@ -174,8 +174,10 @@ interface SdrRuntimeTuningDebug {
 
 /** Dev console: `window.__focusAppearance` — runtime-only Focus emission/key/Bloom tuning. */
 interface FocusAppearanceDebug {
-  /** Runtime override of the vote-average power exponent; must be finite and > 0. */
-  exponent: number
+  /** Runtime lower rating anchor; must remain below ratingHighAnchor. */
+  ratingLowAnchor: number
+  /** Runtime upper rating anchor; must remain above ratingLowAnchor. */
+  ratingHighAnchor: number
   /** Runtime Emission lower endpoint; must be finite, non-negative and <= intensityMax. */
   intensityMin: number
   /** Runtime Emission upper endpoint; must be finite, non-negative and >= intensityMin. */
@@ -653,17 +655,13 @@ export function mountGalaxyScene(
   }
 
   const focusRuntime: {
-    exponent: number
-    intensityMin: number
-    intensityMax: number
+    curve: FocusEmissionCurve
     lightness: number
     keyLightIntensity: number
     direction: [number, number, number]
     flatShadingMix: number
   } = {
-    exponent: PLANET_VISUAL_DEFAULTS.focus.emission.exponent,
-    intensityMin: PLANET_VISUAL_DEFAULTS.focus.emission.intensityMin,
-    intensityMax: PLANET_VISUAL_DEFAULTS.focus.emission.intensityMax,
+    curve: validateFocusEmissionCurve(PLANET_VISUAL_DEFAULTS.focus.emission),
     lightness: PLANET_VISUAL_DEFAULTS.focus.lightness,
     keyLightIntensity: PLANET_VISUAL_DEFAULTS.lighting.keyLightIntensity,
     direction: [...PLANET_VISUAL_DEFAULTS.lighting.direction],
@@ -678,12 +676,7 @@ export function mountGalaxyScene(
   const applyFocusAppearanceRuntime = (): void => {
     const movie = activeFocusMovie()
     if (!movie) return
-    const emissionIntensity = focusEmissionIntensityFromVoteAverage(
-      movie.vote_average,
-      focusRuntime.intensityMin,
-      focusRuntime.intensityMax,
-      focusRuntime.exponent,
-    )
+    const emissionIntensity = focusEmissionIntensityFromVoteAverage(movie.vote_average, focusRuntime.curve)
     const uniforms = planet.material.uniforms
     uniforms.uPerlinL.value = focusRuntime.lightness
     uniforms.uEmissionIntensity.value = emissionIntensity
@@ -696,14 +689,12 @@ export function mountGalaxyScene(
         ...planet.lastAppearance,
         lightness: focusRuntime.lightness,
         emissionIntensity,
-        emissionExponent: focusRuntime.exponent,
-        emissionIntensityMin: focusRuntime.intensityMin,
-        emissionIntensityMax: focusRuntime.intensityMax,
+        emissionCurve: focusRuntime.curve,
         keyLightIntensity: focusRuntime.keyLightIntensity,
       }
     }
     console.log(
-      `[FocusAppearance] movie=${movie.id} rating=${movie.vote_average.toFixed(3)} emission=${emissionIntensity.toFixed(4)} exponent=${focusRuntime.exponent} endpoints=${focusRuntime.intensityMin}…${focusRuntime.intensityMax} lightness=${focusRuntime.lightness} key=${focusRuntime.keyLightIntensity} direction=(${focusRuntime.direction.join(',')}) flatMix=${focusRuntime.flatShadingMix}`,
+      `[FocusAppearance] movie=${movie.id} rating=${movie.vote_average.toFixed(3)} emission=${emissionIntensity.toFixed(4)} anchors=${focusRuntime.curve.ratingLowAnchor}…${focusRuntime.curve.ratingHighAnchor} endpoints=${focusRuntime.curve.intensityMin}…${focusRuntime.curve.intensityMax} lightness=${focusRuntime.lightness} key=${focusRuntime.keyLightIntensity} direction=(${focusRuntime.direction.join(',')}) flatMix=${focusRuntime.flatShadingMix}`,
     )
   }
 
@@ -897,29 +888,28 @@ export function mountGalaxyScene(
   perlinBloom.debug.log()
 
   const focusAppearanceDebug: FocusAppearanceDebug = {
-    get exponent() { return focusRuntime.exponent },
-    set exponent(value: number) {
-      setFiniteFocusRuntime('exponent', value)
-      if (value <= 0) throw new Error(`[FocusAppearance] exponent must be > 0; received ${value}`)
-      focusRuntime.exponent = value
+    get ratingLowAnchor() { return focusRuntime.curve.ratingLowAnchor },
+    set ratingLowAnchor(value: number) {
+      setFiniteFocusRuntime('ratingLowAnchor', value)
+      focusRuntime.curve = validateFocusEmissionCurve({ ...focusRuntime.curve, ratingLowAnchor: value })
       applyFocusAppearanceRuntime()
     },
-    get intensityMin() { return focusRuntime.intensityMin },
+    get ratingHighAnchor() { return focusRuntime.curve.ratingHighAnchor },
+    set ratingHighAnchor(value: number) {
+      setFiniteFocusRuntime('ratingHighAnchor', value)
+      focusRuntime.curve = validateFocusEmissionCurve({ ...focusRuntime.curve, ratingHighAnchor: value })
+      applyFocusAppearanceRuntime()
+    },
+    get intensityMin() { return focusRuntime.curve.intensityMin },
     set intensityMin(value: number) {
       setFiniteFocusRuntime('intensityMin', value)
-      if (value < 0 || value > focusRuntime.intensityMax) {
-        throw new Error(`[FocusAppearance] intensityMin must be in [0, intensityMax]; received ${value}`)
-      }
-      focusRuntime.intensityMin = value
+      focusRuntime.curve = validateFocusEmissionCurve({ ...focusRuntime.curve, intensityMin: value })
       applyFocusAppearanceRuntime()
     },
-    get intensityMax() { return focusRuntime.intensityMax },
+    get intensityMax() { return focusRuntime.curve.intensityMax },
     set intensityMax(value: number) {
       setFiniteFocusRuntime('intensityMax', value)
-      if (value < focusRuntime.intensityMin) {
-        throw new Error(`[FocusAppearance] intensityMax must be >= intensityMin; received ${value}`)
-      }
-      focusRuntime.intensityMax = value
+      focusRuntime.curve = validateFocusEmissionCurve({ ...focusRuntime.curve, intensityMax: value })
       applyFocusAppearanceRuntime()
     },
     get lightness() { return focusRuntime.lightness },
@@ -951,9 +941,7 @@ export function mountGalaxyScene(
     get bloom() { return perlinBloom.debug },
     reset() {
       Object.assign(focusRuntime, {
-        exponent: PLANET_VISUAL_DEFAULTS.focus.emission.exponent,
-        intensityMin: PLANET_VISUAL_DEFAULTS.focus.emission.intensityMin,
-        intensityMax: PLANET_VISUAL_DEFAULTS.focus.emission.intensityMax,
+        curve: validateFocusEmissionCurve(PLANET_VISUAL_DEFAULTS.focus.emission),
         lightness: PLANET_VISUAL_DEFAULTS.focus.lightness,
         keyLightIntensity: PLANET_VISUAL_DEFAULTS.lighting.keyLightIntensity,
         direction: [...PLANET_VISUAL_DEFAULTS.lighting.direction],
@@ -967,7 +955,7 @@ export function mountGalaxyScene(
       const movie = activeFocusMovie()
       const emission = planet.material.uniforms.uEmissionIntensity.value as number
       console.log(
-        `[FocusAppearance] movie=${movie?.id ?? 'none'} rating=${movie?.vote_average.toFixed(3) ?? 'n/a'} emission=${emission.toFixed(4)} | exponent=${focusRuntime.exponent} min=${focusRuntime.intensityMin} max=${focusRuntime.intensityMax} lightness=${focusRuntime.lightness} key=${focusRuntime.keyLightIntensity} direction=(${focusRuntime.direction.join(',')}) flatMix=${focusRuntime.flatShadingMix} | bloom strength=${perlinBloom.debug.strength} radius=${perlinBloom.debug.radius} threshold=${perlinBloom.debug.threshold}`,
+        `[FocusAppearance] movie=${movie?.id ?? 'none'} rating=${movie?.vote_average.toFixed(3) ?? 'n/a'} emission=${emission.toFixed(4)} | anchors=${focusRuntime.curve.ratingLowAnchor}…${focusRuntime.curve.ratingHighAnchor} min=${focusRuntime.curve.intensityMin} max=${focusRuntime.curve.intensityMax} lightness=${focusRuntime.lightness} key=${focusRuntime.keyLightIntensity} direction=(${focusRuntime.direction.join(',')}) flatMix=${focusRuntime.flatShadingMix} | bloom strength=${perlinBloom.debug.strength} radius=${perlinBloom.debug.radius} threshold=${perlinBloom.debug.threshold}`,
       )
     },
   }

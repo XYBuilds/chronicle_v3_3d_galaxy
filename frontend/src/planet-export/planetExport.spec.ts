@@ -101,7 +101,7 @@ describe('planet export request and sizing', () => {
     const production = JSON.stringify(PLANET_VISUAL_DEFAULTS)
     const hashes = P3911_CHECKPOINT_B.emissionExponentCandidates.map((exponent) => p3911CheckpointBVisualConfigInput(production, exponent))
     expect(new Set(hashes).size).toBe(3)
-    expect(PLANET_VISUAL_DEFAULTS.focus.emission.exponent).toBe(2)
+    expect(PLANET_VISUAL_DEFAULTS.focus.emission.modelVersion).toBe('vote-average-anchored-smoothstep-v1')
   })
 
   it('keeps C1 threshold overrides at a strict Bloom-ON-only offline boundary', () => {
@@ -211,14 +211,15 @@ describe('planet export request and sizing', () => {
     })
 
     expect(snapshots.map((snapshot) => snapshot.rating)).toEqual([0, 4, 5, 10])
-    expect(snapshots[0]!.emission).toBeCloseTo(0.06, 12)
-    expect(snapshots[1]!.emission).toBeCloseTo(0.1464, 12)
-    expect(snapshots[2]!.emission).toBeCloseTo(0.195, 12)
-    expect(snapshots[3]!.emission).toBeCloseTo(0.6, 12)
+    expect(snapshots[0]!.emission).toBeCloseTo(0.005, 12)
+    expect(snapshots[3]!.emission).toBeCloseTo(0.65, 12)
+    expect(snapshots[1]!.emission).toBe(0.005)
+    expect(snapshots[2]!.emission).toBeGreaterThan(snapshots[1]!.emission)
     for (const snapshot of snapshots) {
       expect(snapshot.emission_curve).toEqual({
         model_version: PLANET_VISUAL_DEFAULTS.focus.emission.modelVersion,
-        exponent: PLANET_VISUAL_DEFAULTS.focus.emission.exponent,
+        rating_low_anchor: PLANET_VISUAL_DEFAULTS.focus.emission.ratingLowAnchor,
+        rating_high_anchor: PLANET_VISUAL_DEFAULTS.focus.emission.ratingHighAnchor,
         intensity_min: PLANET_VISUAL_DEFAULTS.focus.emission.intensityMin,
         intensity_max: PLANET_VISUAL_DEFAULTS.focus.emission.intensityMax,
       })

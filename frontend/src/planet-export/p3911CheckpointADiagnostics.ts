@@ -1,6 +1,5 @@
 import * as THREE from 'three'
 
-import { PLANET_VISUAL_DEFAULTS } from '@/three/planetVisualDefaults'
 import {
   capturePlanetRenderDiagnostics,
   positionExportCamera,
@@ -55,10 +54,10 @@ export function assertP3911CheckpointAKeyLightIntensity(value: number): void {
   }
 }
 
+/** Historical P39 evidence keeps its own curve; it no longer constrains production emission. */
 export function assertP3911CheckpointAEmissionContract(): void {
-  const emission = PLANET_VISUAL_DEFAULTS.focus.emission
-  if (emission.intensityMin !== P3911_CHECKPOINT_A.emission.intensityMin || emission.intensityMax !== P3911_CHECKPOINT_A.emission.intensityMax) {
-    throw new Error('[P39.11 diagnostics] Checkpoint A requires historical 0.06–0.60 emission endpoints')
+  if (P3911_CHECKPOINT_A.emission.intensityMin > P3911_CHECKPOINT_A.emission.intensityMax) {
+    throw new Error('[P39.11 diagnostics] Checkpoint A historical emission endpoints are inverted')
   }
 }
 

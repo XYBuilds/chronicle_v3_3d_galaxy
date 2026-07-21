@@ -7,7 +7,7 @@ import { planetExportVisualConfigInput } from './visualConfig'
 
 type MutableVisualConfig = {
   schemaVersion: number
-  focus: { emission: { modelVersion: string; exponent: number; intensityMax: number } }
+  focus: { emission: { modelVersion: string; ratingLowAnchor: number; ratingHighAnchor: number; intensityMax: number } }
   lighting: { keyLightIntensity: number }
   color: { pipelineVersion: string }
 }
@@ -53,9 +53,9 @@ describe('planet export visual configuration', () => {
     emissionChanged.focus.emission.intensityMax = 0.61
     expect(sha256(planetExportVisualConfigInput(JSON.stringify(emissionChanged), 3))).not.toBe(sha256(currentPageConfig))
 
-    const exponentChanged = parsePlanetVisualConfig(currentPlanetConfig)
-    exponentChanged.focus.emission.exponent = 3
-    expect(sha256(planetExportVisualConfigInput(JSON.stringify(exponentChanged), 3))).not.toBe(sha256(currentPageConfig))
+    const anchorChanged = parsePlanetVisualConfig(currentPlanetConfig)
+    anchorChanged.focus.emission.ratingHighAnchor = 8.5
+    expect(sha256(planetExportVisualConfigInput(JSON.stringify(anchorChanged), 3))).not.toBe(sha256(currentPageConfig))
 
     const modelChanged = parsePlanetVisualConfig(currentPlanetConfig)
     modelChanged.focus.emission.modelVersion = 'vote-average-power-clamped-v2'

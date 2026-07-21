@@ -44,7 +44,6 @@ export function parseP3911CheckpointCThresholdRequest(search: string): P3911Chec
 }
 
 export function assertP3911CheckpointCThresholdProductionContract(): void {
-  const emission = PLANET_VISUAL_DEFAULTS.focus.emission
   const bloom = PERLIN_BLOOM_DEFAULTS
   const expected = P3911_CHECKPOINT_C_THRESHOLD
   const historicalBloom = p3911CheckpointCThresholdBloomParams(0)
@@ -54,9 +53,6 @@ export function assertP3911CheckpointCThresholdProductionContract(): void {
     || historicalBloom.radius !== expected.bloom.radius
     || historicalBloom.threshold !== 0
     || PLANET_VISUAL_DEFAULTS.lighting.keyLightIntensity !== expected.production.keyLightIntensity
-    || emission.exponent !== expected.production.emissionExponent
-    || emission.intensityMin !== expected.production.intensityMin
-    || emission.intensityMax !== expected.production.intensityMax
     || bloom.enabled !== expected.productionBloom.enabled
     || bloom.strength !== expected.productionBloom.strength
     || bloom.radius !== expected.productionBloom.radius

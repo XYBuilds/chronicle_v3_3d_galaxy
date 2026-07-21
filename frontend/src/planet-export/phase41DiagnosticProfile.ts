@@ -1,23 +1,15 @@
+import {
+  focusEmissionIntensityFromVoteAverage,
+  validateFocusEmissionCurve,
+  type FocusEmissionCurve,
+} from '@/three/focusEmission'
 import { PERLIN_BLOOM_DEFAULTS, validatePerlinBloomParams, type PerlinBloomParams } from '@/three/perlinBloomContract'
 import { PLANET_VISUAL_DEFAULTS, planetVisualConfigHashInput } from '@/three/planetVisualDefaults'
 
 export const PHASE41_DIAGNOSTIC_MARKER = 'phase41-visual-diagnostic-v1' as const
 export const PHASE41_FIXED_FLAT_SHADING_MIX = 0.8 as const
 
-export type Phase41EmissionCurve =
-  | {
-    modelVersion: 'vote-average-power-clamped-v1'
-    exponent: number
-    intensityMin: number
-    intensityMax: number
-  }
-  | {
-    modelVersion: 'vote-average-anchored-smoothstep-v1'
-    ratingLowAnchor: number
-    ratingHighAnchor: number
-    intensityMin: number
-    intensityMax: number
-  }
+export type Phase41EmissionCurve = FocusEmissionCurve
 
 export type Phase41DiagnosticOverride = {
   diagnostic_only: typeof PHASE41_DIAGNOSTIC_MARKER
@@ -84,28 +76,21 @@ function vector(value: unknown, label: string): [number, number, number] {
 
 function curve(value: unknown, label: string): Phase41EmissionCurve {
   const record = object(value, label)
-  if (record.modelVersion === 'vote-average-power-clamped-v1') {
-    exactKeys(record, new Set(['modelVersion', 'exponent', 'intensityMin', 'intensityMax']), label)
-    const exponent = finite(record.exponent, `${label}.exponent`)
-    const intensityMin = nonNegative(record.intensityMin, `${label}.intensityMin`)
-    const intensityMax = nonNegative(record.intensityMax, `${label}.intensityMax`)
-    if (exponent <= 0) throw new Error(`[Phase41 diagnostic] ${label}.exponent must be > 0`)
-    if (intensityMin > intensityMax) throw new Error(`[Phase41 diagnostic] ${label}.intensityMin must be <= intensityMax`)
-    return { modelVersion: 'vote-average-power-clamped-v1', exponent, intensityMin, intensityMax }
+  exactKeys(record, new Set(['modelVersion', 'ratingLowAnchor', 'ratingHighAnchor', 'intensityMin', 'intensityMax']), label)
+  if (record.modelVersion !== 'vote-average-anchored-smoothstep-v1') {
+    throw new Error(`[Phase41 diagnostic] ${label}.modelVersion must equal vote-average-anchored-smoothstep-v1`)
   }
-  if (record.modelVersion === 'vote-average-anchored-smoothstep-v1') {
-    exactKeys(record, new Set(['modelVersion', 'ratingLowAnchor', 'ratingHighAnchor', 'intensityMin', 'intensityMax']), label)
-    const ratingLowAnchor = finite(record.ratingLowAnchor, `${label}.ratingLowAnchor`)
-    const ratingHighAnchor = finite(record.ratingHighAnchor, `${label}.ratingHighAnchor`)
-    const intensityMin = nonNegative(record.intensityMin, `${label}.intensityMin`)
-    const intensityMax = nonNegative(record.intensityMax, `${label}.intensityMax`)
-    if (ratingLowAnchor < 0 || ratingHighAnchor > 10 || ratingLowAnchor >= ratingHighAnchor) {
-      throw new Error(`[Phase41 diagnostic] ${label} requires 0 <= ratingLowAnchor < ratingHighAnchor <= 10`)
-    }
-    if (intensityMin > intensityMax) throw new Error(`[Phase41 diagnostic] ${label}.intensityMin must be <= intensityMax`)
-    return { modelVersion: 'vote-average-anchored-smoothstep-v1', ratingLowAnchor, ratingHighAnchor, intensityMin, intensityMax }
+  try {
+    return validateFocusEmissionCurve({
+      modelVersion: record.modelVersion,
+      ratingLowAnchor: finite(record.ratingLowAnchor, `${label}.ratingLowAnchor`),
+      ratingHighAnchor: finite(record.ratingHighAnchor, `${label}.ratingHighAnchor`),
+      intensityMin: nonNegative(record.intensityMin, `${label}.intensityMin`),
+      intensityMax: nonNegative(record.intensityMax, `${label}.intensityMax`),
+    })
+  } catch (error) {
+    throw new Error(`[Phase41 diagnostic] ${label} is invalid: ${error instanceof Error ? error.message : String(error)}`)
   }
-  throw new Error(`[Phase41 diagnostic] ${label}.modelVersion is invalid`)
 }
 
 function bloom(value: unknown): PerlinBloomParams {
@@ -121,13 +106,7 @@ function bloom(value: unknown): PerlinBloomParams {
 }
 
 function productionCurve(): Phase41EmissionCurve {
-  const emission = PLANET_VISUAL_DEFAULTS.focus.emission
-  return curve({
-    modelVersion: emission.modelVersion,
-    exponent: emission.exponent,
-    intensityMin: emission.intensityMin,
-    intensityMax: emission.intensityMax,
-  }, 'PLANET_VISUAL_DEFAULTS.focus.emission')
+  return curve(PLANET_VISUAL_DEFAULTS.focus.emission, 'PLANET_VISUAL_DEFAULTS.focus.emission')
 }
 
 export function parsePhase41DiagnosticOverride(value: unknown): Phase41DiagnosticOverride {
@@ -173,13 +152,11 @@ export function resolvePhase41VisualProfile(override?: Phase41DiagnosticOverride
 }
 
 export function phase41EmissionForRating(rating: number, emission: Phase41EmissionCurve): number {
-  const value = finite(rating, 'rating')
-  if (emission.modelVersion === 'vote-average-power-clamped-v1') {
-    const t = Math.min(10, Math.max(0, value)) / 10
-    return emission.intensityMin + Math.pow(t, emission.exponent) * (emission.intensityMax - emission.intensityMin)
+  try {
+    return focusEmissionIntensityFromVoteAverage(rating, emission)
+  } catch (error) {
+    throw new Error(`[Phase41 diagnostic] ${error instanceof Error ? error.message : String(error)}`)
   }
-  const t = Math.min(1, Math.max(0, (value - emission.ratingLowAnchor) / (emission.ratingHighAnchor - emission.ratingLowAnchor)))
-  return emission.intensityMin + (t * t * (3 - 2 * t)) * (emission.intensityMax - emission.intensityMin)
 }
 
 export function toPhase41RenderOverride(profile: ResolvedPhase41VisualProfile): Phase41RenderOverride {

@@ -8,11 +8,11 @@ import {
   validatePerlinBloomParams,
   withCameraLayer,
 } from '@/three/perlinBloomContract'
+import { focusEmissionIntensityFromVoteAverage } from '@/three/focusEmission'
 import { createSelectionPlanet, type SelectionPlanetHandle } from '@/three/planet'
 import { planetNoiseSeed } from '@/three/planetAppearance'
 import {
   PHASE41_DIAGNOSTIC_MARKER,
-  phase41EmissionForRating,
   type Phase41EmissionCurve,
   type Phase41RenderOverride,
 } from './phase41DiagnosticProfile'
@@ -138,14 +138,6 @@ function quaternionTuple(quaternion: THREE.Quaternion, label: string): [number, 
 }
 
 function diagnosticsEmissionCurve(curve: Phase41EmissionCurve): PlanetRenderDiagnostics['emission_curve'] {
-  if (curve.modelVersion === 'vote-average-power-clamped-v1') {
-    return {
-      model_version: curve.modelVersion,
-      exponent: serializableNumber(curve.exponent, 'emission exponent'),
-      intensity_min: serializableNumber(curve.intensityMin, 'emission minimum'),
-      intensity_max: serializableNumber(curve.intensityMax, 'emission maximum'),
-    }
-  }
   return {
     model_version: curve.modelVersion,
     rating_low_anchor: serializableNumber(curve.ratingLowAnchor, 'emission low anchor'),
@@ -235,12 +227,7 @@ export function capturePlanetRenderDiagnostics(
     size_root: options.sizeRoot,
     padding: serializableNumber(options.padding, 'padding'),
     emission: serializableNumber(uniforms.uEmissionIntensity.value as number, 'emission'),
-    emission_curve: diagnosticsEmissionCurve(options.emissionCurveOverride ?? {
-      modelVersion: appearance.emissionModelVersion,
-      exponent: appearance.emissionExponent,
-      intensityMin: appearance.emissionIntensityMin,
-      intensityMax: appearance.emissionIntensityMax,
-    }),
+    emission_curve: diagnosticsEmissionCurve(options.emissionCurveOverride ?? appearance.emissionCurve),
     fixed_lightness: serializableNumber(uniforms.uPerlinL.value as number, 'lightness'),
     fixed_chroma: serializableNumber(uniforms.uPerlinChroma.value as number, 'chroma'),
     bloom: {
@@ -336,7 +323,7 @@ export function positionExportCamera(camera: THREE.OrthographicCamera, halfExten
 }
 
 function applyPhase41DiagnosticOverride(planet: SelectionPlanetHandle, movie: Movie, override: Phase41RenderOverride): void {
-  planet.material.uniforms.uEmissionIntensity.value = phase41EmissionForRating(movie.vote_average, override.curve)
+  planet.material.uniforms.uEmissionIntensity.value = focusEmissionIntensityFromVoteAverage(movie.vote_average, override.curve)
   planet.material.uniforms.uPerlinL.value = override.lightness
   planet.material.uniforms.uKeyLightIntensity.value = override.keyLightIntensity
   ;(planet.material.uniforms.uLightDir.value as THREE.Vector3).set(...override.direction).normalize()

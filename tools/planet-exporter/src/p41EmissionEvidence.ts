@@ -6,9 +6,70 @@ import {
 } from '../../../frontend/src/three/focusEmission.js'
 import { PLANET_VISUAL_DEFAULTS } from '../../../frontend/src/three/planetVisualDefaults.js'
 
-import { PHASE41_CONTROLLED_RATINGS } from './phase41Baseline.js'
+import { PHASE41_CONTROLLED_RATINGS, AUTHORITATIVE_GZIP_RELATIVE_PATH } from './phase41Baseline.js'
 
 export const P41_EMISSION_EVIDENCE_RELATIVE_DIRECTORY = 'data/runs/phase41/p41.5-emission-curve-bloom-off' as const
+
+/**
+ * Frozen source for both P41.5 candidates. The diagnostic candidate must read movies from
+ * this exact gzip only; it is not a production data or schema contract.
+ */
+export const P41_EMISSION_AUTHORITATIVE_DATA = {
+  relativePath: AUTHORITATIVE_GZIP_RELATIVE_PATH,
+  sha256: 'eb15d597479f4f46792c440ae6478ddade9ba1bd95cc623d0dd135e680c60cad',
+  dataVersion: '2026.07.18.daily.113',
+  movieCount: 61531,
+} as const
+
+/** The only matrix fields permitted to differ between emission candidates. */
+export const P41_EMISSION_ALLOWED_VARIATION_FIELDS = ['rating', 'emission'] as const
+
+/**
+ * Preserved, candidate-no-go historical baseline. Its existing evidence directory is read-only:
+ * do not regenerate into it while evaluating the CDF/LUT diagnostic candidate.
+ */
+export const P41_EMISSION_HISTORICAL_BASELINE_CANDIDATE = {
+  candidateId: 'anchored-smoothstep-historical-baseline',
+  status: 'candidate-no-go',
+  modelVersion: FOCUS_EMISSION_MODEL_VERSION,
+  evidenceDirectory: P41_EMISSION_EVIDENCE_RELATIVE_DIRECTORY,
+  input: P41_EMISSION_AUTHORITATIVE_DATA,
+  allowedVariationFields: P41_EMISSION_ALLOWED_VARIATION_FIELDS,
+} as const
+
+/**
+ * Metadata boundary for the next diagnostic-only candidate. 41.5.1 deliberately declares no
+ * midrank/CDF/LUT generator, evaluator, runtime lookup, production default, or schema change.
+ */
+export const P41_EMISSION_MIDRANK_CDF_LUT_DIAGNOSTIC_CANDIDATE = {
+  candidateId: 'rating-midrank-cdf-lut-v1',
+  status: 'declared-not-implemented',
+  scope: 'diagnostic-only',
+  input: P41_EMISSION_AUTHORITATIVE_DATA,
+  ratingMin: 0,
+  ratingMax: 10,
+  percentile: {
+    method: 'midrank',
+    formula: '(count(< rating) + 0.5 * count(= rating)) / N',
+    samples: 'authoritative movies only',
+  },
+  lut: {
+    sampleStep: 0.05,
+    sampleCount: 201,
+    interpolation: 'linear',
+  },
+  intensityMin: 0.005,
+  intensityMax: 0.65,
+  allowedVariationFields: P41_EMISSION_ALLOWED_VARIATION_FIELDS,
+  prohibitedUntilLaterPhase: [
+    'production PLANET_VISUAL_DEFAULTS change',
+    'runtime LUT lookup',
+    'frontend Meta schema change',
+    'shader change',
+    'monthly refit',
+    'ordinary website entry point',
+  ],
+} as const
 
 /** Baseline fixtures selected deterministically from the authoritative gzip in P41.1. */
 export const P41_EMISSION_FIXTURE_ROWS = [
@@ -62,6 +123,21 @@ export function assertP41EmissionEvidenceContract(): void {
   assert(equal(PHASE41_CONTROLLED_RATINGS, [4.0, 4.5, 5.5, 6.5, 7.5, 8.2, 9.5]), 'controlled rating columns drifted')
   assert(P41_EMISSION_FIXTURE_ROWS.length === new Set(P41_EMISSION_FIXTURE_ROWS).size, 'fixture rows must be unique')
   assert(P41_EMISSION_FIXTURE_ROWS.includes('high-rating-low-votes'), 'fixture rows must include the high-rating/low-votes anomaly')
+  assert(P41_EMISSION_AUTHORITATIVE_DATA.relativePath === 'frontend/public/data/galaxy_data.json.gz', 'authoritative gzip path drifted')
+  assert(P41_EMISSION_AUTHORITATIVE_DATA.sha256 === 'eb15d597479f4f46792c440ae6478ddade9ba1bd95cc623d0dd135e680c60cad', 'authoritative gzip hash drifted')
+  assert(P41_EMISSION_AUTHORITATIVE_DATA.dataVersion === '2026.07.18.daily.113', 'authoritative data version drifted')
+  assert(P41_EMISSION_AUTHORITATIVE_DATA.movieCount === 61531, 'authoritative movie count drifted')
+  assert(P41_EMISSION_HISTORICAL_BASELINE_CANDIDATE.status === 'candidate-no-go', 'anchored smoothstep must remain the candidate-no-go history')
+  assert(P41_EMISSION_HISTORICAL_BASELINE_CANDIDATE.modelVersion === FOCUS_EMISSION_MODEL_VERSION, 'historical baseline model drifted')
+  assert(P41_EMISSION_HISTORICAL_BASELINE_CANDIDATE.evidenceDirectory === P41_EMISSION_EVIDENCE_RELATIVE_DIRECTORY, 'historical baseline evidence directory drifted')
+  assert(P41_EMISSION_MIDRANK_CDF_LUT_DIAGNOSTIC_CANDIDATE.status === 'declared-not-implemented', 'CDF/LUT candidate must not be implemented in 41.5.1')
+  assert(P41_EMISSION_MIDRANK_CDF_LUT_DIAGNOSTIC_CANDIDATE.scope === 'diagnostic-only', 'CDF/LUT candidate must remain diagnostic-only')
+  assert(P41_EMISSION_MIDRANK_CDF_LUT_DIAGNOSTIC_CANDIDATE.ratingMin === 0 && P41_EMISSION_MIDRANK_CDF_LUT_DIAGNOSTIC_CANDIDATE.ratingMax === 10, 'CDF/LUT rating domain must remain 0..10')
+  assert(P41_EMISSION_MIDRANK_CDF_LUT_DIAGNOSTIC_CANDIDATE.lut.sampleStep === 0.05 && P41_EMISSION_MIDRANK_CDF_LUT_DIAGNOSTIC_CANDIDATE.lut.sampleCount === 201, 'CDF/LUT grid must remain 201 samples at 0.05')
+  assert(P41_EMISSION_MIDRANK_CDF_LUT_DIAGNOSTIC_CANDIDATE.intensityMin === 0.005 && P41_EMISSION_MIDRANK_CDF_LUT_DIAGNOSTIC_CANDIDATE.intensityMax === 0.65, 'CDF/LUT intensity range must remain 0.005/0.65')
+  assert(equal(P41_EMISSION_HISTORICAL_BASELINE_CANDIDATE.allowedVariationFields, P41_EMISSION_ALLOWED_VARIATION_FIELDS), 'historical allowed variations drifted')
+  assert(equal(P41_EMISSION_MIDRANK_CDF_LUT_DIAGNOSTIC_CANDIDATE.allowedVariationFields, P41_EMISSION_ALLOWED_VARIATION_FIELDS), 'CDF/LUT allowed variations drifted')
+  assert(equal(P41_EMISSION_ALLOWED_VARIATION_FIELDS, ['rating', 'emission']), 'only rating and emission may vary between candidates')
   assert(P41_EMISSION_FIXED_PROFILE.lightness === 0.66, 'P41.4-approved Lightness must remain 0.66')
   assert(P41_EMISSION_FIXED_PROFILE.keyLightIntensity === 0.45, 'P41.4-approved Key must remain 0.45')
   assert(P41_EMISSION_FIXED_PROFILE.flatShadingMix === 0.8, 'P41.4-approved flatShadingMix must remain 0.8')

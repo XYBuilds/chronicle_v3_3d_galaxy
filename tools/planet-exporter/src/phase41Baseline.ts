@@ -3,6 +3,8 @@ import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import { gunzipSync } from 'node:zlib'
 
+import { P41_4_SEMANTIC_FUTURE_ROWS, P41_4_VISIBLE_BAND_CAP } from './p41FixedShaping.js'
+
 export const PHASE41_CONTROLLED_RATINGS = [4.0, 4.5, 5.5, 6.5, 7.5, 8.2, 9.5] as const
 export const PHASE41_EVIDENCE_RELATIVE_DIRECTORY = 'data/runs/phase41/baseline'
 export const AUTHORITATIVE_GZIP_RELATIVE_PATH = 'frontend/public/data/galaxy_data.json.gz'
@@ -245,6 +247,20 @@ function controlledRatingLabel(rating: number): string {
   return rating === 4 ? '4.0' : String(rating)
 }
 
+function semanticFixtureSelection(row: typeof P41_4_SEMANTIC_FUTURE_ROWS[number]): string {
+  return `first authoritative gzip movie with primary genre in ${row.paletteFamily} categorical palette family and ${row.terrainComplexity} (${row.expectedVisibleBandCount} visible bands; cap=${P41_4_VISIBLE_BAND_CAP}); source order is preserved; hue and seed are not selection criteria`
+}
+
+function pickSemanticFutureFixture(source: readonly Phase41Movie[], row: typeof P41_4_SEMANTIC_FUTURE_ROWS[number]): Phase41Movie {
+  const primaryGenres: readonly string[] = row.primaryGenres
+  const selected = source.find((movie) => {
+    const visibleBandCount = Math.min(movie.genres.length, P41_4_VISIBLE_BAND_CAP)
+    return primaryGenres.includes(movie.genres[0]!) && visibleBandCount === row.expectedVisibleBandCount
+  })
+  assert(selected, `no authoritative movie satisfies future semantic row ${row.fixture}`)
+  return selected
+}
+
 /**
  * Picks seven distinct, fully preserved source records. Labels describe the deterministic
  * order rather than subjective quality; each ordering ends with the TMDB id tie-break.
@@ -282,6 +298,46 @@ export function createPhase41Fixtures(galaxy: Phase41Galaxy, sourceSha256: strin
   return { controlled, real }
 }
 
+/** Additive future-only fixture set; avoids altering P41.1's established fixtures. */
+export function createPhase41SemanticFixtures(galaxy: Phase41Galaxy, sourceSha256: string): ReadonlyMap<string, Phase41Fixture> {
+  const source = [...galaxy.movies]
+  const fixtures = new Map(P41_4_SEMANTIC_FUTURE_ROWS.map((row) => [
+    row.fixture,
+    fixtureFromMovie(galaxy, pickSemanticFutureFixture(source, row), sourceSha256, 'real', row.fixture, semanticFixtureSelection(row)),
+  ]))
+  assertPhase41SemanticFixtureCoverage(fixtures)
+  return fixtures
+}
+
+export function assertPhase41SemanticFixtureCoverage(fixtures: ReadonlyMap<string, Phase41Fixture>): void {
+  assert(fixtures.size === P41_4_SEMANTIC_FUTURE_ROWS.length, 'semantic fixture set is incomplete')
+  const families = new Set<string>()
+  const complexities = new Set<number>()
+  const hues: number[] = []
+  for (const row of P41_4_SEMANTIC_FUTURE_ROWS) {
+    const fixture = fixtures.get(row.fixture)
+    assert(fixture, `semantic fixture ${row.fixture} is missing`)
+    const movie = fixture.movies[0]!
+    const primaryGenres: readonly string[] = row.primaryGenres
+    assert(!/hue-(low|high)|seed-(low|high)/.test(row.fixture), `${row.fixture} must not encode hue or seed ordering`)
+    assert(primaryGenres.includes(movie.genres[0]!), `${row.fixture} primary genre is outside its palette family`)
+    assert(Math.min(movie.genres.length, P41_4_VISIBLE_BAND_CAP) === row.expectedVisibleBandCount, `${row.fixture} visible band count drifted`)
+    assert(fixture.phase41_fixture.selection.includes('hue and seed are not selection criteria'), `${row.fixture} selection predicate must reject hue and seed ordering`)
+    families.add(row.paletteFamily)
+    complexities.add(row.expectedVisibleBandCount)
+    hues.push(movie.genre_hue)
+  }
+  assert(families.size >= 3, 'semantic fixture set must cover three palette families')
+  assert(complexities.has(1) && complexities.has(P41_4_VISIBLE_BAND_CAP), 'semantic fixture set must cover single and maximum visible bands')
+  for (let index = 0; index < hues.length; index += 1) {
+    for (let other = index + 1; other < hues.length; other += 1) {
+      const delta = Math.abs(hues[index]! - hues[other]!) % (Math.PI * 2)
+      const circularDistance = Math.min(delta, (Math.PI * 2) - delta)
+      assert(circularDistance > (Math.PI / 18), 'semantic fixture hues must not duplicate across the circular wrap-around boundary')
+    }
+  }
+}
+
 async function writeJsonAtomically(file: string, value: unknown): Promise<void> {
   const directory = path.dirname(file)
   const temporary = path.join(directory, `.${path.basename(file)}.${process.pid}.tmp`)
@@ -308,4 +364,15 @@ export async function writePhase41Baseline(root: string, inputPath?: string): Pr
   }
   await fs.rm(path.join(outputDirectory, 'fixtures', 'controlled-rating-4.json'), { force: true })
   return { summary, outputDirectory }
+}
+
+/** Writes only the additive, semantic rows used by future P41.4 evidence sheets. */
+export async function writePhase41SemanticFixtures(root: string): Promise<{ outputDirectory: string }> {
+  const { galaxy, sourceSha256 } = await loadAuthoritativeGalaxy(root)
+  const fixtures = createPhase41SemanticFixtures(galaxy, sourceSha256)
+  const outputDirectory = path.resolve(root, PHASE41_EVIDENCE_RELATIVE_DIRECTORY, 'fixtures', 'semantic')
+  for (const [label, fixture] of fixtures) {
+    await writeJsonAtomically(path.join(outputDirectory, `real-${label}.json`), fixture)
+  }
+  return { outputDirectory }
 }

@@ -13,7 +13,7 @@ todos:
     status: completed
   - id: p41.4-fixed-shaping-gate
     content: 41.4 · [需人工验收] 在 Bloom OFF 下依次锁定光线方向、Lightness 和 Key
-    status: pending
+    status: completed
   - id: p41.5-emission-curve-gate
     content: 41.5 · [需人工验收] 实现 anchored smoothstep 并收敛 Bloom OFF 评分层级
     status: pending

@@ -16,7 +16,7 @@ export const PERLIN_LIGHTING_ENABLED_DEFAULT = true
  * Keep vectors as tuples so the same object can be hashed into render metadata.
  */
 export const PLANET_VISUAL_DEFAULTS = {
-  schemaVersion: 5,
+  schemaVersion: 6,
   geometry: {
     detail: 8,
   },
@@ -45,7 +45,7 @@ export const PLANET_VISUAL_DEFAULTS = {
   },
   /** Focus-only inputs; the vote-driven emission contract is independent of macro galaxy color. */
   focus: {
-    lightness: 0.55,
+    lightness: 0.66,
     chroma: 0.15,
     emission: {
       modelVersion: 'vote-average-power-clamped-v1',
@@ -64,8 +64,8 @@ export const PLANET_VISUAL_DEFAULTS = {
   },
   lighting: {
     enabled: PERLIN_LIGHTING_ENABLED_DEFAULT,
-    direction: [0.7, 0.7, -0.14] as const,
-    keyLightIntensity: 0.35,
+    direction: [0.700665949127905, 0.4003805423588029, 0.5905612999792342] as const,
+    keyLightIntensity: 0.45,
     flatShadingMix: 0.8,
   },
   material: {

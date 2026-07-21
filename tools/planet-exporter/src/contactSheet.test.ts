@@ -84,7 +84,7 @@ describe('contact sheet', () => {
     expect(second.manifest.output.png_sha256).toBe(createHash('sha256').update(png).digest('hex'))
     expect(second.manifest.normalized_input.cells.every((entry) => !path.isAbsolute(entry.input))).toBe(true)
     expect(second.manifest.sources.every((entry) => !path.isAbsolute(entry.input))).toBe(true)
-    await expect(sharp(png).metadata()).resolves.toMatchObject({ format: 'png', width: 1028, height: 770 })
+    await expect(sharp(png).metadata()).resolves.toMatchObject({ format: 'png', width: 1028, height: 850 })
   })
 
   it.each([

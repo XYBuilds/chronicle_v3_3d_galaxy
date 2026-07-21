@@ -1,0 +1,682 @@
+{
+  "schema_version": "p41.4-fixed-shaping-validation-v1",
+  "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v5-backlight-lightness-066-semantic-fixtures",
+  "checkpoint": "lightness",
+  "human_review_required": false,
+  "production_lock": "locked",
+  "candidate_review": "approved",
+  "approved_candidate": "lightness-0.66",
+  "human_approved_inputs": [
+    {
+      "stage": "direction",
+      "parameter": "direction",
+      "candidate": "backlight-east-v1",
+      "value": [
+        0.700665949127905,
+        0.4003805423588029,
+        0.5905612999792342
+      ],
+      "source": "explicit-cli-human-approved-input",
+      "status": "human-approved-input"
+    }
+  ],
+  "frozen_upstream_baseline_hash": "26a0de598b6ae07f3b30d6406ebe97a1e621a60153ac7e747a3a2f3b10271244",
+  "direction_convention": {
+    "space": "world",
+    "lightVectorMeaning": "frozen approved direction candidate",
+    "backlightZSign": "positive-z",
+    "sideBackConstraint": "positive-z is the user-defined backlight side; downstream checkpoints must not reinterpret candidate coordinates"
+  },
+  "backlight_direction_revision": {
+    "id": "backlight-z-flip-v1",
+    "relation": "replaces-frontlight-candidates",
+    "z_transform": "negated-from-frontlight-candidates",
+    "backlight_z_sign": "positive-z",
+    "replaces_candidate_ids": [
+      "side-back-west",
+      "side-back-east",
+      "side-back-high"
+    ],
+    "invalidated_descendants": [
+      {
+        "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v3-approved-direction-semantic-fixtures",
+        "status": "invalidated-frontlight-descendant",
+        "reason": "records a superseded front-light direction approval"
+      },
+      {
+        "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v3-approved-direction-semantic-fixtures",
+        "status": "invalidated-frontlight-descendant",
+        "reason": "records a superseded front-light direction approval"
+      }
+    ]
+  },
+  "lightness_follow_up": {
+    "id": "lightness-066-follow-up-v1",
+    "relation": "extends-lightness-candidate-review",
+    "new_candidate": "lightness-0.66",
+    "predecessor_evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v4-backlight-semantic-fixtures",
+    "candidate_review": "approved"
+  },
+  "reproduction_command": "npm run evidence:p41.4 -- --checkpoint lightness --direction backlight-east-v1 --approve lightness-0.66",
+  "matrix": {
+    "fixtures": [
+      {
+        "fixture": "semantic-warm-single-band",
+        "palette_family": "warm",
+        "terrain_complexity": "single-visible-band",
+        "expected_visible_band_count": 1
+      },
+      {
+        "fixture": "semantic-cool-single-band",
+        "palette_family": "cool",
+        "terrain_complexity": "single-visible-band",
+        "expected_visible_band_count": 1
+      },
+      {
+        "fixture": "semantic-violet-rose-single-band",
+        "palette_family": "violet-rose",
+        "terrain_complexity": "single-visible-band",
+        "expected_visible_band_count": 1
+      },
+      {
+        "fixture": "semantic-warm-max-visible-bands",
+        "palette_family": "warm",
+        "terrain_complexity": "max-visible-bands",
+        "expected_visible_band_count": 8
+      },
+      {
+        "fixture": "semantic-cool-max-visible-bands",
+        "palette_family": "cool",
+        "terrain_complexity": "max-visible-bands",
+        "expected_visible_band_count": 8
+      }
+    ],
+    "candidates": [
+      {
+        "id": "lightness-0.45",
+        "direction": [
+          0.700665949127905,
+          0.4003805423588029,
+          0.5905612999792342
+        ],
+        "lightness": 0.45,
+        "keyLightIntensity": 0.35
+      },
+      {
+        "id": "lightness-0.50",
+        "direction": [
+          0.700665949127905,
+          0.4003805423588029,
+          0.5905612999792342
+        ],
+        "lightness": 0.5,
+        "keyLightIntensity": 0.35
+      },
+      {
+        "id": "lightness-0.55",
+        "direction": [
+          0.700665949127905,
+          0.4003805423588029,
+          0.5905612999792342
+        ],
+        "lightness": 0.55,
+        "keyLightIntensity": 0.35
+      },
+      {
+        "id": "lightness-0.66",
+        "direction": [
+          0.700665949127905,
+          0.4003805423588029,
+          0.5905612999792342
+        ],
+        "lightness": 0.66,
+        "keyLightIntensity": 0.35
+      }
+    ],
+    "varied_parameter": "lightness",
+    "fixed": {
+      "emission_curve": {
+        "modelVersion": "vote-average-power-clamped-v1",
+        "exponent": 1,
+        "intensityMin": 0.005,
+        "intensityMax": 0.005
+      },
+      "bloom": {
+        "enabled": false,
+        "strength": 0.01,
+        "radius": 1,
+        "threshold": 0
+      },
+      "flat_shading_mix": 0.8
+    }
+  },
+  "assertions": {
+    "complete_matrix": "pass",
+    "single_variable": "pass (lightness only)",
+    "same_fixture_rows": "pass",
+    "low_emission": "pass (0.005 fixed)",
+    "bloom_off": "pass",
+    "flat_shading_mix": "pass (0.8)",
+    "human_approved_inputs": "pass (explicit upstream approval bound into sidecars, manifest, and visual config hash)",
+    "isolated_diagnostic_override": "pass",
+    "production_defaults_unchanged_by_override": "pass (profile records production source and distinct resolved config)"
+  },
+  "cells": [
+    {
+      "fixture": "semantic-warm-single-band",
+      "palette_family": "warm",
+      "palette_family_label": "warm palette family",
+      "terrain_complexity": "single-visible-band",
+      "expected_visible_band_count": 1,
+      "fixture_movie_id": 5,
+      "fixture_title": "Four Rooms",
+      "fixture_hue": 0.9920818906073031,
+      "fixture_primary_genre": "Comedy",
+      "fixture_palette_hex": "#F0954C",
+      "fixture_genres": [
+        "Comedy"
+      ],
+      "fixture_visible_band_count": 1,
+      "fixture_selection_predicate": "first authoritative gzip movie with primary genre in warm categorical palette family and single-visible-band (1 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+      "fixture_seed": 1416710939,
+      "candidate": "lightness-0.45",
+      "png": "cells/semantic-warm-single-band__lightness-0.45.png",
+      "sidecar": "cells/semantic-warm-single-band__lightness-0.45.png.render.json",
+      "png_sha256": "010088df886419ad4b5d2901a1b666059dd492b8c92d020053f7092c78b2fa83",
+      "visual_config_hash": "e43c3188e064c881b666bc6caf55bb5906422cf35c2fecde673404d9f13102c4"
+    },
+    {
+      "fixture": "semantic-warm-single-band",
+      "palette_family": "warm",
+      "palette_family_label": "warm palette family",
+      "terrain_complexity": "single-visible-band",
+      "expected_visible_band_count": 1,
+      "fixture_movie_id": 5,
+      "fixture_title": "Four Rooms",
+      "fixture_hue": 0.9920818906073031,
+      "fixture_primary_genre": "Comedy",
+      "fixture_palette_hex": "#F0954C",
+      "fixture_genres": [
+        "Comedy"
+      ],
+      "fixture_visible_band_count": 1,
+      "fixture_selection_predicate": "first authoritative gzip movie with primary genre in warm categorical palette family and single-visible-band (1 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+      "fixture_seed": 1416710939,
+      "candidate": "lightness-0.50",
+      "png": "cells/semantic-warm-single-band__lightness-0.50.png",
+      "sidecar": "cells/semantic-warm-single-band__lightness-0.50.png.render.json",
+      "png_sha256": "32e1bc280e41dbf01d06784e70512f3839eaedb305228deede7fd9cecd0bbe08",
+      "visual_config_hash": "9d13259dd5a958c91ed6d3be9fce38917d40cc59a06b6384e448a789a2657727"
+    },
+    {
+      "fixture": "semantic-warm-single-band",
+      "palette_family": "warm",
+      "palette_family_label": "warm palette family",
+      "terrain_complexity": "single-visible-band",
+      "expected_visible_band_count": 1,
+      "fixture_movie_id": 5,
+      "fixture_title": "Four Rooms",
+      "fixture_hue": 0.9920818906073031,
+      "fixture_primary_genre": "Comedy",
+      "fixture_palette_hex": "#F0954C",
+      "fixture_genres": [
+        "Comedy"
+      ],
+      "fixture_visible_band_count": 1,
+      "fixture_selection_predicate": "first authoritative gzip movie with primary genre in warm categorical palette family and single-visible-band (1 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+      "fixture_seed": 1416710939,
+      "candidate": "lightness-0.55",
+      "png": "cells/semantic-warm-single-band__lightness-0.55.png",
+      "sidecar": "cells/semantic-warm-single-band__lightness-0.55.png.render.json",
+      "png_sha256": "6979414ff5a88d835d9d2445605f0fab0d45effc9887c15499b7d6b56b7fa2e7",
+      "visual_config_hash": "f0747aaa0952b4bddab5547534ee129ecc572b68ecbd699b5a6211327e0fdfd0"
+    },
+    {
+      "fixture": "semantic-warm-single-band",
+      "palette_family": "warm",
+      "palette_family_label": "warm palette family",
+      "terrain_complexity": "single-visible-band",
+      "expected_visible_band_count": 1,
+      "fixture_movie_id": 5,
+      "fixture_title": "Four Rooms",
+      "fixture_hue": 0.9920818906073031,
+      "fixture_primary_genre": "Comedy",
+      "fixture_palette_hex": "#F0954C",
+      "fixture_genres": [
+        "Comedy"
+      ],
+      "fixture_visible_band_count": 1,
+      "fixture_selection_predicate": "first authoritative gzip movie with primary genre in warm categorical palette family and single-visible-band (1 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+      "fixture_seed": 1416710939,
+      "candidate": "lightness-0.66",
+      "png": "cells/semantic-warm-single-band__lightness-0.66.png",
+      "sidecar": "cells/semantic-warm-single-band__lightness-0.66.png.render.json",
+      "png_sha256": "af032b3f8b9e97358909283220e2ea0523ddc314aee317fc0f4cec1a8b92d3e7",
+      "visual_config_hash": "025882df885f7d2afced52c4253f826ed2a0f7e8f1cded5da2892a14ae49d624"
+    },
+    {
+      "fixture": "semantic-cool-single-band",
+      "palette_family": "cool",
+      "palette_family_label": "cool palette family",
+      "terrain_complexity": "single-visible-band",
+      "expected_visible_band_count": 1,
+      "fixture_movie_id": 138,
+      "fixture_title": "Dracula",
+      "fixture_hue": 3.306939635357677,
+      "fixture_primary_genre": "Horror",
+      "fixture_palette_hex": "#00C9C1",
+      "fixture_genres": [
+        "Horror"
+      ],
+      "fixture_visible_band_count": 1,
+      "fixture_selection_predicate": "first authoritative gzip movie with primary genre in cool categorical palette family and single-visible-band (1 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+      "fixture_seed": 245146387,
+      "candidate": "lightness-0.45",
+      "png": "cells/semantic-cool-single-band__lightness-0.45.png",
+      "sidecar": "cells/semantic-cool-single-band__lightness-0.45.png.render.json",
+      "png_sha256": "dd8accafb83d0bcd6bc957b4b1a1ab2ff457c5a3ce67605bfdc92e88ba2cd4c0",
+      "visual_config_hash": "e43c3188e064c881b666bc6caf55bb5906422cf35c2fecde673404d9f13102c4"
+    },
+    {
+      "fixture": "semantic-cool-single-band",
+      "palette_family": "cool",
+      "palette_family_label": "cool palette family",
+      "terrain_complexity": "single-visible-band",
+      "expected_visible_band_count": 1,
+      "fixture_movie_id": 138,
+      "fixture_title": "Dracula",
+      "fixture_hue": 3.306939635357677,
+      "fixture_primary_genre": "Horror",
+      "fixture_palette_hex": "#00C9C1",
+      "fixture_genres": [
+        "Horror"
+      ],
+      "fixture_visible_band_count": 1,
+      "fixture_selection_predicate": "first authoritative gzip movie with primary genre in cool categorical palette family and single-visible-band (1 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+      "fixture_seed": 245146387,
+      "candidate": "lightness-0.50",
+      "png": "cells/semantic-cool-single-band__lightness-0.50.png",
+      "sidecar": "cells/semantic-cool-single-band__lightness-0.50.png.render.json",
+      "png_sha256": "beaf37d8f670951d637a2dc024762a7cc30e7a70193e66de4b1eee7535b2d1d9",
+      "visual_config_hash": "9d13259dd5a958c91ed6d3be9fce38917d40cc59a06b6384e448a789a2657727"
+    },
+    {
+      "fixture": "semantic-cool-single-band",
+      "palette_family": "cool",
+      "palette_family_label": "cool palette family",
+      "terrain_complexity": "single-visible-band",
+      "expected_visible_band_count": 1,
+      "fixture_movie_id": 138,
+      "fixture_title": "Dracula",
+      "fixture_hue": 3.306939635357677,
+      "fixture_primary_genre": "Horror",
+      "fixture_palette_hex": "#00C9C1",
+      "fixture_genres": [
+        "Horror"
+      ],
+      "fixture_visible_band_count": 1,
+      "fixture_selection_predicate": "first authoritative gzip movie with primary genre in cool categorical palette family and single-visible-band (1 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+      "fixture_seed": 245146387,
+      "candidate": "lightness-0.55",
+      "png": "cells/semantic-cool-single-band__lightness-0.55.png",
+      "sidecar": "cells/semantic-cool-single-band__lightness-0.55.png.render.json",
+      "png_sha256": "3b95d842fc80740f163da296fd60e600a7de0a6825e81511ed779acf099588ac",
+      "visual_config_hash": "f0747aaa0952b4bddab5547534ee129ecc572b68ecbd699b5a6211327e0fdfd0"
+    },
+    {
+      "fixture": "semantic-cool-single-band",
+      "palette_family": "cool",
+      "palette_family_label": "cool palette family",
+      "terrain_complexity": "single-visible-band",
+      "expected_visible_band_count": 1,
+      "fixture_movie_id": 138,
+      "fixture_title": "Dracula",
+      "fixture_hue": 3.306939635357677,
+      "fixture_primary_genre": "Horror",
+      "fixture_palette_hex": "#00C9C1",
+      "fixture_genres": [
+        "Horror"
+      ],
+      "fixture_visible_band_count": 1,
+      "fixture_selection_predicate": "first authoritative gzip movie with primary genre in cool categorical palette family and single-visible-band (1 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+      "fixture_seed": 245146387,
+      "candidate": "lightness-0.66",
+      "png": "cells/semantic-cool-single-band__lightness-0.66.png",
+      "sidecar": "cells/semantic-cool-single-band__lightness-0.66.png.render.json",
+      "png_sha256": "ceac4a693accd4acc67c24fcd84b0785548226e804557996d5cf8d7ee8e47931",
+      "visual_config_hash": "025882df885f7d2afced52c4253f826ed2a0f7e8f1cded5da2892a14ae49d624"
+    },
+    {
+      "fixture": "semantic-violet-rose-single-band",
+      "palette_family": "violet-rose",
+      "palette_family_label": "violet-rose palette family",
+      "terrain_complexity": "single-visible-band",
+      "expected_visible_band_count": 1,
+      "fixture_movie_id": 33,
+      "fixture_title": "Unforgiven",
+      "fixture_hue": 5.9524913436438185,
+      "fixture_primary_genre": "Western",
+      "fixture_palette_hex": "#E989C8",
+      "fixture_genres": [
+        "Western"
+      ],
+      "fixture_visible_band_count": 1,
+      "fixture_selection_predicate": "first authoritative gzip movie with primary genre in violet-rose categorical palette family and single-visible-band (1 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+      "fixture_seed": 2765658642,
+      "candidate": "lightness-0.45",
+      "png": "cells/semantic-violet-rose-single-band__lightness-0.45.png",
+      "sidecar": "cells/semantic-violet-rose-single-band__lightness-0.45.png.render.json",
+      "png_sha256": "d808d13010ce477333269b766568d385a6df39a10607a4020be2f4f5d8b3c2ef",
+      "visual_config_hash": "e43c3188e064c881b666bc6caf55bb5906422cf35c2fecde673404d9f13102c4"
+    },
+    {
+      "fixture": "semantic-violet-rose-single-band",
+      "palette_family": "violet-rose",
+      "palette_family_label": "violet-rose palette family",
+      "terrain_complexity": "single-visible-band",
+      "expected_visible_band_count": 1,
+      "fixture_movie_id": 33,
+      "fixture_title": "Unforgiven",
+      "fixture_hue": 5.9524913436438185,
+      "fixture_primary_genre": "Western",
+      "fixture_palette_hex": "#E989C8",
+      "fixture_genres": [
+        "Western"
+      ],
+      "fixture_visible_band_count": 1,
+      "fixture_selection_predicate": "first authoritative gzip movie with primary genre in violet-rose categorical palette family and single-visible-band (1 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+      "fixture_seed": 2765658642,
+      "candidate": "lightness-0.50",
+      "png": "cells/semantic-violet-rose-single-band__lightness-0.50.png",
+      "sidecar": "cells/semantic-violet-rose-single-band__lightness-0.50.png.render.json",
+      "png_sha256": "a1d267335919e64ca7b00a5fd1e5f55cfb98b59b4cc804b7d03520aed1292ee7",
+      "visual_config_hash": "9d13259dd5a958c91ed6d3be9fce38917d40cc59a06b6384e448a789a2657727"
+    },
+    {
+      "fixture": "semantic-violet-rose-single-band",
+      "palette_family": "violet-rose",
+      "palette_family_label": "violet-rose palette family",
+      "terrain_complexity": "single-visible-band",
+      "expected_visible_band_count": 1,
+      "fixture_movie_id": 33,
+      "fixture_title": "Unforgiven",
+      "fixture_hue": 5.9524913436438185,
+      "fixture_primary_genre": "Western",
+      "fixture_palette_hex": "#E989C8",
+      "fixture_genres": [
+        "Western"
+      ],
+      "fixture_visible_band_count": 1,
+      "fixture_selection_predicate": "first authoritative gzip movie with primary genre in violet-rose categorical palette family and single-visible-band (1 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+      "fixture_seed": 2765658642,
+      "candidate": "lightness-0.55",
+      "png": "cells/semantic-violet-rose-single-band__lightness-0.55.png",
+      "sidecar": "cells/semantic-violet-rose-single-band__lightness-0.55.png.render.json",
+      "png_sha256": "634fed5e08e86603e82f2693a7e6d3333a834369ff0edb7743b5c40722cb508d",
+      "visual_config_hash": "f0747aaa0952b4bddab5547534ee129ecc572b68ecbd699b5a6211327e0fdfd0"
+    },
+    {
+      "fixture": "semantic-violet-rose-single-band",
+      "palette_family": "violet-rose",
+      "palette_family_label": "violet-rose palette family",
+      "terrain_complexity": "single-visible-band",
+      "expected_visible_band_count": 1,
+      "fixture_movie_id": 33,
+      "fixture_title": "Unforgiven",
+      "fixture_hue": 5.9524913436438185,
+      "fixture_primary_genre": "Western",
+      "fixture_palette_hex": "#E989C8",
+      "fixture_genres": [
+        "Western"
+      ],
+      "fixture_visible_band_count": 1,
+      "fixture_selection_predicate": "first authoritative gzip movie with primary genre in violet-rose categorical palette family and single-visible-band (1 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+      "fixture_seed": 2765658642,
+      "candidate": "lightness-0.66",
+      "png": "cells/semantic-violet-rose-single-band__lightness-0.66.png",
+      "sidecar": "cells/semantic-violet-rose-single-band__lightness-0.66.png.render.json",
+      "png_sha256": "707318ccf067bd5b3527b3962cf8d872ee6dfefe24f6f99f0a02765e0ec17521",
+      "visual_config_hash": "025882df885f7d2afced52c4253f826ed2a0f7e8f1cded5da2892a14ae49d624"
+    },
+    {
+      "fixture": "semantic-warm-max-visible-bands",
+      "palette_family": "warm",
+      "palette_family_label": "warm palette family",
+      "terrain_complexity": "max-visible-bands",
+      "expected_visible_band_count": 8,
+      "fixture_movie_id": 64152,
+      "fixture_title": "Garfield: His 9 Lives",
+      "fixture_hue": 0.6613879270715354,
+      "fixture_primary_genre": "Animation",
+      "fixture_palette_hex": "#F88C6B",
+      "fixture_genres": [
+        "Animation",
+        "Comedy",
+        "Adventure",
+        "Drama",
+        "Fantasy",
+        "Music",
+        "Science Fiction",
+        "TV Movie"
+      ],
+      "fixture_visible_band_count": 8,
+      "fixture_selection_predicate": "first authoritative gzip movie with primary genre in warm categorical palette family and max-visible-bands (8 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+      "fixture_seed": 1987718520,
+      "candidate": "lightness-0.45",
+      "png": "cells/semantic-warm-max-visible-bands__lightness-0.45.png",
+      "sidecar": "cells/semantic-warm-max-visible-bands__lightness-0.45.png.render.json",
+      "png_sha256": "37acf56879afb4e5dfeb7ad60a1b45c185458557d1ebbeb1027f62d62a50b830",
+      "visual_config_hash": "e43c3188e064c881b666bc6caf55bb5906422cf35c2fecde673404d9f13102c4"
+    },
+    {
+      "fixture": "semantic-warm-max-visible-bands",
+      "palette_family": "warm",
+      "palette_family_label": "warm palette family",
+      "terrain_complexity": "max-visible-bands",
+      "expected_visible_band_count": 8,
+      "fixture_movie_id": 64152,
+      "fixture_title": "Garfield: His 9 Lives",
+      "fixture_hue": 0.6613879270715354,
+      "fixture_primary_genre": "Animation",
+      "fixture_palette_hex": "#F88C6B",
+      "fixture_genres": [
+        "Animation",
+        "Comedy",
+        "Adventure",
+        "Drama",
+        "Fantasy",
+        "Music",
+        "Science Fiction",
+        "TV Movie"
+      ],
+      "fixture_visible_band_count": 8,
+      "fixture_selection_predicate": "first authoritative gzip movie with primary genre in warm categorical palette family and max-visible-bands (8 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+      "fixture_seed": 1987718520,
+      "candidate": "lightness-0.50",
+      "png": "cells/semantic-warm-max-visible-bands__lightness-0.50.png",
+      "sidecar": "cells/semantic-warm-max-visible-bands__lightness-0.50.png.render.json",
+      "png_sha256": "09d1e59a91df69c21e6c31e667643ee1464d93b02ee7368355d56c030bcb5568",
+      "visual_config_hash": "9d13259dd5a958c91ed6d3be9fce38917d40cc59a06b6384e448a789a2657727"
+    },
+    {
+      "fixture": "semantic-warm-max-visible-bands",
+      "palette_family": "warm",
+      "palette_family_label": "warm palette family",
+      "terrain_complexity": "max-visible-bands",
+      "expected_visible_band_count": 8,
+      "fixture_movie_id": 64152,
+      "fixture_title": "Garfield: His 9 Lives",
+      "fixture_hue": 0.6613879270715354,
+      "fixture_primary_genre": "Animation",
+      "fixture_palette_hex": "#F88C6B",
+      "fixture_genres": [
+        "Animation",
+        "Comedy",
+        "Adventure",
+        "Drama",
+        "Fantasy",
+        "Music",
+        "Science Fiction",
+        "TV Movie"
+      ],
+      "fixture_visible_band_count": 8,
+      "fixture_selection_predicate": "first authoritative gzip movie with primary genre in warm categorical palette family and max-visible-bands (8 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+      "fixture_seed": 1987718520,
+      "candidate": "lightness-0.55",
+      "png": "cells/semantic-warm-max-visible-bands__lightness-0.55.png",
+      "sidecar": "cells/semantic-warm-max-visible-bands__lightness-0.55.png.render.json",
+      "png_sha256": "54702320e69eeb14915f600cf69c5436b6227480dcb0975230ab911038653a62",
+      "visual_config_hash": "f0747aaa0952b4bddab5547534ee129ecc572b68ecbd699b5a6211327e0fdfd0"
+    },
+    {
+      "fixture": "semantic-warm-max-visible-bands",
+      "palette_family": "warm",
+      "palette_family_label": "warm palette family",
+      "terrain_complexity": "max-visible-bands",
+      "expected_visible_band_count": 8,
+      "fixture_movie_id": 64152,
+      "fixture_title": "Garfield: His 9 Lives",
+      "fixture_hue": 0.6613879270715354,
+      "fixture_primary_genre": "Animation",
+      "fixture_palette_hex": "#F88C6B",
+      "fixture_genres": [
+        "Animation",
+        "Comedy",
+        "Adventure",
+        "Drama",
+        "Fantasy",
+        "Music",
+        "Science Fiction",
+        "TV Movie"
+      ],
+      "fixture_visible_band_count": 8,
+      "fixture_selection_predicate": "first authoritative gzip movie with primary genre in warm categorical palette family and max-visible-bands (8 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+      "fixture_seed": 1987718520,
+      "candidate": "lightness-0.66",
+      "png": "cells/semantic-warm-max-visible-bands__lightness-0.66.png",
+      "sidecar": "cells/semantic-warm-max-visible-bands__lightness-0.66.png.render.json",
+      "png_sha256": "9907f33f27b2f899d99257e091e7126296c15bc86f449b4855cb707444b7a8f5",
+      "visual_config_hash": "025882df885f7d2afced52c4253f826ed2a0f7e8f1cded5da2892a14ae49d624"
+    },
+    {
+      "fixture": "semantic-cool-max-visible-bands",
+      "palette_family": "cool",
+      "palette_family_label": "cool palette family",
+      "terrain_complexity": "max-visible-bands",
+      "expected_visible_band_count": 8,
+      "fixture_movie_id": 16774,
+      "fixture_title": "Hellboy Animated: Sword of Storms",
+      "fixture_hue": 4.6297154895007475,
+      "fixture_primary_genre": "Science Fiction",
+      "fixture_palette_hex": "#83ABFF",
+      "fixture_genres": [
+        "Science Fiction",
+        "Animation",
+        "Fantasy",
+        "Action",
+        "Horror",
+        "Adventure",
+        "Thriller",
+        "TV Movie"
+      ],
+      "fixture_visible_band_count": 8,
+      "fixture_selection_predicate": "first authoritative gzip movie with primary genre in cool categorical palette family and max-visible-bands (8 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+      "fixture_seed": 230367109,
+      "candidate": "lightness-0.45",
+      "png": "cells/semantic-cool-max-visible-bands__lightness-0.45.png",
+      "sidecar": "cells/semantic-cool-max-visible-bands__lightness-0.45.png.render.json",
+      "png_sha256": "85aed33adcd132d2af7d5b82f56b2da90ad8f596a180809472cb1235d1ded7d6",
+      "visual_config_hash": "e43c3188e064c881b666bc6caf55bb5906422cf35c2fecde673404d9f13102c4"
+    },
+    {
+      "fixture": "semantic-cool-max-visible-bands",
+      "palette_family": "cool",
+      "palette_family_label": "cool palette family",
+      "terrain_complexity": "max-visible-bands",
+      "expected_visible_band_count": 8,
+      "fixture_movie_id": 16774,
+      "fixture_title": "Hellboy Animated: Sword of Storms",
+      "fixture_hue": 4.6297154895007475,
+      "fixture_primary_genre": "Science Fiction",
+      "fixture_palette_hex": "#83ABFF",
+      "fixture_genres": [
+        "Science Fiction",
+        "Animation",
+        "Fantasy",
+        "Action",
+        "Horror",
+        "Adventure",
+        "Thriller",
+        "TV Movie"
+      ],
+      "fixture_visible_band_count": 8,
+      "fixture_selection_predicate": "first authoritative gzip movie with primary genre in cool categorical palette family and max-visible-bands (8 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+      "fixture_seed": 230367109,
+      "candidate": "lightness-0.50",
+      "png": "cells/semantic-cool-max-visible-bands__lightness-0.50.png",
+      "sidecar": "cells/semantic-cool-max-visible-bands__lightness-0.50.png.render.json",
+      "png_sha256": "5f882d5133408897824cff83052ef3b0a638dd929bab27e43be8ec9e72989fea",
+      "visual_config_hash": "9d13259dd5a958c91ed6d3be9fce38917d40cc59a06b6384e448a789a2657727"
+    },
+    {
+      "fixture": "semantic-cool-max-visible-bands",
+      "palette_family": "cool",
+      "palette_family_label": "cool palette family",
+      "terrain_complexity": "max-visible-bands",
+      "expected_visible_band_count": 8,
+      "fixture_movie_id": 16774,
+      "fixture_title": "Hellboy Animated: Sword of Storms",
+      "fixture_hue": 4.6297154895007475,
+      "fixture_primary_genre": "Science Fiction",
+      "fixture_palette_hex": "#83ABFF",
+      "fixture_genres": [
+        "Science Fiction",
+        "Animation",
+        "Fantasy",
+        "Action",
+        "Horror",
+        "Adventure",
+        "Thriller",
+        "TV Movie"
+      ],
+      "fixture_visible_band_count": 8,
+      "fixture_selection_predicate": "first authoritative gzip movie with primary genre in cool categorical palette family and max-visible-bands (8 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+      "fixture_seed": 230367109,
+      "candidate": "lightness-0.55",
+      "png": "cells/semantic-cool-max-visible-bands__lightness-0.55.png",
+      "sidecar": "cells/semantic-cool-max-visible-bands__lightness-0.55.png.render.json",
+      "png_sha256": "5943477e4e452820de8e10a70120627e2b2af6987e949084d23db88210daa74a",
+      "visual_config_hash": "f0747aaa0952b4bddab5547534ee129ecc572b68ecbd699b5a6211327e0fdfd0"
+    },
+    {
+      "fixture": "semantic-cool-max-visible-bands",
+      "palette_family": "cool",
+      "palette_family_label": "cool palette family",
+      "terrain_complexity": "max-visible-bands",
+      "expected_visible_band_count": 8,
+      "fixture_movie_id": 16774,
+      "fixture_title": "Hellboy Animated: Sword of Storms",
+      "fixture_hue": 4.6297154895007475,
+      "fixture_primary_genre": "Science Fiction",
+      "fixture_palette_hex": "#83ABFF",
+      "fixture_genres": [
+        "Science Fiction",
+        "Animation",
+        "Fantasy",
+        "Action",
+        "Horror",
+        "Adventure",
+        "Thriller",
+        "TV Movie"
+      ],
+      "fixture_visible_band_count": 8,
+      "fixture_selection_predicate": "first authoritative gzip movie with primary genre in cool categorical palette family and max-visible-bands (8 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+      "fixture_seed": 230367109,
+      "candidate": "lightness-0.66",
+      "png": "cells/semantic-cool-max-visible-bands__lightness-0.66.png",
+      "sidecar": "cells/semantic-cool-max-visible-bands__lightness-0.66.png.render.json",
+      "png_sha256": "2e7d8dc6877a8a87ad3abeb2aee00a36198a0af410f42f3d25eb511c141466ec",
+      "visual_config_hash": "025882df885f7d2afced52c4253f826ed2a0f7e8f1cded5da2892a14ae49d624"
+    }
+  ]
+}

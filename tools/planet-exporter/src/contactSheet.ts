@@ -83,7 +83,7 @@ const LEFT_LABEL_WIDTH = 180
 const MARGIN = 24
 const TITLE_HEIGHT = 52
 const COLUMN_LABEL_HEIGHT = 40
-const CAPTION_HEIGHT = 48
+const CAPTION_HEIGHT = 88
 const TEXT_COLOR = '#f4f4f5'
 const MUTED_TEXT_COLOR = '#c4c4cc'
 
@@ -199,8 +199,9 @@ export function createContactSheetSvg(layout: ContactSheetLayout): Buffer {
       const row = Math.floor(index / layout.columnLabels.length)
       const column = index % layout.columnLabels.length
       const x = LEFT_LABEL_WIDTH + MARGIN + column * CELL_WIDTH + 12
-      const y = MARGIN + TITLE_HEIGHT + COLUMN_LABEL_HEIGHT + row * cellHeight + layout.cellImage.height + 30
-      return `<text x="${x}" y="${y}" fill="${MUTED_TEXT_COLOR}" font-family="sans-serif" font-size="16">${escapeXml(caption)}</text>`
+      const y = MARGIN + TITLE_HEIGHT + COLUMN_LABEL_HEIGHT + row * cellHeight + layout.cellImage.height + 23
+      const lines = caption.split('\n')
+      return `<text x="${x}" y="${y}" fill="${MUTED_TEXT_COLOR}" font-family="sans-serif" font-size="14">${lines.map((line, lineIndex) => `<tspan x="${x}" dy="${lineIndex === 0 ? 0 : 16}">${escapeXml(line)}</tspan>`).join('')}</text>`
     }),
   ]
   return Buffer.from(`<svg width="${layout.canvas.width}" height="${layout.canvas.height}" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="#111113"/>${labels.join('')}</svg>`)

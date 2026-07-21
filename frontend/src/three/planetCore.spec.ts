@@ -70,7 +70,7 @@ const palette: Meta['genre_palette'] = {
 describe('planet visual defaults', () => {
   it('serializes the versioned Focus visual configuration for metadata hashing', () => {
     expect(PLANET_VISUAL_DEFAULTS).toEqual({
-      schemaVersion: 5,
+      schemaVersion: 6,
       geometry: { detail: 8 },
       activeShell: { sizeScale: 0.5, activeSizeMultiplier: 0.012 },
       noise: { scale: 2.35, octaves: 4, persistence: 0.52 },
@@ -88,7 +88,7 @@ describe('planet visual defaults', () => {
         huntApplyMask: 7,
       },
       focus: {
-        lightness: 0.55,
+        lightness: 0.66,
         chroma: 0.15,
         emission: {
           modelVersion: 'vote-average-power-clamped-v1',
@@ -107,8 +107,8 @@ describe('planet visual defaults', () => {
       },
       lighting: {
         enabled: true,
-        direction: [0.7, 0.7, -0.14],
-        keyLightIntensity: 0.35,
+        direction: [0.700665949127905, 0.4003805423588029, 0.5905612999792342],
+        keyLightIntensity: 0.45,
         flatShadingMix: 0.8,
       },
       material: {
@@ -195,9 +195,9 @@ describe('planet appearance', () => {
       expect(handle.material.uniforms).not.toHaveProperty('uDiffuse')
       expect(handle.material.uniforms.uLightingEnabled.value).toBe(1)
       expect((handle.material.uniforms.uLightDir.value as { toArray: () => number[] }).toArray()).toEqual([
-        0.7001400420140049,
-        0.7001400420140049,
-        -0.14002800840280102,
+        0.700665949127905,
+        0.4003805423588029,
+        0.5905612999792342,
       ])
       expect(handle.mesh.scale.x).toBe(2)
       expect(handle.mesh.scale.y).toBe(2)
@@ -222,9 +222,9 @@ describe('planet appearance', () => {
         }
       })
 
-      expect(uniforms.map(({ lightness }) => lightness)).toEqual([0.55, 0.55, 0.55, 0.55])
+      expect(uniforms.map(({ lightness }) => lightness)).toEqual([0.66, 0.66, 0.66, 0.66])
       expect(uniforms.map(({ chroma }) => chroma)).toEqual([0.15, 0.15, 0.15, 0.15])
-      expect(uniforms.map(({ key }) => key)).toEqual([0.35, 0.35, 0.35, 0.35])
+      expect(uniforms.map(({ key }) => key)).toEqual([0.45, 0.45, 0.45, 0.45])
       const emissions = uniforms.map(({ emission }) => emission)
       expect(emissions[0]).toBe(0.06)
       expect(emissions[1]).toBeCloseTo(0.1464, 12)

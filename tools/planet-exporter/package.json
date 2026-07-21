@@ -15,6 +15,7 @@
     "evidence:p39.11:c:strength": "tsx scripts/generate-p3911-checkpoint-c-strength-evidence.ts",
     "evidence:p39.11:final": "tsx scripts/generate-p3911-final-evidence.ts",
     "evidence:p41.1": "tsx scripts/generate-p41-baseline.ts",
+    "evidence:p41.4": "tsx scripts/generate-p41-fixed-shaping-evidence.ts",
     "contact-sheet": "tsx scripts/generate-contact-sheet.ts"
   },
   "dependencies": {

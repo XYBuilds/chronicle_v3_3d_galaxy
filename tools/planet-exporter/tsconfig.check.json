@@ -23,6 +23,7 @@
     "src/phase39Fixtures.ts",
     "src/phase41Baseline.ts",
     "src/phase41Diagnostic.ts",
+    "src/p41FixedShaping.ts",
     "src/png.ts"
   ],
   "include": ["scripts/**/*.ts"]

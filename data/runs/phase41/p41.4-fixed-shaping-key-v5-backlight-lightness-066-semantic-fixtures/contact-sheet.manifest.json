@@ -1,0 +1,3535 @@
+{
+  "schema": "contact-sheet-manifest-v1",
+  "normalized_input": {
+    "title": "P41.4 Bloom OFF fixed shaping — key (approved: key-0.45)",
+    "rows": [
+      {
+        "key": "semantic-warm-single-band",
+        "label": "warm palette family · single-visible-band · primary=Comedy · visible bands=1"
+      },
+      {
+        "key": "semantic-cool-single-band",
+        "label": "cool palette family · single-visible-band · primary=Horror · visible bands=1"
+      },
+      {
+        "key": "semantic-violet-rose-single-band",
+        "label": "violet-rose palette family · single-visible-band · primary=Western · visible bands=1"
+      },
+      {
+        "key": "semantic-warm-max-visible-bands",
+        "label": "warm palette family · max-visible-bands · primary=Animation · visible bands=8"
+      },
+      {
+        "key": "semantic-cool-max-visible-bands",
+        "label": "cool palette family · max-visible-bands · primary=Science Fiction · visible bands=8"
+      }
+    ],
+    "columns": [
+      {
+        "key": "key-0.25",
+        "label": "key-0.25"
+      },
+      {
+        "key": "key-0.35",
+        "label": "key-0.35"
+      },
+      {
+        "key": "key-0.45",
+        "label": "key-0.45"
+      }
+    ],
+    "cells": [
+      {
+        "rowKey": "semantic-warm-single-band",
+        "columnKey": "key-0.25",
+        "input": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures/cells/semantic-warm-single-band__key-0.25.png",
+        "caption": "L=0.660 Key=0.250 Flat=0.800\nDir=[0.701,0.400,0.591]\nEmission=0.005 (power-clamped-v1)\nBloom=OFF strength=0.01 radius=1 threshold=0",
+        "parameters": {
+          "checkpoint": "key",
+          "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures",
+          "varied_parameter": "keyLightIntensity",
+          "candidate": "key-0.25",
+          "png": "cells/semantic-warm-single-band__key-0.25.png",
+          "sidecar": "cells/semantic-warm-single-band__key-0.25.png.render.json",
+          "candidate_review": "approved",
+          "approved_candidate": "key-0.45",
+          "human_approved_inputs": [
+            {
+              "stage": "direction",
+              "parameter": "direction",
+              "candidate": "backlight-east-v1",
+              "value": [
+                0.700665949127905,
+                0.4003805423588029,
+                0.5905612999792342
+              ],
+              "source": "explicit-cli-human-approved-input",
+              "status": "human-approved-input"
+            },
+            {
+              "stage": "lightness",
+              "parameter": "lightness",
+              "candidate": "lightness-0.66",
+              "value": 0.66,
+              "source": "explicit-cli-human-approved-input",
+              "status": "human-approved-input"
+            }
+          ],
+          "frozen_upstream_baseline_hash": "dc6396cf975660e45e4dbe4ee74ad616fbaf6ebb64368f691b5d74d10b3283aa",
+          "direction_convention": {
+            "space": "world",
+            "lightVectorMeaning": "frozen approved direction candidate",
+            "backlightZSign": "positive-z",
+            "sideBackConstraint": "positive-z is the user-defined backlight side; downstream checkpoints must not reinterpret candidate coordinates"
+          },
+          "backlight_direction_revision": {
+            "id": "backlight-z-flip-v1",
+            "relation": "replaces-frontlight-candidates",
+            "z_transform": "negated-from-frontlight-candidates",
+            "backlight_z_sign": "positive-z",
+            "replaces_candidate_ids": [
+              "side-back-west",
+              "side-back-east",
+              "side-back-high"
+            ],
+            "invalidated_descendants": [
+              {
+                "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v3-approved-direction-semantic-fixtures",
+                "status": "invalidated-frontlight-descendant",
+                "reason": "records a superseded front-light direction approval"
+              },
+              {
+                "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v3-approved-direction-semantic-fixtures",
+                "status": "invalidated-frontlight-descendant",
+                "reason": "records a superseded front-light direction approval"
+              }
+            ]
+          },
+          "lightness_follow_up": {
+            "id": "lightness-066-follow-up-v1",
+            "relation": "extends-lightness-candidate-review",
+            "new_candidate": "lightness-0.66",
+            "predecessor_evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v4-backlight-semantic-fixtures",
+            "candidate_review": "approved"
+          },
+          "fixture": "semantic-warm-single-band",
+          "palette_family": "warm",
+          "palette_family_label": "warm palette family",
+          "terrain_complexity": "single-visible-band",
+          "expected_visible_band_count": 1,
+          "fixture_movie_id": 5,
+          "fixture_title": "Four Rooms",
+          "fixture_hue": 0.9920818906073031,
+          "fixture_primary_genre": "Comedy",
+          "fixture_palette_hex": "#F0954C",
+          "fixture_genres": [
+            "Comedy"
+          ],
+          "fixture_visible_band_count": 1,
+          "fixture_selection_predicate": "first authoritative gzip movie with primary genre in warm categorical palette family and single-visible-band (1 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+          "fixture_seed": 1416710939,
+          "diagnostic_only": "phase41-visual-diagnostic-v1",
+          "lightness": 0.66,
+          "key_light_intensity": 0.25,
+          "direction": [
+            0.700665949127905,
+            0.4003805423588029,
+            0.5905612999792342
+          ],
+          "flat_shading_mix": 0.8,
+          "emission_curve": {
+            "modelVersion": "vote-average-power-clamped-v1",
+            "exponent": 1,
+            "intensityMin": 0.005,
+            "intensityMax": 0.005
+          },
+          "bloom": {
+            "enabled": false,
+            "strength": 0.01,
+            "radius": 1,
+            "threshold": 0
+          }
+        }
+      },
+      {
+        "rowKey": "semantic-warm-single-band",
+        "columnKey": "key-0.35",
+        "input": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures/cells/semantic-warm-single-band__key-0.35.png",
+        "caption": "L=0.660 Key=0.350 Flat=0.800\nDir=[0.701,0.400,0.591]\nEmission=0.005 (power-clamped-v1)\nBloom=OFF strength=0.01 radius=1 threshold=0",
+        "parameters": {
+          "checkpoint": "key",
+          "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures",
+          "varied_parameter": "keyLightIntensity",
+          "candidate": "key-0.35",
+          "png": "cells/semantic-warm-single-band__key-0.35.png",
+          "sidecar": "cells/semantic-warm-single-band__key-0.35.png.render.json",
+          "candidate_review": "approved",
+          "approved_candidate": "key-0.45",
+          "human_approved_inputs": [
+            {
+              "stage": "direction",
+              "parameter": "direction",
+              "candidate": "backlight-east-v1",
+              "value": [
+                0.700665949127905,
+                0.4003805423588029,
+                0.5905612999792342
+              ],
+              "source": "explicit-cli-human-approved-input",
+              "status": "human-approved-input"
+            },
+            {
+              "stage": "lightness",
+              "parameter": "lightness",
+              "candidate": "lightness-0.66",
+              "value": 0.66,
+              "source": "explicit-cli-human-approved-input",
+              "status": "human-approved-input"
+            }
+          ],
+          "frozen_upstream_baseline_hash": "dc6396cf975660e45e4dbe4ee74ad616fbaf6ebb64368f691b5d74d10b3283aa",
+          "direction_convention": {
+            "space": "world",
+            "lightVectorMeaning": "frozen approved direction candidate",
+            "backlightZSign": "positive-z",
+            "sideBackConstraint": "positive-z is the user-defined backlight side; downstream checkpoints must not reinterpret candidate coordinates"
+          },
+          "backlight_direction_revision": {
+            "id": "backlight-z-flip-v1",
+            "relation": "replaces-frontlight-candidates",
+            "z_transform": "negated-from-frontlight-candidates",
+            "backlight_z_sign": "positive-z",
+            "replaces_candidate_ids": [
+              "side-back-west",
+              "side-back-east",
+              "side-back-high"
+            ],
+            "invalidated_descendants": [
+              {
+                "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v3-approved-direction-semantic-fixtures",
+                "status": "invalidated-frontlight-descendant",
+                "reason": "records a superseded front-light direction approval"
+              },
+              {
+                "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v3-approved-direction-semantic-fixtures",
+                "status": "invalidated-frontlight-descendant",
+                "reason": "records a superseded front-light direction approval"
+              }
+            ]
+          },
+          "lightness_follow_up": {
+            "id": "lightness-066-follow-up-v1",
+            "relation": "extends-lightness-candidate-review",
+            "new_candidate": "lightness-0.66",
+            "predecessor_evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v4-backlight-semantic-fixtures",
+            "candidate_review": "approved"
+          },
+          "fixture": "semantic-warm-single-band",
+          "palette_family": "warm",
+          "palette_family_label": "warm palette family",
+          "terrain_complexity": "single-visible-band",
+          "expected_visible_band_count": 1,
+          "fixture_movie_id": 5,
+          "fixture_title": "Four Rooms",
+          "fixture_hue": 0.9920818906073031,
+          "fixture_primary_genre": "Comedy",
+          "fixture_palette_hex": "#F0954C",
+          "fixture_genres": [
+            "Comedy"
+          ],
+          "fixture_visible_band_count": 1,
+          "fixture_selection_predicate": "first authoritative gzip movie with primary genre in warm categorical palette family and single-visible-band (1 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+          "fixture_seed": 1416710939,
+          "diagnostic_only": "phase41-visual-diagnostic-v1",
+          "lightness": 0.66,
+          "key_light_intensity": 0.35,
+          "direction": [
+            0.700665949127905,
+            0.4003805423588029,
+            0.5905612999792342
+          ],
+          "flat_shading_mix": 0.8,
+          "emission_curve": {
+            "modelVersion": "vote-average-power-clamped-v1",
+            "exponent": 1,
+            "intensityMin": 0.005,
+            "intensityMax": 0.005
+          },
+          "bloom": {
+            "enabled": false,
+            "strength": 0.01,
+            "radius": 1,
+            "threshold": 0
+          }
+        }
+      },
+      {
+        "rowKey": "semantic-warm-single-band",
+        "columnKey": "key-0.45",
+        "input": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures/cells/semantic-warm-single-band__key-0.45.png",
+        "caption": "L=0.660 Key=0.450 Flat=0.800\nDir=[0.701,0.400,0.591]\nEmission=0.005 (power-clamped-v1)\nBloom=OFF strength=0.01 radius=1 threshold=0",
+        "parameters": {
+          "checkpoint": "key",
+          "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures",
+          "varied_parameter": "keyLightIntensity",
+          "candidate": "key-0.45",
+          "png": "cells/semantic-warm-single-band__key-0.45.png",
+          "sidecar": "cells/semantic-warm-single-band__key-0.45.png.render.json",
+          "candidate_review": "approved",
+          "approved_candidate": "key-0.45",
+          "human_approved_inputs": [
+            {
+              "stage": "direction",
+              "parameter": "direction",
+              "candidate": "backlight-east-v1",
+              "value": [
+                0.700665949127905,
+                0.4003805423588029,
+                0.5905612999792342
+              ],
+              "source": "explicit-cli-human-approved-input",
+              "status": "human-approved-input"
+            },
+            {
+              "stage": "lightness",
+              "parameter": "lightness",
+              "candidate": "lightness-0.66",
+              "value": 0.66,
+              "source": "explicit-cli-human-approved-input",
+              "status": "human-approved-input"
+            }
+          ],
+          "frozen_upstream_baseline_hash": "dc6396cf975660e45e4dbe4ee74ad616fbaf6ebb64368f691b5d74d10b3283aa",
+          "direction_convention": {
+            "space": "world",
+            "lightVectorMeaning": "frozen approved direction candidate",
+            "backlightZSign": "positive-z",
+            "sideBackConstraint": "positive-z is the user-defined backlight side; downstream checkpoints must not reinterpret candidate coordinates"
+          },
+          "backlight_direction_revision": {
+            "id": "backlight-z-flip-v1",
+            "relation": "replaces-frontlight-candidates",
+            "z_transform": "negated-from-frontlight-candidates",
+            "backlight_z_sign": "positive-z",
+            "replaces_candidate_ids": [
+              "side-back-west",
+              "side-back-east",
+              "side-back-high"
+            ],
+            "invalidated_descendants": [
+              {
+                "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v3-approved-direction-semantic-fixtures",
+                "status": "invalidated-frontlight-descendant",
+                "reason": "records a superseded front-light direction approval"
+              },
+              {
+                "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v3-approved-direction-semantic-fixtures",
+                "status": "invalidated-frontlight-descendant",
+                "reason": "records a superseded front-light direction approval"
+              }
+            ]
+          },
+          "lightness_follow_up": {
+            "id": "lightness-066-follow-up-v1",
+            "relation": "extends-lightness-candidate-review",
+            "new_candidate": "lightness-0.66",
+            "predecessor_evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v4-backlight-semantic-fixtures",
+            "candidate_review": "approved"
+          },
+          "fixture": "semantic-warm-single-band",
+          "palette_family": "warm",
+          "palette_family_label": "warm palette family",
+          "terrain_complexity": "single-visible-band",
+          "expected_visible_band_count": 1,
+          "fixture_movie_id": 5,
+          "fixture_title": "Four Rooms",
+          "fixture_hue": 0.9920818906073031,
+          "fixture_primary_genre": "Comedy",
+          "fixture_palette_hex": "#F0954C",
+          "fixture_genres": [
+            "Comedy"
+          ],
+          "fixture_visible_band_count": 1,
+          "fixture_selection_predicate": "first authoritative gzip movie with primary genre in warm categorical palette family and single-visible-band (1 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+          "fixture_seed": 1416710939,
+          "diagnostic_only": "phase41-visual-diagnostic-v1",
+          "lightness": 0.66,
+          "key_light_intensity": 0.45,
+          "direction": [
+            0.700665949127905,
+            0.4003805423588029,
+            0.5905612999792342
+          ],
+          "flat_shading_mix": 0.8,
+          "emission_curve": {
+            "modelVersion": "vote-average-power-clamped-v1",
+            "exponent": 1,
+            "intensityMin": 0.005,
+            "intensityMax": 0.005
+          },
+          "bloom": {
+            "enabled": false,
+            "strength": 0.01,
+            "radius": 1,
+            "threshold": 0
+          }
+        }
+      },
+      {
+        "rowKey": "semantic-cool-single-band",
+        "columnKey": "key-0.25",
+        "input": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures/cells/semantic-cool-single-band__key-0.25.png",
+        "caption": "L=0.660 Key=0.250 Flat=0.800\nDir=[0.701,0.400,0.591]\nEmission=0.005 (power-clamped-v1)\nBloom=OFF strength=0.01 radius=1 threshold=0",
+        "parameters": {
+          "checkpoint": "key",
+          "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures",
+          "varied_parameter": "keyLightIntensity",
+          "candidate": "key-0.25",
+          "png": "cells/semantic-cool-single-band__key-0.25.png",
+          "sidecar": "cells/semantic-cool-single-band__key-0.25.png.render.json",
+          "candidate_review": "approved",
+          "approved_candidate": "key-0.45",
+          "human_approved_inputs": [
+            {
+              "stage": "direction",
+              "parameter": "direction",
+              "candidate": "backlight-east-v1",
+              "value": [
+                0.700665949127905,
+                0.4003805423588029,
+                0.5905612999792342
+              ],
+              "source": "explicit-cli-human-approved-input",
+              "status": "human-approved-input"
+            },
+            {
+              "stage": "lightness",
+              "parameter": "lightness",
+              "candidate": "lightness-0.66",
+              "value": 0.66,
+              "source": "explicit-cli-human-approved-input",
+              "status": "human-approved-input"
+            }
+          ],
+          "frozen_upstream_baseline_hash": "dc6396cf975660e45e4dbe4ee74ad616fbaf6ebb64368f691b5d74d10b3283aa",
+          "direction_convention": {
+            "space": "world",
+            "lightVectorMeaning": "frozen approved direction candidate",
+            "backlightZSign": "positive-z",
+            "sideBackConstraint": "positive-z is the user-defined backlight side; downstream checkpoints must not reinterpret candidate coordinates"
+          },
+          "backlight_direction_revision": {
+            "id": "backlight-z-flip-v1",
+            "relation": "replaces-frontlight-candidates",
+            "z_transform": "negated-from-frontlight-candidates",
+            "backlight_z_sign": "positive-z",
+            "replaces_candidate_ids": [
+              "side-back-west",
+              "side-back-east",
+              "side-back-high"
+            ],
+            "invalidated_descendants": [
+              {
+                "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v3-approved-direction-semantic-fixtures",
+                "status": "invalidated-frontlight-descendant",
+                "reason": "records a superseded front-light direction approval"
+              },
+              {
+                "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v3-approved-direction-semantic-fixtures",
+                "status": "invalidated-frontlight-descendant",
+                "reason": "records a superseded front-light direction approval"
+              }
+            ]
+          },
+          "lightness_follow_up": {
+            "id": "lightness-066-follow-up-v1",
+            "relation": "extends-lightness-candidate-review",
+            "new_candidate": "lightness-0.66",
+            "predecessor_evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v4-backlight-semantic-fixtures",
+            "candidate_review": "approved"
+          },
+          "fixture": "semantic-cool-single-band",
+          "palette_family": "cool",
+          "palette_family_label": "cool palette family",
+          "terrain_complexity": "single-visible-band",
+          "expected_visible_band_count": 1,
+          "fixture_movie_id": 138,
+          "fixture_title": "Dracula",
+          "fixture_hue": 3.306939635357677,
+          "fixture_primary_genre": "Horror",
+          "fixture_palette_hex": "#00C9C1",
+          "fixture_genres": [
+            "Horror"
+          ],
+          "fixture_visible_band_count": 1,
+          "fixture_selection_predicate": "first authoritative gzip movie with primary genre in cool categorical palette family and single-visible-band (1 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+          "fixture_seed": 245146387,
+          "diagnostic_only": "phase41-visual-diagnostic-v1",
+          "lightness": 0.66,
+          "key_light_intensity": 0.25,
+          "direction": [
+            0.700665949127905,
+            0.4003805423588029,
+            0.5905612999792342
+          ],
+          "flat_shading_mix": 0.8,
+          "emission_curve": {
+            "modelVersion": "vote-average-power-clamped-v1",
+            "exponent": 1,
+            "intensityMin": 0.005,
+            "intensityMax": 0.005
+          },
+          "bloom": {
+            "enabled": false,
+            "strength": 0.01,
+            "radius": 1,
+            "threshold": 0
+          }
+        }
+      },
+      {
+        "rowKey": "semantic-cool-single-band",
+        "columnKey": "key-0.35",
+        "input": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures/cells/semantic-cool-single-band__key-0.35.png",
+        "caption": "L=0.660 Key=0.350 Flat=0.800\nDir=[0.701,0.400,0.591]\nEmission=0.005 (power-clamped-v1)\nBloom=OFF strength=0.01 radius=1 threshold=0",
+        "parameters": {
+          "checkpoint": "key",
+          "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures",
+          "varied_parameter": "keyLightIntensity",
+          "candidate": "key-0.35",
+          "png": "cells/semantic-cool-single-band__key-0.35.png",
+          "sidecar": "cells/semantic-cool-single-band__key-0.35.png.render.json",
+          "candidate_review": "approved",
+          "approved_candidate": "key-0.45",
+          "human_approved_inputs": [
+            {
+              "stage": "direction",
+              "parameter": "direction",
+              "candidate": "backlight-east-v1",
+              "value": [
+                0.700665949127905,
+                0.4003805423588029,
+                0.5905612999792342
+              ],
+              "source": "explicit-cli-human-approved-input",
+              "status": "human-approved-input"
+            },
+            {
+              "stage": "lightness",
+              "parameter": "lightness",
+              "candidate": "lightness-0.66",
+              "value": 0.66,
+              "source": "explicit-cli-human-approved-input",
+              "status": "human-approved-input"
+            }
+          ],
+          "frozen_upstream_baseline_hash": "dc6396cf975660e45e4dbe4ee74ad616fbaf6ebb64368f691b5d74d10b3283aa",
+          "direction_convention": {
+            "space": "world",
+            "lightVectorMeaning": "frozen approved direction candidate",
+            "backlightZSign": "positive-z",
+            "sideBackConstraint": "positive-z is the user-defined backlight side; downstream checkpoints must not reinterpret candidate coordinates"
+          },
+          "backlight_direction_revision": {
+            "id": "backlight-z-flip-v1",
+            "relation": "replaces-frontlight-candidates",
+            "z_transform": "negated-from-frontlight-candidates",
+            "backlight_z_sign": "positive-z",
+            "replaces_candidate_ids": [
+              "side-back-west",
+              "side-back-east",
+              "side-back-high"
+            ],
+            "invalidated_descendants": [
+              {
+                "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v3-approved-direction-semantic-fixtures",
+                "status": "invalidated-frontlight-descendant",
+                "reason": "records a superseded front-light direction approval"
+              },
+              {
+                "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v3-approved-direction-semantic-fixtures",
+                "status": "invalidated-frontlight-descendant",
+                "reason": "records a superseded front-light direction approval"
+              }
+            ]
+          },
+          "lightness_follow_up": {
+            "id": "lightness-066-follow-up-v1",
+            "relation": "extends-lightness-candidate-review",
+            "new_candidate": "lightness-0.66",
+            "predecessor_evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v4-backlight-semantic-fixtures",
+            "candidate_review": "approved"
+          },
+          "fixture": "semantic-cool-single-band",
+          "palette_family": "cool",
+          "palette_family_label": "cool palette family",
+          "terrain_complexity": "single-visible-band",
+          "expected_visible_band_count": 1,
+          "fixture_movie_id": 138,
+          "fixture_title": "Dracula",
+          "fixture_hue": 3.306939635357677,
+          "fixture_primary_genre": "Horror",
+          "fixture_palette_hex": "#00C9C1",
+          "fixture_genres": [
+            "Horror"
+          ],
+          "fixture_visible_band_count": 1,
+          "fixture_selection_predicate": "first authoritative gzip movie with primary genre in cool categorical palette family and single-visible-band (1 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+          "fixture_seed": 245146387,
+          "diagnostic_only": "phase41-visual-diagnostic-v1",
+          "lightness": 0.66,
+          "key_light_intensity": 0.35,
+          "direction": [
+            0.700665949127905,
+            0.4003805423588029,
+            0.5905612999792342
+          ],
+          "flat_shading_mix": 0.8,
+          "emission_curve": {
+            "modelVersion": "vote-average-power-clamped-v1",
+            "exponent": 1,
+            "intensityMin": 0.005,
+            "intensityMax": 0.005
+          },
+          "bloom": {
+            "enabled": false,
+            "strength": 0.01,
+            "radius": 1,
+            "threshold": 0
+          }
+        }
+      },
+      {
+        "rowKey": "semantic-cool-single-band",
+        "columnKey": "key-0.45",
+        "input": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures/cells/semantic-cool-single-band__key-0.45.png",
+        "caption": "L=0.660 Key=0.450 Flat=0.800\nDir=[0.701,0.400,0.591]\nEmission=0.005 (power-clamped-v1)\nBloom=OFF strength=0.01 radius=1 threshold=0",
+        "parameters": {
+          "checkpoint": "key",
+          "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures",
+          "varied_parameter": "keyLightIntensity",
+          "candidate": "key-0.45",
+          "png": "cells/semantic-cool-single-band__key-0.45.png",
+          "sidecar": "cells/semantic-cool-single-band__key-0.45.png.render.json",
+          "candidate_review": "approved",
+          "approved_candidate": "key-0.45",
+          "human_approved_inputs": [
+            {
+              "stage": "direction",
+              "parameter": "direction",
+              "candidate": "backlight-east-v1",
+              "value": [
+                0.700665949127905,
+                0.4003805423588029,
+                0.5905612999792342
+              ],
+              "source": "explicit-cli-human-approved-input",
+              "status": "human-approved-input"
+            },
+            {
+              "stage": "lightness",
+              "parameter": "lightness",
+              "candidate": "lightness-0.66",
+              "value": 0.66,
+              "source": "explicit-cli-human-approved-input",
+              "status": "human-approved-input"
+            }
+          ],
+          "frozen_upstream_baseline_hash": "dc6396cf975660e45e4dbe4ee74ad616fbaf6ebb64368f691b5d74d10b3283aa",
+          "direction_convention": {
+            "space": "world",
+            "lightVectorMeaning": "frozen approved direction candidate",
+            "backlightZSign": "positive-z",
+            "sideBackConstraint": "positive-z is the user-defined backlight side; downstream checkpoints must not reinterpret candidate coordinates"
+          },
+          "backlight_direction_revision": {
+            "id": "backlight-z-flip-v1",
+            "relation": "replaces-frontlight-candidates",
+            "z_transform": "negated-from-frontlight-candidates",
+            "backlight_z_sign": "positive-z",
+            "replaces_candidate_ids": [
+              "side-back-west",
+              "side-back-east",
+              "side-back-high"
+            ],
+            "invalidated_descendants": [
+              {
+                "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v3-approved-direction-semantic-fixtures",
+                "status": "invalidated-frontlight-descendant",
+                "reason": "records a superseded front-light direction approval"
+              },
+              {
+                "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v3-approved-direction-semantic-fixtures",
+                "status": "invalidated-frontlight-descendant",
+                "reason": "records a superseded front-light direction approval"
+              }
+            ]
+          },
+          "lightness_follow_up": {
+            "id": "lightness-066-follow-up-v1",
+            "relation": "extends-lightness-candidate-review",
+            "new_candidate": "lightness-0.66",
+            "predecessor_evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v4-backlight-semantic-fixtures",
+            "candidate_review": "approved"
+          },
+          "fixture": "semantic-cool-single-band",
+          "palette_family": "cool",
+          "palette_family_label": "cool palette family",
+          "terrain_complexity": "single-visible-band",
+          "expected_visible_band_count": 1,
+          "fixture_movie_id": 138,
+          "fixture_title": "Dracula",
+          "fixture_hue": 3.306939635357677,
+          "fixture_primary_genre": "Horror",
+          "fixture_palette_hex": "#00C9C1",
+          "fixture_genres": [
+            "Horror"
+          ],
+          "fixture_visible_band_count": 1,
+          "fixture_selection_predicate": "first authoritative gzip movie with primary genre in cool categorical palette family and single-visible-band (1 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+          "fixture_seed": 245146387,
+          "diagnostic_only": "phase41-visual-diagnostic-v1",
+          "lightness": 0.66,
+          "key_light_intensity": 0.45,
+          "direction": [
+            0.700665949127905,
+            0.4003805423588029,
+            0.5905612999792342
+          ],
+          "flat_shading_mix": 0.8,
+          "emission_curve": {
+            "modelVersion": "vote-average-power-clamped-v1",
+            "exponent": 1,
+            "intensityMin": 0.005,
+            "intensityMax": 0.005
+          },
+          "bloom": {
+            "enabled": false,
+            "strength": 0.01,
+            "radius": 1,
+            "threshold": 0
+          }
+        }
+      },
+      {
+        "rowKey": "semantic-violet-rose-single-band",
+        "columnKey": "key-0.25",
+        "input": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures/cells/semantic-violet-rose-single-band__key-0.25.png",
+        "caption": "L=0.660 Key=0.250 Flat=0.800\nDir=[0.701,0.400,0.591]\nEmission=0.005 (power-clamped-v1)\nBloom=OFF strength=0.01 radius=1 threshold=0",
+        "parameters": {
+          "checkpoint": "key",
+          "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures",
+          "varied_parameter": "keyLightIntensity",
+          "candidate": "key-0.25",
+          "png": "cells/semantic-violet-rose-single-band__key-0.25.png",
+          "sidecar": "cells/semantic-violet-rose-single-band__key-0.25.png.render.json",
+          "candidate_review": "approved",
+          "approved_candidate": "key-0.45",
+          "human_approved_inputs": [
+            {
+              "stage": "direction",
+              "parameter": "direction",
+              "candidate": "backlight-east-v1",
+              "value": [
+                0.700665949127905,
+                0.4003805423588029,
+                0.5905612999792342
+              ],
+              "source": "explicit-cli-human-approved-input",
+              "status": "human-approved-input"
+            },
+            {
+              "stage": "lightness",
+              "parameter": "lightness",
+              "candidate": "lightness-0.66",
+              "value": 0.66,
+              "source": "explicit-cli-human-approved-input",
+              "status": "human-approved-input"
+            }
+          ],
+          "frozen_upstream_baseline_hash": "dc6396cf975660e45e4dbe4ee74ad616fbaf6ebb64368f691b5d74d10b3283aa",
+          "direction_convention": {
+            "space": "world",
+            "lightVectorMeaning": "frozen approved direction candidate",
+            "backlightZSign": "positive-z",
+            "sideBackConstraint": "positive-z is the user-defined backlight side; downstream checkpoints must not reinterpret candidate coordinates"
+          },
+          "backlight_direction_revision": {
+            "id": "backlight-z-flip-v1",
+            "relation": "replaces-frontlight-candidates",
+            "z_transform": "negated-from-frontlight-candidates",
+            "backlight_z_sign": "positive-z",
+            "replaces_candidate_ids": [
+              "side-back-west",
+              "side-back-east",
+              "side-back-high"
+            ],
+            "invalidated_descendants": [
+              {
+                "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v3-approved-direction-semantic-fixtures",
+                "status": "invalidated-frontlight-descendant",
+                "reason": "records a superseded front-light direction approval"
+              },
+              {
+                "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v3-approved-direction-semantic-fixtures",
+                "status": "invalidated-frontlight-descendant",
+                "reason": "records a superseded front-light direction approval"
+              }
+            ]
+          },
+          "lightness_follow_up": {
+            "id": "lightness-066-follow-up-v1",
+            "relation": "extends-lightness-candidate-review",
+            "new_candidate": "lightness-0.66",
+            "predecessor_evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v4-backlight-semantic-fixtures",
+            "candidate_review": "approved"
+          },
+          "fixture": "semantic-violet-rose-single-band",
+          "palette_family": "violet-rose",
+          "palette_family_label": "violet-rose palette family",
+          "terrain_complexity": "single-visible-band",
+          "expected_visible_band_count": 1,
+          "fixture_movie_id": 33,
+          "fixture_title": "Unforgiven",
+          "fixture_hue": 5.9524913436438185,
+          "fixture_primary_genre": "Western",
+          "fixture_palette_hex": "#E989C8",
+          "fixture_genres": [
+            "Western"
+          ],
+          "fixture_visible_band_count": 1,
+          "fixture_selection_predicate": "first authoritative gzip movie with primary genre in violet-rose categorical palette family and single-visible-band (1 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+          "fixture_seed": 2765658642,
+          "diagnostic_only": "phase41-visual-diagnostic-v1",
+          "lightness": 0.66,
+          "key_light_intensity": 0.25,
+          "direction": [
+            0.700665949127905,
+            0.4003805423588029,
+            0.5905612999792342
+          ],
+          "flat_shading_mix": 0.8,
+          "emission_curve": {
+            "modelVersion": "vote-average-power-clamped-v1",
+            "exponent": 1,
+            "intensityMin": 0.005,
+            "intensityMax": 0.005
+          },
+          "bloom": {
+            "enabled": false,
+            "strength": 0.01,
+            "radius": 1,
+            "threshold": 0
+          }
+        }
+      },
+      {
+        "rowKey": "semantic-violet-rose-single-band",
+        "columnKey": "key-0.35",
+        "input": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures/cells/semantic-violet-rose-single-band__key-0.35.png",
+        "caption": "L=0.660 Key=0.350 Flat=0.800\nDir=[0.701,0.400,0.591]\nEmission=0.005 (power-clamped-v1)\nBloom=OFF strength=0.01 radius=1 threshold=0",
+        "parameters": {
+          "checkpoint": "key",
+          "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures",
+          "varied_parameter": "keyLightIntensity",
+          "candidate": "key-0.35",
+          "png": "cells/semantic-violet-rose-single-band__key-0.35.png",
+          "sidecar": "cells/semantic-violet-rose-single-band__key-0.35.png.render.json",
+          "candidate_review": "approved",
+          "approved_candidate": "key-0.45",
+          "human_approved_inputs": [
+            {
+              "stage": "direction",
+              "parameter": "direction",
+              "candidate": "backlight-east-v1",
+              "value": [
+                0.700665949127905,
+                0.4003805423588029,
+                0.5905612999792342
+              ],
+              "source": "explicit-cli-human-approved-input",
+              "status": "human-approved-input"
+            },
+            {
+              "stage": "lightness",
+              "parameter": "lightness",
+              "candidate": "lightness-0.66",
+              "value": 0.66,
+              "source": "explicit-cli-human-approved-input",
+              "status": "human-approved-input"
+            }
+          ],
+          "frozen_upstream_baseline_hash": "dc6396cf975660e45e4dbe4ee74ad616fbaf6ebb64368f691b5d74d10b3283aa",
+          "direction_convention": {
+            "space": "world",
+            "lightVectorMeaning": "frozen approved direction candidate",
+            "backlightZSign": "positive-z",
+            "sideBackConstraint": "positive-z is the user-defined backlight side; downstream checkpoints must not reinterpret candidate coordinates"
+          },
+          "backlight_direction_revision": {
+            "id": "backlight-z-flip-v1",
+            "relation": "replaces-frontlight-candidates",
+            "z_transform": "negated-from-frontlight-candidates",
+            "backlight_z_sign": "positive-z",
+            "replaces_candidate_ids": [
+              "side-back-west",
+              "side-back-east",
+              "side-back-high"
+            ],
+            "invalidated_descendants": [
+              {
+                "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v3-approved-direction-semantic-fixtures",
+                "status": "invalidated-frontlight-descendant",
+                "reason": "records a superseded front-light direction approval"
+              },
+              {
+                "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v3-approved-direction-semantic-fixtures",
+                "status": "invalidated-frontlight-descendant",
+                "reason": "records a superseded front-light direction approval"
+              }
+            ]
+          },
+          "lightness_follow_up": {
+            "id": "lightness-066-follow-up-v1",
+            "relation": "extends-lightness-candidate-review",
+            "new_candidate": "lightness-0.66",
+            "predecessor_evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v4-backlight-semantic-fixtures",
+            "candidate_review": "approved"
+          },
+          "fixture": "semantic-violet-rose-single-band",
+          "palette_family": "violet-rose",
+          "palette_family_label": "violet-rose palette family",
+          "terrain_complexity": "single-visible-band",
+          "expected_visible_band_count": 1,
+          "fixture_movie_id": 33,
+          "fixture_title": "Unforgiven",
+          "fixture_hue": 5.9524913436438185,
+          "fixture_primary_genre": "Western",
+          "fixture_palette_hex": "#E989C8",
+          "fixture_genres": [
+            "Western"
+          ],
+          "fixture_visible_band_count": 1,
+          "fixture_selection_predicate": "first authoritative gzip movie with primary genre in violet-rose categorical palette family and single-visible-band (1 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+          "fixture_seed": 2765658642,
+          "diagnostic_only": "phase41-visual-diagnostic-v1",
+          "lightness": 0.66,
+          "key_light_intensity": 0.35,
+          "direction": [
+            0.700665949127905,
+            0.4003805423588029,
+            0.5905612999792342
+          ],
+          "flat_shading_mix": 0.8,
+          "emission_curve": {
+            "modelVersion": "vote-average-power-clamped-v1",
+            "exponent": 1,
+            "intensityMin": 0.005,
+            "intensityMax": 0.005
+          },
+          "bloom": {
+            "enabled": false,
+            "strength": 0.01,
+            "radius": 1,
+            "threshold": 0
+          }
+        }
+      },
+      {
+        "rowKey": "semantic-violet-rose-single-band",
+        "columnKey": "key-0.45",
+        "input": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures/cells/semantic-violet-rose-single-band__key-0.45.png",
+        "caption": "L=0.660 Key=0.450 Flat=0.800\nDir=[0.701,0.400,0.591]\nEmission=0.005 (power-clamped-v1)\nBloom=OFF strength=0.01 radius=1 threshold=0",
+        "parameters": {
+          "checkpoint": "key",
+          "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures",
+          "varied_parameter": "keyLightIntensity",
+          "candidate": "key-0.45",
+          "png": "cells/semantic-violet-rose-single-band__key-0.45.png",
+          "sidecar": "cells/semantic-violet-rose-single-band__key-0.45.png.render.json",
+          "candidate_review": "approved",
+          "approved_candidate": "key-0.45",
+          "human_approved_inputs": [
+            {
+              "stage": "direction",
+              "parameter": "direction",
+              "candidate": "backlight-east-v1",
+              "value": [
+                0.700665949127905,
+                0.4003805423588029,
+                0.5905612999792342
+              ],
+              "source": "explicit-cli-human-approved-input",
+              "status": "human-approved-input"
+            },
+            {
+              "stage": "lightness",
+              "parameter": "lightness",
+              "candidate": "lightness-0.66",
+              "value": 0.66,
+              "source": "explicit-cli-human-approved-input",
+              "status": "human-approved-input"
+            }
+          ],
+          "frozen_upstream_baseline_hash": "dc6396cf975660e45e4dbe4ee74ad616fbaf6ebb64368f691b5d74d10b3283aa",
+          "direction_convention": {
+            "space": "world",
+            "lightVectorMeaning": "frozen approved direction candidate",
+            "backlightZSign": "positive-z",
+            "sideBackConstraint": "positive-z is the user-defined backlight side; downstream checkpoints must not reinterpret candidate coordinates"
+          },
+          "backlight_direction_revision": {
+            "id": "backlight-z-flip-v1",
+            "relation": "replaces-frontlight-candidates",
+            "z_transform": "negated-from-frontlight-candidates",
+            "backlight_z_sign": "positive-z",
+            "replaces_candidate_ids": [
+              "side-back-west",
+              "side-back-east",
+              "side-back-high"
+            ],
+            "invalidated_descendants": [
+              {
+                "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v3-approved-direction-semantic-fixtures",
+                "status": "invalidated-frontlight-descendant",
+                "reason": "records a superseded front-light direction approval"
+              },
+              {
+                "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v3-approved-direction-semantic-fixtures",
+                "status": "invalidated-frontlight-descendant",
+                "reason": "records a superseded front-light direction approval"
+              }
+            ]
+          },
+          "lightness_follow_up": {
+            "id": "lightness-066-follow-up-v1",
+            "relation": "extends-lightness-candidate-review",
+            "new_candidate": "lightness-0.66",
+            "predecessor_evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v4-backlight-semantic-fixtures",
+            "candidate_review": "approved"
+          },
+          "fixture": "semantic-violet-rose-single-band",
+          "palette_family": "violet-rose",
+          "palette_family_label": "violet-rose palette family",
+          "terrain_complexity": "single-visible-band",
+          "expected_visible_band_count": 1,
+          "fixture_movie_id": 33,
+          "fixture_title": "Unforgiven",
+          "fixture_hue": 5.9524913436438185,
+          "fixture_primary_genre": "Western",
+          "fixture_palette_hex": "#E989C8",
+          "fixture_genres": [
+            "Western"
+          ],
+          "fixture_visible_band_count": 1,
+          "fixture_selection_predicate": "first authoritative gzip movie with primary genre in violet-rose categorical palette family and single-visible-band (1 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+          "fixture_seed": 2765658642,
+          "diagnostic_only": "phase41-visual-diagnostic-v1",
+          "lightness": 0.66,
+          "key_light_intensity": 0.45,
+          "direction": [
+            0.700665949127905,
+            0.4003805423588029,
+            0.5905612999792342
+          ],
+          "flat_shading_mix": 0.8,
+          "emission_curve": {
+            "modelVersion": "vote-average-power-clamped-v1",
+            "exponent": 1,
+            "intensityMin": 0.005,
+            "intensityMax": 0.005
+          },
+          "bloom": {
+            "enabled": false,
+            "strength": 0.01,
+            "radius": 1,
+            "threshold": 0
+          }
+        }
+      },
+      {
+        "rowKey": "semantic-warm-max-visible-bands",
+        "columnKey": "key-0.25",
+        "input": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures/cells/semantic-warm-max-visible-bands__key-0.25.png",
+        "caption": "L=0.660 Key=0.250 Flat=0.800\nDir=[0.701,0.400,0.591]\nEmission=0.005 (power-clamped-v1)\nBloom=OFF strength=0.01 radius=1 threshold=0",
+        "parameters": {
+          "checkpoint": "key",
+          "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures",
+          "varied_parameter": "keyLightIntensity",
+          "candidate": "key-0.25",
+          "png": "cells/semantic-warm-max-visible-bands__key-0.25.png",
+          "sidecar": "cells/semantic-warm-max-visible-bands__key-0.25.png.render.json",
+          "candidate_review": "approved",
+          "approved_candidate": "key-0.45",
+          "human_approved_inputs": [
+            {
+              "stage": "direction",
+              "parameter": "direction",
+              "candidate": "backlight-east-v1",
+              "value": [
+                0.700665949127905,
+                0.4003805423588029,
+                0.5905612999792342
+              ],
+              "source": "explicit-cli-human-approved-input",
+              "status": "human-approved-input"
+            },
+            {
+              "stage": "lightness",
+              "parameter": "lightness",
+              "candidate": "lightness-0.66",
+              "value": 0.66,
+              "source": "explicit-cli-human-approved-input",
+              "status": "human-approved-input"
+            }
+          ],
+          "frozen_upstream_baseline_hash": "dc6396cf975660e45e4dbe4ee74ad616fbaf6ebb64368f691b5d74d10b3283aa",
+          "direction_convention": {
+            "space": "world",
+            "lightVectorMeaning": "frozen approved direction candidate",
+            "backlightZSign": "positive-z",
+            "sideBackConstraint": "positive-z is the user-defined backlight side; downstream checkpoints must not reinterpret candidate coordinates"
+          },
+          "backlight_direction_revision": {
+            "id": "backlight-z-flip-v1",
+            "relation": "replaces-frontlight-candidates",
+            "z_transform": "negated-from-frontlight-candidates",
+            "backlight_z_sign": "positive-z",
+            "replaces_candidate_ids": [
+              "side-back-west",
+              "side-back-east",
+              "side-back-high"
+            ],
+            "invalidated_descendants": [
+              {
+                "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v3-approved-direction-semantic-fixtures",
+                "status": "invalidated-frontlight-descendant",
+                "reason": "records a superseded front-light direction approval"
+              },
+              {
+                "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v3-approved-direction-semantic-fixtures",
+                "status": "invalidated-frontlight-descendant",
+                "reason": "records a superseded front-light direction approval"
+              }
+            ]
+          },
+          "lightness_follow_up": {
+            "id": "lightness-066-follow-up-v1",
+            "relation": "extends-lightness-candidate-review",
+            "new_candidate": "lightness-0.66",
+            "predecessor_evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v4-backlight-semantic-fixtures",
+            "candidate_review": "approved"
+          },
+          "fixture": "semantic-warm-max-visible-bands",
+          "palette_family": "warm",
+          "palette_family_label": "warm palette family",
+          "terrain_complexity": "max-visible-bands",
+          "expected_visible_band_count": 8,
+          "fixture_movie_id": 64152,
+          "fixture_title": "Garfield: His 9 Lives",
+          "fixture_hue": 0.6613879270715354,
+          "fixture_primary_genre": "Animation",
+          "fixture_palette_hex": "#F88C6B",
+          "fixture_genres": [
+            "Animation",
+            "Comedy",
+            "Adventure",
+            "Drama",
+            "Fantasy",
+            "Music",
+            "Science Fiction",
+            "TV Movie"
+          ],
+          "fixture_visible_band_count": 8,
+          "fixture_selection_predicate": "first authoritative gzip movie with primary genre in warm categorical palette family and max-visible-bands (8 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+          "fixture_seed": 1987718520,
+          "diagnostic_only": "phase41-visual-diagnostic-v1",
+          "lightness": 0.66,
+          "key_light_intensity": 0.25,
+          "direction": [
+            0.700665949127905,
+            0.4003805423588029,
+            0.5905612999792342
+          ],
+          "flat_shading_mix": 0.8,
+          "emission_curve": {
+            "modelVersion": "vote-average-power-clamped-v1",
+            "exponent": 1,
+            "intensityMin": 0.005,
+            "intensityMax": 0.005
+          },
+          "bloom": {
+            "enabled": false,
+            "strength": 0.01,
+            "radius": 1,
+            "threshold": 0
+          }
+        }
+      },
+      {
+        "rowKey": "semantic-warm-max-visible-bands",
+        "columnKey": "key-0.35",
+        "input": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures/cells/semantic-warm-max-visible-bands__key-0.35.png",
+        "caption": "L=0.660 Key=0.350 Flat=0.800\nDir=[0.701,0.400,0.591]\nEmission=0.005 (power-clamped-v1)\nBloom=OFF strength=0.01 radius=1 threshold=0",
+        "parameters": {
+          "checkpoint": "key",
+          "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures",
+          "varied_parameter": "keyLightIntensity",
+          "candidate": "key-0.35",
+          "png": "cells/semantic-warm-max-visible-bands__key-0.35.png",
+          "sidecar": "cells/semantic-warm-max-visible-bands__key-0.35.png.render.json",
+          "candidate_review": "approved",
+          "approved_candidate": "key-0.45",
+          "human_approved_inputs": [
+            {
+              "stage": "direction",
+              "parameter": "direction",
+              "candidate": "backlight-east-v1",
+              "value": [
+                0.700665949127905,
+                0.4003805423588029,
+                0.5905612999792342
+              ],
+              "source": "explicit-cli-human-approved-input",
+              "status": "human-approved-input"
+            },
+            {
+              "stage": "lightness",
+              "parameter": "lightness",
+              "candidate": "lightness-0.66",
+              "value": 0.66,
+              "source": "explicit-cli-human-approved-input",
+              "status": "human-approved-input"
+            }
+          ],
+          "frozen_upstream_baseline_hash": "dc6396cf975660e45e4dbe4ee74ad616fbaf6ebb64368f691b5d74d10b3283aa",
+          "direction_convention": {
+            "space": "world",
+            "lightVectorMeaning": "frozen approved direction candidate",
+            "backlightZSign": "positive-z",
+            "sideBackConstraint": "positive-z is the user-defined backlight side; downstream checkpoints must not reinterpret candidate coordinates"
+          },
+          "backlight_direction_revision": {
+            "id": "backlight-z-flip-v1",
+            "relation": "replaces-frontlight-candidates",
+            "z_transform": "negated-from-frontlight-candidates",
+            "backlight_z_sign": "positive-z",
+            "replaces_candidate_ids": [
+              "side-back-west",
+              "side-back-east",
+              "side-back-high"
+            ],
+            "invalidated_descendants": [
+              {
+                "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v3-approved-direction-semantic-fixtures",
+                "status": "invalidated-frontlight-descendant",
+                "reason": "records a superseded front-light direction approval"
+              },
+              {
+                "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v3-approved-direction-semantic-fixtures",
+                "status": "invalidated-frontlight-descendant",
+                "reason": "records a superseded front-light direction approval"
+              }
+            ]
+          },
+          "lightness_follow_up": {
+            "id": "lightness-066-follow-up-v1",
+            "relation": "extends-lightness-candidate-review",
+            "new_candidate": "lightness-0.66",
+            "predecessor_evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v4-backlight-semantic-fixtures",
+            "candidate_review": "approved"
+          },
+          "fixture": "semantic-warm-max-visible-bands",
+          "palette_family": "warm",
+          "palette_family_label": "warm palette family",
+          "terrain_complexity": "max-visible-bands",
+          "expected_visible_band_count": 8,
+          "fixture_movie_id": 64152,
+          "fixture_title": "Garfield: His 9 Lives",
+          "fixture_hue": 0.6613879270715354,
+          "fixture_primary_genre": "Animation",
+          "fixture_palette_hex": "#F88C6B",
+          "fixture_genres": [
+            "Animation",
+            "Comedy",
+            "Adventure",
+            "Drama",
+            "Fantasy",
+            "Music",
+            "Science Fiction",
+            "TV Movie"
+          ],
+          "fixture_visible_band_count": 8,
+          "fixture_selection_predicate": "first authoritative gzip movie with primary genre in warm categorical palette family and max-visible-bands (8 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+          "fixture_seed": 1987718520,
+          "diagnostic_only": "phase41-visual-diagnostic-v1",
+          "lightness": 0.66,
+          "key_light_intensity": 0.35,
+          "direction": [
+            0.700665949127905,
+            0.4003805423588029,
+            0.5905612999792342
+          ],
+          "flat_shading_mix": 0.8,
+          "emission_curve": {
+            "modelVersion": "vote-average-power-clamped-v1",
+            "exponent": 1,
+            "intensityMin": 0.005,
+            "intensityMax": 0.005
+          },
+          "bloom": {
+            "enabled": false,
+            "strength": 0.01,
+            "radius": 1,
+            "threshold": 0
+          }
+        }
+      },
+      {
+        "rowKey": "semantic-warm-max-visible-bands",
+        "columnKey": "key-0.45",
+        "input": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures/cells/semantic-warm-max-visible-bands__key-0.45.png",
+        "caption": "L=0.660 Key=0.450 Flat=0.800\nDir=[0.701,0.400,0.591]\nEmission=0.005 (power-clamped-v1)\nBloom=OFF strength=0.01 radius=1 threshold=0",
+        "parameters": {
+          "checkpoint": "key",
+          "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures",
+          "varied_parameter": "keyLightIntensity",
+          "candidate": "key-0.45",
+          "png": "cells/semantic-warm-max-visible-bands__key-0.45.png",
+          "sidecar": "cells/semantic-warm-max-visible-bands__key-0.45.png.render.json",
+          "candidate_review": "approved",
+          "approved_candidate": "key-0.45",
+          "human_approved_inputs": [
+            {
+              "stage": "direction",
+              "parameter": "direction",
+              "candidate": "backlight-east-v1",
+              "value": [
+                0.700665949127905,
+                0.4003805423588029,
+                0.5905612999792342
+              ],
+              "source": "explicit-cli-human-approved-input",
+              "status": "human-approved-input"
+            },
+            {
+              "stage": "lightness",
+              "parameter": "lightness",
+              "candidate": "lightness-0.66",
+              "value": 0.66,
+              "source": "explicit-cli-human-approved-input",
+              "status": "human-approved-input"
+            }
+          ],
+          "frozen_upstream_baseline_hash": "dc6396cf975660e45e4dbe4ee74ad616fbaf6ebb64368f691b5d74d10b3283aa",
+          "direction_convention": {
+            "space": "world",
+            "lightVectorMeaning": "frozen approved direction candidate",
+            "backlightZSign": "positive-z",
+            "sideBackConstraint": "positive-z is the user-defined backlight side; downstream checkpoints must not reinterpret candidate coordinates"
+          },
+          "backlight_direction_revision": {
+            "id": "backlight-z-flip-v1",
+            "relation": "replaces-frontlight-candidates",
+            "z_transform": "negated-from-frontlight-candidates",
+            "backlight_z_sign": "positive-z",
+            "replaces_candidate_ids": [
+              "side-back-west",
+              "side-back-east",
+              "side-back-high"
+            ],
+            "invalidated_descendants": [
+              {
+                "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v3-approved-direction-semantic-fixtures",
+                "status": "invalidated-frontlight-descendant",
+                "reason": "records a superseded front-light direction approval"
+              },
+              {
+                "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v3-approved-direction-semantic-fixtures",
+                "status": "invalidated-frontlight-descendant",
+                "reason": "records a superseded front-light direction approval"
+              }
+            ]
+          },
+          "lightness_follow_up": {
+            "id": "lightness-066-follow-up-v1",
+            "relation": "extends-lightness-candidate-review",
+            "new_candidate": "lightness-0.66",
+            "predecessor_evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v4-backlight-semantic-fixtures",
+            "candidate_review": "approved"
+          },
+          "fixture": "semantic-warm-max-visible-bands",
+          "palette_family": "warm",
+          "palette_family_label": "warm palette family",
+          "terrain_complexity": "max-visible-bands",
+          "expected_visible_band_count": 8,
+          "fixture_movie_id": 64152,
+          "fixture_title": "Garfield: His 9 Lives",
+          "fixture_hue": 0.6613879270715354,
+          "fixture_primary_genre": "Animation",
+          "fixture_palette_hex": "#F88C6B",
+          "fixture_genres": [
+            "Animation",
+            "Comedy",
+            "Adventure",
+            "Drama",
+            "Fantasy",
+            "Music",
+            "Science Fiction",
+            "TV Movie"
+          ],
+          "fixture_visible_band_count": 8,
+          "fixture_selection_predicate": "first authoritative gzip movie with primary genre in warm categorical palette family and max-visible-bands (8 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+          "fixture_seed": 1987718520,
+          "diagnostic_only": "phase41-visual-diagnostic-v1",
+          "lightness": 0.66,
+          "key_light_intensity": 0.45,
+          "direction": [
+            0.700665949127905,
+            0.4003805423588029,
+            0.5905612999792342
+          ],
+          "flat_shading_mix": 0.8,
+          "emission_curve": {
+            "modelVersion": "vote-average-power-clamped-v1",
+            "exponent": 1,
+            "intensityMin": 0.005,
+            "intensityMax": 0.005
+          },
+          "bloom": {
+            "enabled": false,
+            "strength": 0.01,
+            "radius": 1,
+            "threshold": 0
+          }
+        }
+      },
+      {
+        "rowKey": "semantic-cool-max-visible-bands",
+        "columnKey": "key-0.25",
+        "input": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures/cells/semantic-cool-max-visible-bands__key-0.25.png",
+        "caption": "L=0.660 Key=0.250 Flat=0.800\nDir=[0.701,0.400,0.591]\nEmission=0.005 (power-clamped-v1)\nBloom=OFF strength=0.01 radius=1 threshold=0",
+        "parameters": {
+          "checkpoint": "key",
+          "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures",
+          "varied_parameter": "keyLightIntensity",
+          "candidate": "key-0.25",
+          "png": "cells/semantic-cool-max-visible-bands__key-0.25.png",
+          "sidecar": "cells/semantic-cool-max-visible-bands__key-0.25.png.render.json",
+          "candidate_review": "approved",
+          "approved_candidate": "key-0.45",
+          "human_approved_inputs": [
+            {
+              "stage": "direction",
+              "parameter": "direction",
+              "candidate": "backlight-east-v1",
+              "value": [
+                0.700665949127905,
+                0.4003805423588029,
+                0.5905612999792342
+              ],
+              "source": "explicit-cli-human-approved-input",
+              "status": "human-approved-input"
+            },
+            {
+              "stage": "lightness",
+              "parameter": "lightness",
+              "candidate": "lightness-0.66",
+              "value": 0.66,
+              "source": "explicit-cli-human-approved-input",
+              "status": "human-approved-input"
+            }
+          ],
+          "frozen_upstream_baseline_hash": "dc6396cf975660e45e4dbe4ee74ad616fbaf6ebb64368f691b5d74d10b3283aa",
+          "direction_convention": {
+            "space": "world",
+            "lightVectorMeaning": "frozen approved direction candidate",
+            "backlightZSign": "positive-z",
+            "sideBackConstraint": "positive-z is the user-defined backlight side; downstream checkpoints must not reinterpret candidate coordinates"
+          },
+          "backlight_direction_revision": {
+            "id": "backlight-z-flip-v1",
+            "relation": "replaces-frontlight-candidates",
+            "z_transform": "negated-from-frontlight-candidates",
+            "backlight_z_sign": "positive-z",
+            "replaces_candidate_ids": [
+              "side-back-west",
+              "side-back-east",
+              "side-back-high"
+            ],
+            "invalidated_descendants": [
+              {
+                "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v3-approved-direction-semantic-fixtures",
+                "status": "invalidated-frontlight-descendant",
+                "reason": "records a superseded front-light direction approval"
+              },
+              {
+                "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v3-approved-direction-semantic-fixtures",
+                "status": "invalidated-frontlight-descendant",
+                "reason": "records a superseded front-light direction approval"
+              }
+            ]
+          },
+          "lightness_follow_up": {
+            "id": "lightness-066-follow-up-v1",
+            "relation": "extends-lightness-candidate-review",
+            "new_candidate": "lightness-0.66",
+            "predecessor_evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v4-backlight-semantic-fixtures",
+            "candidate_review": "approved"
+          },
+          "fixture": "semantic-cool-max-visible-bands",
+          "palette_family": "cool",
+          "palette_family_label": "cool palette family",
+          "terrain_complexity": "max-visible-bands",
+          "expected_visible_band_count": 8,
+          "fixture_movie_id": 16774,
+          "fixture_title": "Hellboy Animated: Sword of Storms",
+          "fixture_hue": 4.6297154895007475,
+          "fixture_primary_genre": "Science Fiction",
+          "fixture_palette_hex": "#83ABFF",
+          "fixture_genres": [
+            "Science Fiction",
+            "Animation",
+            "Fantasy",
+            "Action",
+            "Horror",
+            "Adventure",
+            "Thriller",
+            "TV Movie"
+          ],
+          "fixture_visible_band_count": 8,
+          "fixture_selection_predicate": "first authoritative gzip movie with primary genre in cool categorical palette family and max-visible-bands (8 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+          "fixture_seed": 230367109,
+          "diagnostic_only": "phase41-visual-diagnostic-v1",
+          "lightness": 0.66,
+          "key_light_intensity": 0.25,
+          "direction": [
+            0.700665949127905,
+            0.4003805423588029,
+            0.5905612999792342
+          ],
+          "flat_shading_mix": 0.8,
+          "emission_curve": {
+            "modelVersion": "vote-average-power-clamped-v1",
+            "exponent": 1,
+            "intensityMin": 0.005,
+            "intensityMax": 0.005
+          },
+          "bloom": {
+            "enabled": false,
+            "strength": 0.01,
+            "radius": 1,
+            "threshold": 0
+          }
+        }
+      },
+      {
+        "rowKey": "semantic-cool-max-visible-bands",
+        "columnKey": "key-0.35",
+        "input": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures/cells/semantic-cool-max-visible-bands__key-0.35.png",
+        "caption": "L=0.660 Key=0.350 Flat=0.800\nDir=[0.701,0.400,0.591]\nEmission=0.005 (power-clamped-v1)\nBloom=OFF strength=0.01 radius=1 threshold=0",
+        "parameters": {
+          "checkpoint": "key",
+          "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures",
+          "varied_parameter": "keyLightIntensity",
+          "candidate": "key-0.35",
+          "png": "cells/semantic-cool-max-visible-bands__key-0.35.png",
+          "sidecar": "cells/semantic-cool-max-visible-bands__key-0.35.png.render.json",
+          "candidate_review": "approved",
+          "approved_candidate": "key-0.45",
+          "human_approved_inputs": [
+            {
+              "stage": "direction",
+              "parameter": "direction",
+              "candidate": "backlight-east-v1",
+              "value": [
+                0.700665949127905,
+                0.4003805423588029,
+                0.5905612999792342
+              ],
+              "source": "explicit-cli-human-approved-input",
+              "status": "human-approved-input"
+            },
+            {
+              "stage": "lightness",
+              "parameter": "lightness",
+              "candidate": "lightness-0.66",
+              "value": 0.66,
+              "source": "explicit-cli-human-approved-input",
+              "status": "human-approved-input"
+            }
+          ],
+          "frozen_upstream_baseline_hash": "dc6396cf975660e45e4dbe4ee74ad616fbaf6ebb64368f691b5d74d10b3283aa",
+          "direction_convention": {
+            "space": "world",
+            "lightVectorMeaning": "frozen approved direction candidate",
+            "backlightZSign": "positive-z",
+            "sideBackConstraint": "positive-z is the user-defined backlight side; downstream checkpoints must not reinterpret candidate coordinates"
+          },
+          "backlight_direction_revision": {
+            "id": "backlight-z-flip-v1",
+            "relation": "replaces-frontlight-candidates",
+            "z_transform": "negated-from-frontlight-candidates",
+            "backlight_z_sign": "positive-z",
+            "replaces_candidate_ids": [
+              "side-back-west",
+              "side-back-east",
+              "side-back-high"
+            ],
+            "invalidated_descendants": [
+              {
+                "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v3-approved-direction-semantic-fixtures",
+                "status": "invalidated-frontlight-descendant",
+                "reason": "records a superseded front-light direction approval"
+              },
+              {
+                "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v3-approved-direction-semantic-fixtures",
+                "status": "invalidated-frontlight-descendant",
+                "reason": "records a superseded front-light direction approval"
+              }
+            ]
+          },
+          "lightness_follow_up": {
+            "id": "lightness-066-follow-up-v1",
+            "relation": "extends-lightness-candidate-review",
+            "new_candidate": "lightness-0.66",
+            "predecessor_evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v4-backlight-semantic-fixtures",
+            "candidate_review": "approved"
+          },
+          "fixture": "semantic-cool-max-visible-bands",
+          "palette_family": "cool",
+          "palette_family_label": "cool palette family",
+          "terrain_complexity": "max-visible-bands",
+          "expected_visible_band_count": 8,
+          "fixture_movie_id": 16774,
+          "fixture_title": "Hellboy Animated: Sword of Storms",
+          "fixture_hue": 4.6297154895007475,
+          "fixture_primary_genre": "Science Fiction",
+          "fixture_palette_hex": "#83ABFF",
+          "fixture_genres": [
+            "Science Fiction",
+            "Animation",
+            "Fantasy",
+            "Action",
+            "Horror",
+            "Adventure",
+            "Thriller",
+            "TV Movie"
+          ],
+          "fixture_visible_band_count": 8,
+          "fixture_selection_predicate": "first authoritative gzip movie with primary genre in cool categorical palette family and max-visible-bands (8 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+          "fixture_seed": 230367109,
+          "diagnostic_only": "phase41-visual-diagnostic-v1",
+          "lightness": 0.66,
+          "key_light_intensity": 0.35,
+          "direction": [
+            0.700665949127905,
+            0.4003805423588029,
+            0.5905612999792342
+          ],
+          "flat_shading_mix": 0.8,
+          "emission_curve": {
+            "modelVersion": "vote-average-power-clamped-v1",
+            "exponent": 1,
+            "intensityMin": 0.005,
+            "intensityMax": 0.005
+          },
+          "bloom": {
+            "enabled": false,
+            "strength": 0.01,
+            "radius": 1,
+            "threshold": 0
+          }
+        }
+      },
+      {
+        "rowKey": "semantic-cool-max-visible-bands",
+        "columnKey": "key-0.45",
+        "input": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures/cells/semantic-cool-max-visible-bands__key-0.45.png",
+        "caption": "L=0.660 Key=0.450 Flat=0.800\nDir=[0.701,0.400,0.591]\nEmission=0.005 (power-clamped-v1)\nBloom=OFF strength=0.01 radius=1 threshold=0",
+        "parameters": {
+          "checkpoint": "key",
+          "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures",
+          "varied_parameter": "keyLightIntensity",
+          "candidate": "key-0.45",
+          "png": "cells/semantic-cool-max-visible-bands__key-0.45.png",
+          "sidecar": "cells/semantic-cool-max-visible-bands__key-0.45.png.render.json",
+          "candidate_review": "approved",
+          "approved_candidate": "key-0.45",
+          "human_approved_inputs": [
+            {
+              "stage": "direction",
+              "parameter": "direction",
+              "candidate": "backlight-east-v1",
+              "value": [
+                0.700665949127905,
+                0.4003805423588029,
+                0.5905612999792342
+              ],
+              "source": "explicit-cli-human-approved-input",
+              "status": "human-approved-input"
+            },
+            {
+              "stage": "lightness",
+              "parameter": "lightness",
+              "candidate": "lightness-0.66",
+              "value": 0.66,
+              "source": "explicit-cli-human-approved-input",
+              "status": "human-approved-input"
+            }
+          ],
+          "frozen_upstream_baseline_hash": "dc6396cf975660e45e4dbe4ee74ad616fbaf6ebb64368f691b5d74d10b3283aa",
+          "direction_convention": {
+            "space": "world",
+            "lightVectorMeaning": "frozen approved direction candidate",
+            "backlightZSign": "positive-z",
+            "sideBackConstraint": "positive-z is the user-defined backlight side; downstream checkpoints must not reinterpret candidate coordinates"
+          },
+          "backlight_direction_revision": {
+            "id": "backlight-z-flip-v1",
+            "relation": "replaces-frontlight-candidates",
+            "z_transform": "negated-from-frontlight-candidates",
+            "backlight_z_sign": "positive-z",
+            "replaces_candidate_ids": [
+              "side-back-west",
+              "side-back-east",
+              "side-back-high"
+            ],
+            "invalidated_descendants": [
+              {
+                "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v3-approved-direction-semantic-fixtures",
+                "status": "invalidated-frontlight-descendant",
+                "reason": "records a superseded front-light direction approval"
+              },
+              {
+                "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v3-approved-direction-semantic-fixtures",
+                "status": "invalidated-frontlight-descendant",
+                "reason": "records a superseded front-light direction approval"
+              }
+            ]
+          },
+          "lightness_follow_up": {
+            "id": "lightness-066-follow-up-v1",
+            "relation": "extends-lightness-candidate-review",
+            "new_candidate": "lightness-0.66",
+            "predecessor_evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v4-backlight-semantic-fixtures",
+            "candidate_review": "approved"
+          },
+          "fixture": "semantic-cool-max-visible-bands",
+          "palette_family": "cool",
+          "palette_family_label": "cool palette family",
+          "terrain_complexity": "max-visible-bands",
+          "expected_visible_band_count": 8,
+          "fixture_movie_id": 16774,
+          "fixture_title": "Hellboy Animated: Sword of Storms",
+          "fixture_hue": 4.6297154895007475,
+          "fixture_primary_genre": "Science Fiction",
+          "fixture_palette_hex": "#83ABFF",
+          "fixture_genres": [
+            "Science Fiction",
+            "Animation",
+            "Fantasy",
+            "Action",
+            "Horror",
+            "Adventure",
+            "Thriller",
+            "TV Movie"
+          ],
+          "fixture_visible_band_count": 8,
+          "fixture_selection_predicate": "first authoritative gzip movie with primary genre in cool categorical palette family and max-visible-bands (8 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+          "fixture_seed": 230367109,
+          "diagnostic_only": "phase41-visual-diagnostic-v1",
+          "lightness": 0.66,
+          "key_light_intensity": 0.45,
+          "direction": [
+            0.700665949127905,
+            0.4003805423588029,
+            0.5905612999792342
+          ],
+          "flat_shading_mix": 0.8,
+          "emission_curve": {
+            "modelVersion": "vote-average-power-clamped-v1",
+            "exponent": 1,
+            "intensityMin": 0.005,
+            "intensityMax": 0.005
+          },
+          "bloom": {
+            "enabled": false,
+            "strength": 0.01,
+            "radius": 1,
+            "threshold": 0
+          }
+        }
+      }
+    ]
+  },
+  "sources": [
+    {
+      "row_key": "semantic-warm-single-band",
+      "column_key": "key-0.25",
+      "input": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures/cells/semantic-warm-single-band__key-0.25.png",
+      "sha256": "80dd796c524b3147c2c08aa7f6dae0a2f377c6c931bd34e681a93b4c66315463",
+      "width": 1024,
+      "height": 1024,
+      "parameters": {
+        "checkpoint": "key",
+        "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures",
+        "varied_parameter": "keyLightIntensity",
+        "candidate": "key-0.25",
+        "png": "cells/semantic-warm-single-band__key-0.25.png",
+        "sidecar": "cells/semantic-warm-single-band__key-0.25.png.render.json",
+        "candidate_review": "approved",
+        "approved_candidate": "key-0.45",
+        "human_approved_inputs": [
+          {
+            "stage": "direction",
+            "parameter": "direction",
+            "candidate": "backlight-east-v1",
+            "value": [
+              0.700665949127905,
+              0.4003805423588029,
+              0.5905612999792342
+            ],
+            "source": "explicit-cli-human-approved-input",
+            "status": "human-approved-input"
+          },
+          {
+            "stage": "lightness",
+            "parameter": "lightness",
+            "candidate": "lightness-0.66",
+            "value": 0.66,
+            "source": "explicit-cli-human-approved-input",
+            "status": "human-approved-input"
+          }
+        ],
+        "frozen_upstream_baseline_hash": "dc6396cf975660e45e4dbe4ee74ad616fbaf6ebb64368f691b5d74d10b3283aa",
+        "direction_convention": {
+          "space": "world",
+          "lightVectorMeaning": "frozen approved direction candidate",
+          "backlightZSign": "positive-z",
+          "sideBackConstraint": "positive-z is the user-defined backlight side; downstream checkpoints must not reinterpret candidate coordinates"
+        },
+        "backlight_direction_revision": {
+          "id": "backlight-z-flip-v1",
+          "relation": "replaces-frontlight-candidates",
+          "z_transform": "negated-from-frontlight-candidates",
+          "backlight_z_sign": "positive-z",
+          "replaces_candidate_ids": [
+            "side-back-west",
+            "side-back-east",
+            "side-back-high"
+          ],
+          "invalidated_descendants": [
+            {
+              "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v3-approved-direction-semantic-fixtures",
+              "status": "invalidated-frontlight-descendant",
+              "reason": "records a superseded front-light direction approval"
+            },
+            {
+              "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v3-approved-direction-semantic-fixtures",
+              "status": "invalidated-frontlight-descendant",
+              "reason": "records a superseded front-light direction approval"
+            }
+          ]
+        },
+        "lightness_follow_up": {
+          "id": "lightness-066-follow-up-v1",
+          "relation": "extends-lightness-candidate-review",
+          "new_candidate": "lightness-0.66",
+          "predecessor_evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v4-backlight-semantic-fixtures",
+          "candidate_review": "approved"
+        },
+        "fixture": "semantic-warm-single-band",
+        "palette_family": "warm",
+        "palette_family_label": "warm palette family",
+        "terrain_complexity": "single-visible-band",
+        "expected_visible_band_count": 1,
+        "fixture_movie_id": 5,
+        "fixture_title": "Four Rooms",
+        "fixture_hue": 0.9920818906073031,
+        "fixture_primary_genre": "Comedy",
+        "fixture_palette_hex": "#F0954C",
+        "fixture_genres": [
+          "Comedy"
+        ],
+        "fixture_visible_band_count": 1,
+        "fixture_selection_predicate": "first authoritative gzip movie with primary genre in warm categorical palette family and single-visible-band (1 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+        "fixture_seed": 1416710939,
+        "diagnostic_only": "phase41-visual-diagnostic-v1",
+        "lightness": 0.66,
+        "key_light_intensity": 0.25,
+        "direction": [
+          0.700665949127905,
+          0.4003805423588029,
+          0.5905612999792342
+        ],
+        "flat_shading_mix": 0.8,
+        "emission_curve": {
+          "modelVersion": "vote-average-power-clamped-v1",
+          "exponent": 1,
+          "intensityMin": 0.005,
+          "intensityMax": 0.005
+        },
+        "bloom": {
+          "enabled": false,
+          "strength": 0.01,
+          "radius": 1,
+          "threshold": 0
+        }
+      }
+    },
+    {
+      "row_key": "semantic-warm-single-band",
+      "column_key": "key-0.35",
+      "input": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures/cells/semantic-warm-single-band__key-0.35.png",
+      "sha256": "af032b3f8b9e97358909283220e2ea0523ddc314aee317fc0f4cec1a8b92d3e7",
+      "width": 1024,
+      "height": 1024,
+      "parameters": {
+        "checkpoint": "key",
+        "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures",
+        "varied_parameter": "keyLightIntensity",
+        "candidate": "key-0.35",
+        "png": "cells/semantic-warm-single-band__key-0.35.png",
+        "sidecar": "cells/semantic-warm-single-band__key-0.35.png.render.json",
+        "candidate_review": "approved",
+        "approved_candidate": "key-0.45",
+        "human_approved_inputs": [
+          {
+            "stage": "direction",
+            "parameter": "direction",
+            "candidate": "backlight-east-v1",
+            "value": [
+              0.700665949127905,
+              0.4003805423588029,
+              0.5905612999792342
+            ],
+            "source": "explicit-cli-human-approved-input",
+            "status": "human-approved-input"
+          },
+          {
+            "stage": "lightness",
+            "parameter": "lightness",
+            "candidate": "lightness-0.66",
+            "value": 0.66,
+            "source": "explicit-cli-human-approved-input",
+            "status": "human-approved-input"
+          }
+        ],
+        "frozen_upstream_baseline_hash": "dc6396cf975660e45e4dbe4ee74ad616fbaf6ebb64368f691b5d74d10b3283aa",
+        "direction_convention": {
+          "space": "world",
+          "lightVectorMeaning": "frozen approved direction candidate",
+          "backlightZSign": "positive-z",
+          "sideBackConstraint": "positive-z is the user-defined backlight side; downstream checkpoints must not reinterpret candidate coordinates"
+        },
+        "backlight_direction_revision": {
+          "id": "backlight-z-flip-v1",
+          "relation": "replaces-frontlight-candidates",
+          "z_transform": "negated-from-frontlight-candidates",
+          "backlight_z_sign": "positive-z",
+          "replaces_candidate_ids": [
+            "side-back-west",
+            "side-back-east",
+            "side-back-high"
+          ],
+          "invalidated_descendants": [
+            {
+              "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v3-approved-direction-semantic-fixtures",
+              "status": "invalidated-frontlight-descendant",
+              "reason": "records a superseded front-light direction approval"
+            },
+            {
+              "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v3-approved-direction-semantic-fixtures",
+              "status": "invalidated-frontlight-descendant",
+              "reason": "records a superseded front-light direction approval"
+            }
+          ]
+        },
+        "lightness_follow_up": {
+          "id": "lightness-066-follow-up-v1",
+          "relation": "extends-lightness-candidate-review",
+          "new_candidate": "lightness-0.66",
+          "predecessor_evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v4-backlight-semantic-fixtures",
+          "candidate_review": "approved"
+        },
+        "fixture": "semantic-warm-single-band",
+        "palette_family": "warm",
+        "palette_family_label": "warm palette family",
+        "terrain_complexity": "single-visible-band",
+        "expected_visible_band_count": 1,
+        "fixture_movie_id": 5,
+        "fixture_title": "Four Rooms",
+        "fixture_hue": 0.9920818906073031,
+        "fixture_primary_genre": "Comedy",
+        "fixture_palette_hex": "#F0954C",
+        "fixture_genres": [
+          "Comedy"
+        ],
+        "fixture_visible_band_count": 1,
+        "fixture_selection_predicate": "first authoritative gzip movie with primary genre in warm categorical palette family and single-visible-band (1 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+        "fixture_seed": 1416710939,
+        "diagnostic_only": "phase41-visual-diagnostic-v1",
+        "lightness": 0.66,
+        "key_light_intensity": 0.35,
+        "direction": [
+          0.700665949127905,
+          0.4003805423588029,
+          0.5905612999792342
+        ],
+        "flat_shading_mix": 0.8,
+        "emission_curve": {
+          "modelVersion": "vote-average-power-clamped-v1",
+          "exponent": 1,
+          "intensityMin": 0.005,
+          "intensityMax": 0.005
+        },
+        "bloom": {
+          "enabled": false,
+          "strength": 0.01,
+          "radius": 1,
+          "threshold": 0
+        }
+      }
+    },
+    {
+      "row_key": "semantic-warm-single-band",
+      "column_key": "key-0.45",
+      "input": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures/cells/semantic-warm-single-band__key-0.45.png",
+      "sha256": "25ad20f0eb866bc32abcff96d5d57d6723c856a3d40e3d7bf2897ac1680e819f",
+      "width": 1024,
+      "height": 1024,
+      "parameters": {
+        "checkpoint": "key",
+        "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures",
+        "varied_parameter": "keyLightIntensity",
+        "candidate": "key-0.45",
+        "png": "cells/semantic-warm-single-band__key-0.45.png",
+        "sidecar": "cells/semantic-warm-single-band__key-0.45.png.render.json",
+        "candidate_review": "approved",
+        "approved_candidate": "key-0.45",
+        "human_approved_inputs": [
+          {
+            "stage": "direction",
+            "parameter": "direction",
+            "candidate": "backlight-east-v1",
+            "value": [
+              0.700665949127905,
+              0.4003805423588029,
+              0.5905612999792342
+            ],
+            "source": "explicit-cli-human-approved-input",
+            "status": "human-approved-input"
+          },
+          {
+            "stage": "lightness",
+            "parameter": "lightness",
+            "candidate": "lightness-0.66",
+            "value": 0.66,
+            "source": "explicit-cli-human-approved-input",
+            "status": "human-approved-input"
+          }
+        ],
+        "frozen_upstream_baseline_hash": "dc6396cf975660e45e4dbe4ee74ad616fbaf6ebb64368f691b5d74d10b3283aa",
+        "direction_convention": {
+          "space": "world",
+          "lightVectorMeaning": "frozen approved direction candidate",
+          "backlightZSign": "positive-z",
+          "sideBackConstraint": "positive-z is the user-defined backlight side; downstream checkpoints must not reinterpret candidate coordinates"
+        },
+        "backlight_direction_revision": {
+          "id": "backlight-z-flip-v1",
+          "relation": "replaces-frontlight-candidates",
+          "z_transform": "negated-from-frontlight-candidates",
+          "backlight_z_sign": "positive-z",
+          "replaces_candidate_ids": [
+            "side-back-west",
+            "side-back-east",
+            "side-back-high"
+          ],
+          "invalidated_descendants": [
+            {
+              "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v3-approved-direction-semantic-fixtures",
+              "status": "invalidated-frontlight-descendant",
+              "reason": "records a superseded front-light direction approval"
+            },
+            {
+              "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v3-approved-direction-semantic-fixtures",
+              "status": "invalidated-frontlight-descendant",
+              "reason": "records a superseded front-light direction approval"
+            }
+          ]
+        },
+        "lightness_follow_up": {
+          "id": "lightness-066-follow-up-v1",
+          "relation": "extends-lightness-candidate-review",
+          "new_candidate": "lightness-0.66",
+          "predecessor_evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v4-backlight-semantic-fixtures",
+          "candidate_review": "approved"
+        },
+        "fixture": "semantic-warm-single-band",
+        "palette_family": "warm",
+        "palette_family_label": "warm palette family",
+        "terrain_complexity": "single-visible-band",
+        "expected_visible_band_count": 1,
+        "fixture_movie_id": 5,
+        "fixture_title": "Four Rooms",
+        "fixture_hue": 0.9920818906073031,
+        "fixture_primary_genre": "Comedy",
+        "fixture_palette_hex": "#F0954C",
+        "fixture_genres": [
+          "Comedy"
+        ],
+        "fixture_visible_band_count": 1,
+        "fixture_selection_predicate": "first authoritative gzip movie with primary genre in warm categorical palette family and single-visible-band (1 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+        "fixture_seed": 1416710939,
+        "diagnostic_only": "phase41-visual-diagnostic-v1",
+        "lightness": 0.66,
+        "key_light_intensity": 0.45,
+        "direction": [
+          0.700665949127905,
+          0.4003805423588029,
+          0.5905612999792342
+        ],
+        "flat_shading_mix": 0.8,
+        "emission_curve": {
+          "modelVersion": "vote-average-power-clamped-v1",
+          "exponent": 1,
+          "intensityMin": 0.005,
+          "intensityMax": 0.005
+        },
+        "bloom": {
+          "enabled": false,
+          "strength": 0.01,
+          "radius": 1,
+          "threshold": 0
+        }
+      }
+    },
+    {
+      "row_key": "semantic-cool-single-band",
+      "column_key": "key-0.25",
+      "input": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures/cells/semantic-cool-single-band__key-0.25.png",
+      "sha256": "c27787b19b80b8e5fdcb93a718ec60c9bd5bd9005b783a59e108781eeb2854d5",
+      "width": 1024,
+      "height": 1024,
+      "parameters": {
+        "checkpoint": "key",
+        "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures",
+        "varied_parameter": "keyLightIntensity",
+        "candidate": "key-0.25",
+        "png": "cells/semantic-cool-single-band__key-0.25.png",
+        "sidecar": "cells/semantic-cool-single-band__key-0.25.png.render.json",
+        "candidate_review": "approved",
+        "approved_candidate": "key-0.45",
+        "human_approved_inputs": [
+          {
+            "stage": "direction",
+            "parameter": "direction",
+            "candidate": "backlight-east-v1",
+            "value": [
+              0.700665949127905,
+              0.4003805423588029,
+              0.5905612999792342
+            ],
+            "source": "explicit-cli-human-approved-input",
+            "status": "human-approved-input"
+          },
+          {
+            "stage": "lightness",
+            "parameter": "lightness",
+            "candidate": "lightness-0.66",
+            "value": 0.66,
+            "source": "explicit-cli-human-approved-input",
+            "status": "human-approved-input"
+          }
+        ],
+        "frozen_upstream_baseline_hash": "dc6396cf975660e45e4dbe4ee74ad616fbaf6ebb64368f691b5d74d10b3283aa",
+        "direction_convention": {
+          "space": "world",
+          "lightVectorMeaning": "frozen approved direction candidate",
+          "backlightZSign": "positive-z",
+          "sideBackConstraint": "positive-z is the user-defined backlight side; downstream checkpoints must not reinterpret candidate coordinates"
+        },
+        "backlight_direction_revision": {
+          "id": "backlight-z-flip-v1",
+          "relation": "replaces-frontlight-candidates",
+          "z_transform": "negated-from-frontlight-candidates",
+          "backlight_z_sign": "positive-z",
+          "replaces_candidate_ids": [
+            "side-back-west",
+            "side-back-east",
+            "side-back-high"
+          ],
+          "invalidated_descendants": [
+            {
+              "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v3-approved-direction-semantic-fixtures",
+              "status": "invalidated-frontlight-descendant",
+              "reason": "records a superseded front-light direction approval"
+            },
+            {
+              "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v3-approved-direction-semantic-fixtures",
+              "status": "invalidated-frontlight-descendant",
+              "reason": "records a superseded front-light direction approval"
+            }
+          ]
+        },
+        "lightness_follow_up": {
+          "id": "lightness-066-follow-up-v1",
+          "relation": "extends-lightness-candidate-review",
+          "new_candidate": "lightness-0.66",
+          "predecessor_evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v4-backlight-semantic-fixtures",
+          "candidate_review": "approved"
+        },
+        "fixture": "semantic-cool-single-band",
+        "palette_family": "cool",
+        "palette_family_label": "cool palette family",
+        "terrain_complexity": "single-visible-band",
+        "expected_visible_band_count": 1,
+        "fixture_movie_id": 138,
+        "fixture_title": "Dracula",
+        "fixture_hue": 3.306939635357677,
+        "fixture_primary_genre": "Horror",
+        "fixture_palette_hex": "#00C9C1",
+        "fixture_genres": [
+          "Horror"
+        ],
+        "fixture_visible_band_count": 1,
+        "fixture_selection_predicate": "first authoritative gzip movie with primary genre in cool categorical palette family and single-visible-band (1 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+        "fixture_seed": 245146387,
+        "diagnostic_only": "phase41-visual-diagnostic-v1",
+        "lightness": 0.66,
+        "key_light_intensity": 0.25,
+        "direction": [
+          0.700665949127905,
+          0.4003805423588029,
+          0.5905612999792342
+        ],
+        "flat_shading_mix": 0.8,
+        "emission_curve": {
+          "modelVersion": "vote-average-power-clamped-v1",
+          "exponent": 1,
+          "intensityMin": 0.005,
+          "intensityMax": 0.005
+        },
+        "bloom": {
+          "enabled": false,
+          "strength": 0.01,
+          "radius": 1,
+          "threshold": 0
+        }
+      }
+    },
+    {
+      "row_key": "semantic-cool-single-band",
+      "column_key": "key-0.35",
+      "input": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures/cells/semantic-cool-single-band__key-0.35.png",
+      "sha256": "ceac4a693accd4acc67c24fcd84b0785548226e804557996d5cf8d7ee8e47931",
+      "width": 1024,
+      "height": 1024,
+      "parameters": {
+        "checkpoint": "key",
+        "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures",
+        "varied_parameter": "keyLightIntensity",
+        "candidate": "key-0.35",
+        "png": "cells/semantic-cool-single-band__key-0.35.png",
+        "sidecar": "cells/semantic-cool-single-band__key-0.35.png.render.json",
+        "candidate_review": "approved",
+        "approved_candidate": "key-0.45",
+        "human_approved_inputs": [
+          {
+            "stage": "direction",
+            "parameter": "direction",
+            "candidate": "backlight-east-v1",
+            "value": [
+              0.700665949127905,
+              0.4003805423588029,
+              0.5905612999792342
+            ],
+            "source": "explicit-cli-human-approved-input",
+            "status": "human-approved-input"
+          },
+          {
+            "stage": "lightness",
+            "parameter": "lightness",
+            "candidate": "lightness-0.66",
+            "value": 0.66,
+            "source": "explicit-cli-human-approved-input",
+            "status": "human-approved-input"
+          }
+        ],
+        "frozen_upstream_baseline_hash": "dc6396cf975660e45e4dbe4ee74ad616fbaf6ebb64368f691b5d74d10b3283aa",
+        "direction_convention": {
+          "space": "world",
+          "lightVectorMeaning": "frozen approved direction candidate",
+          "backlightZSign": "positive-z",
+          "sideBackConstraint": "positive-z is the user-defined backlight side; downstream checkpoints must not reinterpret candidate coordinates"
+        },
+        "backlight_direction_revision": {
+          "id": "backlight-z-flip-v1",
+          "relation": "replaces-frontlight-candidates",
+          "z_transform": "negated-from-frontlight-candidates",
+          "backlight_z_sign": "positive-z",
+          "replaces_candidate_ids": [
+            "side-back-west",
+            "side-back-east",
+            "side-back-high"
+          ],
+          "invalidated_descendants": [
+            {
+              "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v3-approved-direction-semantic-fixtures",
+              "status": "invalidated-frontlight-descendant",
+              "reason": "records a superseded front-light direction approval"
+            },
+            {
+              "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v3-approved-direction-semantic-fixtures",
+              "status": "invalidated-frontlight-descendant",
+              "reason": "records a superseded front-light direction approval"
+            }
+          ]
+        },
+        "lightness_follow_up": {
+          "id": "lightness-066-follow-up-v1",
+          "relation": "extends-lightness-candidate-review",
+          "new_candidate": "lightness-0.66",
+          "predecessor_evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v4-backlight-semantic-fixtures",
+          "candidate_review": "approved"
+        },
+        "fixture": "semantic-cool-single-band",
+        "palette_family": "cool",
+        "palette_family_label": "cool palette family",
+        "terrain_complexity": "single-visible-band",
+        "expected_visible_band_count": 1,
+        "fixture_movie_id": 138,
+        "fixture_title": "Dracula",
+        "fixture_hue": 3.306939635357677,
+        "fixture_primary_genre": "Horror",
+        "fixture_palette_hex": "#00C9C1",
+        "fixture_genres": [
+          "Horror"
+        ],
+        "fixture_visible_band_count": 1,
+        "fixture_selection_predicate": "first authoritative gzip movie with primary genre in cool categorical palette family and single-visible-band (1 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+        "fixture_seed": 245146387,
+        "diagnostic_only": "phase41-visual-diagnostic-v1",
+        "lightness": 0.66,
+        "key_light_intensity": 0.35,
+        "direction": [
+          0.700665949127905,
+          0.4003805423588029,
+          0.5905612999792342
+        ],
+        "flat_shading_mix": 0.8,
+        "emission_curve": {
+          "modelVersion": "vote-average-power-clamped-v1",
+          "exponent": 1,
+          "intensityMin": 0.005,
+          "intensityMax": 0.005
+        },
+        "bloom": {
+          "enabled": false,
+          "strength": 0.01,
+          "radius": 1,
+          "threshold": 0
+        }
+      }
+    },
+    {
+      "row_key": "semantic-cool-single-band",
+      "column_key": "key-0.45",
+      "input": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures/cells/semantic-cool-single-band__key-0.45.png",
+      "sha256": "430d27aa09821edd03e64ac94bd8d4bfd0738f95615503682aa6f286f9a86f7b",
+      "width": 1024,
+      "height": 1024,
+      "parameters": {
+        "checkpoint": "key",
+        "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures",
+        "varied_parameter": "keyLightIntensity",
+        "candidate": "key-0.45",
+        "png": "cells/semantic-cool-single-band__key-0.45.png",
+        "sidecar": "cells/semantic-cool-single-band__key-0.45.png.render.json",
+        "candidate_review": "approved",
+        "approved_candidate": "key-0.45",
+        "human_approved_inputs": [
+          {
+            "stage": "direction",
+            "parameter": "direction",
+            "candidate": "backlight-east-v1",
+            "value": [
+              0.700665949127905,
+              0.4003805423588029,
+              0.5905612999792342
+            ],
+            "source": "explicit-cli-human-approved-input",
+            "status": "human-approved-input"
+          },
+          {
+            "stage": "lightness",
+            "parameter": "lightness",
+            "candidate": "lightness-0.66",
+            "value": 0.66,
+            "source": "explicit-cli-human-approved-input",
+            "status": "human-approved-input"
+          }
+        ],
+        "frozen_upstream_baseline_hash": "dc6396cf975660e45e4dbe4ee74ad616fbaf6ebb64368f691b5d74d10b3283aa",
+        "direction_convention": {
+          "space": "world",
+          "lightVectorMeaning": "frozen approved direction candidate",
+          "backlightZSign": "positive-z",
+          "sideBackConstraint": "positive-z is the user-defined backlight side; downstream checkpoints must not reinterpret candidate coordinates"
+        },
+        "backlight_direction_revision": {
+          "id": "backlight-z-flip-v1",
+          "relation": "replaces-frontlight-candidates",
+          "z_transform": "negated-from-frontlight-candidates",
+          "backlight_z_sign": "positive-z",
+          "replaces_candidate_ids": [
+            "side-back-west",
+            "side-back-east",
+            "side-back-high"
+          ],
+          "invalidated_descendants": [
+            {
+              "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v3-approved-direction-semantic-fixtures",
+              "status": "invalidated-frontlight-descendant",
+              "reason": "records a superseded front-light direction approval"
+            },
+            {
+              "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v3-approved-direction-semantic-fixtures",
+              "status": "invalidated-frontlight-descendant",
+              "reason": "records a superseded front-light direction approval"
+            }
+          ]
+        },
+        "lightness_follow_up": {
+          "id": "lightness-066-follow-up-v1",
+          "relation": "extends-lightness-candidate-review",
+          "new_candidate": "lightness-0.66",
+          "predecessor_evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v4-backlight-semantic-fixtures",
+          "candidate_review": "approved"
+        },
+        "fixture": "semantic-cool-single-band",
+        "palette_family": "cool",
+        "palette_family_label": "cool palette family",
+        "terrain_complexity": "single-visible-band",
+        "expected_visible_band_count": 1,
+        "fixture_movie_id": 138,
+        "fixture_title": "Dracula",
+        "fixture_hue": 3.306939635357677,
+        "fixture_primary_genre": "Horror",
+        "fixture_palette_hex": "#00C9C1",
+        "fixture_genres": [
+          "Horror"
+        ],
+        "fixture_visible_band_count": 1,
+        "fixture_selection_predicate": "first authoritative gzip movie with primary genre in cool categorical palette family and single-visible-band (1 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+        "fixture_seed": 245146387,
+        "diagnostic_only": "phase41-visual-diagnostic-v1",
+        "lightness": 0.66,
+        "key_light_intensity": 0.45,
+        "direction": [
+          0.700665949127905,
+          0.4003805423588029,
+          0.5905612999792342
+        ],
+        "flat_shading_mix": 0.8,
+        "emission_curve": {
+          "modelVersion": "vote-average-power-clamped-v1",
+          "exponent": 1,
+          "intensityMin": 0.005,
+          "intensityMax": 0.005
+        },
+        "bloom": {
+          "enabled": false,
+          "strength": 0.01,
+          "radius": 1,
+          "threshold": 0
+        }
+      }
+    },
+    {
+      "row_key": "semantic-violet-rose-single-band",
+      "column_key": "key-0.25",
+      "input": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures/cells/semantic-violet-rose-single-band__key-0.25.png",
+      "sha256": "2a537cc64380631c51823df58e7f3341e5e22373cc3759adb38bc561685753a3",
+      "width": 1024,
+      "height": 1024,
+      "parameters": {
+        "checkpoint": "key",
+        "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures",
+        "varied_parameter": "keyLightIntensity",
+        "candidate": "key-0.25",
+        "png": "cells/semantic-violet-rose-single-band__key-0.25.png",
+        "sidecar": "cells/semantic-violet-rose-single-band__key-0.25.png.render.json",
+        "candidate_review": "approved",
+        "approved_candidate": "key-0.45",
+        "human_approved_inputs": [
+          {
+            "stage": "direction",
+            "parameter": "direction",
+            "candidate": "backlight-east-v1",
+            "value": [
+              0.700665949127905,
+              0.4003805423588029,
+              0.5905612999792342
+            ],
+            "source": "explicit-cli-human-approved-input",
+            "status": "human-approved-input"
+          },
+          {
+            "stage": "lightness",
+            "parameter": "lightness",
+            "candidate": "lightness-0.66",
+            "value": 0.66,
+            "source": "explicit-cli-human-approved-input",
+            "status": "human-approved-input"
+          }
+        ],
+        "frozen_upstream_baseline_hash": "dc6396cf975660e45e4dbe4ee74ad616fbaf6ebb64368f691b5d74d10b3283aa",
+        "direction_convention": {
+          "space": "world",
+          "lightVectorMeaning": "frozen approved direction candidate",
+          "backlightZSign": "positive-z",
+          "sideBackConstraint": "positive-z is the user-defined backlight side; downstream checkpoints must not reinterpret candidate coordinates"
+        },
+        "backlight_direction_revision": {
+          "id": "backlight-z-flip-v1",
+          "relation": "replaces-frontlight-candidates",
+          "z_transform": "negated-from-frontlight-candidates",
+          "backlight_z_sign": "positive-z",
+          "replaces_candidate_ids": [
+            "side-back-west",
+            "side-back-east",
+            "side-back-high"
+          ],
+          "invalidated_descendants": [
+            {
+              "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v3-approved-direction-semantic-fixtures",
+              "status": "invalidated-frontlight-descendant",
+              "reason": "records a superseded front-light direction approval"
+            },
+            {
+              "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v3-approved-direction-semantic-fixtures",
+              "status": "invalidated-frontlight-descendant",
+              "reason": "records a superseded front-light direction approval"
+            }
+          ]
+        },
+        "lightness_follow_up": {
+          "id": "lightness-066-follow-up-v1",
+          "relation": "extends-lightness-candidate-review",
+          "new_candidate": "lightness-0.66",
+          "predecessor_evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v4-backlight-semantic-fixtures",
+          "candidate_review": "approved"
+        },
+        "fixture": "semantic-violet-rose-single-band",
+        "palette_family": "violet-rose",
+        "palette_family_label": "violet-rose palette family",
+        "terrain_complexity": "single-visible-band",
+        "expected_visible_band_count": 1,
+        "fixture_movie_id": 33,
+        "fixture_title": "Unforgiven",
+        "fixture_hue": 5.9524913436438185,
+        "fixture_primary_genre": "Western",
+        "fixture_palette_hex": "#E989C8",
+        "fixture_genres": [
+          "Western"
+        ],
+        "fixture_visible_band_count": 1,
+        "fixture_selection_predicate": "first authoritative gzip movie with primary genre in violet-rose categorical palette family and single-visible-band (1 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+        "fixture_seed": 2765658642,
+        "diagnostic_only": "phase41-visual-diagnostic-v1",
+        "lightness": 0.66,
+        "key_light_intensity": 0.25,
+        "direction": [
+          0.700665949127905,
+          0.4003805423588029,
+          0.5905612999792342
+        ],
+        "flat_shading_mix": 0.8,
+        "emission_curve": {
+          "modelVersion": "vote-average-power-clamped-v1",
+          "exponent": 1,
+          "intensityMin": 0.005,
+          "intensityMax": 0.005
+        },
+        "bloom": {
+          "enabled": false,
+          "strength": 0.01,
+          "radius": 1,
+          "threshold": 0
+        }
+      }
+    },
+    {
+      "row_key": "semantic-violet-rose-single-band",
+      "column_key": "key-0.35",
+      "input": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures/cells/semantic-violet-rose-single-band__key-0.35.png",
+      "sha256": "707318ccf067bd5b3527b3962cf8d872ee6dfefe24f6f99f0a02765e0ec17521",
+      "width": 1024,
+      "height": 1024,
+      "parameters": {
+        "checkpoint": "key",
+        "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures",
+        "varied_parameter": "keyLightIntensity",
+        "candidate": "key-0.35",
+        "png": "cells/semantic-violet-rose-single-band__key-0.35.png",
+        "sidecar": "cells/semantic-violet-rose-single-band__key-0.35.png.render.json",
+        "candidate_review": "approved",
+        "approved_candidate": "key-0.45",
+        "human_approved_inputs": [
+          {
+            "stage": "direction",
+            "parameter": "direction",
+            "candidate": "backlight-east-v1",
+            "value": [
+              0.700665949127905,
+              0.4003805423588029,
+              0.5905612999792342
+            ],
+            "source": "explicit-cli-human-approved-input",
+            "status": "human-approved-input"
+          },
+          {
+            "stage": "lightness",
+            "parameter": "lightness",
+            "candidate": "lightness-0.66",
+            "value": 0.66,
+            "source": "explicit-cli-human-approved-input",
+            "status": "human-approved-input"
+          }
+        ],
+        "frozen_upstream_baseline_hash": "dc6396cf975660e45e4dbe4ee74ad616fbaf6ebb64368f691b5d74d10b3283aa",
+        "direction_convention": {
+          "space": "world",
+          "lightVectorMeaning": "frozen approved direction candidate",
+          "backlightZSign": "positive-z",
+          "sideBackConstraint": "positive-z is the user-defined backlight side; downstream checkpoints must not reinterpret candidate coordinates"
+        },
+        "backlight_direction_revision": {
+          "id": "backlight-z-flip-v1",
+          "relation": "replaces-frontlight-candidates",
+          "z_transform": "negated-from-frontlight-candidates",
+          "backlight_z_sign": "positive-z",
+          "replaces_candidate_ids": [
+            "side-back-west",
+            "side-back-east",
+            "side-back-high"
+          ],
+          "invalidated_descendants": [
+            {
+              "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v3-approved-direction-semantic-fixtures",
+              "status": "invalidated-frontlight-descendant",
+              "reason": "records a superseded front-light direction approval"
+            },
+            {
+              "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v3-approved-direction-semantic-fixtures",
+              "status": "invalidated-frontlight-descendant",
+              "reason": "records a superseded front-light direction approval"
+            }
+          ]
+        },
+        "lightness_follow_up": {
+          "id": "lightness-066-follow-up-v1",
+          "relation": "extends-lightness-candidate-review",
+          "new_candidate": "lightness-0.66",
+          "predecessor_evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v4-backlight-semantic-fixtures",
+          "candidate_review": "approved"
+        },
+        "fixture": "semantic-violet-rose-single-band",
+        "palette_family": "violet-rose",
+        "palette_family_label": "violet-rose palette family",
+        "terrain_complexity": "single-visible-band",
+        "expected_visible_band_count": 1,
+        "fixture_movie_id": 33,
+        "fixture_title": "Unforgiven",
+        "fixture_hue": 5.9524913436438185,
+        "fixture_primary_genre": "Western",
+        "fixture_palette_hex": "#E989C8",
+        "fixture_genres": [
+          "Western"
+        ],
+        "fixture_visible_band_count": 1,
+        "fixture_selection_predicate": "first authoritative gzip movie with primary genre in violet-rose categorical palette family and single-visible-band (1 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+        "fixture_seed": 2765658642,
+        "diagnostic_only": "phase41-visual-diagnostic-v1",
+        "lightness": 0.66,
+        "key_light_intensity": 0.35,
+        "direction": [
+          0.700665949127905,
+          0.4003805423588029,
+          0.5905612999792342
+        ],
+        "flat_shading_mix": 0.8,
+        "emission_curve": {
+          "modelVersion": "vote-average-power-clamped-v1",
+          "exponent": 1,
+          "intensityMin": 0.005,
+          "intensityMax": 0.005
+        },
+        "bloom": {
+          "enabled": false,
+          "strength": 0.01,
+          "radius": 1,
+          "threshold": 0
+        }
+      }
+    },
+    {
+      "row_key": "semantic-violet-rose-single-band",
+      "column_key": "key-0.45",
+      "input": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures/cells/semantic-violet-rose-single-band__key-0.45.png",
+      "sha256": "43a98e8baa3e0b48cec169f09dff5fdade3893e914aceca0909f10b90ae8e0d4",
+      "width": 1024,
+      "height": 1024,
+      "parameters": {
+        "checkpoint": "key",
+        "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures",
+        "varied_parameter": "keyLightIntensity",
+        "candidate": "key-0.45",
+        "png": "cells/semantic-violet-rose-single-band__key-0.45.png",
+        "sidecar": "cells/semantic-violet-rose-single-band__key-0.45.png.render.json",
+        "candidate_review": "approved",
+        "approved_candidate": "key-0.45",
+        "human_approved_inputs": [
+          {
+            "stage": "direction",
+            "parameter": "direction",
+            "candidate": "backlight-east-v1",
+            "value": [
+              0.700665949127905,
+              0.4003805423588029,
+              0.5905612999792342
+            ],
+            "source": "explicit-cli-human-approved-input",
+            "status": "human-approved-input"
+          },
+          {
+            "stage": "lightness",
+            "parameter": "lightness",
+            "candidate": "lightness-0.66",
+            "value": 0.66,
+            "source": "explicit-cli-human-approved-input",
+            "status": "human-approved-input"
+          }
+        ],
+        "frozen_upstream_baseline_hash": "dc6396cf975660e45e4dbe4ee74ad616fbaf6ebb64368f691b5d74d10b3283aa",
+        "direction_convention": {
+          "space": "world",
+          "lightVectorMeaning": "frozen approved direction candidate",
+          "backlightZSign": "positive-z",
+          "sideBackConstraint": "positive-z is the user-defined backlight side; downstream checkpoints must not reinterpret candidate coordinates"
+        },
+        "backlight_direction_revision": {
+          "id": "backlight-z-flip-v1",
+          "relation": "replaces-frontlight-candidates",
+          "z_transform": "negated-from-frontlight-candidates",
+          "backlight_z_sign": "positive-z",
+          "replaces_candidate_ids": [
+            "side-back-west",
+            "side-back-east",
+            "side-back-high"
+          ],
+          "invalidated_descendants": [
+            {
+              "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v3-approved-direction-semantic-fixtures",
+              "status": "invalidated-frontlight-descendant",
+              "reason": "records a superseded front-light direction approval"
+            },
+            {
+              "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v3-approved-direction-semantic-fixtures",
+              "status": "invalidated-frontlight-descendant",
+              "reason": "records a superseded front-light direction approval"
+            }
+          ]
+        },
+        "lightness_follow_up": {
+          "id": "lightness-066-follow-up-v1",
+          "relation": "extends-lightness-candidate-review",
+          "new_candidate": "lightness-0.66",
+          "predecessor_evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v4-backlight-semantic-fixtures",
+          "candidate_review": "approved"
+        },
+        "fixture": "semantic-violet-rose-single-band",
+        "palette_family": "violet-rose",
+        "palette_family_label": "violet-rose palette family",
+        "terrain_complexity": "single-visible-band",
+        "expected_visible_band_count": 1,
+        "fixture_movie_id": 33,
+        "fixture_title": "Unforgiven",
+        "fixture_hue": 5.9524913436438185,
+        "fixture_primary_genre": "Western",
+        "fixture_palette_hex": "#E989C8",
+        "fixture_genres": [
+          "Western"
+        ],
+        "fixture_visible_band_count": 1,
+        "fixture_selection_predicate": "first authoritative gzip movie with primary genre in violet-rose categorical palette family and single-visible-band (1 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+        "fixture_seed": 2765658642,
+        "diagnostic_only": "phase41-visual-diagnostic-v1",
+        "lightness": 0.66,
+        "key_light_intensity": 0.45,
+        "direction": [
+          0.700665949127905,
+          0.4003805423588029,
+          0.5905612999792342
+        ],
+        "flat_shading_mix": 0.8,
+        "emission_curve": {
+          "modelVersion": "vote-average-power-clamped-v1",
+          "exponent": 1,
+          "intensityMin": 0.005,
+          "intensityMax": 0.005
+        },
+        "bloom": {
+          "enabled": false,
+          "strength": 0.01,
+          "radius": 1,
+          "threshold": 0
+        }
+      }
+    },
+    {
+      "row_key": "semantic-warm-max-visible-bands",
+      "column_key": "key-0.25",
+      "input": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures/cells/semantic-warm-max-visible-bands__key-0.25.png",
+      "sha256": "7f533134b1b705ff0ca7004b4cad997b7d9defb57055f90ccfe2ee0a75d625e8",
+      "width": 1024,
+      "height": 1024,
+      "parameters": {
+        "checkpoint": "key",
+        "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures",
+        "varied_parameter": "keyLightIntensity",
+        "candidate": "key-0.25",
+        "png": "cells/semantic-warm-max-visible-bands__key-0.25.png",
+        "sidecar": "cells/semantic-warm-max-visible-bands__key-0.25.png.render.json",
+        "candidate_review": "approved",
+        "approved_candidate": "key-0.45",
+        "human_approved_inputs": [
+          {
+            "stage": "direction",
+            "parameter": "direction",
+            "candidate": "backlight-east-v1",
+            "value": [
+              0.700665949127905,
+              0.4003805423588029,
+              0.5905612999792342
+            ],
+            "source": "explicit-cli-human-approved-input",
+            "status": "human-approved-input"
+          },
+          {
+            "stage": "lightness",
+            "parameter": "lightness",
+            "candidate": "lightness-0.66",
+            "value": 0.66,
+            "source": "explicit-cli-human-approved-input",
+            "status": "human-approved-input"
+          }
+        ],
+        "frozen_upstream_baseline_hash": "dc6396cf975660e45e4dbe4ee74ad616fbaf6ebb64368f691b5d74d10b3283aa",
+        "direction_convention": {
+          "space": "world",
+          "lightVectorMeaning": "frozen approved direction candidate",
+          "backlightZSign": "positive-z",
+          "sideBackConstraint": "positive-z is the user-defined backlight side; downstream checkpoints must not reinterpret candidate coordinates"
+        },
+        "backlight_direction_revision": {
+          "id": "backlight-z-flip-v1",
+          "relation": "replaces-frontlight-candidates",
+          "z_transform": "negated-from-frontlight-candidates",
+          "backlight_z_sign": "positive-z",
+          "replaces_candidate_ids": [
+            "side-back-west",
+            "side-back-east",
+            "side-back-high"
+          ],
+          "invalidated_descendants": [
+            {
+              "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v3-approved-direction-semantic-fixtures",
+              "status": "invalidated-frontlight-descendant",
+              "reason": "records a superseded front-light direction approval"
+            },
+            {
+              "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v3-approved-direction-semantic-fixtures",
+              "status": "invalidated-frontlight-descendant",
+              "reason": "records a superseded front-light direction approval"
+            }
+          ]
+        },
+        "lightness_follow_up": {
+          "id": "lightness-066-follow-up-v1",
+          "relation": "extends-lightness-candidate-review",
+          "new_candidate": "lightness-0.66",
+          "predecessor_evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v4-backlight-semantic-fixtures",
+          "candidate_review": "approved"
+        },
+        "fixture": "semantic-warm-max-visible-bands",
+        "palette_family": "warm",
+        "palette_family_label": "warm palette family",
+        "terrain_complexity": "max-visible-bands",
+        "expected_visible_band_count": 8,
+        "fixture_movie_id": 64152,
+        "fixture_title": "Garfield: His 9 Lives",
+        "fixture_hue": 0.6613879270715354,
+        "fixture_primary_genre": "Animation",
+        "fixture_palette_hex": "#F88C6B",
+        "fixture_genres": [
+          "Animation",
+          "Comedy",
+          "Adventure",
+          "Drama",
+          "Fantasy",
+          "Music",
+          "Science Fiction",
+          "TV Movie"
+        ],
+        "fixture_visible_band_count": 8,
+        "fixture_selection_predicate": "first authoritative gzip movie with primary genre in warm categorical palette family and max-visible-bands (8 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+        "fixture_seed": 1987718520,
+        "diagnostic_only": "phase41-visual-diagnostic-v1",
+        "lightness": 0.66,
+        "key_light_intensity": 0.25,
+        "direction": [
+          0.700665949127905,
+          0.4003805423588029,
+          0.5905612999792342
+        ],
+        "flat_shading_mix": 0.8,
+        "emission_curve": {
+          "modelVersion": "vote-average-power-clamped-v1",
+          "exponent": 1,
+          "intensityMin": 0.005,
+          "intensityMax": 0.005
+        },
+        "bloom": {
+          "enabled": false,
+          "strength": 0.01,
+          "radius": 1,
+          "threshold": 0
+        }
+      }
+    },
+    {
+      "row_key": "semantic-warm-max-visible-bands",
+      "column_key": "key-0.35",
+      "input": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures/cells/semantic-warm-max-visible-bands__key-0.35.png",
+      "sha256": "9907f33f27b2f899d99257e091e7126296c15bc86f449b4855cb707444b7a8f5",
+      "width": 1024,
+      "height": 1024,
+      "parameters": {
+        "checkpoint": "key",
+        "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures",
+        "varied_parameter": "keyLightIntensity",
+        "candidate": "key-0.35",
+        "png": "cells/semantic-warm-max-visible-bands__key-0.35.png",
+        "sidecar": "cells/semantic-warm-max-visible-bands__key-0.35.png.render.json",
+        "candidate_review": "approved",
+        "approved_candidate": "key-0.45",
+        "human_approved_inputs": [
+          {
+            "stage": "direction",
+            "parameter": "direction",
+            "candidate": "backlight-east-v1",
+            "value": [
+              0.700665949127905,
+              0.4003805423588029,
+              0.5905612999792342
+            ],
+            "source": "explicit-cli-human-approved-input",
+            "status": "human-approved-input"
+          },
+          {
+            "stage": "lightness",
+            "parameter": "lightness",
+            "candidate": "lightness-0.66",
+            "value": 0.66,
+            "source": "explicit-cli-human-approved-input",
+            "status": "human-approved-input"
+          }
+        ],
+        "frozen_upstream_baseline_hash": "dc6396cf975660e45e4dbe4ee74ad616fbaf6ebb64368f691b5d74d10b3283aa",
+        "direction_convention": {
+          "space": "world",
+          "lightVectorMeaning": "frozen approved direction candidate",
+          "backlightZSign": "positive-z",
+          "sideBackConstraint": "positive-z is the user-defined backlight side; downstream checkpoints must not reinterpret candidate coordinates"
+        },
+        "backlight_direction_revision": {
+          "id": "backlight-z-flip-v1",
+          "relation": "replaces-frontlight-candidates",
+          "z_transform": "negated-from-frontlight-candidates",
+          "backlight_z_sign": "positive-z",
+          "replaces_candidate_ids": [
+            "side-back-west",
+            "side-back-east",
+            "side-back-high"
+          ],
+          "invalidated_descendants": [
+            {
+              "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v3-approved-direction-semantic-fixtures",
+              "status": "invalidated-frontlight-descendant",
+              "reason": "records a superseded front-light direction approval"
+            },
+            {
+              "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v3-approved-direction-semantic-fixtures",
+              "status": "invalidated-frontlight-descendant",
+              "reason": "records a superseded front-light direction approval"
+            }
+          ]
+        },
+        "lightness_follow_up": {
+          "id": "lightness-066-follow-up-v1",
+          "relation": "extends-lightness-candidate-review",
+          "new_candidate": "lightness-0.66",
+          "predecessor_evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v4-backlight-semantic-fixtures",
+          "candidate_review": "approved"
+        },
+        "fixture": "semantic-warm-max-visible-bands",
+        "palette_family": "warm",
+        "palette_family_label": "warm palette family",
+        "terrain_complexity": "max-visible-bands",
+        "expected_visible_band_count": 8,
+        "fixture_movie_id": 64152,
+        "fixture_title": "Garfield: His 9 Lives",
+        "fixture_hue": 0.6613879270715354,
+        "fixture_primary_genre": "Animation",
+        "fixture_palette_hex": "#F88C6B",
+        "fixture_genres": [
+          "Animation",
+          "Comedy",
+          "Adventure",
+          "Drama",
+          "Fantasy",
+          "Music",
+          "Science Fiction",
+          "TV Movie"
+        ],
+        "fixture_visible_band_count": 8,
+        "fixture_selection_predicate": "first authoritative gzip movie with primary genre in warm categorical palette family and max-visible-bands (8 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+        "fixture_seed": 1987718520,
+        "diagnostic_only": "phase41-visual-diagnostic-v1",
+        "lightness": 0.66,
+        "key_light_intensity": 0.35,
+        "direction": [
+          0.700665949127905,
+          0.4003805423588029,
+          0.5905612999792342
+        ],
+        "flat_shading_mix": 0.8,
+        "emission_curve": {
+          "modelVersion": "vote-average-power-clamped-v1",
+          "exponent": 1,
+          "intensityMin": 0.005,
+          "intensityMax": 0.005
+        },
+        "bloom": {
+          "enabled": false,
+          "strength": 0.01,
+          "radius": 1,
+          "threshold": 0
+        }
+      }
+    },
+    {
+      "row_key": "semantic-warm-max-visible-bands",
+      "column_key": "key-0.45",
+      "input": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures/cells/semantic-warm-max-visible-bands__key-0.45.png",
+      "sha256": "58bd4f6d4f7c3ae422c9e771469202eb8daf647d1b4e9959b59cbfbb53eaa6ef",
+      "width": 1024,
+      "height": 1024,
+      "parameters": {
+        "checkpoint": "key",
+        "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures",
+        "varied_parameter": "keyLightIntensity",
+        "candidate": "key-0.45",
+        "png": "cells/semantic-warm-max-visible-bands__key-0.45.png",
+        "sidecar": "cells/semantic-warm-max-visible-bands__key-0.45.png.render.json",
+        "candidate_review": "approved",
+        "approved_candidate": "key-0.45",
+        "human_approved_inputs": [
+          {
+            "stage": "direction",
+            "parameter": "direction",
+            "candidate": "backlight-east-v1",
+            "value": [
+              0.700665949127905,
+              0.4003805423588029,
+              0.5905612999792342
+            ],
+            "source": "explicit-cli-human-approved-input",
+            "status": "human-approved-input"
+          },
+          {
+            "stage": "lightness",
+            "parameter": "lightness",
+            "candidate": "lightness-0.66",
+            "value": 0.66,
+            "source": "explicit-cli-human-approved-input",
+            "status": "human-approved-input"
+          }
+        ],
+        "frozen_upstream_baseline_hash": "dc6396cf975660e45e4dbe4ee74ad616fbaf6ebb64368f691b5d74d10b3283aa",
+        "direction_convention": {
+          "space": "world",
+          "lightVectorMeaning": "frozen approved direction candidate",
+          "backlightZSign": "positive-z",
+          "sideBackConstraint": "positive-z is the user-defined backlight side; downstream checkpoints must not reinterpret candidate coordinates"
+        },
+        "backlight_direction_revision": {
+          "id": "backlight-z-flip-v1",
+          "relation": "replaces-frontlight-candidates",
+          "z_transform": "negated-from-frontlight-candidates",
+          "backlight_z_sign": "positive-z",
+          "replaces_candidate_ids": [
+            "side-back-west",
+            "side-back-east",
+            "side-back-high"
+          ],
+          "invalidated_descendants": [
+            {
+              "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v3-approved-direction-semantic-fixtures",
+              "status": "invalidated-frontlight-descendant",
+              "reason": "records a superseded front-light direction approval"
+            },
+            {
+              "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v3-approved-direction-semantic-fixtures",
+              "status": "invalidated-frontlight-descendant",
+              "reason": "records a superseded front-light direction approval"
+            }
+          ]
+        },
+        "lightness_follow_up": {
+          "id": "lightness-066-follow-up-v1",
+          "relation": "extends-lightness-candidate-review",
+          "new_candidate": "lightness-0.66",
+          "predecessor_evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v4-backlight-semantic-fixtures",
+          "candidate_review": "approved"
+        },
+        "fixture": "semantic-warm-max-visible-bands",
+        "palette_family": "warm",
+        "palette_family_label": "warm palette family",
+        "terrain_complexity": "max-visible-bands",
+        "expected_visible_band_count": 8,
+        "fixture_movie_id": 64152,
+        "fixture_title": "Garfield: His 9 Lives",
+        "fixture_hue": 0.6613879270715354,
+        "fixture_primary_genre": "Animation",
+        "fixture_palette_hex": "#F88C6B",
+        "fixture_genres": [
+          "Animation",
+          "Comedy",
+          "Adventure",
+          "Drama",
+          "Fantasy",
+          "Music",
+          "Science Fiction",
+          "TV Movie"
+        ],
+        "fixture_visible_band_count": 8,
+        "fixture_selection_predicate": "first authoritative gzip movie with primary genre in warm categorical palette family and max-visible-bands (8 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+        "fixture_seed": 1987718520,
+        "diagnostic_only": "phase41-visual-diagnostic-v1",
+        "lightness": 0.66,
+        "key_light_intensity": 0.45,
+        "direction": [
+          0.700665949127905,
+          0.4003805423588029,
+          0.5905612999792342
+        ],
+        "flat_shading_mix": 0.8,
+        "emission_curve": {
+          "modelVersion": "vote-average-power-clamped-v1",
+          "exponent": 1,
+          "intensityMin": 0.005,
+          "intensityMax": 0.005
+        },
+        "bloom": {
+          "enabled": false,
+          "strength": 0.01,
+          "radius": 1,
+          "threshold": 0
+        }
+      }
+    },
+    {
+      "row_key": "semantic-cool-max-visible-bands",
+      "column_key": "key-0.25",
+      "input": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures/cells/semantic-cool-max-visible-bands__key-0.25.png",
+      "sha256": "e75915872260453be77422dd73449b1a06fe297b85f86bdfc1bd9d329cb8d4d9",
+      "width": 1024,
+      "height": 1024,
+      "parameters": {
+        "checkpoint": "key",
+        "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures",
+        "varied_parameter": "keyLightIntensity",
+        "candidate": "key-0.25",
+        "png": "cells/semantic-cool-max-visible-bands__key-0.25.png",
+        "sidecar": "cells/semantic-cool-max-visible-bands__key-0.25.png.render.json",
+        "candidate_review": "approved",
+        "approved_candidate": "key-0.45",
+        "human_approved_inputs": [
+          {
+            "stage": "direction",
+            "parameter": "direction",
+            "candidate": "backlight-east-v1",
+            "value": [
+              0.700665949127905,
+              0.4003805423588029,
+              0.5905612999792342
+            ],
+            "source": "explicit-cli-human-approved-input",
+            "status": "human-approved-input"
+          },
+          {
+            "stage": "lightness",
+            "parameter": "lightness",
+            "candidate": "lightness-0.66",
+            "value": 0.66,
+            "source": "explicit-cli-human-approved-input",
+            "status": "human-approved-input"
+          }
+        ],
+        "frozen_upstream_baseline_hash": "dc6396cf975660e45e4dbe4ee74ad616fbaf6ebb64368f691b5d74d10b3283aa",
+        "direction_convention": {
+          "space": "world",
+          "lightVectorMeaning": "frozen approved direction candidate",
+          "backlightZSign": "positive-z",
+          "sideBackConstraint": "positive-z is the user-defined backlight side; downstream checkpoints must not reinterpret candidate coordinates"
+        },
+        "backlight_direction_revision": {
+          "id": "backlight-z-flip-v1",
+          "relation": "replaces-frontlight-candidates",
+          "z_transform": "negated-from-frontlight-candidates",
+          "backlight_z_sign": "positive-z",
+          "replaces_candidate_ids": [
+            "side-back-west",
+            "side-back-east",
+            "side-back-high"
+          ],
+          "invalidated_descendants": [
+            {
+              "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v3-approved-direction-semantic-fixtures",
+              "status": "invalidated-frontlight-descendant",
+              "reason": "records a superseded front-light direction approval"
+            },
+            {
+              "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v3-approved-direction-semantic-fixtures",
+              "status": "invalidated-frontlight-descendant",
+              "reason": "records a superseded front-light direction approval"
+            }
+          ]
+        },
+        "lightness_follow_up": {
+          "id": "lightness-066-follow-up-v1",
+          "relation": "extends-lightness-candidate-review",
+          "new_candidate": "lightness-0.66",
+          "predecessor_evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v4-backlight-semantic-fixtures",
+          "candidate_review": "approved"
+        },
+        "fixture": "semantic-cool-max-visible-bands",
+        "palette_family": "cool",
+        "palette_family_label": "cool palette family",
+        "terrain_complexity": "max-visible-bands",
+        "expected_visible_band_count": 8,
+        "fixture_movie_id": 16774,
+        "fixture_title": "Hellboy Animated: Sword of Storms",
+        "fixture_hue": 4.6297154895007475,
+        "fixture_primary_genre": "Science Fiction",
+        "fixture_palette_hex": "#83ABFF",
+        "fixture_genres": [
+          "Science Fiction",
+          "Animation",
+          "Fantasy",
+          "Action",
+          "Horror",
+          "Adventure",
+          "Thriller",
+          "TV Movie"
+        ],
+        "fixture_visible_band_count": 8,
+        "fixture_selection_predicate": "first authoritative gzip movie with primary genre in cool categorical palette family and max-visible-bands (8 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+        "fixture_seed": 230367109,
+        "diagnostic_only": "phase41-visual-diagnostic-v1",
+        "lightness": 0.66,
+        "key_light_intensity": 0.25,
+        "direction": [
+          0.700665949127905,
+          0.4003805423588029,
+          0.5905612999792342
+        ],
+        "flat_shading_mix": 0.8,
+        "emission_curve": {
+          "modelVersion": "vote-average-power-clamped-v1",
+          "exponent": 1,
+          "intensityMin": 0.005,
+          "intensityMax": 0.005
+        },
+        "bloom": {
+          "enabled": false,
+          "strength": 0.01,
+          "radius": 1,
+          "threshold": 0
+        }
+      }
+    },
+    {
+      "row_key": "semantic-cool-max-visible-bands",
+      "column_key": "key-0.35",
+      "input": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures/cells/semantic-cool-max-visible-bands__key-0.35.png",
+      "sha256": "2e7d8dc6877a8a87ad3abeb2aee00a36198a0af410f42f3d25eb511c141466ec",
+      "width": 1024,
+      "height": 1024,
+      "parameters": {
+        "checkpoint": "key",
+        "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures",
+        "varied_parameter": "keyLightIntensity",
+        "candidate": "key-0.35",
+        "png": "cells/semantic-cool-max-visible-bands__key-0.35.png",
+        "sidecar": "cells/semantic-cool-max-visible-bands__key-0.35.png.render.json",
+        "candidate_review": "approved",
+        "approved_candidate": "key-0.45",
+        "human_approved_inputs": [
+          {
+            "stage": "direction",
+            "parameter": "direction",
+            "candidate": "backlight-east-v1",
+            "value": [
+              0.700665949127905,
+              0.4003805423588029,
+              0.5905612999792342
+            ],
+            "source": "explicit-cli-human-approved-input",
+            "status": "human-approved-input"
+          },
+          {
+            "stage": "lightness",
+            "parameter": "lightness",
+            "candidate": "lightness-0.66",
+            "value": 0.66,
+            "source": "explicit-cli-human-approved-input",
+            "status": "human-approved-input"
+          }
+        ],
+        "frozen_upstream_baseline_hash": "dc6396cf975660e45e4dbe4ee74ad616fbaf6ebb64368f691b5d74d10b3283aa",
+        "direction_convention": {
+          "space": "world",
+          "lightVectorMeaning": "frozen approved direction candidate",
+          "backlightZSign": "positive-z",
+          "sideBackConstraint": "positive-z is the user-defined backlight side; downstream checkpoints must not reinterpret candidate coordinates"
+        },
+        "backlight_direction_revision": {
+          "id": "backlight-z-flip-v1",
+          "relation": "replaces-frontlight-candidates",
+          "z_transform": "negated-from-frontlight-candidates",
+          "backlight_z_sign": "positive-z",
+          "replaces_candidate_ids": [
+            "side-back-west",
+            "side-back-east",
+            "side-back-high"
+          ],
+          "invalidated_descendants": [
+            {
+              "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v3-approved-direction-semantic-fixtures",
+              "status": "invalidated-frontlight-descendant",
+              "reason": "records a superseded front-light direction approval"
+            },
+            {
+              "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v3-approved-direction-semantic-fixtures",
+              "status": "invalidated-frontlight-descendant",
+              "reason": "records a superseded front-light direction approval"
+            }
+          ]
+        },
+        "lightness_follow_up": {
+          "id": "lightness-066-follow-up-v1",
+          "relation": "extends-lightness-candidate-review",
+          "new_candidate": "lightness-0.66",
+          "predecessor_evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v4-backlight-semantic-fixtures",
+          "candidate_review": "approved"
+        },
+        "fixture": "semantic-cool-max-visible-bands",
+        "palette_family": "cool",
+        "palette_family_label": "cool palette family",
+        "terrain_complexity": "max-visible-bands",
+        "expected_visible_band_count": 8,
+        "fixture_movie_id": 16774,
+        "fixture_title": "Hellboy Animated: Sword of Storms",
+        "fixture_hue": 4.6297154895007475,
+        "fixture_primary_genre": "Science Fiction",
+        "fixture_palette_hex": "#83ABFF",
+        "fixture_genres": [
+          "Science Fiction",
+          "Animation",
+          "Fantasy",
+          "Action",
+          "Horror",
+          "Adventure",
+          "Thriller",
+          "TV Movie"
+        ],
+        "fixture_visible_band_count": 8,
+        "fixture_selection_predicate": "first authoritative gzip movie with primary genre in cool categorical palette family and max-visible-bands (8 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+        "fixture_seed": 230367109,
+        "diagnostic_only": "phase41-visual-diagnostic-v1",
+        "lightness": 0.66,
+        "key_light_intensity": 0.35,
+        "direction": [
+          0.700665949127905,
+          0.4003805423588029,
+          0.5905612999792342
+        ],
+        "flat_shading_mix": 0.8,
+        "emission_curve": {
+          "modelVersion": "vote-average-power-clamped-v1",
+          "exponent": 1,
+          "intensityMin": 0.005,
+          "intensityMax": 0.005
+        },
+        "bloom": {
+          "enabled": false,
+          "strength": 0.01,
+          "radius": 1,
+          "threshold": 0
+        }
+      }
+    },
+    {
+      "row_key": "semantic-cool-max-visible-bands",
+      "column_key": "key-0.45",
+      "input": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures/cells/semantic-cool-max-visible-bands__key-0.45.png",
+      "sha256": "fc6a2db0f4cf268db4fa55ab1db7a1aafdfd3171060125810add56cd5cae18e4",
+      "width": 1024,
+      "height": 1024,
+      "parameters": {
+        "checkpoint": "key",
+        "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v5-backlight-lightness-066-semantic-fixtures",
+        "varied_parameter": "keyLightIntensity",
+        "candidate": "key-0.45",
+        "png": "cells/semantic-cool-max-visible-bands__key-0.45.png",
+        "sidecar": "cells/semantic-cool-max-visible-bands__key-0.45.png.render.json",
+        "candidate_review": "approved",
+        "approved_candidate": "key-0.45",
+        "human_approved_inputs": [
+          {
+            "stage": "direction",
+            "parameter": "direction",
+            "candidate": "backlight-east-v1",
+            "value": [
+              0.700665949127905,
+              0.4003805423588029,
+              0.5905612999792342
+            ],
+            "source": "explicit-cli-human-approved-input",
+            "status": "human-approved-input"
+          },
+          {
+            "stage": "lightness",
+            "parameter": "lightness",
+            "candidate": "lightness-0.66",
+            "value": 0.66,
+            "source": "explicit-cli-human-approved-input",
+            "status": "human-approved-input"
+          }
+        ],
+        "frozen_upstream_baseline_hash": "dc6396cf975660e45e4dbe4ee74ad616fbaf6ebb64368f691b5d74d10b3283aa",
+        "direction_convention": {
+          "space": "world",
+          "lightVectorMeaning": "frozen approved direction candidate",
+          "backlightZSign": "positive-z",
+          "sideBackConstraint": "positive-z is the user-defined backlight side; downstream checkpoints must not reinterpret candidate coordinates"
+        },
+        "backlight_direction_revision": {
+          "id": "backlight-z-flip-v1",
+          "relation": "replaces-frontlight-candidates",
+          "z_transform": "negated-from-frontlight-candidates",
+          "backlight_z_sign": "positive-z",
+          "replaces_candidate_ids": [
+            "side-back-west",
+            "side-back-east",
+            "side-back-high"
+          ],
+          "invalidated_descendants": [
+            {
+              "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v3-approved-direction-semantic-fixtures",
+              "status": "invalidated-frontlight-descendant",
+              "reason": "records a superseded front-light direction approval"
+            },
+            {
+              "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v3-approved-direction-semantic-fixtures",
+              "status": "invalidated-frontlight-descendant",
+              "reason": "records a superseded front-light direction approval"
+            }
+          ]
+        },
+        "lightness_follow_up": {
+          "id": "lightness-066-follow-up-v1",
+          "relation": "extends-lightness-candidate-review",
+          "new_candidate": "lightness-0.66",
+          "predecessor_evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v4-backlight-semantic-fixtures",
+          "candidate_review": "approved"
+        },
+        "fixture": "semantic-cool-max-visible-bands",
+        "palette_family": "cool",
+        "palette_family_label": "cool palette family",
+        "terrain_complexity": "max-visible-bands",
+        "expected_visible_band_count": 8,
+        "fixture_movie_id": 16774,
+        "fixture_title": "Hellboy Animated: Sword of Storms",
+        "fixture_hue": 4.6297154895007475,
+        "fixture_primary_genre": "Science Fiction",
+        "fixture_palette_hex": "#83ABFF",
+        "fixture_genres": [
+          "Science Fiction",
+          "Animation",
+          "Fantasy",
+          "Action",
+          "Horror",
+          "Adventure",
+          "Thriller",
+          "TV Movie"
+        ],
+        "fixture_visible_band_count": 8,
+        "fixture_selection_predicate": "first authoritative gzip movie with primary genre in cool categorical palette family and max-visible-bands (8 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+        "fixture_seed": 230367109,
+        "diagnostic_only": "phase41-visual-diagnostic-v1",
+        "lightness": 0.66,
+        "key_light_intensity": 0.45,
+        "direction": [
+          0.700665949127905,
+          0.4003805423588029,
+          0.5905612999792342
+        ],
+        "flat_shading_mix": 0.8,
+        "emission_curve": {
+          "modelVersion": "vote-average-power-clamped-v1",
+          "exponent": 1,
+          "intensityMin": 0.005,
+          "intensityMax": 0.005
+        },
+        "bloom": {
+          "enabled": false,
+          "strength": 0.01,
+          "radius": 1,
+          "threshold": 0
+        }
+      }
+    }
+  ],
+  "output": {
+    "png": "contact-sheet.png",
+    "png_sha256": "e6e6967c703eadb0f7ae87139a51a4f4c7b80494f48e36f19469634ee63329c7",
+    "manifest": "contact-sheet.manifest.json",
+    "image": {
+      "width": 1428,
+      "height": 2580
+    },
+    "source_image": {
+      "width": 1024,
+      "height": 1024
+    }
+  },
+  "git_commit": "c8c645a57d5517a45491c3393ef58de5cce801f4",
+  "command": "npm run evidence:p41.4 -- --checkpoint key --direction backlight-east-v1 --lightness lightness-0.66 --approve key-0.45"
+}

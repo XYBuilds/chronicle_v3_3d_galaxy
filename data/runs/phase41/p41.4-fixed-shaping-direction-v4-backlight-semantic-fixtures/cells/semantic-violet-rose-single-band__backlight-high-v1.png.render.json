@@ -1,0 +1,256 @@
+{
+  "tmdb_id": 33,
+  "data_version": "2026.07.18.daily.113-p41.1-real-semantic-violet-rose-single-band",
+  "data_source": "file:E:\\projects\\chronicle_v3_3d_galaxy\\data\\runs\\phase41\\baseline\\fixtures\\semantic\\real-semantic-violet-rose-single-band.json",
+  "resolution": 1024,
+  "padding": 0.08,
+  "bloom": "off",
+  "render_mode": "shader",
+  "chronicle_git_commit": "c8c645a57d5517a45491c3393ef58de5cce801f4",
+  "visual_config_hash": "f3373dbffd1d3c9d43374fcbd2d69d557dbeceb84798154dde2f45b6aff0fbe7",
+  "png_sha256": "7143caccbc4ef435b87ec15daead2c706686c3d234c4f9c4de47c1c9733d708a",
+  "visual_diagnostics": {
+    "movie_id": 33,
+    "genres": [
+      "Western"
+    ],
+    "rating": 7.912,
+    "band_count": 1,
+    "world_radius": 0.01623018271444336,
+    "outer_radius": 0.01623018271444336,
+    "size_root": 3,
+    "padding": 0.08,
+    "emission": 0.005,
+    "emission_curve": {
+      "model_version": "vote-average-power-clamped-v1",
+      "exponent": 1,
+      "intensity_min": 0.005,
+      "intensity_max": 0.005
+    },
+    "fixed_lightness": 0.5,
+    "fixed_chroma": 0.15,
+    "bloom": {
+      "enabled": false,
+      "composition": "pure-bloom-delta-v1",
+      "strength": 0.01,
+      "radius": 1,
+      "threshold": 0
+    },
+    "key_light": {
+      "enabled": true,
+      "direction": [
+        0.3794501955361362,
+        0.7589003910722724,
+        0.5292331674582952
+      ],
+      "intensity": 0.35,
+      "flat_shading_mix": 0.8
+    },
+    "noise": {
+      "seed": 2765658642,
+      "scale": 2.35,
+      "octaves": 4,
+      "persistence": 0.52
+    },
+    "rotation": {
+      "base_quaternion": [
+        -0.5756735395529857,
+        0.3884176549119403,
+        0,
+        0.7195357539492013
+      ],
+      "seeded_spin_axis_world": [
+        0.5589607803484876,
+        0.8284353886217263,
+        0.035463402422491686
+      ],
+      "revs_per_sec": -0.05390582084655762
+    },
+    "camera": {
+      "projection": "orthographic",
+      "position": [
+        0,
+        0,
+        -0.03528300590096383
+      ],
+      "quaternion": [
+        0,
+        1,
+        0,
+        0
+      ],
+      "direction": [
+        0,
+        0,
+        1
+      ],
+      "left": -0.017641502950481915,
+      "right": 0.017641502950481915,
+      "top": 0.017641502950481915,
+      "bottom": -0.017641502950481915,
+      "near": 0.01,
+      "far": 0.07056601180192766
+    },
+    "phase41_resolved_profile": {
+      "curve": {
+        "modelVersion": "vote-average-power-clamped-v1",
+        "exponent": 1,
+        "intensityMin": 0.005,
+        "intensityMax": 0.005
+      },
+      "lightness": 0.5,
+      "chroma": 0.15,
+      "keyLightIntensity": 0.35,
+      "direction": [
+        0.3794501955361362,
+        0.7589003910722724,
+        0.5292331674582952
+      ],
+      "flatShadingMix": 0.8,
+      "bloom": {
+        "enabled": false,
+        "strength": 0.01,
+        "radius": 1,
+        "threshold": 0
+      },
+      "productionSource": "PLANET_VISUAL_DEFAULTS",
+      "productionVisualConfigInput": "{\"schemaVersion\":6,\"geometry\":{\"detail\":8},\"activeShell\":{\"sizeScale\":0.5,\"activeSizeMultiplier\":0.012},\"noise\":{\"scale\":2.35,\"octaves\":4,\"persistence\":0.52},\"bands\":{\"max\":8,\"areaRatio\":0.6180339887498948,\"thresholdPad\":2,\"stepHeight\":0.03,\"stepSmoothness\":0.01},\"color\":{\"pipelineVersion\":\"oklch-local-base-linear-emission-fixed-key-single-srgb-v1\",\"lMax\":1,\"huntGamma\":0.3,\"huntApplyMask\":7},\"focus\":{\"lightness\":0.66,\"chroma\":0.15,\"emission\":{\"modelVersion\":\"vote-average-power-clamped-v1\",\"exponent\":2,\"intensityMin\":0.06,\"intensityMax\":0.6}},\"galaxyColor\":{\"lMin\":0.3,\"lMax\":1,\"highRatingT\":0.85,\"highTierTRangeScale\":0.4,\"lightnessRatingExponent\":3,\"chroma\":0.18},\"lighting\":{\"enabled\":true,\"direction\":[0.700665949127905,0.4003805423588029,0.5905612999792342],\"keyLightIntensity\":0.45,\"flatShadingMix\":0.8},\"material\":{\"alpha\":0,\"alphaTest\":0.01,\"transparent\":false,\"depthWrite\":true,\"depthTest\":true}}",
+      "overrideProvenance": "phase41-diagnostic-override",
+      "resolvedVisualConfigInput": "{\"phase41Diagnostic\":\"phase41-visual-diagnostic-v1\",\"profile\":{\"curve\":{\"modelVersion\":\"vote-average-power-clamped-v1\",\"exponent\":1,\"intensityMin\":0.005,\"intensityMax\":0.005},\"lightness\":0.5,\"chroma\":0.15,\"keyLightIntensity\":0.35,\"direction\":[0.3794501955361363,0.7589003910722726,0.5292331674582953],\"flatShadingMix\":0.8,\"bloom\":{\"enabled\":false,\"strength\":0.01,\"radius\":1,\"threshold\":0},\"productionSource\":\"PLANET_VISUAL_DEFAULTS\",\"productionVisualConfigInput\":\"{\\\"schemaVersion\\\":6,\\\"geometry\\\":{\\\"detail\\\":8},\\\"activeShell\\\":{\\\"sizeScale\\\":0.5,\\\"activeSizeMultiplier\\\":0.012},\\\"noise\\\":{\\\"scale\\\":2.35,\\\"octaves\\\":4,\\\"persistence\\\":0.52},\\\"bands\\\":{\\\"max\\\":8,\\\"areaRatio\\\":0.6180339887498948,\\\"thresholdPad\\\":2,\\\"stepHeight\\\":0.03,\\\"stepSmoothness\\\":0.01},\\\"color\\\":{\\\"pipelineVersion\\\":\\\"oklch-local-base-linear-emission-fixed-key-single-srgb-v1\\\",\\\"lMax\\\":1,\\\"huntGamma\\\":0.3,\\\"huntApplyMask\\\":7},\\\"focus\\\":{\\\"lightness\\\":0.66,\\\"chroma\\\":0.15,\\\"emission\\\":{\\\"modelVersion\\\":\\\"vote-average-power-clamped-v1\\\",\\\"exponent\\\":2,\\\"intensityMin\\\":0.06,\\\"intensityMax\\\":0.6}},\\\"galaxyColor\\\":{\\\"lMin\\\":0.3,\\\"lMax\\\":1,\\\"highRatingT\\\":0.85,\\\"highTierTRangeScale\\\":0.4,\\\"lightnessRatingExponent\\\":3,\\\"chroma\\\":0.18},\\\"lighting\\\":{\\\"enabled\\\":true,\\\"direction\\\":[0.700665949127905,0.4003805423588029,0.5905612999792342],\\\"keyLightIntensity\\\":0.45,\\\"flatShadingMix\\\":0.8},\\\"material\\\":{\\\"alpha\\\":0,\\\"alphaTest\\\":0.01,\\\"transparent\\\":false,\\\"depthWrite\\\":true,\\\"depthTest\\\":true}}\",\"overrideProvenance\":\"phase41-diagnostic-override\"}}",
+      "camera": {
+        "projection": "orthographic",
+        "position": [
+          0,
+          0,
+          -0.03528300590096383
+        ],
+        "quaternion": [
+          0,
+          1,
+          0,
+          0
+        ],
+        "direction": [
+          0,
+          0,
+          1
+        ],
+        "left": -0.017641502950481915,
+        "right": 0.017641502950481915,
+        "top": 0.017641502950481915,
+        "bottom": -0.017641502950481915,
+        "near": 0.01,
+        "far": 0.07056601180192766
+      },
+      "seed": 2765658642,
+      "rotation": {
+        "base_quaternion": [
+          -0.5756735395529857,
+          0.3884176549119403,
+          0,
+          0.7195357539492013
+        ],
+        "seeded_spin_axis_world": [
+          0.5589607803484876,
+          0.8284353886217263,
+          0.035463402422491686
+        ],
+        "revs_per_sec": -0.05390582084655762
+      }
+    }
+  },
+  "chromium_version": "136.0.7103.25",
+  "webgl_renderer": "WebKit WebGL",
+  "generated_at": "2026-07-21T07:46:33.451Z",
+  "renderer_visual_config_hash": "015faba66cf0e1eae38c726640f363a3b9a67bf19103938b1f79a7fcd28c992b",
+  "p41_4_fixed_shaping": {
+    "checkpoint": "direction",
+    "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-direction-v4-backlight-semantic-fixtures",
+    "varied_parameter": "direction",
+    "candidate": "backlight-high-v1",
+    "candidate_review": "approved",
+    "approved_candidate": "backlight-east-v1",
+    "human_approved_inputs": [],
+    "frozen_upstream_baseline_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "direction_convention": {
+      "space": "world",
+      "lightVectorMeaning": "frozen approved direction candidate",
+      "backlightZSign": "positive-z",
+      "sideBackConstraint": "positive-z is the user-defined backlight side; downstream checkpoints must not reinterpret candidate coordinates"
+    },
+    "backlight_direction_revision": {
+      "id": "backlight-z-flip-v1",
+      "relation": "replaces-frontlight-candidates",
+      "z_transform": "negated-from-frontlight-candidates",
+      "backlight_z_sign": "positive-z",
+      "replaces_candidate_ids": [
+        "side-back-west",
+        "side-back-east",
+        "side-back-high"
+      ],
+      "invalidated_descendants": [
+        {
+          "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-lightness-v3-approved-direction-semantic-fixtures",
+          "status": "invalidated-frontlight-descendant",
+          "reason": "records a superseded front-light direction approval"
+        },
+        {
+          "evidence_directory": "data/runs/phase41/p41.4-fixed-shaping-key-v3-approved-direction-semantic-fixtures",
+          "status": "invalidated-frontlight-descendant",
+          "reason": "records a superseded front-light direction approval"
+        }
+      ]
+    },
+    "raw_direction": [
+      0.38,
+      0.76,
+      0.53
+    ],
+    "normalized_renderer_direction": [
+      0.3794501955361362,
+      0.7589003910722724,
+      0.5292331674582952
+    ],
+    "human_review_required": false,
+    "fixture": "semantic-violet-rose-single-band",
+    "fixture_semantics": {
+      "palette_family": "violet-rose",
+      "terrain_complexity": "single-visible-band",
+      "expected_visible_band_count": 1,
+      "movie_id": 33,
+      "title": "Unforgiven",
+      "hue": 5.9524913436438185,
+      "primary_genre": "Western",
+      "palette_hex": "#E989C8",
+      "genres": [
+        "Western"
+      ],
+      "visible_band_count": 1,
+      "selection_predicate": "first authoritative gzip movie with primary genre in violet-rose categorical palette family and single-visible-band (1 visible bands; cap=8); source order is preserved; hue and seed are not selection criteria",
+      "seed": 2765658642
+    },
+    "diagnostic_only": "phase41-visual-diagnostic-v1",
+    "override": {
+      "diagnostic_only": "phase41-visual-diagnostic-v1",
+      "emissionCurve": {
+        "modelVersion": "vote-average-power-clamped-v1",
+        "exponent": 1,
+        "intensityMin": 0.005,
+        "intensityMax": 0.005
+      },
+      "lightness": 0.5,
+      "keyLightIntensity": 0.35,
+      "direction": [
+        0.3794501955361362,
+        0.7589003910722724,
+        0.5292331674582952
+      ],
+      "bloom": {
+        "enabled": false,
+        "strength": 0.01,
+        "radius": 1,
+        "threshold": 0
+      }
+    }
+  }
+}

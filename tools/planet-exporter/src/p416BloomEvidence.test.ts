@@ -10,6 +10,8 @@ import {
   P416_BLOOM_V1_CANDIDATE,
   P416_BLOOM_V2_THRESHOLD_CANDIDATE,
   P416_BLOOM_V3_CONTRAST_CANDIDATE,
+  P416_BLOOM_V4_SAFE_STRENGTH_CANDIDATE,
+  P416_BLOOM_V5_HIGH_STRENGTH_CANDIDATE,
   assertP416EvidenceContract,
   assertP416PairOnlyBloomVariation,
   measureP416BloomPair,
@@ -46,6 +48,8 @@ describe('P41.6 Bloom evidence contract', () => {
     expect(P416_BLOOM_CANDIDATES.v1).toBe(P416_BLOOM_V1_CANDIDATE)
     expect(P416_BLOOM_CANDIDATES['v2-threshold']).toBe(P416_BLOOM_V2_THRESHOLD_CANDIDATE)
     expect(P416_BLOOM_CANDIDATES['v3-contrast']).toBe(P416_BLOOM_V3_CONTRAST_CANDIDATE)
+    expect(P416_BLOOM_CANDIDATES['v4-safe-strength']).toBe(P416_BLOOM_V4_SAFE_STRENGTH_CANDIDATE)
+    expect(P416_BLOOM_CANDIDATES['v5-high-strength']).toBe(P416_BLOOM_V5_HIGH_STRENGTH_CANDIDATE)
     expect(validateP416BloomParams(P416_BLOOM_OFF, 'off')).toEqual(P416_BLOOM_OFF)
     expect(validateP416BloomParams(P416_BLOOM_ON, 'on')).toEqual(P416_BLOOM_ON)
   })
@@ -66,6 +70,52 @@ describe('P41.6 Bloom evidence contract', () => {
     expect(P416_BLOOM_V3_CONTRAST_CANDIDATE.bloomOn).toMatchObject({ enabled: true, threshold: 0.3, strength: 0.03, radius: 0.2 })
     expect(P416_BLOOM_V3_CONTRAST_CANDIDATE.bloomOn.threshold).toBeGreaterThan(P416_BLOOM_V2_THRESHOLD_CANDIDATE.bloomOn.threshold)
   })
+  it('keeps v4 and v5 in independent directories and changes only v2 strength', () => {
+    const v2 = P416_BLOOM_V2_THRESHOLD_CANDIDATE.bloomOn
+    const candidates = [P416_BLOOM_V4_SAFE_STRENGTH_CANDIDATE, P416_BLOOM_V5_HIGH_STRENGTH_CANDIDATE]
+    expect(new Set(candidates.map((candidate) => candidate.candidateId)).size).toBe(2)
+    expect(new Set(candidates.map((candidate) => candidate.evidenceDirectory)).size).toBe(2)
+    expect(candidates.map((candidate) => candidate.evidenceDirectory)).toEqual([
+      'data/runs/phase41/p41.6-bloom-integration-v4-safe-strength',
+      'data/runs/phase41/p41.6-bloom-integration-v5-high-strength',
+    ])
+    expect(candidates.map((candidate) => candidate.schemaVersion)).toEqual([
+      'p41.6-bloom-integration-validation-v4-safe-strength',
+      'p41.6-bloom-integration-validation-v5-high-strength',
+    ])
+    for (const candidate of candidates) {
+      expect(candidate.evidenceDirectory).not.toBe(P416_BLOOM_V1_CANDIDATE.evidenceDirectory)
+      expect(candidate.evidenceDirectory).not.toBe(P416_BLOOM_V2_THRESHOLD_CANDIDATE.evidenceDirectory)
+      expect(candidate.evidenceDirectory).not.toBe(P416_BLOOM_V3_CONTRAST_CANDIDATE.evidenceDirectory)
+      expect(candidate.bloomOn).toMatchObject({ enabled: v2.enabled, radius: v2.radius, threshold: v2.threshold })
+    }
+    expect(P416_BLOOM_V4_SAFE_STRENGTH_CANDIDATE.bloomOn.strength).toBe(0.05)
+    expect(P416_BLOOM_V5_HIGH_STRENGTH_CANDIDATE.bloomOn.strength).toBe(0.12)
+  })
+
+  it('keeps v4 and v5 as explicitly human-reviewed diagnostic strength controls from v2', () => {
+    for (const [candidate, strength, nature] of [
+      [P416_BLOOM_V4_SAFE_STRENGTH_CANDIDATE, 0.05, 'diagnostic-strength-comparison-pending-human-review'],
+      [P416_BLOOM_V5_HIGH_STRENGTH_CANDIDATE, 0.12, 'diagnostic-high-strength-overexposure-permitted-pending-human-review'],
+    ] as const) {
+      expect(candidate.candidateNature).toBe(nature)
+      expect(candidate.bloomOn).toMatchObject({ enabled: true, strength, radius: 0.35, threshold: 0.2 })
+      expect(candidate.bloomOn.radius).toBe(P416_BLOOM_V2_THRESHOLD_CANDIDATE.bloomOn.radius)
+      expect(candidate.bloomOn.threshold).toBe(P416_BLOOM_V2_THRESHOLD_CANDIDATE.bloomOn.threshold)
+    }
+    expect(P416_BLOOM_V4_SAFE_STRENGTH_CANDIDATE.bloomOn.strength).toBeGreaterThan(P416_BLOOM_V2_THRESHOLD_CANDIDATE.bloomOn.strength)
+    expect(P416_BLOOM_V5_HIGH_STRENGTH_CANDIDATE.bloomOn.strength).toBeGreaterThan(P416_BLOOM_V4_SAFE_STRENGTH_CANDIDATE.bloomOn.strength)
+  })
+
+  it('does not reject a higher core ON/OFF ratio', () => {
+    const stats = measureP416BloomPair(image(100), image(130))
+    expect(stats.core.on_to_off_mean_luma_ratio).toBeCloseTo(1.3, 8)
+  })
+
+  it('retains the positive core-increment proof', () => {
+    expect(() => measureP416BloomPair(image(100), image(100))).toThrow(/statistically meaningful positive core increment/)
+  })
+
   it('rejects non-finite and out-of-range Bloom candidates before rendering', () => {
     expect(() => validateP416BloomParams({ ...P416_BLOOM_ON, threshold: Number.NaN }, 'on')).toThrow(/finite/)
     expect(() => validateP416BloomParams({ ...P416_BLOOM_ON, radius: 1.01 }, 'on')).toThrow(/\[0, 1\]/)

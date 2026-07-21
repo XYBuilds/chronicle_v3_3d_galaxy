@@ -18,6 +18,10 @@ export const P416_BLOOM_V2_THRESHOLD_EVIDENCE_RELATIVE_DIRECTORY = 'data/runs/ph
 export const P416_BLOOM_V2_THRESHOLD_CANDIDATE_ID = 'p41.6-cdf-lut-thresholded-bloom-candidate-v2' as const
 export const P416_BLOOM_V3_CONTRAST_EVIDENCE_RELATIVE_DIRECTORY = 'data/runs/phase41/p41.6-bloom-integration-v3-contrast' as const
 export const P416_BLOOM_V3_CONTRAST_CANDIDATE_ID = 'p41.6-cdf-lut-highlight-contrast-bloom-candidate-v3' as const
+export const P416_BLOOM_V4_SAFE_STRENGTH_EVIDENCE_RELATIVE_DIRECTORY = 'data/runs/phase41/p41.6-bloom-integration-v4-safe-strength' as const
+export const P416_BLOOM_V4_SAFE_STRENGTH_CANDIDATE_ID = 'p41.6-cdf-lut-safe-strength-bloom-candidate-v4' as const
+export const P416_BLOOM_V5_HIGH_STRENGTH_EVIDENCE_RELATIVE_DIRECTORY = 'data/runs/phase41/p41.6-bloom-integration-v5-high-strength' as const
+export const P416_BLOOM_V5_HIGH_STRENGTH_CANDIDATE_ID = 'p41.6-cdf-lut-high-strength-bloom-candidate-v5' as const
 export const P416_BLOOM_MATRIX_COLUMNS = ['off', 'on'] as const
 export type P416BloomMode = typeof P416_BLOOM_MATRIX_COLUMNS[number]
 export type P416BloomParams = { enabled: boolean; strength: number; radius: number; threshold: number }
@@ -38,6 +42,7 @@ const P416_BLOOM_V1_ON = {
 
 export type P416BloomCandidate = {
   candidateId: string
+  candidateNature: string
   schemaVersion: string
   evidenceDirectory: string
   sourceProfileId: 'rating-midrank-cdf-lut-v1'
@@ -47,6 +52,7 @@ export type P416BloomCandidate = {
 
 export const P416_BLOOM_V1_CANDIDATE: P416BloomCandidate = {
   candidateId: P416_BLOOM_V1_CANDIDATE_ID,
+  candidateNature: 'diagnostic-bloom-candidate',
   schemaVersion: 'p41.6-bloom-integration-validation-v1',
   evidenceDirectory: P416_BLOOM_V1_EVIDENCE_RELATIVE_DIRECTORY,
   sourceProfileId: 'rating-midrank-cdf-lut-v1',
@@ -56,6 +62,7 @@ export const P416_BLOOM_V1_CANDIDATE: P416BloomCandidate = {
 
 export const P416_BLOOM_V2_THRESHOLD_CANDIDATE: P416BloomCandidate = {
   candidateId: P416_BLOOM_V2_THRESHOLD_CANDIDATE_ID,
+  candidateNature: 'diagnostic-thresholded-bloom-candidate',
   schemaVersion: 'p41.6-bloom-integration-validation-v2',
   evidenceDirectory: P416_BLOOM_V2_THRESHOLD_EVIDENCE_RELATIVE_DIRECTORY,
   sourceProfileId: 'rating-midrank-cdf-lut-v1',
@@ -63,9 +70,10 @@ export const P416_BLOOM_V2_THRESHOLD_CANDIDATE: P416BloomCandidate = {
   bloomOn: { enabled: true, strength: 0.025, radius: 0.35, threshold: 0.2 },
 }
 
-/** Raised threshold and tighter radius keep bloom highlight-selective; strength stays just above v2 to respect the pure-core ceiling. */
+/** Raised threshold and tighter radius keep bloom highlight-selective. */
 export const P416_BLOOM_V3_CONTRAST_CANDIDATE: P416BloomCandidate = {
   candidateId: P416_BLOOM_V3_CONTRAST_CANDIDATE_ID,
+  candidateNature: 'diagnostic-highlight-contrast-bloom-candidate',
   schemaVersion: 'p41.6-bloom-integration-validation-v3',
   evidenceDirectory: P416_BLOOM_V3_CONTRAST_EVIDENCE_RELATIVE_DIRECTORY,
   sourceProfileId: 'rating-midrank-cdf-lut-v1',
@@ -73,10 +81,34 @@ export const P416_BLOOM_V3_CONTRAST_CANDIDATE: P416BloomCandidate = {
   bloomOn: { enabled: true, strength: 0.03, radius: 0.2, threshold: 0.3 },
 }
 
+/** Controlled v2-strength increase for human comparison; it makes no non-overexposure ceiling claim. */
+export const P416_BLOOM_V4_SAFE_STRENGTH_CANDIDATE: P416BloomCandidate = {
+  candidateId: P416_BLOOM_V4_SAFE_STRENGTH_CANDIDATE_ID,
+  candidateNature: 'diagnostic-strength-comparison-pending-human-review',
+  schemaVersion: 'p41.6-bloom-integration-validation-v4-safe-strength',
+  evidenceDirectory: P416_BLOOM_V4_SAFE_STRENGTH_EVIDENCE_RELATIVE_DIRECTORY,
+  sourceProfileId: 'rating-midrank-cdf-lut-v1',
+  bloomOff: P416_BLOOM_V1_OFF,
+  bloomOn: { enabled: true, strength: 0.05, radius: 0.35, threshold: 0.2 },
+}
+
+/** Diagnostic high-strength control: overexposure is permitted and requires human confirmation. */
+export const P416_BLOOM_V5_HIGH_STRENGTH_CANDIDATE: P416BloomCandidate = {
+  candidateId: P416_BLOOM_V5_HIGH_STRENGTH_CANDIDATE_ID,
+  candidateNature: 'diagnostic-high-strength-overexposure-permitted-pending-human-review',
+  schemaVersion: 'p41.6-bloom-integration-validation-v5-high-strength',
+  evidenceDirectory: P416_BLOOM_V5_HIGH_STRENGTH_EVIDENCE_RELATIVE_DIRECTORY,
+  sourceProfileId: 'rating-midrank-cdf-lut-v1',
+  bloomOff: P416_BLOOM_V1_OFF,
+  bloomOn: { enabled: true, strength: 0.12, radius: 0.35, threshold: 0.2 },
+}
+
 export const P416_BLOOM_CANDIDATES = {
   v1: P416_BLOOM_V1_CANDIDATE,
   'v2-threshold': P416_BLOOM_V2_THRESHOLD_CANDIDATE,
   'v3-contrast': P416_BLOOM_V3_CONTRAST_CANDIDATE,
+  'v4-safe-strength': P416_BLOOM_V4_SAFE_STRENGTH_CANDIDATE,
+  'v5-high-strength': P416_BLOOM_V5_HIGH_STRENGTH_CANDIDATE,
 } as const
 
 /** Backward-compatible defaults for the historical v1 reproduction command. */
@@ -186,7 +218,10 @@ function haloBounds(off: RgbaImage, on: RgbaImage): P416BloomPixelStats['halo_bo
   return pixels === 0 ? null : { x_min: xMin, x_max: xMax, y_min: yMin, y_max: yMax, pixels, ratio: pixels / (off.width * off.height) }
 }
 
-export function measureP416BloomPair(off: RgbaImage, on: RgbaImage): P416BloomPixelStats {
+export function measureP416BloomPair(
+  off: RgbaImage,
+  on: RgbaImage,
+): P416BloomPixelStats {
   assert(off.width === on.width && off.height === on.height && off.data.length === on.data.length, 'OFF/ON images must share dimensions and channels')
   assert(off.width > 0 && off.height > 0 && off.data.length === off.width * off.height * 4, 'image matrix is invalid')
   const offSaturated = saturatedPixels(off)
@@ -222,10 +257,11 @@ export function assertP416EvidenceContract(): void {
   assert(P41_EMISSION_MIDRANK_CDF_LUT_DIAGNOSTIC_CANDIDATE.scope === 'diagnostic-only', 'CDF/LUT profile must remain diagnostic-only')
   assert(P41_EMISSION_FIXTURE_ROWS.length * P41_MIDRANK_CDF_LUT_CONTROLLED_RATINGS.length === 77, 'P41.6 matrix shape drifted')
   const candidates = Object.values(P416_BLOOM_CANDIDATES)
-  assert(candidates.length === 3, 'candidate registry must retain v1, v2, and v3')
+  assert(candidates.length === 5, 'candidate registry must retain v1, v2, v3, v4, and v5')
   assert(new Set(candidates.map((candidate) => candidate.candidateId)).size === candidates.length, 'candidate ids must be unique')
   assert(new Set(candidates.map((candidate) => candidate.evidenceDirectory)).size === candidates.length, 'candidate evidence directories must be unique')
   assert(new Set(candidates.map((candidate) => candidate.schemaVersion)).size === candidates.length, 'candidate schemas must be unique')
+  assert(candidates.every((candidate) => candidate.candidateNature.startsWith('diagnostic-')), 'candidates must remain diagnostic-only')
   for (const candidate of candidates) {
     assert(candidate.sourceProfileId === 'rating-midrank-cdf-lut-v1', `${candidate.candidateId} source profile drifted`)
     assert(validateP416BloomParams(candidate.bloomOff, `${candidate.candidateId} Bloom OFF`).enabled === false, `${candidate.candidateId} OFF candidate must be disabled`)
@@ -233,7 +269,16 @@ export function assertP416EvidenceContract(): void {
   }
   const v2 = validateP416BloomParams(P416_BLOOM_V2_THRESHOLD_CANDIDATE.bloomOn, 'v2 threshold Bloom ON')
   const v3 = validateP416BloomParams(P416_BLOOM_V3_CONTRAST_CANDIDATE.bloomOn, 'v3 contrast Bloom ON')
+  const v4 = validateP416BloomParams(P416_BLOOM_V4_SAFE_STRENGTH_CANDIDATE.bloomOn, 'v4 safe-strength Bloom ON')
+  const v5 = validateP416BloomParams(P416_BLOOM_V5_HIGH_STRENGTH_CANDIDATE.bloomOn, 'v5 high-strength Bloom ON')
   assert(v2.enabled && v2.threshold === 0.2, 'v2 candidate threshold drifted')
   assert(v3.enabled && v3.threshold > v2.threshold, 'v3 threshold must exceed v2')
   assert(v3.strength > v2.strength && v3.radius < v2.radius, 'v3 must use stronger, tighter highlight bloom')
+  for (const [label, bloom] of [['v4', v4], ['v5', v5]] as const) {
+    assert(bloom.enabled === v2.enabled && bloom.radius === v2.radius && bloom.threshold === v2.threshold, `${label} must change only strength from v2`)
+  }
+  assert(v4.strength === 0.05 && v4.strength > v2.strength, 'v4 safe-strength must be the specified human-reviewed comparison')
+  assert(v5.strength === 0.12 && v5.strength > v4.strength, 'v5 high-strength must be the specified overexposure-permitted comparison')
+  assert(P416_BLOOM_V4_SAFE_STRENGTH_CANDIDATE.candidateNature === 'diagnostic-strength-comparison-pending-human-review', 'v4 must remain a human-reviewed diagnostic comparison')
+  assert(P416_BLOOM_V5_HIGH_STRENGTH_CANDIDATE.candidateNature === 'diagnostic-high-strength-overexposure-permitted-pending-human-review', 'v5 must remain an overexposure-permitted human-reviewed diagnostic control')
 }

@@ -53,10 +53,5 @@ export function resolvePhase41DiagnosticRequest(request: Phase41DiagnosticReques
   if (request.diagnostic_only !== PHASE41_DIAGNOSTIC_MARKER) {
     throw new Error(`[Phase41 diagnostic] diagnostic_only must equal ${PHASE41_DIAGNOSTIC_MARKER}`)
   }
-  const profile = resolvePhase41VisualProfile(request.profileOverride)
-  if (profile.bloom.enabled === request.bloom) return profile
-  if (profile.overrideProvenance !== 'none') {
-    throw new Error('[Phase41 diagnostic] override Bloom state must match the bloom request parameter')
-  }
-  return { ...profile, bloom: { ...profile.bloom, enabled: request.bloom } }
+  return resolvePhase41VisualProfile(request.profileOverride, request.bloom)
 }

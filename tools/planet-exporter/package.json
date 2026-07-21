@@ -23,6 +23,7 @@
     "evidence:p41.6:v3-contrast": "tsx scripts/generate-p416-bloom-integration-evidence.ts --candidate v3-contrast",
     "evidence:p41.6:v4-safe-strength": "tsx scripts/generate-p416-bloom-integration-evidence.ts --candidate v4-safe-strength",
     "evidence:p41.6:v5-high-strength": "tsx scripts/generate-p416-bloom-integration-evidence.ts --candidate v5-high-strength",
+    "evidence:p41.7": "tsx scripts/generate-p417-final-evidence.ts",
     "contact-sheet": "tsx scripts/generate-contact-sheet.ts"
   },
   "dependencies": {

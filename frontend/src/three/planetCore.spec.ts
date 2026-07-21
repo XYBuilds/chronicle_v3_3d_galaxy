@@ -70,7 +70,7 @@ const palette: Meta['genre_palette'] = {
 describe('planet visual defaults', () => {
   it('serializes the versioned Focus visual configuration for metadata hashing', () => {
     expect(PLANET_VISUAL_DEFAULTS).toEqual({
-      schemaVersion: 7,
+      schemaVersion: 8,
       geometry: { detail: 8 },
       activeShell: { sizeScale: 0.5, activeSizeMultiplier: 0.012 },
       noise: { scale: 2.35, octaves: 4, persistence: 0.52 },
@@ -96,6 +96,13 @@ describe('planet visual defaults', () => {
           ratingHighAnchor: 8.2,
           intensityMin: 0.005,
           intensityMax: 0.65,
+        },
+        bloom: {
+          composition: 'pure-bloom-delta-v1',
+          enabled: true,
+          strength: 0.01,
+          radius: 1,
+          threshold: 0,
         },
       },
       galaxyColor: {

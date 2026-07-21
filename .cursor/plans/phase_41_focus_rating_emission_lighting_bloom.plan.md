@@ -22,7 +22,7 @@ todos:
     status: completed
   - id: p41.7-three-surface-regression
     content: 41.7 · 统一网站、exporter、diagnostics 契约并生成最终回归证据
-    status: pending
+    status: completed
   - id: p41.8-production-gate
     content: 41.8 · [需人工验收] 完成最终生产 Go/No-Go、参数锁定和实施报告
     status: pending

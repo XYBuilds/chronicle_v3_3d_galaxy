@@ -16,7 +16,7 @@ export const PERLIN_LIGHTING_ENABLED_DEFAULT = true
  * Keep vectors as tuples so the same object can be hashed into render metadata.
  */
 export const PLANET_VISUAL_DEFAULTS = {
-  schemaVersion: 7,
+  schemaVersion: 8,
   geometry: {
     detail: 8,
   },
@@ -54,6 +54,13 @@ export const PLANET_VISUAL_DEFAULTS = {
       intensityMin: 0.005,
       intensityMax: 0.65,
     },
+    bloom: {
+      composition: 'pure-bloom-delta-v1',
+      enabled: true,
+      strength: 0.01,
+      radius: 1.0,
+      threshold: 0,
+    },
   },
   galaxyColor: {
     lMin: 0.3,
@@ -79,8 +86,28 @@ export const PLANET_VISUAL_DEFAULTS = {
 } as const
 
 export type PlanetVisualDefaults = typeof PLANET_VISUAL_DEFAULTS
+export type ProductionPlanetBloomParams = Omit<typeof PLANET_VISUAL_DEFAULTS.focus.bloom, 'composition' | 'enabled'> & { enabled: boolean }
+
+/** Resolves the production Bloom state without exposing a normal-request override channel. */
+export function productionPlanetBloomParams(enabled: boolean = PLANET_VISUAL_DEFAULTS.focus.bloom.enabled): ProductionPlanetBloomParams {
+  if (typeof enabled !== 'boolean') throw new Error('[PlanetVisualDefaults] bloom enabled must be boolean')
+  return {
+    enabled,
+    strength: PLANET_VISUAL_DEFAULTS.focus.bloom.strength,
+    radius: PLANET_VISUAL_DEFAULTS.focus.bloom.radius,
+    threshold: PLANET_VISUAL_DEFAULTS.focus.bloom.threshold,
+  }
+}
 
 /** Stable JSON input for CLI render metadata hashing. */
-export function planetVisualConfigHashInput(): string {
-  return JSON.stringify(PLANET_VISUAL_DEFAULTS)
+export function planetVisualConfigHashInput(bloomEnabled: boolean = PLANET_VISUAL_DEFAULTS.focus.bloom.enabled): string {
+  if (typeof bloomEnabled !== 'boolean') throw new Error('[PlanetVisualDefaults] bloom enabled must be boolean')
+  if (bloomEnabled === PLANET_VISUAL_DEFAULTS.focus.bloom.enabled) return JSON.stringify(PLANET_VISUAL_DEFAULTS)
+  return JSON.stringify({
+    ...PLANET_VISUAL_DEFAULTS,
+    focus: {
+      ...PLANET_VISUAL_DEFAULTS.focus,
+      bloom: productionPlanetBloomParams(bloomEnabled),
+    },
+  })
 }

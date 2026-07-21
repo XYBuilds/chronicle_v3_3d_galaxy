@@ -30,7 +30,10 @@ async function main(): Promise<void> {
     document.body.dataset.maxTextureSize = String(gl.getParameter(gl.MAX_TEXTURE_SIZE))
     document.body.dataset.webglRenderer = String(gl.getParameter(gl.RENDERER) ?? 'unknown')
     document.body.dataset.dataVersion = data.meta.version
-    document.body.dataset.visualHash = planetExportVisualConfigInput(planetVisualConfigHashInput(), request.sizeRoot)
+    const productionVisualConfigInput = planetExportVisualConfigInput(planetVisualConfigHashInput(), request.sizeRoot)
+    document.body.dataset.visualHash = request.bloom
+      ? productionVisualConfigInput
+      : planetExportVisualConfigInput(planetVisualConfigHashInput(false), request.sizeRoot)
     document.body.dataset.visualDiagnostics = JSON.stringify(result.diagnostics)
     document.body.dataset.exportReady = '1'
     console.log(`[PlanetExport] ready movieId=${movie.id} resolution=${request.resolution} bloom=${request.bloom ? 'on' : 'off'} mode=${request.renderMode}`)

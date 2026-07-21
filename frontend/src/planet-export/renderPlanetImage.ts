@@ -1,7 +1,7 @@
+import { productionPlanetBloomParams } from '@/three/planetVisualDefaults'
 import * as THREE from 'three'
 import {
   PERLIN_BLOOM_COMPOSITION,
-  PERLIN_BLOOM_DEFAULTS,
   PERLIN_BLOOM_LAYER,
   createPerlinBloomDeltaCompositor,
   type PerlinBloomParams,
@@ -194,7 +194,7 @@ export function capturePlanetRenderDiagnostics(
 
   const appearance = planet.lastAppearance
   if (!appearance) throw new Error('[PlanetExport] planet appearance must be resolved before diagnostics')
-  const bloomParams = validatePerlinBloomParams(options.bloomParamsOverride ?? PERLIN_BLOOM_DEFAULTS)
+  const bloomParams = validatePerlinBloomParams(options.bloomParamsOverride ?? productionPlanetBloomParams(options.bloom))
   const scale = planet.mesh.scale
   const worldRadius = positive(scale.x, 'world radius')
   if (scale.y !== scale.x || scale.z !== scale.x) {
@@ -351,7 +351,7 @@ function applyPhase41DiagnosticOverride(planet: SelectionPlanetHandle, movie: Mo
 
 function renderPlanetImageInternal(options: OfflineDiagnosticPlanetRenderOptions, diagnosticOverride?: Phase41RenderOverride): PlanetRenderResult {
   const { canvas, movie, meta, globalRadius, resolution, padding, bloom, renderMode, sizeRoot, bloomParamsOverride } = options
-  const bloomParams = validatePerlinBloomParams(bloomParamsOverride ?? PERLIN_BLOOM_DEFAULTS)
+  const bloomParams = validatePerlinBloomParams(bloomParamsOverride ?? productionPlanetBloomParams(bloom))
   const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, preserveDrawingBuffer: true })
   renderer.setPixelRatio(1)
   renderer.setSize(resolution, resolution, false)
@@ -368,6 +368,7 @@ function renderPlanetImageInternal(options: OfflineDiagnosticPlanetRenderOptions
   if (diagnosticOverride !== undefined) applyPhase41DiagnosticOverride(planet, movie, diagnosticOverride)
   const diagnostics = capturePlanetRenderDiagnostics(movie, planet, camera, {
     ...options,
+    bloomParamsOverride: bloomParams,
     ...(diagnosticOverride === undefined ? {} : { emissionCurveOverride: diagnosticOverride.curve }),
   })
   scene.add(planet.mesh)

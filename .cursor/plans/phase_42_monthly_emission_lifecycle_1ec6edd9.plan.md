@@ -7,7 +7,7 @@ todos:
     status: completed
   - id: p42.2-monthly-profile-generator
     content: 把 monthly final movies 接入 midrank CDF/LUT profile 生成并输出 provenance、hash 与漂移指标
-    status: pending
+    status: completed
   - id: p42.3-runtime-exporter-consumer
     content: 统一网站、Planet exporter、diagnostics 对 active profile 的读取、缓存、校验和数值消费
     status: pending

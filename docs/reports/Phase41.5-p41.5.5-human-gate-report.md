@@ -47,3 +47,5 @@ npm run typecheck -w planet-exporter
 ## 父级 TODO 收口
 
 在用户明确确认 CDF + LUT 视觉结果满意后，父级计划 `phase_41_focus_rating_emission_lighting_bloom.plan.md` 的 `p41.5-emission-curve-gate` 已更新为 `completed`。该通过结论只允许 `rating-midrank-cdf-lut-v1` 作为 41.6 Bloom ON 联调的诊断输入；它不表示该 LUT 已成为生产默认曲线，也不提前关闭 41.6、41.7 或 41.8 门禁。
+
+本地计划与报告收口提交为 `f283fe1`，后续远程交付由仓库标准完成脚本处理。

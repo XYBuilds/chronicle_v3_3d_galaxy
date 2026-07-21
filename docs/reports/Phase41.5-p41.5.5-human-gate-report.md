@@ -43,3 +43,7 @@ npm run typecheck -w planet-exporter
 - 允许进入 41.6 Bloom ON 联调，但仍只作为当前诊断候选输入。
 - monthly refit、LUT 生产化写入、数据 schema、网站/exporter/diagnostics 三端统一消费、月间漂移检测和失败保护必须另立后续 Phase。
 - 不修改或删除 anchored smoothstep 历史证据。
+
+## 父级 TODO 收口
+
+在用户明确确认 CDF + LUT 视觉结果满意后，父级计划 `phase_41_focus_rating_emission_lighting_bloom.plan.md` 的 `p41.5-emission-curve-gate` 已更新为 `completed`。该通过结论只允许 `rating-midrank-cdf-lut-v1` 作为 41.6 Bloom ON 联调的诊断输入；它不表示该 LUT 已成为生产默认曲线，也不提前关闭 41.6、41.7 或 41.8 门禁。

@@ -16,7 +16,7 @@ todos:
     status: completed
   - id: p41.5-emission-curve-gate
     content: 41.5 · [需人工验收] 实现 anchored smoothstep 并收敛 Bloom OFF 评分层级
-    status: pending
+    status: completed
   - id: p41.6-bloom-integration-gate
     content: 41.6 · [需人工验收] 在 Bloom ON 下手工联调 Bloom 并允许回调 emission 高端
     status: pending

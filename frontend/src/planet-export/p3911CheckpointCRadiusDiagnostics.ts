@@ -9,7 +9,7 @@ export const P3911_CHECKPOINT_C_RADIUS = {
   ratings: [0, 4, 5, 10] as const,
   radiusCandidates: [0, 0.5, 1] as const,
   bloom: { enabled: true, strength: 0.005, threshold: 0, baselineRadius: 1 },
-  production: { keyLightIntensity: 0.35, emissionExponent: 2, intensityMin: 0.06, intensityMax: 0.6 },
+  production: { keyLightIntensity: 0.45, emissionExponent: 2, intensityMin: 0.06, intensityMax: 0.6 },
   productionBloom: { enabled: true, strength: 0.01, radius: 1, threshold: 0 },
 } as const
 

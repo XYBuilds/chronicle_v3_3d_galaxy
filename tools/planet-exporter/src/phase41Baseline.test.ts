@@ -5,15 +5,23 @@ import { gzipSync } from 'node:zlib'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import {
+  P41_4_SEMANTIC_FUTURE_ROWS,
+  assertP41FixedShapingFixtureSemantics,
+  p41FixedShapingSemanticRowLabel,
+} from './p41FixedShaping.js'
+import {
   AUTHORITATIVE_GZIP_RELATIVE_PATH,
+  assertPhase41SemanticFixtureCoverage,
   PHASE41_CONTROLLED_RATINGS,
   createPhase41Fixtures,
+  createPhase41SemanticFixtures,
   loadAuthoritativeGalaxy,
   parseAuthoritativeGzip,
   parsePhase41Galaxy,
   phase41NoiseSeed,
   summarizePhase41Baseline,
   writePhase41Baseline,
+  writePhase41SemanticFixtures,
 } from './phase41Baseline.js'
 
 type MovieInput = Record<string, unknown>
@@ -70,6 +78,16 @@ function fixtureGalaxy(): unknown {
   }
 }
 
+function semanticFixtureGalaxy(): unknown {
+  const value = fixtureGalaxy() as { meta: { count: number }; movies: MovieInput[] }
+  value.movies.push(
+    movie(13, { genres: ['Action', 'Adventure', 'Animation', 'Comedy', 'Crime', 'Documentary', 'Drama', 'Fantasy'] }),
+    movie(14, { genre_hue: 4.2, genres: ['Family', 'Fantasy', 'History', 'Horror', 'Music', 'Mystery', 'Romance', 'Science Fiction'] }),
+  )
+  value.meta.count = value.movies.length
+  return value
+}
+
 function serializedFixtures(value: ReturnType<typeof createPhase41Fixtures>): string {
   return JSON.stringify({ controlled: [...value.controlled], real: [...value.real] })
 }
@@ -117,6 +135,54 @@ describe('P41.1 authoritative baseline and fixture generator', () => {
     expect(anomaly.vote_average).toBeGreaterThanOrEqual(9)
     expect(anomaly.vote_count).toBe(1)
     expect(phase41NoiseSeed(157336)).toBe(1006856808)
+  })
+
+  it('creates additive semantic rows from categorical palette families and visible terrain complexity', () => {
+    const galaxy = parsePhase41Galaxy(semanticFixtureGalaxy())
+    const fixtures = createPhase41SemanticFixtures(galaxy, 'c'.repeat(64))
+
+    expect([...fixtures.keys()]).toEqual(P41_4_SEMANTIC_FUTURE_ROWS.map((row) => row.fixture))
+    expect(() => assertPhase41SemanticFixtureCoverage(fixtures)).not.toThrow()
+    const duplicateHue = new Map(fixtures)
+    const firstFixture = duplicateHue.get(P41_4_SEMANTIC_FUTURE_ROWS[0]!.fixture)!
+    const secondRow = P41_4_SEMANTIC_FUTURE_ROWS[1]!
+    const secondFixture = duplicateHue.get(secondRow.fixture)!
+    duplicateHue.set(secondRow.fixture, { ...secondFixture, movies: [{ ...secondFixture.movies[0]!, genre_hue: firstFixture.movies[0]!.genre_hue }] })
+    expect(() => assertPhase41SemanticFixtureCoverage(duplicateHue)).toThrow(/circular wrap-around boundary/)
+    for (const row of P41_4_SEMANTIC_FUTURE_ROWS) {
+      const fixture = fixtures.get(row.fixture)!
+      const movie = fixture.movies[0]!
+      const semantics = {
+        movieId: movie.id,
+        title: movie.title,
+        hue: movie.genre_hue,
+        seed: phase41NoiseSeed(movie.id),
+        primaryGenre: movie.genres[0]!,
+        paletteHex: '#F486AA',
+        genres: movie.genres,
+        visibleBandCount: Math.min(movie.genres.length, 8),
+        selectionPredicate: fixture.phase41_fixture.selection,
+      }
+      expect(() => assertP41FixedShapingFixtureSemantics(row, semantics)).not.toThrow()
+      const label = p41FixedShapingSemanticRowLabel(row, semantics)
+      expect(label).toContain(`visible bands=${row.expectedVisibleBandCount}`)
+      expect(label).not.toMatch(/hue|seed|id|high|low/i)
+      expect(fixture.phase41_fixture.selection).toContain('hue and seed are not selection criteria')
+      expect(row.fixture).not.toMatch(/hue-(low|high)|seed-(low|high)/)
+    }
+  })
+
+  it('writes semantic fixtures separately without rewriting the established baseline fixture set', async () => {
+    const root = await temporaryDirectory()
+    const gzipPath = path.join(root, AUTHORITATIVE_GZIP_RELATIVE_PATH)
+    await fs.mkdir(path.dirname(gzipPath), { recursive: true })
+    await fs.writeFile(gzipPath, gzipSync(JSON.stringify(semanticFixtureGalaxy())))
+
+    await writePhase41Baseline(root)
+    const semantic = await writePhase41SemanticFixtures(root)
+    await expect(fs.readdir(semantic.outputDirectory)).resolves.toEqual(P41_4_SEMANTIC_FUTURE_ROWS.map((row) => `real-${row.fixture}.json`).sort())
+    const baselineEntries = await fs.readdir(path.join(root, 'data/runs/phase41/baseline/fixtures'))
+    expect(baselineEntries.filter((entry) => entry !== 'semantic')).toHaveLength(14)
   })
 
   it('only reads the canonical gzip location and writes reproducible Phase 41 evidence', async () => {

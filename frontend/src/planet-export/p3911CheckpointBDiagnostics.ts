@@ -15,7 +15,7 @@ import { computeOrthographicHalfExtent } from './sizing'
 export const P3911_CHECKPOINT_B = {
   checkpoint: 'B',
   movieId: 157336,
-  keyLightIntensity: 0.35,
+  keyLightIntensity: 0.45,
   ratings: [0, 4, 5, 10] as const,
   emissionExponentCandidates: [3, 2.5, 2] as const,
   bloom: false,
@@ -66,7 +66,7 @@ export function assertP3911CheckpointBProductionContract(): void {
     || emission.intensityMax !== P3911_CHECKPOINT_B.emission.intensityMax
     || PLANET_VISUAL_DEFAULTS.lighting.keyLightIntensity !== P3911_CHECKPOINT_B.keyLightIntensity
   ) {
-    throw new Error('[P39.11 diagnostics] Checkpoint B requires production Key=0.35 and 0.06–0.60 emission endpoints')
+    throw new Error('[P39.11 diagnostics] Checkpoint B requires production Key=0.45 and 0.06–0.60 emission endpoints')
   }
 }
 

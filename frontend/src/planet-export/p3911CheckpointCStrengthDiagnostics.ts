@@ -9,7 +9,7 @@ export const P3911_CHECKPOINT_C_STRENGTH = {
   ratings: [0, 4, 5, 10] as const,
   strengthCandidates: [0.0025, 0.005, 0.01] as const,
   bloom: { enabled: true, baselineStrength: 0.005, threshold: 0, radius: 1 },
-  production: { keyLightIntensity: 0.35, emissionExponent: 2, intensityMin: 0.06, intensityMax: 0.6 },
+  production: { keyLightIntensity: 0.45, emissionExponent: 2, intensityMin: 0.06, intensityMax: 0.6 },
   productionBloom: { enabled: true, strength: 0.01, radius: 1, threshold: 0 },
 } as const
 

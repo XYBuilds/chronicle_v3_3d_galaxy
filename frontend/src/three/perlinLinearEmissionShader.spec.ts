@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url'
 
 import { describe, expect, it } from 'vitest'
 
-import { focusEmissionIntensityFromVoteAverage } from './planetAppearance'
+import { focusEmissionIntensityFromVoteAverage } from './focusEmission'
 import { PLANET_VISUAL_DEFAULTS } from './planetVisualDefaults'
 
 const source = readFileSync(fileURLToPath(new URL('./shaders/perlin.frag.glsl', import.meta.url)), 'utf8')
@@ -76,18 +76,19 @@ describe('Perlin linear-emission shader contract', () => {
 
   it('keeps the configured Key fixed while rating-derived emission brightens dark and lit sides without HDR clipping', () => {
     const base: LinearRgb = [0.25, 0.5, 0.75]
-    const voteAverages = [0, 4, 5, 10] as const
-    const { intensityMin, intensityMax, exponent } = PLANET_VISUAL_DEFAULTS.focus.emission
+    const voteAverages = [4.5, 5.5, 6.5, 8.2] as const
+    const curve = PLANET_VISUAL_DEFAULTS.focus.emission
+    const { intensityMin, intensityMax } = curve
     const keyLightIntensity = PLANET_VISUAL_DEFAULTS.lighting.keyLightIntensity
     const emissions = voteAverages.map((voteAverage) =>
-      focusEmissionIntensityFromVoteAverage(voteAverage, intensityMin, intensityMax, exponent),
+      focusEmissionIntensityFromVoteAverage(voteAverage, curve),
     )
 
     expect(emissions).toHaveLength(4)
     expect(emissions[0]).toBeCloseTo(intensityMin, 12)
-    expect(emissions[1]).toBeCloseTo(0.1464, 12)
-    expect(emissions[2]).toBeCloseTo(0.195, 12)
     expect(emissions[3]).toBeCloseTo(intensityMax, 12)
+    expect(emissions[1]).toBeGreaterThan(emissions[0]!)
+    expect(emissions[2]).toBeGreaterThan(emissions[1]!)
 
     for (const lambert of [0, 0.7]) {
       const linearByRating = emissions.map((emissionIntensity) =>

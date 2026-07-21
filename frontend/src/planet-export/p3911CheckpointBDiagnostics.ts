@@ -59,14 +59,10 @@ export function parseP3911CheckpointBRequest(search: string): P3911CheckpointBRe
   return { ...request, emissionExponent }
 }
 
+/** Historical P39 evidence keeps its own curve; only the still-shared Key value is checked here. */
 export function assertP3911CheckpointBProductionContract(): void {
-  const emission = PLANET_VISUAL_DEFAULTS.focus.emission
-  if (
-    emission.intensityMin !== P3911_CHECKPOINT_B.emission.intensityMin
-    || emission.intensityMax !== P3911_CHECKPOINT_B.emission.intensityMax
-    || PLANET_VISUAL_DEFAULTS.lighting.keyLightIntensity !== P3911_CHECKPOINT_B.keyLightIntensity
-  ) {
-    throw new Error('[P39.11 diagnostics] Checkpoint B requires production Key=0.45 and 0.06–0.60 emission endpoints')
+  if (PLANET_VISUAL_DEFAULTS.lighting.keyLightIntensity !== P3911_CHECKPOINT_B.keyLightIntensity) {
+    throw new Error('[P39.11 diagnostics] Checkpoint B requires production Key=0.45')
   }
 }
 

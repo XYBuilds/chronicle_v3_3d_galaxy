@@ -3,6 +3,7 @@ import * as THREE from 'three'
 import type { Meta, Movie } from '@/types/galaxy'
 import { genreHueForGenreName, hueFromGenreColor, primaryGenreHueRad } from '@/utils/genreHue'
 
+import { focusEmissionIntensityFromVoteAverage, type FocusEmissionCurve } from './focusEmission'
 import { PLANET_MAX_BANDS, PLANET_VISUAL_DEFAULTS } from './planetVisualDefaults'
 import { selectionPlanetBaseQuaternion } from './selectionPlanetRotation'
 
@@ -14,58 +15,11 @@ export interface PlanetAppearance {
   lightness: number
   chroma: number
   emissionIntensity: number
-  emissionModelVersion: 'vote-average-power-clamped-v1'
-  emissionExponent: number
-  emissionIntensityMin: number
-  emissionIntensityMax: number
+  emissionCurve: FocusEmissionCurve
   keyLightIntensity: number
   bandCount: number
   cutCount: number
   baseQuaternion: THREE.Quaternion
-}
-
-/**
- * Maps a finite TMDB vote average to the Focus emission range.
- *
- * The Focus emission curve is deliberately independent from macro-layer
- * Lightness and Key Light calculations. Invalid configuration fails here
- * rather than being silently clamped into a visually misleading value.
- */
-export function focusEmissionIntensityFromVoteAverage(
-  voteAverage: number,
-  minIntensity: number,
-  maxIntensity: number,
-  exponent: number,
-): number {
-  if (!Number.isFinite(voteAverage)) {
-    throw new Error(`[PlanetAppearance] voteAverage must be finite; received ${voteAverage}`)
-  }
-  if (!Number.isFinite(minIntensity)) {
-    throw new Error(`[PlanetAppearance] minIntensity must be finite; received ${minIntensity}`)
-  }
-  if (!Number.isFinite(maxIntensity)) {
-    throw new Error(`[PlanetAppearance] maxIntensity must be finite; received ${maxIntensity}`)
-  }
-  if (!Number.isFinite(exponent) || exponent <= 0) {
-    throw new Error(`[PlanetAppearance] exponent must be finite and > 0; received ${exponent}`)
-  }
-  if (minIntensity < 0) {
-    throw new Error(`[PlanetAppearance] minIntensity must be non-negative; received ${minIntensity}`)
-  }
-  if (maxIntensity < 0) {
-    throw new Error(`[PlanetAppearance] maxIntensity must be non-negative; received ${maxIntensity}`)
-  }
-  if (maxIntensity < minIntensity) {
-    throw new Error(
-      `[PlanetAppearance] maxIntensity must be greater than or equal to minIntensity; received min=${minIntensity}, max=${maxIntensity}`,
-    )
-  }
-
-  const clampedVoteAverage = Math.min(10, Math.max(0, voteAverage))
-  const t = clampedVoteAverage / 10
-  if (t === 0) return minIntensity
-  if (t === 1) return maxIntensity
-  return minIntensity + Math.pow(t, exponent) * (maxIntensity - minIntensity)
 }
 
 /** xmur3 string hash → deterministic 32-bit seed. */
@@ -123,16 +77,8 @@ export function resolvePlanetAppearance(movie: Movie, palette: Meta['genre_palet
     hues,
     lightness: focus.lightness,
     chroma: focus.chroma,
-    emissionIntensity: focusEmissionIntensityFromVoteAverage(
-      movie.vote_average,
-      emission.intensityMin,
-      emission.intensityMax,
-      emission.exponent,
-    ),
-    emissionModelVersion: emission.modelVersion,
-    emissionExponent: emission.exponent,
-    emissionIntensityMin: emission.intensityMin,
-    emissionIntensityMax: emission.intensityMax,
+    emissionIntensity: focusEmissionIntensityFromVoteAverage(movie.vote_average, emission),
+    emissionCurve: emission,
     keyLightIntensity: PLANET_VISUAL_DEFAULTS.lighting.keyLightIntensity,
     bandCount: genres.length,
     cutCount: Math.max(0, genres.length - 1),

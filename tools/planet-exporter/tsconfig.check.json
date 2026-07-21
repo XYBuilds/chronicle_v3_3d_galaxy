@@ -24,6 +24,7 @@
     "src/phase41Baseline.ts",
     "src/phase41Diagnostic.ts",
     "src/p41FixedShaping.ts",
+    "src/p41EmissionEvidence.ts",
     "src/png.ts"
   ],
   "include": ["scripts/**/*.ts"]

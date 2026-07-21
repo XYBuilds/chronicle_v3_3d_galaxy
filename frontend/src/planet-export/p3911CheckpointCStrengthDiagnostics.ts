@@ -44,7 +44,6 @@ export function parseP3911CheckpointCStrengthRequest(search: string): P3911Check
 }
 
 export function assertP3911CheckpointCStrengthProductionContract(): void {
-  const emission = PLANET_VISUAL_DEFAULTS.focus.emission
   const bloom = PERLIN_BLOOM_DEFAULTS
   const expected = P3911_CHECKPOINT_C_STRENGTH
   const historicalBloom = p3911CheckpointCStrengthBloomParams(expected.bloom.baselineStrength)
@@ -54,9 +53,6 @@ export function assertP3911CheckpointCStrengthProductionContract(): void {
     || historicalBloom.radius !== expected.bloom.radius
     || historicalBloom.threshold !== expected.bloom.threshold
     || PLANET_VISUAL_DEFAULTS.lighting.keyLightIntensity !== expected.production.keyLightIntensity
-    || emission.exponent !== expected.production.emissionExponent
-    || emission.intensityMin !== expected.production.intensityMin
-    || emission.intensityMax !== expected.production.intensityMax
     || bloom.enabled !== expected.productionBloom.enabled
     || bloom.strength !== expected.productionBloom.strength
     || bloom.radius !== expected.productionBloom.radius

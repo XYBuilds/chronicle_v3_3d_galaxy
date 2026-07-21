@@ -1,7 +1,7 @@
 import {
   DEFAULT_GALAXY_U_ACTIVE_SIZE_MUL,
   DEFAULT_GALAXY_U_SIZE_SCALE,
-} from './galaxyUniformDefaults'
+} from './galaxyUniformDefaults.js'
 
 const PHI = (1 + Math.sqrt(5)) / 2
 
@@ -16,7 +16,7 @@ export const PERLIN_LIGHTING_ENABLED_DEFAULT = true
  * Keep vectors as tuples so the same object can be hashed into render metadata.
  */
 export const PLANET_VISUAL_DEFAULTS = {
-  schemaVersion: 6,
+  schemaVersion: 7,
   geometry: {
     detail: 8,
   },
@@ -48,10 +48,11 @@ export const PLANET_VISUAL_DEFAULTS = {
     lightness: 0.66,
     chroma: 0.15,
     emission: {
-      modelVersion: 'vote-average-power-clamped-v1',
-      exponent: 2,
-      intensityMin: 0.06,
-      intensityMax: 0.6,
+      modelVersion: 'vote-average-anchored-smoothstep-v1',
+      ratingLowAnchor: 4.5,
+      ratingHighAnchor: 8.2,
+      intensityMin: 0.005,
+      intensityMax: 0.65,
     },
   },
   galaxyColor: {

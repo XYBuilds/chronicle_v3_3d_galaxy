@@ -44,7 +44,6 @@ export function parseP3911CheckpointCRadiusRequest(search: string): P3911Checkpo
 }
 
 export function assertP3911CheckpointCRadiusProductionContract(): void {
-  const emission = PLANET_VISUAL_DEFAULTS.focus.emission
   const bloom = PERLIN_BLOOM_DEFAULTS
   const expected = P3911_CHECKPOINT_C_RADIUS
   const historicalBloom = p3911CheckpointCRadiusBloomParams(expected.bloom.baselineRadius)
@@ -54,9 +53,6 @@ export function assertP3911CheckpointCRadiusProductionContract(): void {
     || historicalBloom.radius !== expected.bloom.baselineRadius
     || historicalBloom.threshold !== expected.bloom.threshold
     || PLANET_VISUAL_DEFAULTS.lighting.keyLightIntensity !== expected.production.keyLightIntensity
-    || emission.exponent !== expected.production.emissionExponent
-    || emission.intensityMin !== expected.production.intensityMin
-    || emission.intensityMax !== expected.production.intensityMax
     || bloom.enabled !== expected.productionBloom.enabled
     || bloom.strength !== expected.productionBloom.strength
     || bloom.radius !== expected.productionBloom.radius

@@ -44,15 +44,21 @@ describe('Phase 41 diagnostic profile', () => {
     expect(() => parsePhase41DiagnosticOverride({ diagnostic_only: PHASE41_DIAGNOSTIC_MARKER, direction: [0, 0] })).toThrow(/3-vector/)
     expect(() => parsePhase41DiagnosticOverride({ diagnostic_only: PHASE41_DIAGNOSTIC_MARKER, bloom: { enabled: true, strength: Number.NaN, radius: 1, threshold: 0 } })).toThrow(/finite/)
     expect(() => parsePhase41DiagnosticOverride({ diagnostic_only: PHASE41_DIAGNOSTIC_MARKER, emissionCurve: { modelVersion: 'vote-average-anchored-smoothstep-v1', ratingLowAnchor: 8, ratingHighAnchor: 4, intensityMin: 0, intensityMax: 1 } })).toThrow(/ratingLowAnchor/)
-    expect(() => parsePhase41DiagnosticOverride({ diagnostic_only: PHASE41_DIAGNOSTIC_MARKER, emissionCurve: { modelVersion: 'vote-average-power-clamped-v1', exponent: 2, intensityMin: 2, intensityMax: 1 } })).toThrow(/intensityMin/)
+    expect(() => parsePhase41DiagnosticOverride({ diagnostic_only: PHASE41_DIAGNOSTIC_MARKER, emissionCurve: { modelVersion: 'vote-average-power-clamped-v1', exponent: 2, intensityMin: 2, intensityMax: 1 } })).toThrow(/unknown field/)
     expect(() => parsePhase41DiagnosticRequest(`${request}&diagnostic_only=${PHASE41_DIAGNOSTIC_MARKER}&profile=${encodeURIComponent(JSON.stringify({ diagnostic_only: PHASE41_DIAGNOSTIC_MARKER, bloom: { enabled: true, strength: 0.01, radius: 1, threshold: 0 } }))}`)).toThrow(/bloom.enabled/)
   })
 
-  it('retains the production power model and production hash without an override on all three surfaces', () => {
+  it('uses the anchored smoothstep production model and production hash without an override on all three surfaces', () => {
     const production = resolvePhase41VisualProfile()
     const diagnostic = resolvePhase41DiagnosticRequest(parsePhase41DiagnosticRequest(`${request}&diagnostic_only=${PHASE41_DIAGNOSTIC_MARKER}`))
     const normalExporter = planetExportVisualConfigInput(planetVisualConfigHashInput(), 3)
-    expect(PLANET_VISUAL_DEFAULTS.focus.emission.modelVersion).toBe('vote-average-power-clamped-v1')
+    expect(PLANET_VISUAL_DEFAULTS.focus.emission).toMatchObject({
+      modelVersion: 'vote-average-anchored-smoothstep-v1',
+      ratingLowAnchor: 4.5,
+      ratingHighAnchor: 8.2,
+      intensityMin: 0.005,
+      intensityMax: 0.65,
+    })
     expect(production.overrideProvenance).toBe('none')
     expect(production.resolvedVisualConfigInput).toBe(planetVisualConfigHashInput())
     expect(diagnostic.resolvedVisualConfigInput).toBe(production.resolvedVisualConfigInput)
@@ -60,20 +66,22 @@ describe('Phase 41 diagnostic profile', () => {
     expect(normalExporter).toBe(production.resolvedVisualConfigInput)
   })
 
-  it('maps the candidate curve only inside diagnostics', () => {
+  it('maps the production curve and preserves its isolated diagnostic override boundary', () => {
     const curve = parsePhase41DiagnosticOverride({
       diagnostic_only: PHASE41_DIAGNOSTIC_MARKER,
       emissionCurve: { modelVersion: 'vote-average-anchored-smoothstep-v1', ratingLowAnchor: 4.5, ratingHighAnchor: 8.2, intensityMin: 0.005, intensityMax: 0.65 },
     }).emissionCurve!
     expect(phase41EmissionForRating(4.5, curve)).toBe(0.005)
     expect(phase41EmissionForRating(8.2, curve)).toBe(0.65)
-    expect(PLANET_VISUAL_DEFAULTS.focus.emission.modelVersion).toBe('vote-average-power-clamped-v1')
+    expect(PLANET_VISUAL_DEFAULTS.focus.emission.modelVersion).toBe('vote-average-anchored-smoothstep-v1')
   })
 
   it('enforces declared matrix variables and rating-row isolation', () => {
     const baseline = snapshot(4.5, 0.1)
     const rating = snapshot(5.5, 0.2)
     expect(() => assertPhase41RatingRow(baseline, rating)).not.toThrow()
+    expect(() => assertPhase41RatingRow(baseline, { ...rating, profile: { ...rating.profile, bloom: { ...rating.profile.bloom, strength: 0.02 } } })).toThrow(/undeclared variable bloom/)
+    expect(() => assertPhase41RatingRow(baseline, { ...rating, profile: { ...rating.profile, direction: [0, 1, 0] } })).toThrow(/undeclared variable direction/)
     expect(() => assertPhase41MatrixTransition(baseline, { ...rating, profile: { ...rating.profile, lightness: 0.6 } }, ['rating', 'emission'])).toThrow(/undeclared variable lightness/)
     expect(() => assertPhase41RatingRow(baseline, { ...rating, camera: { position: [1, 0, -20] } })).toThrow(/undeclared variable camera/)
     expect(() => assertPhase41MatrixTransition(baseline, { ...baseline, profile: { ...baseline.profile, chroma: 0.2 } }, ['rating'])).toThrow(/fixed production field/)

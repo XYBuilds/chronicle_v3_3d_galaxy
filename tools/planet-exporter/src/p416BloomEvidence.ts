@@ -14,6 +14,8 @@ import { assertPureBloomCore, type CoreBloomStats, type RgbaImage } from './bloo
 
 export const P416_BLOOM_EVIDENCE_RELATIVE_DIRECTORY = 'data/runs/phase41/p41.6-bloom-integration' as const
 export const P416_BLOOM_CANDIDATE_ID = 'p41.6-approved-cdf-lut-bloom-candidate-v1' as const
+export const P416_BLOOM_V2_THRESHOLD_EVIDENCE_RELATIVE_DIRECTORY = 'data/runs/phase41/p41.6-bloom-integration-v2-threshold' as const
+export const P416_BLOOM_V2_THRESHOLD_CANDIDATE_ID = 'p41.6-cdf-lut-thresholded-bloom-candidate-v2' as const
 export const P416_BLOOM_MATRIX_COLUMNS = ['off', 'on'] as const
 export type P416BloomMode = typeof P416_BLOOM_MATRIX_COLUMNS[number]
 
@@ -30,6 +32,30 @@ export const P416_BLOOM_ON = {
   radius: 1,
   threshold: 0,
 } as const
+
+export type P416BloomCandidate = {
+  candidateId: string
+  schemaVersion: string
+  evidenceDirectory: string
+  bloomOff: P416BloomParams
+  bloomOn: P416BloomParams
+}
+
+export const P416_BLOOM_V1_CANDIDATE: P416BloomCandidate = {
+  candidateId: P416_BLOOM_CANDIDATE_ID,
+  schemaVersion: 'p41.6-bloom-integration-validation-v1',
+  evidenceDirectory: P416_BLOOM_EVIDENCE_RELATIVE_DIRECTORY,
+  bloomOff: P416_BLOOM_OFF,
+  bloomOn: P416_BLOOM_ON,
+}
+
+export const P416_BLOOM_V2_THRESHOLD_CANDIDATE: P416BloomCandidate = {
+  candidateId: P416_BLOOM_V2_THRESHOLD_CANDIDATE_ID,
+  schemaVersion: 'p41.6-bloom-integration-validation-v2',
+  evidenceDirectory: P416_BLOOM_V2_THRESHOLD_EVIDENCE_RELATIVE_DIRECTORY,
+  bloomOff: P416_BLOOM_OFF,
+  bloomOn: { enabled: true, strength: 0.025, radius: 0.35, threshold: 0.2 },
+}
 
 export type P416BloomPixelStats = {
   width: number
@@ -86,7 +112,7 @@ export function validateP416BloomParams(params: unknown, label: string): P416Blo
 }
 
 export function createP416BloomOverride(
-  bloom: typeof P416_BLOOM_OFF | typeof P416_BLOOM_ON,
+  bloom: P416BloomParams,
   emissionCurve: Phase41DiagnosticOverride['emissionCurve'],
 ): Phase41DiagnosticOverride {
   const validated = validateP416BloomParams(bloom, 'bloom candidate')
@@ -169,4 +195,9 @@ export function assertP416EvidenceContract(): void {
   assert(P41_EMISSION_FIXTURE_ROWS.length * P41_MIDRANK_CDF_LUT_CONTROLLED_RATINGS.length === 77, 'P41.6 matrix shape drifted')
   assert(validateP416BloomParams(P416_BLOOM_OFF, 'Bloom OFF').enabled === false, 'OFF candidate must be disabled')
   assert(validateP416BloomParams(P416_BLOOM_ON, 'Bloom ON').enabled === true, 'ON candidate must be enabled')
+  assert(P416_BLOOM_V1_CANDIDATE.evidenceDirectory === P416_BLOOM_EVIDENCE_RELATIVE_DIRECTORY, 'v1 evidence directory drifted')
+  assert(P416_BLOOM_V2_THRESHOLD_CANDIDATE.evidenceDirectory === P416_BLOOM_V2_THRESHOLD_EVIDENCE_RELATIVE_DIRECTORY, 'v2 evidence directory drifted')
+  assert(P416_BLOOM_V1_CANDIDATE.candidateId !== P416_BLOOM_V2_THRESHOLD_CANDIDATE.candidateId, 'v1 and v2 candidates must not share an id')
+  const v2 = validateP416BloomParams(P416_BLOOM_V2_THRESHOLD_CANDIDATE.bloomOn, 'v2 threshold Bloom ON')
+  assert(v2.enabled && v2.threshold > 0, 'v2 candidate must use a positive threshold')
 }

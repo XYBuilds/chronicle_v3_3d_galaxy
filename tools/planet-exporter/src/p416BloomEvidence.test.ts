@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest'
 import {
   P416_BLOOM_OFF,
   P416_BLOOM_ON,
+  P416_BLOOM_V1_CANDIDATE,
+  P416_BLOOM_V2_THRESHOLD_CANDIDATE,
   assertP416EvidenceContract,
   assertP416PairOnlyBloomVariation,
   measureP416BloomPair,
@@ -33,6 +35,13 @@ describe('P41.6 Bloom evidence contract', () => {
     expect(() => assertP416EvidenceContract()).not.toThrow()
     expect(validateP416BloomParams(P416_BLOOM_OFF, 'off')).toEqual(P416_BLOOM_OFF)
     expect(validateP416BloomParams(P416_BLOOM_ON, 'on')).toEqual(P416_BLOOM_ON)
+  })
+
+  it('keeps the v2 thresholded candidate distinct from v1 and explicitly suppresses dark inputs', () => {
+    expect(P416_BLOOM_V2_THRESHOLD_CANDIDATE.candidateId).not.toBe(P416_BLOOM_V1_CANDIDATE.candidateId)
+    expect(P416_BLOOM_V2_THRESHOLD_CANDIDATE.evidenceDirectory).not.toBe(P416_BLOOM_V1_CANDIDATE.evidenceDirectory)
+    expect(P416_BLOOM_V2_THRESHOLD_CANDIDATE.bloomOn).toMatchObject({ enabled: true, threshold: 0.2, strength: 0.025, radius: 0.35 })
+    expect(P416_BLOOM_V2_THRESHOLD_CANDIDATE.bloomOn.threshold).toBeGreaterThan(0)
   })
 
   it('rejects non-finite and out-of-range Bloom candidates before rendering', () => {

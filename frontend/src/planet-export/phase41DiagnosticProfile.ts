@@ -1,7 +1,8 @@
 import {
-  focusEmissionIntensityFromVoteAverage,
+  focusEmissionIntensityFromProfile,
   validateFocusEmissionCurve,
-  type FocusEmissionCurve,
+  validateRatingMidrankCdfLutProfile,
+  type FocusEmissionProfile,
 } from '@/three/focusEmission'
 import { PERLIN_BLOOM_DEFAULTS, validatePerlinBloomParams, type PerlinBloomParams } from '@/three/perlinBloomContract'
 import { PLANET_VISUAL_DEFAULTS, planetVisualConfigHashInput } from '@/three/planetVisualDefaults'
@@ -9,7 +10,7 @@ import { PLANET_VISUAL_DEFAULTS, planetVisualConfigHashInput } from '@/three/pla
 export const PHASE41_DIAGNOSTIC_MARKER = 'phase41-visual-diagnostic-v1' as const
 export const PHASE41_FIXED_FLAT_SHADING_MIX = 0.8 as const
 
-export type Phase41EmissionCurve = FocusEmissionCurve
+export type Phase41EmissionCurve = FocusEmissionProfile
 
 export type Phase41DiagnosticOverride = {
   diagnostic_only: typeof PHASE41_DIAGNOSTIC_MARKER
@@ -76,9 +77,26 @@ function vector(value: unknown, label: string): [number, number, number] {
 
 function curve(value: unknown, label: string): Phase41EmissionCurve {
   const record = object(value, label)
+  if (record.modelVersion === 'rating-midrank-cdf-lut-v1') {
+    exactKeys(record, new Set(['modelVersion', 'ratingMin', 'ratingMax', 'sampleStep', 'samples', 'intensityMin', 'intensityMax']), label)
+    if (!Array.isArray(record.samples)) throw new Error(`[Phase41 diagnostic] ${label}.samples must be an array`)
+    try {
+      return validateRatingMidrankCdfLutProfile({
+        modelVersion: record.modelVersion,
+        ratingMin: finite(record.ratingMin, `${label}.ratingMin`),
+        ratingMax: finite(record.ratingMax, `${label}.ratingMax`),
+        sampleStep: finite(record.sampleStep, `${label}.sampleStep`),
+        samples: record.samples.map((sample, index) => finite(sample, `${label}.samples[${index}]`)),
+        intensityMin: nonNegative(record.intensityMin, `${label}.intensityMin`),
+        intensityMax: nonNegative(record.intensityMax, `${label}.intensityMax`),
+      })
+    } catch (error) {
+      throw new Error(`[Phase41 diagnostic] ${label} is invalid: ${error instanceof Error ? error.message : String(error)}`)
+    }
+  }
   exactKeys(record, new Set(['modelVersion', 'ratingLowAnchor', 'ratingHighAnchor', 'intensityMin', 'intensityMax']), label)
   if (record.modelVersion !== 'vote-average-anchored-smoothstep-v1') {
-    throw new Error(`[Phase41 diagnostic] ${label}.modelVersion must equal vote-average-anchored-smoothstep-v1`)
+    throw new Error(`[Phase41 diagnostic] ${label}.modelVersion is unsupported`)
   }
   try {
     return validateFocusEmissionCurve({
@@ -153,7 +171,7 @@ export function resolvePhase41VisualProfile(override?: Phase41DiagnosticOverride
 
 export function phase41EmissionForRating(rating: number, emission: Phase41EmissionCurve): number {
   try {
-    return focusEmissionIntensityFromVoteAverage(rating, emission)
+    return focusEmissionIntensityFromProfile(rating, emission)
   } catch (error) {
     throw new Error(`[Phase41 diagnostic] ${error instanceof Error ? error.message : String(error)}`)
   }

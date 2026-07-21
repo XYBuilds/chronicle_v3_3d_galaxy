@@ -10,7 +10,7 @@ import math
 import sys
 from datetime import date, datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 import numpy as np
 import pandas as pd
@@ -295,6 +295,7 @@ def build_galaxy_payload(
     subset_z_min_inclusive: float | None = None,
     subset_z_max_exclusive: float | None = None,
     cast_max: int = 0,
+    focus_emission_profile: Mapping[str, Any] | None = None,
 ) -> tuple[dict[str, Any], list[str]]:
     """Build ``{"meta": ..., "movies": ...}`` from a cleaned frame + UMAP xy (same row order)."""
     if generated_at is None:
@@ -441,6 +442,10 @@ def build_galaxy_payload(
             "max_exclusive": z_sub_hi_ex_f,
         }
         meta["umap_fit_row_count"] = int(n)
+    if focus_emission_profile is not None:
+        if not isinstance(focus_emission_profile, Mapping):
+            raise TypeError("focus_emission_profile provenance must be an object")
+        meta["focus_emission_profile"] = dict(focus_emission_profile)
 
     payload_obj: dict[str, Any] = {"meta": meta, "movies": movies}
     assert meta["count"] == len(movies)

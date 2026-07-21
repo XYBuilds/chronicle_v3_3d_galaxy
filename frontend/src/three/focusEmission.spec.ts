@@ -183,4 +183,28 @@ describe('production rating-emission profile contract', () => {
     expect(decideFocusEmissionActivation(active, candidate)).toMatchObject({ activeProfileId: active.profile_id, activated: false, reason: 'same-period-frozen' })
     expect(decideFocusEmissionActivation(active, candidate, true)).toMatchObject({ activeProfileId: candidate.profile_id, activated: true, reason: 'force-activation' })
   })
+
+  it('matches the Python monthly generator canonical curve hash fixture', () => {
+    const lut = generateRatingMidrankCdfLutProfile([4, 6, 6, 8])
+    const hashInput = profileCurveHashInput({
+      schema_version: 'rating-emission-profile-v1',
+      profile_id: 'rating-emission-2026-07-8d238cdd5788',
+      period: '2026-07',
+      model_version: RATING_MIDRANK_CDF_LUT_MODEL_VERSION,
+      method: 'midrank-cdf-linear-lut-v1',
+      rating_domain: { min: 0, max: 10 },
+      sample_step: lut.sampleStep,
+      samples: lut.samples,
+      emission_endpoints: { min: lut.intensityMin, max: lut.intensityMax },
+      source_data_version: '2026.07.22.monthly.42',
+      source_data_sha256: '8d238cdd57887bfec3d280c9bb861ef2e331220645a29a5ea9376769ab5892cd',
+      source_movie_count: 4,
+      source_threshold_version: 'dynamic-vote-count-v42',
+      curve_sha256: '0'.repeat(64),
+      generated_at: '2026-07-22T01:02:03.000Z',
+      git_commit: '0123456789abcdef',
+    })
+
+    expect(sha256(hashInput)).toBe('79bb84a97d49bdc8c1fe4260706eca27fbbcca1ac0e46757c13a68d0a89f5dc8')
+  })
 })

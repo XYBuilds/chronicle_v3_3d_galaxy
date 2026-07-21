@@ -4,8 +4,8 @@ import {
   validateRatingMidrankCdfLutProfile,
   type FocusEmissionProfile,
 } from '@/three/focusEmission'
-import { PERLIN_BLOOM_DEFAULTS, validatePerlinBloomParams, type PerlinBloomParams } from '@/three/perlinBloomContract'
-import { PLANET_VISUAL_DEFAULTS, planetVisualConfigHashInput } from '@/three/planetVisualDefaults'
+import { validatePerlinBloomParams, type PerlinBloomParams } from '@/three/perlinBloomContract'
+import { PLANET_VISUAL_DEFAULTS, planetVisualConfigHashInput, productionPlanetBloomParams } from '@/three/planetVisualDefaults'
 
 export const PHASE41_DIAGNOSTIC_MARKER = 'phase41-visual-diagnostic-v1' as const
 export const PHASE41_FIXED_FLAT_SHADING_MIX = 0.8 as const
@@ -145,12 +145,20 @@ export function parsePhase41DiagnosticOverride(value: unknown): Phase41Diagnosti
   return result
 }
 
-export function resolvePhase41VisualProfile(override?: Phase41DiagnosticOverride): ResolvedPhase41VisualProfile {
+export function resolvePhase41VisualProfile(
+  override?: Phase41DiagnosticOverride,
+  bloomEnabled: boolean = PLANET_VISUAL_DEFAULTS.focus.bloom.enabled,
+): ResolvedPhase41VisualProfile {
+  if (typeof bloomEnabled !== 'boolean') throw new Error('[Phase41 diagnostic] Bloom state must be boolean')
   const parsed = override === undefined ? undefined : parsePhase41DiagnosticOverride(override)
+  if (parsed?.bloom !== undefined && parsed.bloom.enabled !== bloomEnabled) {
+    throw new Error('[Phase41 diagnostic] override Bloom state must match the request')
+  }
   if (PLANET_VISUAL_DEFAULTS.lighting.flatShadingMix !== PHASE41_FIXED_FLAT_SHADING_MIX) {
     throw new Error('[Phase41 diagnostic] production flatShadingMix must remain fixed at 0.8')
   }
-  const productionVisualConfigInput = planetVisualConfigHashInput()
+  const bloom = parsed?.bloom ?? validatePerlinBloomParams(productionPlanetBloomParams(bloomEnabled))
+  const productionVisualConfigInput = planetVisualConfigHashInput(bloom.enabled)
   const profile = {
     curve: parsed?.emissionCurve ?? productionCurve(),
     lightness: parsed?.lightness ?? PLANET_VISUAL_DEFAULTS.focus.lightness,
@@ -158,7 +166,7 @@ export function resolvePhase41VisualProfile(override?: Phase41DiagnosticOverride
     keyLightIntensity: parsed?.keyLightIntensity ?? PLANET_VISUAL_DEFAULTS.lighting.keyLightIntensity,
     direction: vector(parsed?.direction ?? PLANET_VISUAL_DEFAULTS.lighting.direction, 'resolved direction'),
     flatShadingMix: PHASE41_FIXED_FLAT_SHADING_MIX,
-    bloom: parsed?.bloom ?? validatePerlinBloomParams(PERLIN_BLOOM_DEFAULTS),
+    bloom,
     productionSource: 'PLANET_VISUAL_DEFAULTS' as const,
     productionVisualConfigInput,
     overrideProvenance: parsed === undefined ? 'none' as const : 'phase41-diagnostic-override' as const,

@@ -1,3 +1,4 @@
+import { productionPlanetBloomParams } from './planetVisualDefaults'
 import * as THREE from 'three'
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js'
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
@@ -8,12 +9,7 @@ export const PERLIN_BLOOM_COMPOSITION = 'pure-bloom-delta-v1' as const
 /** Shared layer identity; only the selected Perlin planet enters the bloom source pass. */
 export const PERLIN_BLOOM_LAYER = 1
 
-export const PERLIN_BLOOM_DEFAULTS = {
-  enabled: true,
-  strength: 0.01,
-  radius: 1.0,
-  threshold: 0,
-} as const
+export const PERLIN_BLOOM_DEFAULTS = productionPlanetBloomParams()
 
 export type PerlinBloomParams = {
   enabled: boolean

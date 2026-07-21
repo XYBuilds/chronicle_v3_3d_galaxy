@@ -48,10 +48,10 @@ describe('Phase 41 diagnostic profile', () => {
     expect(() => parsePhase41DiagnosticRequest(`${request}&diagnostic_only=${PHASE41_DIAGNOSTIC_MARKER}&profile=${encodeURIComponent(JSON.stringify({ diagnostic_only: PHASE41_DIAGNOSTIC_MARKER, bloom: { enabled: true, strength: 0.01, radius: 1, threshold: 0 } }))}`)).toThrow(/bloom.enabled/)
   })
 
-  it('uses the anchored smoothstep production model and production hash without an override on all three surfaces', () => {
+  it('uses the anchored smoothstep production model and matches the resolved Bloom state across all three surfaces', () => {
     const production = resolvePhase41VisualProfile()
     const diagnostic = resolvePhase41DiagnosticRequest(parsePhase41DiagnosticRequest(`${request}&diagnostic_only=${PHASE41_DIAGNOSTIC_MARKER}`))
-    const normalExporter = planetExportVisualConfigInput(planetVisualConfigHashInput(), 3)
+    const normalExporter = planetExportVisualConfigInput(planetVisualConfigHashInput(false), 3)
     expect(PLANET_VISUAL_DEFAULTS.focus.emission).toMatchObject({
       modelVersion: 'vote-average-anchored-smoothstep-v1',
       ratingLowAnchor: 4.5,
@@ -60,10 +60,11 @@ describe('Phase 41 diagnostic profile', () => {
       intensityMax: 0.65,
     })
     expect(production.overrideProvenance).toBe('none')
-    expect(production.resolvedVisualConfigInput).toBe(planetVisualConfigHashInput())
-    expect(diagnostic.resolvedVisualConfigInput).toBe(production.resolvedVisualConfigInput)
+    expect(production.resolvedVisualConfigInput).toBe(planetVisualConfigHashInput(true))
+    expect(diagnostic.resolvedVisualConfigInput).toBe(planetVisualConfigHashInput(false))
+    expect(diagnostic.resolvedVisualConfigInput).toBe(normalExporter)
     expect(diagnostic.bloom.enabled).toBe(false)
-    expect(normalExporter).toBe(production.resolvedVisualConfigInput)
+    expect(planetVisualConfigHashInput(true)).not.toBe(planetVisualConfigHashInput(false))
   })
 
   it('maps the production curve and preserves its isolated diagnostic override boundary', () => {

@@ -5,7 +5,6 @@ import { genreHueForGenreName, hueFromGenreColor, primaryGenreHueRad } from '@/u
 
 import {
   focusEmissionIntensityFromProfile,
-  type FocusEmissionCurve,
   type FocusEmissionProfile,
 } from './focusEmission'
 import { PLANET_MAX_BANDS, PLANET_VISUAL_DEFAULTS } from './planetVisualDefaults'
@@ -20,7 +19,7 @@ export interface PlanetAppearance {
   chroma: number
   emissionIntensity: number
   emissionProfile: FocusEmissionProfile
-  emissionCurve: FocusEmissionCurve
+  emissionCurve: FocusEmissionProfile
   keyLightIntensity: number
   bandCount: number
   cutCount: number
@@ -91,7 +90,7 @@ export function resolvePlanetAppearanceWithEmissionProfile(
     chroma: focus.chroma,
     emissionIntensity: focusEmissionIntensityFromProfile(movie.vote_average, emissionProfile),
     emissionProfile,
-    emissionCurve: PLANET_VISUAL_DEFAULTS.focus.emission,
+    emissionCurve: emissionProfile,
     keyLightIntensity: PLANET_VISUAL_DEFAULTS.lighting.keyLightIntensity,
     bandCount: genres.length,
     cutCount: Math.max(0, genres.length - 1),

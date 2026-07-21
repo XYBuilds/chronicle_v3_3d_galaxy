@@ -10,9 +10,8 @@ import { getGitCommit, metadataFor } from '../src/browser.js'
 import { generateContactSheet, type ContactSheetInput } from '../src/contactSheet.js'
 import { type DataSource } from '../src/data-source.js'
 import {
+  P416_BLOOM_CANDIDATES,
   P416_BLOOM_MATRIX_COLUMNS,
-  P416_BLOOM_V1_CANDIDATE,
-  P416_BLOOM_V2_THRESHOLD_CANDIDATE,
   assertP416EvidenceContract,
   assertP416PairOnlyBloomVariation,
   createP416BloomOverride,
@@ -38,23 +37,26 @@ import {
 
 const root = path.resolve(import.meta.dirname, '../../..')
 
-function resolveCandidate(argv: readonly string[]): P416BloomCandidate {
-  const candidateIndex = argv.indexOf('--candidate')
-  if (candidateIndex === -1) return P416_BLOOM_V1_CANDIDATE
-  if (candidateIndex !== 0 || argv.length !== 2) throw new Error('[P41.6 Bloom integration] usage: --candidate v2-threshold')
-  if (argv[candidateIndex + 1] === 'v2-threshold') return P416_BLOOM_V2_THRESHOLD_CANDIDATE
-  throw new Error(`[P41.6 Bloom integration] unknown explicit candidate ${argv[candidateIndex + 1] ?? ''}`)
+function resolveCandidate(argv: readonly string[]): { name: keyof typeof P416_BLOOM_CANDIDATES; candidate: P416BloomCandidate } {
+  if (argv.length === 0) return { name: 'v1', candidate: P416_BLOOM_CANDIDATES.v1 }
+  if (argv.length !== 2 || argv[0] !== '--candidate') throw new Error('[P41.6 Bloom integration] usage: --candidate v2-threshold|v3-contrast')
+  const name = argv[1]
+  if (name === 'v2-threshold' || name === 'v3-contrast') return { name, candidate: P416_BLOOM_CANDIDATES[name] }
+  throw new Error(`[P41.6 Bloom integration] unknown explicit candidate ${name ?? ''}`)
 }
 
-const candidate = resolveCandidate(process.argv.slice(2))
+const selectedCandidate = resolveCandidate(process.argv.slice(2))
+const candidate = selectedCandidate.candidate
 const directory = path.resolve(root, candidate.evidenceDirectory)
 const p415Directory = path.resolve(root, P41_MIDRANK_CDF_LUT_EVIDENCE_RELATIVE_DIRECTORY)
 const resolution = 1024
 const padding = 0.08
 const sizeRoot = 3 as const
-const command = candidate === P416_BLOOM_V1_CANDIDATE
-  ? 'npm run evidence:p41.6 -w planet-exporter'
-  : 'npm run evidence:p41.6:v2-threshold -w planet-exporter'
+const command = {
+  v1: 'npm run evidence:p41.6 -w planet-exporter',
+  'v2-threshold': 'npm run evidence:p41.6:v2-threshold -w planet-exporter',
+  'v3-contrast': 'npm run evidence:p41.6:v3-contrast -w planet-exporter',
+}[selectedCandidate.name]
 
 type Artifact = {
   fixture: string
@@ -209,7 +211,7 @@ async function publishPair(fixture: string, rating: number, profile: RatingMidra
   assertP416PairOnlyBloomVariation(pairComparable(off), pairComparable(on.artifact))
   const offPng = await fs.readFile(path.join(p415Directory, 'cells', sourceCellName(fixture, rating)))
   const stats = measureP416BloomPair(await rgba(offPng), await rgba(on.png))
-  const shared = { status: 'pending-human-review', human_review_required: true, diagnostic_only: 'phase41-visual-diagnostic-v1', candidate_id: candidate.candidateId, candidate, source_candidate: 'rating-midrank-cdf-lut-v1', authoritative_data: P41_EMISSION_AUTHORITATIVE_DATA, fixture, controlled_rating: rating, profile_sha256: p416Sha256({ curve: profile, bloom_off: candidate.bloomOff, bloom_on: candidate.bloomOn }), pair_pixel_statistics: stats, only_declared_pair_variation: ['bloom', 'on_render_output_diagnostics'] }
+  const shared = { status: 'pending-human-review', human_review_required: true, diagnostic_only: 'phase41-visual-diagnostic-v1', candidate_key: selectedCandidate.name, candidate_id: candidate.candidateId, candidate, source_candidate: candidate.sourceProfileId, authoritative_data: P41_EMISSION_AUTHORITATIVE_DATA, fixture, controlled_rating: rating, profile_sha256: p416Sha256({ curve: profile, bloom_off: candidate.bloomOff, bloom_on: candidate.bloomOn }), pair_pixel_statistics: stats, only_declared_pair_variation: ['bloom', 'on_render_output_diagnostics'] }
   await writeArtifactsAtomically({ png: path.join(directory, off.png), metadata: path.join(directory, off.sidecar) }, offPng, { ...shared, bloom_mode: 'off', png_sha256: off.pngSha256, visual_diagnostics: off.diagnostics })
   await writeArtifactsAtomically({ png: path.join(directory, on.artifact.png), metadata: path.join(directory, on.artifact.sidecar) }, on.png, { ...on.renderMetadata, generated_at: undefined, p41_6_bloom_integration: { ...shared, bloom_mode: 'on', png_sha256: on.artifact.pngSha256, visual_diagnostics: on.artifact.diagnostics } })
   return [off, on.artifact]
@@ -256,7 +258,7 @@ async function verify(artifacts: readonly Artifact[], profile: RatingMidrankCdfL
   }
   const contactManifest = record(JSON.parse(await fs.readFile(path.join(directory, 'contact-sheet.manifest.json'), 'utf8')) as unknown, 'contact sheet manifest')
   assert(Array.isArray(contactManifest.sources) && contactManifest.sources.length === expected, 'contact sheet matrix incomplete')
-  const validation = { schema_version: candidate.schemaVersion, status: 'pending-human-review', human_review_required: true, evidence_directory: candidate.evidenceDirectory, reproduction_command: command, candidate_id: candidate.candidateId, candidate, diagnostic_only: 'phase41-visual-diagnostic-v1', authoritative_data: P41_EMISSION_AUTHORITATIVE_DATA, source_sha256: sourceSha256, profile, profile_sha256: p416Sha256({ curve: profile, bloom_off: candidate.bloomOff, bloom_on: candidate.bloomOn }), matrix: { rows: P41_EMISSION_FIXTURE_ROWS, ratings: P41_MIDRANK_CDF_LUT_CONTROLLED_RATINGS, bloom_modes: P416_BLOOM_MATRIX_COLUMNS, expected_cells: expected }, assertions: { authoritative_gzip: 'pass', fixture_movie_camera_seed_rotation_fixed: 'pass', lightness_key_direction_flat_shading_fixed: 'pass', rating_emission_only_by_row: 'pass', off_on_only_declared_bloom_variation: 'pass', pure_bloom_delta_core: 'pass', cell_hashes: 'pass', contact_sheet_complete: 'pass' }, hashes: { contact_sheet_sha256: sha256(await fs.readFile(path.join(directory, 'contact-sheet.png'))), contact_sheet_manifest_sha256: sha256(await fs.readFile(path.join(directory, 'contact-sheet.manifest.json'))) }, cells: artifacts.map((artifact) => ({ fixture: artifact.fixture, rating: artifact.rating, bloom: artifact.mode, png: artifact.png, sidecar: artifact.sidecar, png_sha256: artifact.pngSha256 })) }
+  const validation = { schema_version: candidate.schemaVersion, status: 'pending-human-review', human_review_required: true, evidence_directory: candidate.evidenceDirectory, reproduction_command: command, candidate_key: selectedCandidate.name, candidate_id: candidate.candidateId, candidate, diagnostic_only: 'phase41-visual-diagnostic-v1', authoritative_data: P41_EMISSION_AUTHORITATIVE_DATA, source_sha256: sourceSha256, profile, profile_sha256: p416Sha256({ curve: profile, bloom_off: candidate.bloomOff, bloom_on: candidate.bloomOn }), matrix: { rows: P41_EMISSION_FIXTURE_ROWS, ratings: P41_MIDRANK_CDF_LUT_CONTROLLED_RATINGS, bloom_modes: P416_BLOOM_MATRIX_COLUMNS, expected_cells: expected }, assertions: { authoritative_gzip: 'pass', fixture_movie_camera_seed_rotation_fixed: 'pass', lightness_key_direction_flat_shading_fixed: 'pass', rating_emission_only_by_row: 'pass', off_on_only_declared_bloom_variation: 'pass', pure_bloom_delta_core: 'pass', cell_hashes: 'pass', contact_sheet_complete: 'pass' }, hashes: { contact_sheet_sha256: sha256(await fs.readFile(path.join(directory, 'contact-sheet.png'))), contact_sheet_manifest_sha256: sha256(await fs.readFile(path.join(directory, 'contact-sheet.manifest.json'))) }, cells: artifacts.map((artifact) => ({ fixture: artifact.fixture, rating: artifact.rating, bloom: artifact.mode, png: artifact.png, sidecar: artifact.sidecar, png_sha256: artifact.pngSha256 })) }
   await fs.writeFile(path.join(directory, 'validation.json'), `${stable(validation)}\n`, 'utf8')
 }
 

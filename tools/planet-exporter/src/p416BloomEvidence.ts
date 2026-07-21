@@ -12,21 +12,24 @@ import {
 } from './p41EmissionEvidence.js'
 import { assertPureBloomCore, type CoreBloomStats, type RgbaImage } from './bloomProof.js'
 
-export const P416_BLOOM_EVIDENCE_RELATIVE_DIRECTORY = 'data/runs/phase41/p41.6-bloom-integration' as const
-export const P416_BLOOM_CANDIDATE_ID = 'p41.6-approved-cdf-lut-bloom-candidate-v1' as const
+export const P416_BLOOM_V1_EVIDENCE_RELATIVE_DIRECTORY = 'data/runs/phase41/p41.6-bloom-integration' as const
+export const P416_BLOOM_V1_CANDIDATE_ID = 'p41.6-approved-cdf-lut-bloom-candidate-v1' as const
 export const P416_BLOOM_V2_THRESHOLD_EVIDENCE_RELATIVE_DIRECTORY = 'data/runs/phase41/p41.6-bloom-integration-v2-threshold' as const
 export const P416_BLOOM_V2_THRESHOLD_CANDIDATE_ID = 'p41.6-cdf-lut-thresholded-bloom-candidate-v2' as const
+export const P416_BLOOM_V3_CONTRAST_EVIDENCE_RELATIVE_DIRECTORY = 'data/runs/phase41/p41.6-bloom-integration-v3-contrast' as const
+export const P416_BLOOM_V3_CONTRAST_CANDIDATE_ID = 'p41.6-cdf-lut-highlight-contrast-bloom-candidate-v3' as const
 export const P416_BLOOM_MATRIX_COLUMNS = ['off', 'on'] as const
 export type P416BloomMode = typeof P416_BLOOM_MATRIX_COLUMNS[number]
+export type P416BloomParams = { enabled: boolean; strength: number; radius: number; threshold: number }
 
-export const P416_BLOOM_OFF = {
+const P416_BLOOM_V1_OFF = {
   enabled: false,
   strength: 0.01,
   radius: 1,
   threshold: 0,
 } as const
 
-export const P416_BLOOM_ON = {
+const P416_BLOOM_V1_ON = {
   enabled: true,
   strength: 0.01,
   radius: 1,
@@ -37,25 +40,51 @@ export type P416BloomCandidate = {
   candidateId: string
   schemaVersion: string
   evidenceDirectory: string
+  sourceProfileId: 'rating-midrank-cdf-lut-v1'
   bloomOff: P416BloomParams
   bloomOn: P416BloomParams
 }
 
 export const P416_BLOOM_V1_CANDIDATE: P416BloomCandidate = {
-  candidateId: P416_BLOOM_CANDIDATE_ID,
+  candidateId: P416_BLOOM_V1_CANDIDATE_ID,
   schemaVersion: 'p41.6-bloom-integration-validation-v1',
-  evidenceDirectory: P416_BLOOM_EVIDENCE_RELATIVE_DIRECTORY,
-  bloomOff: P416_BLOOM_OFF,
-  bloomOn: P416_BLOOM_ON,
+  evidenceDirectory: P416_BLOOM_V1_EVIDENCE_RELATIVE_DIRECTORY,
+  sourceProfileId: 'rating-midrank-cdf-lut-v1',
+  bloomOff: P416_BLOOM_V1_OFF,
+  bloomOn: P416_BLOOM_V1_ON,
 }
 
 export const P416_BLOOM_V2_THRESHOLD_CANDIDATE: P416BloomCandidate = {
   candidateId: P416_BLOOM_V2_THRESHOLD_CANDIDATE_ID,
   schemaVersion: 'p41.6-bloom-integration-validation-v2',
   evidenceDirectory: P416_BLOOM_V2_THRESHOLD_EVIDENCE_RELATIVE_DIRECTORY,
-  bloomOff: P416_BLOOM_OFF,
+  sourceProfileId: 'rating-midrank-cdf-lut-v1',
+  bloomOff: P416_BLOOM_V1_OFF,
   bloomOn: { enabled: true, strength: 0.025, radius: 0.35, threshold: 0.2 },
 }
+
+/** Raised threshold and tighter radius keep bloom highlight-selective; strength stays just above v2 to respect the pure-core ceiling. */
+export const P416_BLOOM_V3_CONTRAST_CANDIDATE: P416BloomCandidate = {
+  candidateId: P416_BLOOM_V3_CONTRAST_CANDIDATE_ID,
+  schemaVersion: 'p41.6-bloom-integration-validation-v3',
+  evidenceDirectory: P416_BLOOM_V3_CONTRAST_EVIDENCE_RELATIVE_DIRECTORY,
+  sourceProfileId: 'rating-midrank-cdf-lut-v1',
+  bloomOff: P416_BLOOM_V1_OFF,
+  bloomOn: { enabled: true, strength: 0.03, radius: 0.2, threshold: 0.3 },
+}
+
+export const P416_BLOOM_CANDIDATES = {
+  v1: P416_BLOOM_V1_CANDIDATE,
+  'v2-threshold': P416_BLOOM_V2_THRESHOLD_CANDIDATE,
+  'v3-contrast': P416_BLOOM_V3_CONTRAST_CANDIDATE,
+} as const
+
+/** Backward-compatible defaults for the historical v1 reproduction command. */
+export const P416_BLOOM_CANDIDATE = P416_BLOOM_V1_CANDIDATE
+export const P416_BLOOM_EVIDENCE_RELATIVE_DIRECTORY = P416_BLOOM_V1_EVIDENCE_RELATIVE_DIRECTORY
+export const P416_BLOOM_CANDIDATE_ID = P416_BLOOM_V1_CANDIDATE_ID
+export const P416_BLOOM_OFF = P416_BLOOM_V1_CANDIDATE.bloomOff
+export const P416_BLOOM_ON = P416_BLOOM_V1_CANDIDATE.bloomOn
 
 export type P416BloomPixelStats = {
   width: number
@@ -87,8 +116,6 @@ function stable(value: unknown): string {
 export function p416Sha256(value: unknown): string {
   return createHash('sha256').update(stable(value)).digest('hex')
 }
-
-export type P416BloomParams = { enabled: boolean; strength: number; radius: number; threshold: number }
 
 export function validateP416BloomParams(params: unknown, label: string): P416BloomParams {
   assert(params !== null && typeof params === 'object' && !Array.isArray(params), `${label} must be an object`)
@@ -188,16 +215,25 @@ export function assertP416PairOnlyBloomVariation(off: Record<string, unknown>, o
 }
 
 export function assertP416EvidenceContract(): void {
-  assert(P416_BLOOM_CANDIDATE_ID === 'p41.6-approved-cdf-lut-bloom-candidate-v1', 'candidate id drifted')
-  assert(P416_BLOOM_EVIDENCE_RELATIVE_DIRECTORY === 'data/runs/phase41/p41.6-bloom-integration', 'evidence directory drifted')
+  assert(P416_BLOOM_CANDIDATE === P416_BLOOM_V1_CANDIDATE, 'unqualified candidate must preserve v1 reproduction')
+  assert(P416_BLOOM_CANDIDATE_ID === P416_BLOOM_V1_CANDIDATE_ID, 'v1 candidate id drifted')
+  assert(P416_BLOOM_EVIDENCE_RELATIVE_DIRECTORY === P416_BLOOM_V1_EVIDENCE_RELATIVE_DIRECTORY, 'v1 evidence directory drifted')
   assert(P41_EMISSION_MIDRANK_CDF_LUT_DIAGNOSTIC_CANDIDATE.candidateId === 'rating-midrank-cdf-lut-v1', 'P41.6 must start from approved CDF/LUT profile')
   assert(P41_EMISSION_MIDRANK_CDF_LUT_DIAGNOSTIC_CANDIDATE.scope === 'diagnostic-only', 'CDF/LUT profile must remain diagnostic-only')
   assert(P41_EMISSION_FIXTURE_ROWS.length * P41_MIDRANK_CDF_LUT_CONTROLLED_RATINGS.length === 77, 'P41.6 matrix shape drifted')
-  assert(validateP416BloomParams(P416_BLOOM_OFF, 'Bloom OFF').enabled === false, 'OFF candidate must be disabled')
-  assert(validateP416BloomParams(P416_BLOOM_ON, 'Bloom ON').enabled === true, 'ON candidate must be enabled')
-  assert(P416_BLOOM_V1_CANDIDATE.evidenceDirectory === P416_BLOOM_EVIDENCE_RELATIVE_DIRECTORY, 'v1 evidence directory drifted')
-  assert(P416_BLOOM_V2_THRESHOLD_CANDIDATE.evidenceDirectory === P416_BLOOM_V2_THRESHOLD_EVIDENCE_RELATIVE_DIRECTORY, 'v2 evidence directory drifted')
-  assert(P416_BLOOM_V1_CANDIDATE.candidateId !== P416_BLOOM_V2_THRESHOLD_CANDIDATE.candidateId, 'v1 and v2 candidates must not share an id')
+  const candidates = Object.values(P416_BLOOM_CANDIDATES)
+  assert(candidates.length === 3, 'candidate registry must retain v1, v2, and v3')
+  assert(new Set(candidates.map((candidate) => candidate.candidateId)).size === candidates.length, 'candidate ids must be unique')
+  assert(new Set(candidates.map((candidate) => candidate.evidenceDirectory)).size === candidates.length, 'candidate evidence directories must be unique')
+  assert(new Set(candidates.map((candidate) => candidate.schemaVersion)).size === candidates.length, 'candidate schemas must be unique')
+  for (const candidate of candidates) {
+    assert(candidate.sourceProfileId === 'rating-midrank-cdf-lut-v1', `${candidate.candidateId} source profile drifted`)
+    assert(validateP416BloomParams(candidate.bloomOff, `${candidate.candidateId} Bloom OFF`).enabled === false, `${candidate.candidateId} OFF candidate must be disabled`)
+    assert(validateP416BloomParams(candidate.bloomOn, `${candidate.candidateId} Bloom ON`).enabled === true, `${candidate.candidateId} ON candidate must be enabled`)
+  }
   const v2 = validateP416BloomParams(P416_BLOOM_V2_THRESHOLD_CANDIDATE.bloomOn, 'v2 threshold Bloom ON')
-  assert(v2.enabled && v2.threshold > 0, 'v2 candidate must use a positive threshold')
+  const v3 = validateP416BloomParams(P416_BLOOM_V3_CONTRAST_CANDIDATE.bloomOn, 'v3 contrast Bloom ON')
+  assert(v2.enabled && v2.threshold === 0.2, 'v2 candidate threshold drifted')
+  assert(v3.enabled && v3.threshold > v2.threshold, 'v3 threshold must exceed v2')
+  assert(v3.strength > v2.strength && v3.radius < v2.radius, 'v3 must use stronger, tighter highlight bloom')
 }

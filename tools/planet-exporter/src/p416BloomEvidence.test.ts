@@ -1,10 +1,15 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  P416_BLOOM_CANDIDATE,
+  P416_BLOOM_CANDIDATE_ID,
+  P416_BLOOM_CANDIDATES,
+  P416_BLOOM_EVIDENCE_RELATIVE_DIRECTORY,
   P416_BLOOM_OFF,
   P416_BLOOM_ON,
   P416_BLOOM_V1_CANDIDATE,
   P416_BLOOM_V2_THRESHOLD_CANDIDATE,
+  P416_BLOOM_V3_CONTRAST_CANDIDATE,
   assertP416EvidenceContract,
   assertP416PairOnlyBloomVariation,
   measureP416BloomPair,
@@ -31,8 +36,16 @@ const shared = {
 }
 
 describe('P41.6 Bloom evidence contract', () => {
-  it('pins the approved diagnostic-only CDF/LUT matrix and explicit candidates', () => {
+  it('preserves v1 as the unqualified backward-compatible reproduction candidate', () => {
     expect(() => assertP416EvidenceContract()).not.toThrow()
+    expect(P416_BLOOM_CANDIDATE).toBe(P416_BLOOM_V1_CANDIDATE)
+    expect(P416_BLOOM_CANDIDATE_ID).toBe(P416_BLOOM_V1_CANDIDATE.candidateId)
+    expect(P416_BLOOM_EVIDENCE_RELATIVE_DIRECTORY).toBe(P416_BLOOM_V1_CANDIDATE.evidenceDirectory)
+    expect(P416_BLOOM_OFF).toBe(P416_BLOOM_V1_CANDIDATE.bloomOff)
+    expect(P416_BLOOM_ON).toBe(P416_BLOOM_V1_CANDIDATE.bloomOn)
+    expect(P416_BLOOM_CANDIDATES.v1).toBe(P416_BLOOM_V1_CANDIDATE)
+    expect(P416_BLOOM_CANDIDATES['v2-threshold']).toBe(P416_BLOOM_V2_THRESHOLD_CANDIDATE)
+    expect(P416_BLOOM_CANDIDATES['v3-contrast']).toBe(P416_BLOOM_V3_CONTRAST_CANDIDATE)
     expect(validateP416BloomParams(P416_BLOOM_OFF, 'off')).toEqual(P416_BLOOM_OFF)
     expect(validateP416BloomParams(P416_BLOOM_ON, 'on')).toEqual(P416_BLOOM_ON)
   })
@@ -44,6 +57,15 @@ describe('P41.6 Bloom evidence contract', () => {
     expect(P416_BLOOM_V2_THRESHOLD_CANDIDATE.bloomOn.threshold).toBeGreaterThan(0)
   })
 
+  it('keeps v3 as an isolated brighter-highlight candidate than v2', () => {
+    expect(P416_BLOOM_V3_CONTRAST_CANDIDATE.candidateId).not.toBe(P416_BLOOM_V1_CANDIDATE.candidateId)
+    expect(P416_BLOOM_V3_CONTRAST_CANDIDATE.candidateId).not.toBe(P416_BLOOM_V2_THRESHOLD_CANDIDATE.candidateId)
+    expect(P416_BLOOM_V3_CONTRAST_CANDIDATE.evidenceDirectory).toBe('data/runs/phase41/p41.6-bloom-integration-v3-contrast')
+    expect(P416_BLOOM_V3_CONTRAST_CANDIDATE.evidenceDirectory).not.toBe(P416_BLOOM_V1_CANDIDATE.evidenceDirectory)
+    expect(P416_BLOOM_V3_CONTRAST_CANDIDATE.evidenceDirectory).not.toBe(P416_BLOOM_V2_THRESHOLD_CANDIDATE.evidenceDirectory)
+    expect(P416_BLOOM_V3_CONTRAST_CANDIDATE.bloomOn).toMatchObject({ enabled: true, threshold: 0.3, strength: 0.03, radius: 0.2 })
+    expect(P416_BLOOM_V3_CONTRAST_CANDIDATE.bloomOn.threshold).toBeGreaterThan(P416_BLOOM_V2_THRESHOLD_CANDIDATE.bloomOn.threshold)
+  })
   it('rejects non-finite and out-of-range Bloom candidates before rendering', () => {
     expect(() => validateP416BloomParams({ ...P416_BLOOM_ON, threshold: Number.NaN }, 'on')).toThrow(/finite/)
     expect(() => validateP416BloomParams({ ...P416_BLOOM_ON, radius: 1.01 }, 'on')).toThrow(/\[0, 1\]/)

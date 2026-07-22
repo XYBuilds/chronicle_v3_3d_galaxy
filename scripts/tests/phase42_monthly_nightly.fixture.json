@@ -1,0 +1,27 @@
+{
+  "monthly_export": {
+    "meta": {
+      "version": "2026.07.22.monthly.42",
+      "threshold_version": "dynamic-vote-count-v42",
+      "generated_at": "2026-07-22T01:02:03.000Z"
+    },
+    "movies": [
+      { "id": 40, "imdb_id": "tt0000040", "vote_average": 4.0 },
+      { "id": 10, "imdb_id": "tt0000010", "vote_average": 6.0 },
+      { "id": 20, "imdb_id": "tt0000020", "vote_average": 6.0 },
+      { "id": 30, "imdb_id": "tt0000030", "vote_average": 8.0 }
+    ]
+  },
+  "nightly_export": {
+    "meta": {
+      "version": "2026.07.23.nightly.1",
+      "generated_at": "2026-07-23T01:02:03.000Z"
+    },
+    "movies": [
+      { "id": 40, "imdb_id": "tt0000040", "vote_average": 4.4 },
+      { "id": 10, "imdb_id": "tt0000010", "vote_average": 6.4 },
+      { "id": 20, "imdb_id": "tt0000020", "vote_average": 5.6 },
+      { "id": 30, "imdb_id": "tt0000030", "vote_average": 7.6 }
+    ]
+  }
+}

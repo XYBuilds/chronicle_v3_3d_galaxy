@@ -75,7 +75,7 @@ describe('Perlin linear-emission shader contract', () => {
     expect(source).not.toMatch(/colorspace_fragment|uAmbient|baseLinear\s*\*\s*(?:uAmbient|ambient)|clamp\s*\(\s*(?:litLinear|finalLinear)|min\s*\(\s*(?:litLinear|finalLinear)/)
   })
 
-  it('keeps the configured Key fixed while rating-derived emission brightens dark and lit sides without HDR clipping', () => {
+  it('keeps the approved Key fixed and preserves rating-monotonic linear HDR values without hard clipping', () => {
     const base: LinearRgb = [0.25, 0.5, 0.75]
     const voteAverages = [0, 5.5, 6.5, 10] as const
     const curve = PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE
@@ -105,17 +105,18 @@ describe('Perlin linear-emission shader contract', () => {
       keyByRating.forEach((key) => expectRgbClose(key, keyByRating[0]!))
     }
 
-    const inGamutBase: LinearRgb = [0.9, 0.8, 0.7]
+    const displayGamutBase: LinearRgb = [0.9, 0.8, 0.7]
     const hdrBase: LinearRgb = [1.25, 0.8, 0.7]
     const hdrLambert = 0.7
-    const inGamutLinear = litLinear(inGamutBase, emissions[3]!, keyLightIntensity, hdrLambert)
+    const displayGamutLinear = litLinear(displayGamutBase, emissions[3]!, keyLightIntensity, hdrLambert)
     const hdrLinear = litLinear(hdrBase, emissions[3]!, keyLightIntensity, hdrLambert)
-    const expectedInGamutGreen = inGamutBase[1] * (emissions[3]! + keyLightIntensity * hdrLambert)
+    const expectedDisplayGamutGreen = displayGamutBase[1] * (emissions[3]! + keyLightIntensity * hdrLambert)
     const expectedHdrRed = hdrBase[0] * (emissions[3]! + keyLightIntensity * hdrLambert)
 
-    expect(inGamutBase.every((channel) => channel <= 1)).toBe(true)
-    expect(inGamutLinear[1]).toBeLessThanOrEqual(1)
-    expect(inGamutLinear[1]).toBeCloseTo(expectedInGamutGreen, 12)
+    expect(displayGamutBase.every((channel) => channel <= 1)).toBe(true)
+    // An in-gamut base becomes HDR under the approved fixed Key. The shader must preserve it.
+    expect(displayGamutLinear[1]).toBeGreaterThan(1)
+    expect(displayGamutLinear[1]).toBeCloseTo(expectedDisplayGamutGreen, 12)
     // OKLab-to-linear conversion can legitimately produce an out-of-gamut channel.
     expect(hdrBase.some((channel) => channel > 1)).toBe(true)
     expect(hdrLinear[0]).toBeGreaterThan(1)

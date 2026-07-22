@@ -25,7 +25,30 @@ export type ActiveProfilePointer = {
   activated_at: string
 }
 
-type Manifest = { galaxy_data_gzip_url?: unknown; version?: unknown; data_version?: unknown; focus_emission_profile?: unknown }
+type Manifest = {
+  galaxy_data_gzip_url?: unknown
+  version?: unknown
+  data_version?: unknown
+  focus_emission_profile?: unknown
+  focus_emission_profile_url?: unknown
+}
+
+function controlledProfileUrl(raw: unknown, pointer: ActiveProfilePointer, galaxyDataUrl: string): string {
+  const value = raw === undefined
+    ? new URL(`data/focus-emission-profiles/${pointer.profile_id}.json`, new URL(galaxyDataUrl)).toString()
+    : raw
+  if (typeof value !== 'string') throw new Error('focus_emission_profile_url invalid')
+  let url: URL
+  try {
+    url = new URL(value)
+  } catch {
+    throw new Error('focus_emission_profile_url invalid')
+  }
+  if (!/^https?:$/.test(url.protocol) || url.username || url.password || url.search || url.hash || !url.pathname.endsWith(`/focus-emission-profiles/${pointer.profile_id}.json`)) {
+    throw new Error('focus_emission_profile_url invalid')
+  }
+  return url.toString()
+}
 
 function activeProfilePointer(raw: unknown): ActiveProfilePointer {
   if (raw === null || Array.isArray(raw) || typeof raw !== 'object') throw new Error('focus_emission_profile missing')
@@ -60,7 +83,7 @@ export async function chooseDataSource(args: ExportArgs, manifestPath: string): 
     const url = new URL(manifest.galaxy_data_gzip_url)
     if (!/^https?:$/.test(url.protocol) || url.username || url.password || url.hash || !/\.json(?:\.gz)?$/i.test(url.pathname)) throw new Error('galaxy_data_gzip_url invalid')
     const pointer = activeProfilePointer(manifest.focus_emission_profile)
-    const profileUrl = new URL(`data/focus-emission-profiles/${pointer.profile_id}.json`, new URL(manifest.galaxy_data_gzip_url)).toString()
+    const profileUrl = controlledProfileUrl(manifest.focus_emission_profile_url, pointer, manifest.galaxy_data_gzip_url)
     return {
       kind: 'manifest',
       label: manifest.galaxy_data_gzip_url,

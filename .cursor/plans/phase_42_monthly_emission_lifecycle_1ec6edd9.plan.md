@@ -16,7 +16,7 @@ todos:
     status: completed
   - id: p42.5-regression-observability
     content: 补齐跨端测试、月中冻结不变量、同月重跑策略和可观测证据
-    status: pending
+    status: completed
   - id: p42.6-production-gate
     content: 完成首次月度切换的人工 Go/No-Go，验证月初更新、月中冻结、回滚和跨端 profile 一致性
     status: pending

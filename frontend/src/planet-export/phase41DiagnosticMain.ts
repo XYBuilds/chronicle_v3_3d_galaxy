@@ -1,3 +1,5 @@
+import { loadFocusEmissionProfile } from '@/lib/focusEmissionProfileLoader'
+import type { GalaxyAssetsManifest } from '@/lib/galaxyAssetUrls'
 import { loadGalaxyData } from '@/utils/loadGalaxyData'
 import { findExportMovie, indexGalaxyMovies } from './request'
 import { computeGlobalPlanetRadius } from './sizing'
@@ -9,7 +11,21 @@ async function main(): Promise<void> {
   let failureKind: 'data' | 'render' = 'render'
   try {
     const request = parsePhase41DiagnosticRequest(window.location.search)
-    const profile = resolvePhase41DiagnosticRequest(request)
+    const manifest: GalaxyAssetsManifest = {
+      galaxy_data_gzip_url: request.dataUrl,
+      data_version: 'diagnostic-request',
+      ...(request.profilePointer === undefined ? {} : { focus_emission_profile: request.profilePointer }),
+    }
+    const resolvedEmission = await loadFocusEmissionProfile({
+      manifest,
+      profileUrl: request.profileUrl,
+      allowLegacyFallback: request.allowLegacyProfile === true,
+    })
+    const profile = resolvePhase41DiagnosticRequest(request, {
+      curve: resolvedEmission.lut,
+      provenance: resolvedEmission.provenance,
+      source: resolvedEmission.source,
+    })
     failureKind = 'data'
     const data = await loadGalaxyData(request.dataUrl)
     const index = indexGalaxyMovies(data)
@@ -31,6 +47,7 @@ async function main(): Promise<void> {
       meta: data.meta,
       globalRadius,
       ...request,
+      visualConfig: profile.visualConfig,
       diagnosticOverride: toPhase41RenderOverride(profile),
       bloomParamsOverride: profile.bloom,
     })

@@ -5,7 +5,7 @@ import { chromium, type Browser, type BrowserContext, type Page } from 'playwrig
 
 import { CliError, EXIT_CODES, type ExportArgs } from './args.js'
 import { parsePhase41VisualDiagnostics, type BrowserRender } from './browser.js'
-import { fileDataPlugin, pageDataUrl, type DataSource } from './data-source.js'
+import { fileDataPlugin, isLegacyProfileCompatibilityFixture, pageDataUrl, type DataSource } from './data-source.js'
 
 export const PHASE41_DIAGNOSTIC_MARKER = 'phase41-visual-diagnostic-v1' as const
 
@@ -15,6 +15,7 @@ export type Phase41DiagnosticOverride = {
   lightness?: number
   keyLightIntensity?: number
   direction?: [number, number, number]
+  flatShadingMix?: number
   bloom?: { enabled: boolean; strength: number; radius: number; threshold: number }
 }
 
@@ -38,7 +39,7 @@ function validateOverride(override: Phase41DiagnosticOverride | undefined): void
 }
 
 /** Query builder for the isolated Vite diagnostic entry; normal exporter never calls this. */
-export function phase41DiagnosticSearchParams(args: ExportArgs, override?: Phase41DiagnosticOverride): URLSearchParams {
+export function phase41DiagnosticSearchParams(args: ExportArgs, override?: Phase41DiagnosticOverride, source?: DataSource): URLSearchParams {
   validateOverride(override)
   return new URLSearchParams({
     movieId: String(args.movieId),
@@ -50,6 +51,8 @@ export function phase41DiagnosticSearchParams(args: ExportArgs, override?: Phase
     renderMode: args.renderMode,
     diagnostic_only: PHASE41_DIAGNOSTIC_MARKER,
     ...(override === undefined ? {} : { profile: JSON.stringify(override) }),
+    ...(source?.focusEmissionProfile === undefined ? {} : { profilePointer: JSON.stringify(source.focusEmissionProfile), profileUrl: source.profileUrl! }),
+    ...(source !== undefined && isLegacyProfileCompatibilityFixture(source) ? { allowLegacyProfile: '1' } : {}),
   })
 }
 
@@ -68,7 +71,7 @@ export async function renderPhase41DiagnosticInBrowser(
   let context: BrowserContext | undefined
   let page: Page | undefined
   try {
-    const query = phase41DiagnosticSearchParams(args, override)
+    const query = phase41DiagnosticSearchParams(args, override, source)
     server = await createServer({
       root: path.join(root, 'frontend'),
       configFile: path.join(root, 'frontend/vite.config.ts'),
@@ -113,7 +116,7 @@ export async function renderPhase41DiagnosticInBrowser(
       dataVersion: result.dataVersion,
       webglRenderer: result.webglRenderer,
       visualHash: result.visualHash,
-      visualDiagnostics: parsePhase41VisualDiagnostics(result.visualDiagnostics),
+      visualDiagnostics: parsePhase41VisualDiagnostics(result.visualDiagnostics, result.visualHash),
       chromiumVersion: browser.version(),
     }
   } catch (error) {

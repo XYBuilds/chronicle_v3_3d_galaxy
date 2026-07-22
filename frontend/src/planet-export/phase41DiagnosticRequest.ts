@@ -4,6 +4,7 @@ import {
   parsePhase41DiagnosticOverride,
   resolvePhase41VisualProfile,
   type Phase41DiagnosticOverride,
+  type ResolvedDiagnosticEmissionProfile,
   type ResolvedPhase41VisualProfile,
 } from './phase41DiagnosticProfile'
 
@@ -12,7 +13,7 @@ export type Phase41DiagnosticRequest = PlanetExportRequest & {
   profileOverride?: Phase41DiagnosticOverride
 }
 
-const allowed = new Set(['movieId', 'dataUrl', 'resolution', 'padding', 'bloom', 'sizeRoot', 'renderMode', 'diagnostic_only', 'profile'])
+const allowed = new Set(['movieId', 'dataUrl', 'resolution', 'padding', 'bloom', 'sizeRoot', 'renderMode', 'profilePointer', 'profileUrl', 'allowLegacyProfile', 'diagnostic_only', 'profile'])
 
 function exactlyOne(params: URLSearchParams, name: string): string {
   const values = params.getAll(name)
@@ -49,9 +50,13 @@ export function parsePhase41DiagnosticRequest(search: string): Phase41Diagnostic
   return { ...request, diagnostic_only: PHASE41_DIAGNOSTIC_MARKER, ...(profileOverride === undefined ? {} : { profileOverride }) }
 }
 
-export function resolvePhase41DiagnosticRequest(request: Phase41DiagnosticRequest): ResolvedPhase41VisualProfile {
+export function resolvePhase41DiagnosticRequest(
+  request: Phase41DiagnosticRequest,
+  emissionProfile?: ResolvedDiagnosticEmissionProfile,
+): ResolvedPhase41VisualProfile {
   if (request.diagnostic_only !== PHASE41_DIAGNOSTIC_MARKER) {
     throw new Error(`[Phase41 diagnostic] diagnostic_only must equal ${PHASE41_DIAGNOSTIC_MARKER}`)
   }
-  return resolvePhase41VisualProfile(request.profileOverride, request.bloom)
+  if (emissionProfile === undefined) throw new Error('[Phase41 diagnostic] resolved emission profile is required')
+  return resolvePhase41VisualProfile(request.profileOverride, request.bloom, emissionProfile)
 }

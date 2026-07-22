@@ -50,10 +50,6 @@ export function createPlanetRandom(seed: number): () => number {
   }
 }
 
-export function resolvePlanetAppearance(movie: Movie, palette: Meta['genre_palette']): PlanetAppearance {
-  return resolvePlanetAppearanceWithEmissionProfile(movie, palette, PLANET_VISUAL_DEFAULTS.focus.emission)
-}
-
 /** Genre display order with golden-ratio decay weights. */
 export function planetGenreDisplayWeights(
   genres: string[],
@@ -67,7 +63,7 @@ export function planetGenreDisplayWeights(
   return { genres: list, weights: raw.map((weight) => weight / sum) }
 }
 
-export function resolvePlanetAppearanceWithEmissionProfile(
+export function resolvePlanetAppearance(
   movie: Movie,
   palette: Meta['genre_palette'],
   emissionProfile: FocusEmissionProfile,

@@ -3,8 +3,9 @@ import { execFileSync } from 'node:child_process'
 import path from 'node:path'
 import { createServer, type ViteDevServer } from 'vite'
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright'
+import { stableFocusEmissionJson } from '../../../frontend/src/three/focusEmission.js'
 import { CliError, EXIT_CODES, type ExportArgs } from './args.js'
-import { fileDataPlugin, pageDataUrl, type DataSource } from './data-source.js'
+import { fileDataPlugin, isLegacyProfileCompatibilityFixture, pageDataUrl, type DataSource } from './data-source.js'
 
 export type BrowserRender = {
   png: Buffer
@@ -65,6 +66,13 @@ export function parseVisualDiagnostics(value: string): Record<string, unknown> {
   }
   if (root.size_root !== 2 && root.size_root !== 3 && root.size_root !== 4) {
     throw new CliError('visual diagnostics size_root is invalid', EXIT_CODES.render)
+  }
+
+  if (root.visual_config_payload !== undefined || root.visual_config_hash_input !== undefined) {
+    diagnosticsObject(root.visual_config_payload, 'visual_config_payload')
+    if (typeof root.visual_config_hash_input !== 'string' || root.visual_config_hash_input.length === 0) {
+      throw new CliError('visual diagnostics visual_config_hash_input is invalid', EXIT_CODES.render)
+    }
   }
 
   for (const field of ['rating', 'emission', 'fixed_lightness', 'fixed_chroma']) {
@@ -163,9 +171,34 @@ export function parseVisualDiagnostics(value: string): Record<string, unknown> {
   return root
 }
 
+function requiredCanonicalVisualConfig(root: Record<string, unknown>, label: string): string {
+  const payload = diagnosticsObject(root.visual_config_payload, `${label} visual_config_payload`)
+  if (typeof root.visual_config_hash_input !== 'string' || root.visual_config_hash_input.length === 0) {
+    throw new CliError(`visual diagnostics ${label} visual_config_hash_input is required`, EXIT_CODES.render)
+  }
+  const canonicalPayload = stableFocusEmissionJson(payload as Parameters<typeof stableFocusEmissionJson>[0])
+  if (canonicalPayload !== root.visual_config_hash_input) {
+    throw new CliError(`visual diagnostics ${label} visual_config_hash_input does not match its canonical payload`, EXIT_CODES.render)
+  }
+  return root.visual_config_hash_input
+}
+
+export function assertCanonicalVisualConfig(
+  diagnostics: Record<string, unknown>,
+  pageVisualHash: unknown,
+  label: string,
+): string {
+  const hashInput = requiredCanonicalVisualConfig(diagnostics, label)
+  if (typeof pageVisualHash !== 'string' || pageVisualHash.length === 0 || pageVisualHash !== hashInput) {
+    throw new CliError(`visual diagnostics ${label} dataset visual hash disagrees with canonical renderer payload`, EXIT_CODES.render)
+  }
+  return hashInput
+}
+
 /** Validates the Phase 41 sidecar's resolved profile against the actual renderer state. */
-export function parsePhase41VisualDiagnostics(value: string): Record<string, unknown> {
+export function parsePhase41VisualDiagnostics(value: string, pageVisualHash: unknown): Record<string, unknown> {
   const root = parseVisualDiagnostics(value)
+  const canonicalHashInput = assertCanonicalVisualConfig(root, pageVisualHash, 'Phase 41')
   const profile = diagnosticsObject(root.phase41_resolved_profile, 'phase41_resolved_profile')
   if (typeof profile.resolvedVisualConfigInput !== 'string' || profile.resolvedVisualConfigInput.length === 0) {
     throw new CliError('visual diagnostics phase41 resolved visual-config input is invalid', EXIT_CODES.render)
@@ -175,6 +208,28 @@ export function parsePhase41VisualDiagnostics(value: string): Record<string, unk
   }
   if (profile.overrideProvenance !== 'none' && profile.overrideProvenance !== 'phase41-diagnostic-override') {
     throw new CliError('visual diagnostics phase41 override provenance is invalid', EXIT_CODES.render)
+  }
+  if (
+    profile.resolvedVisualConfigInput !== canonicalHashInput
+    || profile.productionVisualConfigInput !== canonicalHashInput
+  ) {
+    throw new CliError('visual diagnostics Phase 41 canonical hash disagrees with resolved profile aliases', EXIT_CODES.render)
+  }
+  if (!['active', 'legacy-fallback', 'diagnostic-override'].includes(profile.emissionSource as string)) {
+    throw new CliError('visual diagnostics Phase 41 resolved emission source is invalid', EXIT_CODES.render)
+  }
+  const provenance = diagnosticsObject(root.profile_provenance, 'profile_provenance')
+  if (!['active', 'legacy-fallback', 'diagnostic-override'].includes(provenance.source as string) || typeof provenance.profile_id !== 'string' || !provenance.profile_id) {
+    throw new CliError('visual diagnostics Phase 41 emission provenance is invalid', EXIT_CODES.render)
+  }
+  if (profile.emissionSource !== provenance.source) {
+    throw new CliError('visual diagnostics Phase 41 resolved emission source disagrees with renderer provenance', EXIT_CODES.render)
+  }
+  if (
+    (profile.overrideProvenance === 'none' && profile.emissionSource === 'diagnostic-override')
+    || (profile.emissionSource === 'diagnostic-override' && profile.overrideProvenance !== 'phase41-diagnostic-override')
+  ) {
+    throw new CliError('visual diagnostics Phase 41 override provenance disagrees with emission source', EXIT_CODES.render)
   }
   const curve = diagnosticsObject(profile.curve, 'phase41_resolved_profile.curve')
   const emittedCurve = diagnosticsObject(root.emission_curve, 'emission_curve')
@@ -247,6 +302,8 @@ export function metadataFor(args: ExportArgs, source: DataSource, render: Browse
     visual_config_hash: createHash('sha256').update(render.visualHash ?? '').digest('hex'),
     png_sha256: createHash('sha256').update(render.png).digest('hex'),
     visual_diagnostics: render.visualDiagnostics,
+    resolved_visual_config: (render.visualDiagnostics.visual_config_payload as Record<string, unknown> | undefined) ?? null,
+    focus_emission_profile: (render.visualDiagnostics.profile_provenance as Record<string, unknown> | undefined) ?? null,
     chromium_version: render.chromiumVersion,
     webgl_renderer: render.webglRenderer ?? 'unknown',
     generated_at: new Date().toISOString(),
@@ -292,6 +349,8 @@ export async function renderInBrowser(args: ExportArgs, source: DataSource, root
       bloom: args.bloom,
       sizeRoot: String(args.sizeRoot),
       renderMode: args.renderMode,
+      ...(source.focusEmissionProfile === undefined ? {} : { profilePointer: JSON.stringify(source.focusEmissionProfile), profileUrl: source.profileUrl! }),
+      ...(isLegacyProfileCompatibilityFixture(source) ? { allowLegacyProfile: '1' } : {}),
     })
     await page.goto(new URL(`planet-export.html?${query.toString()}`, serverUrl).toString(), { waitUntil: 'networkidle', timeout: 120_000 })
     await page.waitForFunction(() => document.body.dataset.exportReady === '1' || document.body.dataset.exportError !== undefined, undefined, { timeout: 120_000 })
@@ -315,6 +374,7 @@ export async function renderInBrowser(args: ExportArgs, source: DataSource, root
     if (!encoded) throw new CliError('planet export page returned an invalid PNG data URL', EXIT_CODES.render)
     if (!result.visualDiagnostics) throw new CliError('planet export page returned no visual diagnostics', EXIT_CODES.render)
     const visualDiagnostics = parseVisualDiagnostics(result.visualDiagnostics)
+    assertCanonicalVisualConfig(visualDiagnostics, result.visualHash, 'planet export')
     return {
       png: Buffer.from(encoded, 'base64'),
       dataVersion: result.dataVersion,

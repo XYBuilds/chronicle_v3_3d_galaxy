@@ -1,12 +1,13 @@
 import * as THREE from 'three'
 
 import { PLANET_VISUAL_DEFAULTS } from '@/three/planetVisualDefaults'
+import { PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE } from '@/three/productionFocusEmissionProfile'
 import {
   capturePlanetRenderDiagnostics,
   positionExportCamera,
   prepareExportPlanet,
   type PlanetRenderDiagnostics,
-  type PlanetRenderOptions,
+  type P3911LegacyPlanetRenderOptions,
   type PlanetRenderResult,
 } from './renderPlanetImage'
 import { parsePlanetExportRequest, type PlanetExportRequest } from './request'
@@ -95,7 +96,7 @@ export function p3911CheckpointBVisualConfigInput(productionVisualConfig: string
   })
 }
 
-export type P3911CheckpointBPlanetRenderOptions = PlanetRenderOptions & { diagnosticsEmissionExponent: number }
+export type P3911CheckpointBPlanetRenderOptions = P3911LegacyPlanetRenderOptions & { diagnosticsEmissionExponent: number }
 
 function checkpointBDiagnostics(
   captured: PlanetRenderDiagnostics,
@@ -129,7 +130,7 @@ export function renderP3911CheckpointBPlanetImage(options: P3911CheckpointBPlane
   const half = computeOrthographicHalfExtent(globalRadius, padding)
   const camera = new THREE.OrthographicCamera(-half, half, half, -half, 0.01, half * 4)
   positionExportCamera(camera, half)
-  const planet = prepareExportPlanet(movie, meta, renderMode, sizeRoot)
+  const planet = prepareExportPlanet(movie, meta, renderMode, sizeRoot, PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE)
   planet.material.uniforms.uKeyLightIntensity.value = P3911_CHECKPOINT_B.keyLightIntensity
   planet.material.uniforms.uEmissionIntensity.value = emission
   const captured = capturePlanetRenderDiagnostics(movie, planet, camera, options)

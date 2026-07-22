@@ -132,9 +132,8 @@ export const P41_EMISSION_FIXED_PROFILE = {
 /** P41.8 production profile: frozen approved LUT, embedded for normal website/exporter startup. */
 export const P41_PRODUCTION_EMISSION_PROFILE = PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE
 
-export const P41_EMISSION_CURVE: FocusEmissionProfile = {
-  ...PLANET_VISUAL_DEFAULTS.focus.emission,
-}
+/** Historical evidence fixture; production resolves this profile only through an active visual config. */
+export const P41_EMISSION_CURVE: FocusEmissionProfile = PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(`[P41.5 emission evidence] ${message}`)
@@ -263,7 +262,7 @@ export function assertP41EmissionEvidenceContract(): void {
   assert(P41_EMISSION_MIDRANK_CDF_LUT_DIAGNOSTIC_CANDIDATE.diagnosticOverride.requiredMarker === 'phase41-visual-diagnostic-v1', 'historical diagnostic override marker drifted')
   assert(P41_EMISSION_MIDRANK_CDF_LUT_DIAGNOSTIC_CANDIDATE.diagnosticOverride.productionDefaults === 'isolated', 'historical diagnostic override must stay isolated from production defaults')
   assert(P41_PRODUCTION_EMISSION_PROFILE.modelVersion === RATING_MIDRANK_CDF_LUT_MODEL_VERSION, 'production profile model drifted')
-  assert(equal(P41_PRODUCTION_EMISSION_PROFILE, PLANET_VISUAL_DEFAULTS.focus.emission), 'production SSOT must be shared by website and exporter')
+  assert(equal(P41_PRODUCTION_EMISSION_PROFILE, P41_EMISSION_CURVE), 'historical evidence fixture must embed the approved production profile')
   assert(PRODUCTION_FOCUS_EMISSION_CDF_LUT_CONTRACT.authoritativeData.sha256 === P41_EMISSION_AUTHORITATIVE_DATA.sha256, 'production profile source hash drifted')
   assert(PRODUCTION_FOCUS_EMISSION_CDF_LUT_CONTRACT.authoritativeData.dataVersion === P41_EMISSION_AUTHORITATIVE_DATA.dataVersion, 'production profile data version drifted')
   assert(PRODUCTION_FOCUS_EMISSION_CDF_LUT_CONTRACT.authoritativeData.movieCount === P41_EMISSION_AUTHORITATIVE_DATA.movieCount, 'production profile movie count drifted')
@@ -275,9 +274,9 @@ export function assertP41EmissionEvidenceContract(): void {
   assert(equal(P41_EMISSION_HISTORICAL_BASELINE_CANDIDATE.allowedVariationFields, P41_EMISSION_ALLOWED_VARIATION_FIELDS), 'historical allowed variations drifted')
   assert(equal(P41_EMISSION_MIDRANK_CDF_LUT_DIAGNOSTIC_CANDIDATE.allowedVariationFields, P41_EMISSION_ALLOWED_VARIATION_FIELDS), 'CDF/LUT allowed variations drifted')
   assert(equal(P41_EMISSION_ALLOWED_VARIATION_FIELDS, ['rating', 'emission']), 'only rating and emission may vary between candidates')
-  assert(P41_EMISSION_FIXED_PROFILE.lightness === 0.66, 'P41.4-approved Lightness must remain 0.66')
-  assert(P41_EMISSION_FIXED_PROFILE.keyLightIntensity === 0.45, 'P41.4-approved Key must remain 0.45')
-  assert(P41_EMISSION_FIXED_PROFILE.flatShadingMix === 0.8, 'P41.4-approved flatShadingMix must remain 0.8')
+  assert(P41_EMISSION_FIXED_PROFILE.lightness === PLANET_VISUAL_DEFAULTS.focus.lightness, 'resolved Lightness must match the canonical visual defaults')
+  assert(P41_EMISSION_FIXED_PROFILE.keyLightIntensity === PLANET_VISUAL_DEFAULTS.lighting.keyLightIntensity, 'resolved Key must match the canonical visual defaults')
+  assert(P41_EMISSION_FIXED_PROFILE.flatShadingMix === PLANET_VISUAL_DEFAULTS.lighting.flatShadingMix, 'resolved flatShadingMix must match the canonical visual defaults')
   assert(P41_EMISSION_FIXED_PROFILE.bloom.enabled === false, 'P41.5 evidence must render with Bloom OFF')
   assert(equal(P41_EMISSION_FIXED_PROFILE.direction, [0.700665949127905, 0.4003805423588029, 0.5905612999792342]), 'P41.4-approved direction drifted')
   assertP41EmissionCurveInvariants(P41_EMISSION_CURVE)

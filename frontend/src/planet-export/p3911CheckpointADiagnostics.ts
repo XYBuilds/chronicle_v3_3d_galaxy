@@ -5,9 +5,10 @@ import {
   positionExportCamera,
   prepareExportPlanet,
   type PlanetRenderDiagnostics,
-  type PlanetRenderOptions,
+  type P3911LegacyPlanetRenderOptions,
   type PlanetRenderResult,
 } from './renderPlanetImage'
+import { PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE } from '@/three/productionFocusEmissionProfile'
 import { parsePlanetExportRequest, type PlanetExportRequest } from './request'
 import { computeOrthographicHalfExtent } from './sizing'
 
@@ -67,7 +68,7 @@ export function p3911CheckpointAVisualConfigInput(productionVisualConfig: string
   return JSON.stringify({ diagnostic: 'p39.11-checkpoint-a-fixed-key-v1', productionVisualConfig, keyLightIntensity })
 }
 
-export type P3911CheckpointAPlanetRenderOptions = PlanetRenderOptions & { diagnosticsKeyLightIntensity: number }
+export type P3911CheckpointAPlanetRenderOptions = P3911LegacyPlanetRenderOptions & { diagnosticsKeyLightIntensity: number }
 
 /**
  * Dedicated evidence renderer. It begins with shared planet construction, then
@@ -88,7 +89,7 @@ export function renderP3911CheckpointAPlanetImage(options: P3911CheckpointAPlane
   const half = computeOrthographicHalfExtent(globalRadius, padding)
   const camera = new THREE.OrthographicCamera(-half, half, half, -half, 0.01, half * 4)
   positionExportCamera(camera, half)
-  const planet = prepareExportPlanet(movie, meta, renderMode, sizeRoot)
+  const planet = prepareExportPlanet(movie, meta, renderMode, sizeRoot, PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE)
   const historicalEmission = P3911_CHECKPOINT_A.emission.intensityMin
     + Math.pow(Math.min(10, Math.max(0, movie.vote_average)) / 10, P3911_CHECKPOINT_A.emission.exponent)
       * (P3911_CHECKPOINT_A.emission.intensityMax - P3911_CHECKPOINT_A.emission.intensityMin)

@@ -29,6 +29,14 @@ describe('Phase 41 diagnostic adapter', () => {
     expect(params.has('bloom-strength')).toBe(false)
   })
 
+
+  it('treats every file data source as an explicit legacy compatibility fixture', () => {
+    const file = { kind: 'file', label: 'manual fixture', bytes: Buffer.from('{}') } as const
+    const url = { kind: 'url', label: 'https://example.test/data.json.gz', pageUrl: 'https://example.test/data.json.gz' } as const
+    expect(phase41DiagnosticSearchParams(args, undefined, file).get('allowLegacyProfile')).toBe('1')
+    expect(phase41DiagnosticSearchParams(args, undefined, url).has('allowLegacyProfile')).toBe(false)
+  })
+
   it('rejects a profile that lacks the marker', () => {
     expect(() => phase41DiagnosticSearchParams(args, {
       diagnostic_only: 'wrong' as typeof PHASE41_DIAGNOSTIC_MARKER,

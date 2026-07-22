@@ -34,6 +34,7 @@ import {
 } from './sdrRuntimeTuning'
 import { attachGalaxyActiveMeshInteraction } from './interaction'
 import { createSelectionPlanet, type SelectionPlanetHandle } from './planet'
+import { type FocusEmissionProfile } from './focusEmission'
 import { validateFocusEmissionRuntimeTuning, type FocusEmissionRuntimeTuning } from './focusEmissionTuning'
 import { PLANET_VISUAL_DEFAULTS } from './planetVisualDefaults'
 import {
@@ -275,6 +276,7 @@ export function mountGalaxyScene(
   container: HTMLElement,
   meta: Pick<Meta, 'z_range' | 'xy_range' | 'count' | 'genre_palette'>,
   movies: Movie[],
+  focusEmissionProfile: FocusEmissionProfile,
 ): GalaxySceneMount {
   const zRange = meta.z_range
   if (zRange.length !== 2) {
@@ -481,7 +483,7 @@ export function mountGalaxyScene(
     syncConstellationFromStores()
   })
 
-  const planet = createSelectionPlanet()
+  const planet = createSelectionPlanet(focusEmissionProfile)
   planet.mesh.renderOrder = 2
   scene.add(planet.mesh)
 

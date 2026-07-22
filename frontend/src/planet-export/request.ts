@@ -1,4 +1,5 @@
-import type { GalaxyData } from '@/types/galaxy'
+import type { GalaxyData, ActiveFocusEmissionProfilePointer } from '@/types/galaxy'
+import { parseActiveFocusEmissionProfilePointer } from '@/lib/galaxyAssetUrls'
 
 export type PlanetExportRenderMode = 'basic' | 'shader'
 
@@ -10,9 +11,12 @@ export type PlanetExportRequest = {
   bloom: boolean
   sizeRoot: 2 | 3 | 4
   renderMode: PlanetExportRenderMode
+  profilePointer?: ActiveFocusEmissionProfilePointer
+  profileUrl?: string
+  allowLegacyProfile?: boolean
 }
 
-const REQUEST_PARAMS = new Set(['movieId', 'dataUrl', 'resolution', 'padding', 'bloom', 'sizeRoot', 'renderMode'])
+const REQUEST_PARAMS = new Set(['movieId', 'dataUrl', 'resolution', 'padding', 'bloom', 'sizeRoot', 'renderMode', 'profilePointer', 'profileUrl', 'allowLegacyProfile'])
 
 function requiredUniqueParam(params: URLSearchParams, name: string): string {
   const values = params.getAll(name)
@@ -52,6 +56,34 @@ function parseDataUrl(value: string): string {
   return url.href
 }
 
+function parseProfilePointer(value: string): ActiveFocusEmissionProfilePointer {
+  let raw: unknown
+  try {
+    raw = JSON.parse(value)
+  } catch {
+    throw new Error('[PlanetExport] profilePointer must be valid JSON')
+  }
+  const pointer = parseActiveFocusEmissionProfilePointer(raw)
+  if (pointer === null) throw new Error('[PlanetExport] profilePointer violates the active profile contract')
+  return pointer
+}
+
+function parseProfileUrl(value: string, pointer: ActiveFocusEmissionProfilePointer): string {
+  let url: URL
+  try {
+    url = new URL(value)
+  } catch {
+    throw new Error('[PlanetExport] profileUrl must be an absolute http(s) URL')
+  }
+  if ((url.protocol !== 'http:' && url.protocol !== 'https:') || url.username || url.password || url.hash) {
+    throw new Error('[PlanetExport] profileUrl must be http(s) without credentials or fragment')
+  }
+  if (!url.pathname.endsWith(`/data/focus-emission-profiles/${pointer.profile_id}.json`)) {
+    throw new Error('[PlanetExport] profileUrl must address the pointer immutable .json resource')
+  }
+  return url.href
+}
+
 export function parsePlanetExportRequest(search: string): PlanetExportRequest {
   const params = new URLSearchParams(search)
   for (const [name] of params) {
@@ -87,6 +119,20 @@ export function parsePlanetExportRequest(search: string): PlanetExportRequest {
     throw new Error('[PlanetExport] basic renderMode requires bloom=off')
   }
 
+  const pointerValues = params.getAll('profilePointer')
+  const urlValues = params.getAll('profileUrl')
+  const legacyValues = params.getAll('allowLegacyProfile')
+  if (pointerValues.length > 1) throw new Error('[PlanetExport] profilePointer must appear at most once')
+  if (urlValues.length > 1) throw new Error('[PlanetExport] profileUrl must appear at most once')
+  if (legacyValues.length > 1) throw new Error('[PlanetExport] allowLegacyProfile must appear at most once')
+  if (pointerValues.length !== urlValues.length) throw new Error('[PlanetExport] profilePointer and profileUrl must appear together')
+  if (pointerValues.length === 1 && !pointerValues[0]!.trim()) throw new Error('[PlanetExport] profilePointer must be non-empty')
+  if (urlValues.length === 1 && !urlValues[0]!.trim()) throw new Error('[PlanetExport] profileUrl must be non-empty')
+  if (legacyValues.length === 1 && legacyValues[0] !== '1') throw new Error('[PlanetExport] allowLegacyProfile must equal 1')
+  if (pointerValues.length === 1 && legacyValues.length === 1) throw new Error('[PlanetExport] active profile and legacy profile are mutually exclusive')
+  const profilePointer = pointerValues.length === 1 ? parseProfilePointer(pointerValues[0]!.trim()) : undefined
+  const profileUrl = profilePointer === undefined ? undefined : parseProfileUrl(urlValues[0]!.trim(), profilePointer)
+
   return {
     movieId,
     dataUrl,
@@ -95,6 +141,8 @@ export function parsePlanetExportRequest(search: string): PlanetExportRequest {
     bloom: bloomText === 'on',
     sizeRoot: sizeRoot as 2 | 3 | 4,
     renderMode,
+    ...(profilePointer === undefined ? {} : { profilePointer, profileUrl: profileUrl! }),
+    ...(legacyValues.length === 0 ? {} : { allowLegacyProfile: true }),
   }
 }
 export function indexGalaxyMovies(data: GalaxyData): Map<number, GalaxyData['movies'][number]> {

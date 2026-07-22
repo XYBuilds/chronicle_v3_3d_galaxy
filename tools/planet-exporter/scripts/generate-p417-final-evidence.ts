@@ -9,8 +9,9 @@ import { generateContactSheet, type ContactSheetCell, type ContactSheetParameter
 import type { DataSource } from '../src/data-source.js'
 import { loadAuthoritativeGalaxy, type JsonRecord, type Phase41Movie } from '../src/phase41Baseline.js'
 import { assertPngSafe } from '../src/png.js'
-import { PLANET_VISUAL_DEFAULTS, planetVisualConfigHashInput } from '../../../frontend/src/three/planetVisualDefaults.js'
-import { focusEmissionIntensityFromProfile } from '../../../frontend/src/three/focusEmission.js'
+import { PLANET_VISUAL_DEFAULTS } from '../../../frontend/src/three/planetVisualDefaults.js'
+import { resolvePlanetVisualConfig } from '../../../frontend/src/planet-export/visualConfig.js'
+import { LEGACY_FOCUS_EMISSION_FALLBACK_PROVENANCE, focusEmissionIntensityFromProfile } from '../../../frontend/src/three/focusEmission.js'
 import {
   PRODUCTION_FOCUS_EMISSION_CDF_LUT_CONTRACT,
   PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE,
@@ -81,6 +82,16 @@ function createFixture(movie: Phase41Movie, meta: JsonRecord, label: string, con
   return Buffer.from(`${JSON.stringify(fixture)}\n`, 'utf8')
 }
 
+function expectedVisualConfig(bloom: Bloom): string {
+  // p41.7 creates file data fixtures; legacy fallback is therefore an explicit fixture boundary.
+  return resolvePlanetVisualConfig({
+    curve: PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE,
+    emissionProvenance: LEGACY_FOCUS_EMISSION_FALLBACK_PROVENANCE,
+    emissionSource: 'legacy-fallback',
+    bloomEnabled: bloom === 'on',
+  }).hashInput
+}
+
 function bloomDiagnostics(value: JsonRecord, expected: Bloom): void {
   const bloom = record(value.bloom, 'render diagnostics bloom')
   assert(bloom.enabled === (expected === 'on'), `rendered Bloom state must be ${expected}`)
@@ -124,7 +135,7 @@ async function renderArtifact(
   }
   const render = await renderInBrowser(args, source, root)
   assertPngSafe(render.png, productionGateResolution)
-  const expectedVisualHash = planetVisualConfigHashInput(bloom === 'on')
+  const expectedVisualHash = expectedVisualConfig(bloom)
   assert(render.visualHash === expectedVisualHash, `${fileName} did not use the resolved production visual hash`)
   const diagnostics = render.visualDiagnostics
   bloomDiagnostics(diagnostics, bloom)
@@ -209,7 +220,7 @@ async function writeValidation(directory: string, title: string, artifacts: read
     const png = await fs.readFile(path.join(directory, artifact.png))
     assertPngSafe(png, productionGateResolution)
     assert(sha256(png) === artifact.pngSha256, `${artifact.png} PNG hash drifted`)
-    assert(artifact.visualHash === planetVisualConfigHashInput(artifact.bloom === 'on'), `${artifact.png} config hash drifted`)
+    assert(artifact.visualHash === expectedVisualConfig(artifact.bloom), `${artifact.png} config hash drifted`)
   }
   const validation = {
     schema_version: 'p41.7-final-evidence-validation-v1',
@@ -243,7 +254,7 @@ async function assertRepeatStable(movie: Phase41Movie, meta: JsonRecord): Promis
   const args: ExportArgs = { movieId: movie.id, output: path.join(controlledDirectory, 'repeat.png'), resolution: productionGateResolution, padding, bloom: 'on', sizeRoot, renderMode: 'shader' }
   const [first, second] = await Promise.all([renderInBrowser(args, source, root), renderInBrowser(args, source, root)])
   assert(sha256(first.png) === sha256(second.png), 'repeat control renderer output is not byte-stable')
-  assert(first.visualHash === second.visualHash && first.visualHash === planetVisualConfigHashInput(true), 'repeat control visual hash drifted')
+  assert(first.visualHash === second.visualHash && first.visualHash === expectedVisualConfig('on'), 'repeat control visual hash drifted')
 }
 
 function selectRealSamples(movies: readonly Phase41Movie[]): Array<{ key: string; label: string; movie: Phase41Movie }> {
@@ -266,8 +277,8 @@ function selectRealSamples(movies: readonly Phase41Movie[]): Array<{ key: string
 }
 
 async function main(): Promise<void> {
-  assert(PLANET_VISUAL_DEFAULTS.focus.emission.modelVersion === PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE.modelVersion, 'production SSOT must use the approved CDF/LUT')
-  assert(JSON.stringify(PLANET_VISUAL_DEFAULTS.focus.emission) === JSON.stringify(PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE), 'production CDF/LUT profile drifted before evidence generation')
+  // p41.7 uses an explicit historical fixture profile; it must not consult runtime defaults.
+  assert(PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE.modelVersion === 'rating-midrank-cdf-lut-v1', 'historical fixture must use the approved CDF/LUT')
   const { galaxy, sourceSha256 } = await loadAuthoritativeGalaxy(root)
   assert(galaxy.meta.version === '2026.07.18.daily.113' && galaxy.movies.length === 61531, 'authoritative data version or count drifted')
   await fs.rm(controlledDirectory, { recursive: true, force: true })

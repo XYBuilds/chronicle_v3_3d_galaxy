@@ -5,7 +5,8 @@ import {
   type FocusEmissionProfile,
 } from '@/three/focusEmission'
 import { validatePerlinBloomParams, type PerlinBloomParams } from '@/three/perlinBloomContract'
-import { PLANET_VISUAL_DEFAULTS, planetVisualConfigHashInput, productionPlanetBloomParams } from '@/three/planetVisualDefaults'
+import { resolvePlanetVisualConfig, type ResolvedPlanetVisualConfig } from './visualConfig'
+import type { FocusEmissionProfileProvenance } from '@/types/galaxy'
 
 export const PHASE41_DIAGNOSTIC_MARKER = 'phase41-visual-diagnostic-v1' as const
 
@@ -17,6 +18,7 @@ export type Phase41DiagnosticOverride = {
   lightness?: number
   keyLightIntensity?: number
   direction?: [number, number, number]
+  flatShadingMix?: number
   bloom?: PerlinBloomParams
 }
 
@@ -26,17 +28,20 @@ export type ResolvedPhase41VisualProfile = {
   chroma: number
   keyLightIntensity: number
   direction: [number, number, number]
-  flatShadingMix: typeof PLANET_VISUAL_DEFAULTS.lighting.flatShadingMix
+  flatShadingMix: number
   bloom: PerlinBloomParams
-  productionSource: 'PLANET_VISUAL_DEFAULTS'
+  visualConfig: ResolvedPlanetVisualConfig
+  emissionProvenance: FocusEmissionProfileProvenance
+  emissionSource: 'active' | 'legacy-fallback' | 'diagnostic-override'
+  productionSource: 'resolved-emission-profile'
   productionVisualConfigInput: string
   resolvedVisualConfigInput: string
   overrideProvenance: 'none' | 'phase41-diagnostic-override'
 }
 
-export type Phase41RenderOverride = Pick<ResolvedPhase41VisualProfile, 'curve' | 'lightness' | 'keyLightIntensity' | 'direction' | 'bloom'>
+export type Phase41RenderOverride = Pick<ResolvedPlanetVisualConfig, 'curve' | 'lightness' | 'chroma' | 'keyLightIntensity' | 'direction' | 'flatShadingMix' | 'bloom'>
 
-const overrideKeys = new Set(['diagnostic_only', 'emissionCurve', 'lightness', 'keyLightIntensity', 'direction', 'bloom'])
+const overrideKeys = new Set(['diagnostic_only', 'emissionCurve', 'lightness', 'keyLightIntensity', 'direction', 'flatShadingMix', 'bloom'])
 
 function object(value: unknown, label: string): Record<string, unknown> {
   if (value === null || Array.isArray(value) || typeof value !== 'object') throw new Error(`[Phase41 diagnostic] ${label} must be an object`)
@@ -122,10 +127,6 @@ function bloom(value: unknown): PerlinBloomParams {
   })
 }
 
-function productionCurve(): Phase41EmissionCurve {
-  return curve(PLANET_VISUAL_DEFAULTS.focus.emission, 'PLANET_VISUAL_DEFAULTS.focus.emission')
-}
-
 export function parsePhase41DiagnosticOverride(value: unknown): Phase41DiagnosticOverride {
   const record = object(value, 'override')
   exactKeys(record, overrideKeys, 'override')
@@ -140,37 +141,58 @@ export function parsePhase41DiagnosticOverride(value: unknown): Phase41Diagnosti
   if ('lightness' in record) result.lightness = unit(record.lightness, 'override.lightness')
   if ('keyLightIntensity' in record) result.keyLightIntensity = nonNegative(record.keyLightIntensity, 'override.keyLightIntensity')
   if ('direction' in record) result.direction = vector(record.direction, 'override.direction')
+  if ('flatShadingMix' in record) result.flatShadingMix = unit(record.flatShadingMix, 'override.flatShadingMix')
   if ('bloom' in record) result.bloom = bloom(record.bloom)
   return result
 }
 
+export type ResolvedDiagnosticEmissionProfile = {
+  curve: Phase41EmissionCurve
+  provenance: FocusEmissionProfileProvenance
+  source: 'active' | 'legacy-fallback'
+}
+
 export function resolvePhase41VisualProfile(
-  override?: Phase41DiagnosticOverride,
-  bloomEnabled: boolean = PLANET_VISUAL_DEFAULTS.focus.bloom.enabled,
+  override: Phase41DiagnosticOverride | undefined,
+  bloomEnabled: boolean,
+  resolvedEmission: ResolvedDiagnosticEmissionProfile,
 ): ResolvedPhase41VisualProfile {
   if (typeof bloomEnabled !== 'boolean') throw new Error('[Phase41 diagnostic] Bloom state must be boolean')
   const parsed = override === undefined ? undefined : parsePhase41DiagnosticOverride(override)
   if (parsed?.bloom !== undefined && parsed.bloom.enabled !== bloomEnabled) {
     throw new Error('[Phase41 diagnostic] override Bloom state must match the request')
   }
-  const bloom = parsed?.bloom ?? validatePerlinBloomParams(productionPlanetBloomParams(bloomEnabled))
-  const productionVisualConfigInput = planetVisualConfigHashInput(bloom.enabled)
-  const profile = {
-    curve: parsed?.emissionCurve ?? productionCurve(),
-    lightness: parsed?.lightness ?? PLANET_VISUAL_DEFAULTS.focus.lightness,
-    chroma: PLANET_VISUAL_DEFAULTS.focus.chroma,
-    keyLightIntensity: parsed?.keyLightIntensity ?? PLANET_VISUAL_DEFAULTS.lighting.keyLightIntensity,
-    direction: vector(parsed?.direction ?? PLANET_VISUAL_DEFAULTS.lighting.direction, 'resolved direction'),
-    flatShadingMix: PLANET_VISUAL_DEFAULTS.lighting.flatShadingMix,
-    bloom,
-    productionSource: 'PLANET_VISUAL_DEFAULTS' as const,
-    productionVisualConfigInput,
-    overrideProvenance: parsed === undefined ? 'none' as const : 'phase41-diagnostic-override' as const,
+  const hasEmissionOverride = parsed?.emissionCurve !== undefined
+  const emissionSource = hasEmissionOverride ? 'diagnostic-override' as const : resolvedEmission.source
+  const overrideProvenance = parsed === undefined ? 'none' as const : 'phase41-diagnostic-override' as const
+  const visualConfig = resolvePlanetVisualConfig({
+    curve: parsed?.emissionCurve ?? resolvedEmission.curve,
+    emissionProvenance: resolvedEmission.provenance,
+    emissionSource,
+    bloomEnabled,
+    lightness: parsed?.lightness,
+    keyLightIntensity: parsed?.keyLightIntensity,
+    direction: parsed?.direction,
+    flatShadingMix: parsed?.flatShadingMix,
+    bloom: parsed?.bloom,
+    overrideProvenance,
+  })
+  return {
+    curve: visualConfig.curve,
+    lightness: visualConfig.lightness,
+    chroma: visualConfig.chroma,
+    keyLightIntensity: visualConfig.keyLightIntensity,
+    direction: visualConfig.direction,
+    flatShadingMix: visualConfig.flatShadingMix,
+    bloom: visualConfig.bloom,
+    visualConfig,
+    emissionProvenance: visualConfig.emissionProvenance,
+    emissionSource: visualConfig.emissionSource,
+    productionSource: 'resolved-emission-profile',
+    productionVisualConfigInput: visualConfig.hashInput,
+    resolvedVisualConfigInput: visualConfig.hashInput,
+    overrideProvenance,
   }
-  const resolvedVisualConfigInput = parsed === undefined
-    ? productionVisualConfigInput
-    : JSON.stringify({ phase41Diagnostic: PHASE41_DIAGNOSTIC_MARKER, profile })
-  return { ...profile, resolvedVisualConfigInput }
 }
 
 export function phase41EmissionForRating(rating: number, emission: Phase41EmissionCurve): number {
@@ -182,10 +204,10 @@ export function phase41EmissionForRating(rating: number, emission: Phase41Emissi
 }
 
 export function toPhase41RenderOverride(profile: ResolvedPhase41VisualProfile): Phase41RenderOverride {
-  return { curve: profile.curve, lightness: profile.lightness, keyLightIntensity: profile.keyLightIntensity, direction: profile.direction, bloom: profile.bloom }
+  return profile.visualConfig
 }
 
-export type Phase41MatrixVariable = 'rating' | 'emission' | 'curve' | 'lightness' | 'keyLightIntensity' | 'direction' | 'bloom' | 'camera' | 'seed' | 'rotation'
+export type Phase41MatrixVariable = 'rating' | 'emission' | 'curve' | 'lightness' | 'keyLightIntensity' | 'direction' | 'flatShadingMix' | 'bloom' | 'camera' | 'seed' | 'rotation'
 
 export type Phase41MatrixSnapshot = {
   rating: number
@@ -200,12 +222,25 @@ function stable(value: unknown): string {
   return JSON.stringify(value)
 }
 
+function assertSnapshotCanonicalVisualConfig(snapshot: Phase41MatrixSnapshot): void {
+  const { profile } = snapshot
+  if (
+    profile.visualConfig.hashInput.length === 0
+    || profile.resolvedVisualConfigInput !== profile.visualConfig.hashInput
+    || profile.productionVisualConfigInput !== profile.visualConfig.hashInput
+  ) {
+    throw new Error('[Phase41 diagnostic] snapshot canonical visual-config aliases disagree')
+  }
+}
+
 export function assertPhase41MatrixTransition(
   baseline: Phase41MatrixSnapshot,
   candidate: Phase41MatrixSnapshot,
   allowedVariables: readonly Phase41MatrixVariable[],
 ): void {
-  const known = new Set<Phase41MatrixVariable>(['rating', 'emission', 'curve', 'lightness', 'keyLightIntensity', 'direction', 'bloom', 'camera', 'seed', 'rotation'])
+  const known = new Set<Phase41MatrixVariable>(['rating', 'emission', 'curve', 'lightness', 'keyLightIntensity', 'direction', 'flatShadingMix', 'bloom', 'camera', 'seed', 'rotation'])
+  assertSnapshotCanonicalVisualConfig(baseline)
+  assertSnapshotCanonicalVisualConfig(candidate)
   const allowed = new Set(allowedVariables)
   if (allowed.size !== allowedVariables.length || allowed.size === 0) {
     throw new Error('[Phase41 diagnostic] matrix must declare one or more unique allowed variables')
@@ -215,9 +250,7 @@ export function assertPhase41MatrixTransition(
   }
   if (
     baseline.profile.chroma !== candidate.profile.chroma
-    || baseline.profile.flatShadingMix !== candidate.profile.flatShadingMix
     || baseline.profile.productionSource !== candidate.profile.productionSource
-    || baseline.profile.productionVisualConfigInput !== candidate.profile.productionVisualConfigInput
   ) {
     throw new Error('[Phase41 diagnostic] matrix changed a fixed production field')
   }
@@ -228,6 +261,7 @@ export function assertPhase41MatrixTransition(
   if (baseline.profile.lightness !== candidate.profile.lightness) changed.push('lightness')
   if (baseline.profile.keyLightIntensity !== candidate.profile.keyLightIntensity) changed.push('keyLightIntensity')
   if (stable(baseline.profile.direction) !== stable(candidate.profile.direction)) changed.push('direction')
+  if (baseline.profile.flatShadingMix !== candidate.profile.flatShadingMix) changed.push('flatShadingMix')
   if (stable(baseline.profile.bloom) !== stable(candidate.profile.bloom)) changed.push('bloom')
   if (stable(baseline.camera) !== stable(candidate.camera)) changed.push('camera')
   if (stable(baseline.seed) !== stable(candidate.seed)) changed.push('seed')

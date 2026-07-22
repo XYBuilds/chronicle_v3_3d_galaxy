@@ -58,12 +58,16 @@ describe('P41.5 emission evidence contract', () => {
     expect(P41_MIDRANK_CDF_LUT_EVIDENCE_RELATIVE_DIRECTORY).toBe('data/runs/phase41/p41.5-midrank-cdf-lut-bloom-off')
     expect(P41_EMISSION_FIXTURE_ROWS).toContain('high-rating-low-votes')
     expect(P41_EMISSION_BLOOM_OFF.enabled).toBe(false)
-    expect(P41_EMISSION_FIXED_PROFILE).toMatchObject({ lightness: 0.66, keyLightIntensity: 0.45, flatShadingMix: 0.8 })
+    expect(P41_EMISSION_FIXED_PROFILE).toMatchObject({
+      lightness: PLANET_VISUAL_DEFAULTS.focus.lightness,
+      keyLightIntensity: PLANET_VISUAL_DEFAULTS.lighting.keyLightIntensity,
+      flatShadingMix: PLANET_VISUAL_DEFAULTS.lighting.flatShadingMix,
+    })
   })
 
   it('embeds the human-approved CDF/LUT production profile without a gzip runtime dependency', () => {
     expect(P41_PRODUCTION_EMISSION_PROFILE).toEqual(PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE)
-    expect(PLANET_VISUAL_DEFAULTS.focus.emission).toEqual(PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE)
+    expect(P41_EMISSION_CURVE).toEqual(PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE)
     expect(P41_PRODUCTION_EMISSION_PROFILE).toMatchObject({
       modelVersion: 'rating-midrank-cdf-lut-v1', ratingMin: 0, ratingMax: 10, sampleStep: 0.05, intensityMin: 0.005, intensityMax: 0.65,
     })

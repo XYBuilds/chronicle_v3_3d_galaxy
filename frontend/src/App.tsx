@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { MovieDetailDrawer } from '@/components/Drawer'
 import { LoadFailurePage } from '@/components/LoadFailurePage'
@@ -19,6 +19,8 @@ import { LanguageSwitch } from '@/hud/LanguageSwitch'
 import { SupportButton } from '@/hud/SupportButton'
 import { TmdbAttribution } from '@/hud/TmdbAttribution'
 import { useRouteController } from '@/lib/useRouteController'
+import { getGalaxyAssetsManifest } from '@/lib/galaxyAssetUrls'
+import { loadFocusEmissionProfile, type ResolvedFocusEmissionProfile } from '@/lib/focusEmissionProfileLoader'
 import { useStrings } from '@/lib/strings'
 import { clearSearch, useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
 import { useGalaxyDataStore } from '@/store/galaxyDataStore'
@@ -38,6 +40,9 @@ function App() {
   const loadProgress = useGalaxyDataStore((s) => s.loadProgress)
   const fetchGalaxyData = useGalaxyDataStore((s) => s.fetchGalaxyData)
   const indexStatus = useSearchIndexStore((s) => s.status)
+  const [focusEmissionProfile, setFocusEmissionProfile] = useState<ResolvedFocusEmissionProfile | null>(null)
+  const [focusEmissionProfileVersion, setFocusEmissionProfileVersion] = useState<string | null>(null)
+  const [focusEmissionError, setFocusEmissionError] = useState<string | null>(null)
   const canvasHostRef = useRef<HTMLDivElement>(null)
   const animateZCurrentRef = useRef<((z: number, durationMs?: number) => void) | null>(null)
   const animateZCurrentTo = useCallback((z: number, durationMs?: number) => {
@@ -46,11 +51,35 @@ function App() {
 
   const indexHydrationTerminal =
     indexStatus === 'ready' || indexStatus === 'skipped' || indexStatus === 'error'
-  const routeReady = status === 'ready' && data !== null && indexHydrationTerminal
+  const routeReady = status === 'ready' && data !== null && indexHydrationTerminal && focusEmissionProfile !== null && focusEmissionProfileVersion === data.meta.version
 
   useEffect(() => {
     void fetchGalaxyData()
   }, [fetchGalaxyData])
+
+  useEffect(() => {
+    if (status !== 'ready' || data === null) return
+    let cancelled = false
+    void (async () => {
+      await Promise.resolve()
+      try {
+        const manifest = await getGalaxyAssetsManifest()
+        const resolved = await loadFocusEmissionProfile({
+          manifest: manifest ?? { galaxy_data_gzip_url: '', data_version: data.meta.version },
+          // A bundled dev run is an intentional compatibility fixture. Production must have a pointer.
+          allowLegacyFallback: import.meta.env.DEV,
+        })
+        if (!cancelled) {
+          setFocusEmissionProfile(resolved)
+          setFocusEmissionProfileVersion(data.meta.version)
+          setFocusEmissionError(null)
+        }
+      } catch (error) {
+        if (!cancelled) setFocusEmissionError(error instanceof Error ? error.message : String(error))
+      }
+    })()
+    return () => { cancelled = true }
+  }, [status, data])
 
   useEffect(() => {
     document.getElementById('tmdb-attribution-static')?.remove()
@@ -61,14 +90,18 @@ function App() {
     movies: data?.movies ?? null,
   })
 
-  type AppLoadPhase = 'galaxy-loading' | 'galaxy-error' | 'index-loading' | 'started'
+  type AppLoadPhase = 'galaxy-loading' | 'galaxy-error' | 'index-loading' | 'profile-loading' | 'profile-error' | 'started'
   let phase: AppLoadPhase
   if (status === 'loading' || status === 'idle') {
     phase = 'galaxy-loading'
   } else if (status === 'error') {
     phase = 'galaxy-error'
+  } else if (focusEmissionError !== null) {
+    phase = 'profile-error'
   } else if (status === 'ready' && data !== null && !indexHydrationTerminal) {
     phase = 'index-loading'
+  } else if (focusEmissionProfile === null || focusEmissionProfileVersion !== data?.meta.version) {
+    phase = 'profile-loading'
   } else {
     phase = 'started'
   }
@@ -85,13 +118,13 @@ function App() {
     if (!routeReady || !data) return
     const el = canvasHostRef.current
     if (!el) return
-    const mount = mountGalaxyScene(el, data.meta, data.movies)
+    const mount = mountGalaxyScene(el, data.meta, data.movies, focusEmissionProfile.lut)
     animateZCurrentRef.current = mount.controller.animateZCurrentTo
     return () => {
       animateZCurrentRef.current = null
       mount.dispose()
     }
-  }, [routeReady, data])
+  }, [routeReady, data, focusEmissionProfile])
 
   useEffect(() => {
     if (status !== 'ready' || !data) return
@@ -178,8 +211,16 @@ function App() {
     return <LoadFailurePage errorMessage={errorMessage} onRetry={() => void fetchGalaxyData()} />
   }
 
+  if (phase === 'profile-error') {
+    return <LoadFailurePage errorMessage={focusEmissionError ?? 'Focus emission profile failed to load'} onRetry={() => void fetchGalaxyData()} />
+  }
+
   if (phase === 'index-loading' && data !== null) {
     return <Loading label={strings.searchBar.indexLoading} progress={null} gzipDone indexStatus="loading" />
+  }
+
+  if (phase === 'profile-loading') {
+    return <Loading label={strings.loading.title} progress={null} gzipDone indexStatus="pending" />
   }
 
   if (phase !== 'started' || data === null) {

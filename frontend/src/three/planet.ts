@@ -9,6 +9,7 @@ import {
   resolvePlanetAppearance,
   type PlanetAppearance,
 } from './planetAppearance'
+import { type FocusEmissionProfile } from './focusEmission'
 import { computePlanetOuterRadius } from './planetSizing'
 import {
   remapFocusEmissionIntensity,
@@ -143,9 +144,9 @@ function assertFocusUniformValues(
   chroma: number,
   emissionIntensity: number,
   keyLightIntensity: number,
+  emissionProfile: FocusEmissionProfile,
 ): void {
   const { focus, lighting } = PLANET_VISUAL_DEFAULTS
-  const { emission } = focus
   const values = { lightness, chroma, emissionIntensity, keyLightIntensity }
   for (const [name, value] of Object.entries(values)) {
     if (!Number.isFinite(value)) {
@@ -155,7 +156,7 @@ function assertFocusUniformValues(
   if (lightness !== focus.lightness || chroma !== focus.chroma) {
     throw new Error('[Planet] Focus lightness and chroma must match shared visual defaults')
   }
-  if (emissionIntensity < emission.intensityMin || emissionIntensity > emission.intensityMax) {
+  if (emissionIntensity < emissionProfile.intensityMin || emissionIntensity > emissionProfile.intensityMax) {
     throw new Error(
       `[Planet] emission intensity must be within configured endpoints; received ${emissionIntensity}`,
     )
@@ -172,7 +173,9 @@ function assertFocusUniformValues(
  * Color path matches galaxy shaders: OKLCH semantics (L, C, hue rad) → OKLab (L,a,b) in fragment → display sRGB
  * (gamma encode unavoidable for the framebuffer).
  */
-export function createSelectionPlanet(): SelectionPlanetHandle {
+export function createSelectionPlanet(
+  emissionProfile: FocusEmissionProfile,
+): SelectionPlanetHandle {
   const defaults = PLANET_VISUAL_DEFAULTS
   const geometry = new THREE.IcosahedronGeometry(1, defaults.geometry.detail)
   const posAttr = geometry.attributes.position as THREE.BufferAttribute
@@ -203,7 +206,7 @@ export function createSelectionPlanet(): SelectionPlanetHandle {
       uLightDir: { value: uLightDir },
       /** P11.4 — Lambert shading can be disabled for a flat diagnostic. */
       uLightingEnabled: { value: defaults.lighting.enabled ? 1 : 0 },
-      uEmissionIntensity: { value: defaults.focus.emission.intensityMin },
+      uEmissionIntensity: { value: emissionProfile.intensityMin },
       uKeyLightIntensity: { value: defaults.lighting.keyLightIntensity },
       /** 导数法线与几何法线混合；1 = 纯屏幕导数法线。 */
       uFlatShadingMix: { value: defaults.lighting.flatShadingMix },
@@ -334,7 +337,7 @@ export function createSelectionPlanet(): SelectionPlanetHandle {
 
   const setFromMovie = (movie: Movie, palette: Meta['genre_palette'], worldRadius: number) => {
     const stepH = material.uniforms.uStepHeight.value as number
-    const appearance = resolvePlanetAppearance(movie, palette)
+    const appearance = resolvePlanetAppearance(movie, palette, emissionProfile)
     const {
       genres,
       hues,
@@ -346,7 +349,7 @@ export function createSelectionPlanet(): SelectionPlanetHandle {
       cutCount,
       baseQuaternion,
     } = appearance
-    assertFocusUniformValues(lightness, chroma, emissionIntensity, keyLightIntensity)
+    assertFocusUniformValues(lightness, chroma, emissionIntensity, keyLightIntensity, emissionProfile)
     handle.lastAppearance = appearance
     handle.lastRadius = computePlanetOuterRadius(worldRadius, bandCount, stepH)
     const radiusMul = handle.lastRadius / worldRadius

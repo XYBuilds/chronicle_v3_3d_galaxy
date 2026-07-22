@@ -47,6 +47,7 @@ import { planetNoiseSeed } from '@/three/planetAppearance'
 import { focusEmissionIntensityFromProfile } from '@/three/focusEmission'
 import { remapFocusEmissionIntensity } from '@/three/focusEmissionTuning'
 import { PLANET_VISUAL_DEFAULTS } from '@/three/planetVisualDefaults'
+import { PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE } from '@/three/productionFocusEmissionProfile'
 import type { GalaxyData, Movie } from '@/types/galaxy'
 
 const sceneSource = readFileSync(fileURLToPath(new URL('../three/scene.ts', import.meta.url)), 'utf8')
@@ -103,7 +104,7 @@ describe('planet export request and sizing', () => {
     const production = JSON.stringify(PLANET_VISUAL_DEFAULTS)
     const hashes = P3911_CHECKPOINT_B.emissionExponentCandidates.map((exponent) => p3911CheckpointBVisualConfigInput(production, exponent))
     expect(new Set(hashes).size).toBe(3)
-    expect(PLANET_VISUAL_DEFAULTS.focus.emission.modelVersion).toBe('rating-midrank-cdf-lut-v1')
+    expect(PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE.modelVersion).toBe('rating-midrank-cdf-lut-v1')
   })
 
   it('keeps C1 threshold overrides at a strict Bloom-ON-only offline boundary', () => {
@@ -177,7 +178,16 @@ describe('planet export request and sizing', () => {
     expect(() => parsePlanetExportRequest(request().replace('https%3A%2F%2Fexample.test%2Fgalaxy_data.json.gz', 'file%3A%2F%2F%2Fc%3A%2Fdata.json.gz'))).toThrow(/http or https/)
     expect(() => parsePlanetExportRequest(request().replace('galaxy_data.json.gz', 'galaxy.csv'))).toThrow(/\.json/)
     expect(() => parsePlanetExportRequest(request().replace('padding=0.08', 'padding=.1'))).toThrow(/padding/)
-    expect(() => parsePlanetExportRequest(request().replace('bloom=off', 'bloom=on').replace('renderMode=shader', 'renderMode=basic'))).toThrow(/basic renderMode requires bloom=off/)
+    const pointer = encodeURIComponent(JSON.stringify({ profile_id: 'rating-emission-2026-07-a', period: '2026-07', model_version: 'rating-midrank-cdf-lut-v1', curve_sha256: 'a'.repeat(64), source_data_version: 'v1', source_movie_count: 1, status: 'active', activated_at: '2026-07-22T00:00:00.000Z' }))
+    const profileRequest = `${request()}&profilePointer=${pointer}&profileUrl=https%3A%2F%2Fexample.test%2Fdata%2Ffocus-emission-profiles%2Frating-emission-2026-07-a.json`
+    expect(parsePlanetExportRequest(profileRequest).profilePointer?.profile_id).toBe('rating-emission-2026-07-a')
+    for (const invalid of [
+      `${request()}&allowLegacyProfile=0`,
+      `${request()}&allowLegacyProfile=1&allowLegacyProfile=1`,
+      `${request()}&profilePointer=${pointer}`,
+      `${request()}&profileUrl=https%3A%2F%2Fexample.test%2Fdata%2Ffocus-emission-profiles%2Frating-emission-2026-07-a.json`,
+      `${request()}&profilePointer=${pointer}&profileUrl=https%3A%2F%2Fuser%3Apass%40example.test%2Fdata%2Ffocus-emission-profiles%2Frating-emission-2026-07-a.json`,
+    ]) expect(() => parsePlanetExportRequest(invalid)).toThrow(/profile|Legacy/)
   })
 
   it('indexes once and rejects duplicate or absent movie IDs', () => {
@@ -191,8 +201,8 @@ describe('planet export request and sizing', () => {
   it('selects an explicitly visible basic or shader material path', () => {
     const target = movie(7, 2, ['Drama'])
     const data = galaxy([target])
-    const shader = prepareExportPlanet(target, data.meta, 'shader', 2)
-    const basic = prepareExportPlanet(target, data.meta, 'basic', 2)
+    const shader = prepareExportPlanet(target, data.meta, 'shader', 2, PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE)
+    const basic = prepareExportPlanet(target, data.meta, 'basic', 2, PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE)
     expect(shader.mesh.visible).toBe(true)
     expect(shader.mesh.material).toBe(shader.material)
     expect(basic.mesh.visible).toBe(true)
@@ -206,7 +216,7 @@ describe('planet export request and sizing', () => {
     positionExportCamera(camera, 10)
     const snapshots = [0, 4, 5, 10].map((vote_average) => {
       const target = { ...movie(157336, 2, ['Drama']), vote_average }
-      const handle = prepareExportPlanet(target, galaxy([target]).meta, 'shader', 3)
+      const handle = prepareExportPlanet(target, galaxy([target]).meta, 'shader', 3, PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE)
       const diagnostics = capturePlanetRenderDiagnostics(target, handle, camera, { sizeRoot: 3, padding: 0.08 })
       handle.dispose()
       return diagnostics
@@ -215,8 +225,8 @@ describe('planet export request and sizing', () => {
     expect(snapshots.map((snapshot) => snapshot.rating)).toEqual([0, 4, 5, 10])
     expect(snapshots.map((snapshot) => snapshot.emission)).toEqual([0, 4, 5, 10].map((rating) =>
       remapFocusEmissionIntensity(
-        focusEmissionIntensityFromProfile(rating, PLANET_VISUAL_DEFAULTS.focus.emission),
-        PLANET_VISUAL_DEFAULTS.focus.emission,
+        focusEmissionIntensityFromProfile(rating, PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE),
+        PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE,
         PLANET_VISUAL_DEFAULTS.focus.emissionTuning,
       ),
     ))
@@ -225,13 +235,13 @@ describe('planet export request and sizing', () => {
     expect(snapshots[2]!.emission).toBeGreaterThan(snapshots[1]!.emission)
     for (const snapshot of snapshots) {
       expect(snapshot.emission_curve).toEqual({
-        model_version: PLANET_VISUAL_DEFAULTS.focus.emission.modelVersion,
-        rating_min: PLANET_VISUAL_DEFAULTS.focus.emission.ratingMin,
-        rating_max: PLANET_VISUAL_DEFAULTS.focus.emission.ratingMax,
-        sample_step: PLANET_VISUAL_DEFAULTS.focus.emission.sampleStep,
-        sample_count: PLANET_VISUAL_DEFAULTS.focus.emission.samples.length,
-        intensity_min: PLANET_VISUAL_DEFAULTS.focus.emission.intensityMin,
-        intensity_max: PLANET_VISUAL_DEFAULTS.focus.emission.intensityMax,
+        model_version: PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE.modelVersion,
+        rating_min: PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE.ratingMin,
+        rating_max: PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE.ratingMax,
+        sample_step: PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE.sampleStep,
+        sample_count: PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE.samples.length,
+        intensity_min: PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE.intensityMin,
+        intensity_max: PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE.intensityMax,
       })
       expect(snapshot.fixed_lightness).toBe(PLANET_VISUAL_DEFAULTS.focus.lightness)
       expect(snapshot.fixed_chroma).toBe(PLANET_VISUAL_DEFAULTS.focus.chroma)
@@ -264,7 +274,7 @@ describe('planet export request and sizing', () => {
 
   it('records the actual offline Bloom override without changing production defaults', () => {
     const target = movie(157336, 2, ['Drama'])
-    const handle = prepareExportPlanet(target, galaxy([target]).meta, 'shader', 3)
+    const handle = prepareExportPlanet(target, galaxy([target]).meta, 'shader', 3, PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE)
     const camera = new THREE.OrthographicCamera(-10, 10, 10, -10, 0.01, 40)
     positionExportCamera(camera, 10)
     const diagnostics = capturePlanetRenderDiagnostics(target, handle, camera, {
@@ -290,7 +300,7 @@ describe('planet export request and sizing', () => {
 
   it('fails fast when renderer-owned diagnostics contain invalid state', () => {
     const target = movie(157336, 2, ['Drama'])
-    const handle = prepareExportPlanet(target, galaxy([target]).meta, 'shader', 3)
+    const handle = prepareExportPlanet(target, galaxy([target]).meta, 'shader', 3, PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE)
     const camera = new THREE.OrthographicCamera(-10, 10, 10, -10, 0.01, 40)
     positionExportCamera(camera, 10)
 
@@ -340,11 +350,11 @@ describe('planet export request and sizing', () => {
     expect(exportRendererSource).toContain('diagnostic_only !== PHASE41_DIAGNOSTIC_MARKER')
   })
 
-  it('delegates page visual-hash construction to the shared production helper', () => {
-    expect(exportPageSource).toContain("import { planetExportVisualConfigInput } from './visualConfig'")
-    expect(exportPageSource).toMatch(
-      /planetExportVisualConfigInput\(\s*planetVisualConfigHashInput\(\),\s*request\.sizeRoot\s*\)/,
-    )
+  it('builds page visual identity once from the resolved canonical helper', () => {
+    expect(exportPageSource).toContain("import { resolvePlanetVisualConfig } from './visualConfig'")
+    expect(exportPageSource).toContain('const visualConfig = resolvePlanetVisualConfig({')
+    expect(exportPageSource).toContain('visualConfig })')
+    expect(exportPageSource).toContain('document.body.dataset.visualHash = visualConfig.hashInput')
     expect(exportPageSource).toContain('document.body.dataset.visualDiagnostics = JSON.stringify(result.diagnostics)')
   })
 

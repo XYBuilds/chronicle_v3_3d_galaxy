@@ -10,7 +10,7 @@ todos:
     status: completed
   - id: p42.3-runtime-exporter-consumer
     content: 统一网站、Planet exporter、diagnostics 对 active profile 的读取、缓存、校验和数值消费
-    status: pending
+    status: completed
   - id: p42.4-release-workflows
     content: 接入 monthly/nightly workflow 与 R2/Pages manifest，保证 monthly 切换、nightly 复用和失败回滚
     status: pending

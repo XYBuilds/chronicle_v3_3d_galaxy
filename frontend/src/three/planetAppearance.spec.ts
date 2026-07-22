@@ -131,4 +131,18 @@ describe('planet appearance emission profiles', () => {
     expect(appearance.emissionProfile).toBe(diagnosticProfile)
     expect(appearance.emissionIntensity).toBe(diagnosticProfile.samples[100])
   })
+
+  it('keeps the verified profile identity at the appearance boundary while only rating changes the intensity', () => {
+    const activeProfile: RatingMidrankCdfLutProfile = {
+      ...diagnosticProfile,
+      samples: diagnosticProfile.samples.map((sample, index) => index < 100 ? sample : Math.min(0.65, sample + 0.01)),
+    }
+    const low = resolvePlanetAppearance({ ...appearanceMovie, vote_average: 4.5 }, { Drama: '#336699' }, activeProfile)
+    const high = resolvePlanetAppearance({ ...appearanceMovie, vote_average: 7.5 }, { Drama: '#336699' }, activeProfile)
+
+    expect(low.emissionProfile).toBe(activeProfile)
+    expect(high.emissionCurve).toBe(activeProfile)
+    expect(high.emissionIntensity).toBeGreaterThan(low.emissionIntensity)
+    expect({ ...high, emissionIntensity: low.emissionIntensity }).toEqual(low)
+  })
 })

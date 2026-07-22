@@ -66,6 +66,27 @@ describe('Focus emission runtime profile loader', () => {
   })
 
 
+  it('records active provenance once without changing the cached verified profile', async () => {
+    const value = profile()
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify(value), { status: 200 })) as unknown as typeof fetch
+    const log = vi.fn()
+    const options = { manifest: manifestFor(value), fetchImpl, sha256: async (input: string) => sha256(input), log }
+
+    const [first, second] = await Promise.all([loadFocusEmissionProfile(options), loadFocusEmissionProfile(options)])
+
+    expect(second).toBe(first)
+    expect(fetchImpl).toHaveBeenCalledTimes(1)
+    expect(log).toHaveBeenCalledTimes(1)
+    expect(log).toHaveBeenCalledWith('[FocusEmissionProfile] resolved', expect.objectContaining({
+      profile_id: value.profile_id,
+      source: 'active',
+      period: value.period,
+      source_data_version: value.source_data_version,
+      source_movie_count: value.source_movie_count,
+      sample_count: 201,
+    }))
+  })
+
   it('does not reuse a URL cache entry when the trusted pointer identity changes', async () => {
     const value = profile()
     const changedPointer = {

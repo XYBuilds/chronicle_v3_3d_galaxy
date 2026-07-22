@@ -207,4 +207,17 @@ describe('production rating-emission profile contract', () => {
 
     expect(sha256(hashInput)).toBe('79bb84a97d49bdc8c1fe4260706eca27fbbcca1ac0e46757c13a68d0a89f5dc8')
   })
+
+  it('matches the shared monthly fixture at exact grid nodes and interpolation midpoints', () => {
+    const profile = validateRatingMidrankCdfLutProfile(generateRatingMidrankCdfLutProfile([4, 6, 6, 8]))
+
+    expect(profile.samples[80]).toBe(0.085625)
+    expect(profile.samples[81]).toBe(0.16625)
+    expect(profile.samples[120]).toBe(0.3275)
+    expect(profile.samples[121]).toBe(0.48875)
+    expect(profile.samples[160]).toBeCloseTo(0.569375, 14)
+    expect(profile.samples[161]).toBe(0.65)
+    expect(emissionIntensityFromValidatedRatingMidrankCdfLut(4.025, profile)).toBe(0.1259375)
+    expect(emissionIntensityFromValidatedRatingMidrankCdfLut(6.025, profile)).toBe(0.408125)
+  })
 })

@@ -78,7 +78,7 @@ function parseProfileUrl(value: string, pointer: ActiveFocusEmissionProfilePoint
   if ((url.protocol !== 'http:' && url.protocol !== 'https:') || url.username || url.password || url.hash) {
     throw new Error('[PlanetExport] profileUrl must be http(s) without credentials or fragment')
   }
-  if (!url.pathname.endsWith(`/data/focus-emission-profiles/${pointer.profile_id}.json`)) {
+  if (!url.pathname.endsWith(`/focus-emission-profiles/${pointer.profile_id}.json`)) {
     throw new Error('[PlanetExport] profileUrl must address the pointer immutable .json resource')
   }
   return url.href

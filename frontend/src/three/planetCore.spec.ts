@@ -11,7 +11,7 @@ import {
   planetNoiseSeed,
   resolvePlanetAppearance,
 } from './planetAppearance'
-import { focusEmissionIntensityFromProfile } from './focusEmission'
+import { focusEmissionIntensityFromProfile, type RatingMidrankCdfLutProfile } from './focusEmission'
 import { remapFocusEmissionIntensity } from './focusEmissionTuning'
 import { PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE } from './productionFocusEmissionProfile'
 import {
@@ -210,6 +210,32 @@ describe('planet appearance', () => {
       expect(handle.mesh.scale.z).toBe(2)
       expect(handle.mesh.quaternion.equals(selectionPlanetBaseQuaternion(movie.id))).toBe(true)
       expect(handle.lastRadius).toBeCloseTo(computePlanetOuterRadius(2, 3))
+    } finally {
+      handle.dispose()
+    }
+  })
+
+  it('uses the supplied active profile for the shader scalar without introducing LUT state into the material', () => {
+    const activeProfile: RatingMidrankCdfLutProfile = {
+      ...PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE,
+      samples: Array.from(
+        { length: PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE.samples.length },
+        (_, index) => index === PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE.samples.length - 1 ? 0.65 : 0.005,
+      ),
+    }
+    const handle = createSelectionPlanet(activeProfile)
+    try {
+      handle.setFromMovie(movie, palette, 2)
+
+      expect(handle.lastAppearance?.emissionProfile).toBe(activeProfile)
+      expect(handle.material.uniforms.uEmissionIntensity.value).toBe(
+        remapFocusEmissionIntensity(
+          focusEmissionIntensityFromProfile(movie.vote_average, activeProfile),
+          activeProfile,
+          PLANET_VISUAL_DEFAULTS.focus.emissionTuning,
+        ),
+      )
+      expect(handle.material.uniforms).not.toHaveProperty('uEmissionLut')
     } finally {
       handle.dispose()
     }

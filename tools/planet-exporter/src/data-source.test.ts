@@ -85,6 +85,33 @@ describe('planet export data sources', () => {
   })
 
 
+  it('uses the manifest immutable URL only when it exactly names the active pointer profile', async () => {
+    const directory = await temporaryDirectory()
+    const manifest = path.join(directory, 'manifest.json')
+    const pointer = {
+      profile_id: 'rating-emission-2026-07-a', period: '2026-07', model_version: 'rating-midrank-cdf-lut-v1',
+      curve_sha256: 'a'.repeat(64), source_data_version: 'fixture-v1', source_movie_count: 1,
+      status: 'active', activated_at: '2026-07-22T00:00:00.000Z',
+    }
+    const profileUrl = 'https://assets.example.test/galaxy/focus-emission-profiles/rating-emission-2026-07-a.json'
+    await fs.writeFile(manifest, JSON.stringify({
+      galaxy_data_gzip_url: 'https://assets.example.test/galaxy/releases/v1/galaxy_data.json.gz',
+      data_version: 'fixture-v1', focus_emission_profile: pointer, focus_emission_profile_url: profileUrl,
+    }))
+
+    await expect(chooseDataSource(baseArgs, manifest)).resolves.toMatchObject({
+      kind: 'manifest', focusEmissionProfile: pointer, profileUrl,
+    })
+
+    await fs.writeFile(manifest, JSON.stringify({
+      galaxy_data_gzip_url: 'https://assets.example.test/galaxy/releases/v1/galaxy_data.json.gz',
+      data_version: 'fixture-v1', focus_emission_profile: pointer,
+      focus_emission_profile_url: 'https://assets.example.test/galaxy/focus-emission-profiles/rating-emission-2026-07-b.json',
+    }))
+    await expect(chooseDataSource(baseArgs, manifest)).rejects.toThrow(/focus_emission_profile_url/)
+  })
+
+
   it.each([
     ['missing pointer', undefined],
     ['unknown pointer field', { profile_id: 'rating-emission-2026-07-a', period: '2026-07', model_version: 'rating-midrank-cdf-lut-v1', curve_sha256: 'a'.repeat(64), source_data_version: 'fixture-v1', source_movie_count: 1, status: 'active', activated_at: '2026-07-22T00:00:00.000Z', extra: true }],

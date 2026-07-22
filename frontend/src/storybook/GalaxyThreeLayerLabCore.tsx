@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 
 import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
 import { mountGalaxyScene } from '@/three/scene'
+import { PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE } from '@/three/productionFocusEmissionProfile'
 import type { Meta, Movie } from '@/types/galaxy'
 
 export interface GalaxyThreeLayerLabProps {
@@ -99,7 +100,7 @@ export function GalaxyThreeLayerLabCore(props: GalaxyThreeLayerLabProps) {
   useEffect(() => {
     const el = rootRef.current
     if (!el) return
-    const m = mountGalaxyScene(el, meta, movies)
+    const m = mountGalaxyScene(el, meta, movies, PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE)
     mountHandle.current = m
     return () => {
       mountHandle.current = null

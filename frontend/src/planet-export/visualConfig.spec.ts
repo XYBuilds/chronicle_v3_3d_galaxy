@@ -2,71 +2,51 @@ import { createHash } from 'node:crypto'
 
 import { describe, expect, it } from 'vitest'
 
-import { planetVisualConfigHashInput } from '@/three/planetVisualDefaults'
-import { planetExportVisualConfigInput } from './visualConfig'
+import { LEGACY_FOCUS_EMISSION_FALLBACK_PROVENANCE } from '@/three/focusEmission'
+import { PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE } from '@/three/productionFocusEmissionProfile'
+import { resolvePlanetVisualConfig } from './visualConfig'
 
-type MutableVisualConfig = {
-  schemaVersion: number
-  focus: { emission: { modelVersion: string; ratingLowAnchor: number; ratingHighAnchor: number; intensityMax: number } }
-  lighting: { keyLightIntensity: number }
-  color: { pipelineVersion: string }
+const emission = {
+  curve: PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE,
+  emissionProvenance: LEGACY_FOCUS_EMISSION_FALLBACK_PROVENANCE,
+  emissionSource: 'legacy-fallback' as const,
 }
 
 function sha256(input: string): string {
   return createHash('sha256').update(input).digest('hex')
 }
 
-function parsePlanetVisualConfig(input: string): MutableVisualConfig {
-  return JSON.parse(input) as MutableVisualConfig
-}
+describe('canonical resolved planet visual configuration', () => {
+  it('is stable for the same resolved values and includes the curve and provenance', () => {
+    const first = resolvePlanetVisualConfig({ ...emission, bloomEnabled: true })
+    const second = resolvePlanetVisualConfig({ ...emission, bloomEnabled: true })
 
-describe('planet export visual configuration', () => {
-  it('returns the shared production config unchanged across exporter framing choices', () => {
-    const planetConfigInput = planetVisualConfigHashInput()
-
-    expect(planetExportVisualConfigInput).toHaveLength(2)
-    expect(planetExportVisualConfigInput(planetConfigInput, 3)).toBe(planetConfigInput)
-    expect(planetExportVisualConfigInput(planetConfigInput, 2)).toBe(planetConfigInput)
-    expect(planetExportVisualConfigInput(planetConfigInput, 4)).toBe(planetConfigInput)
-    expect(planetExportVisualConfigInput(planetConfigInput, 3)).toBe(
-      planetExportVisualConfigInput(planetVisualConfigHashInput(), 3),
-    )
+    expect(first.hashInput).toBe(second.hashInput)
+    expect(sha256(first.hashInput)).toBe(sha256(second.hashInput))
+    expect(first.payload.emission_profile).toEqual({ ...LEGACY_FOCUS_EMISSION_FALLBACK_PROVENANCE, source: 'legacy-fallback' })
+    expect(first.payload.visual).toMatchObject({
+      focus: { emission: PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE, bloom: { enabled: true } },
+      lighting: { keyLightIntensity: 10, flatShadingMix: 1 },
+    })
   })
 
-  it('changes the exporter SHA-256 when a versioned visual input changes', () => {
-    const currentPlanetConfig = planetVisualConfigHashInput()
-    const currentPageConfig = planetExportVisualConfigInput(currentPlanetConfig, 3)
+  it.each([
+    ['lightness', { lightness: 0.5 }],
+    ['key light', { keyLightIntensity: 2 }],
+    ['direction', { direction: [0, 1, 0] as [number, number, number] }],
+    ['flat shaping', { flatShadingMix: 0.5 }],
+    ['Bloom', { bloomEnabled: false }],
+  ])('changes hash when %s changes', (_name, override) => {
+    const baseline = resolvePlanetVisualConfig({ ...emission, bloomEnabled: true })
+    const changed = resolvePlanetVisualConfig({ ...emission, bloomEnabled: true, ...override })
+    expect(changed.hashInput).not.toBe(baseline.hashInput)
+  })
 
-    const currentHash = sha256(currentPageConfig)
-    const repeatedHash = sha256(
-      planetExportVisualConfigInput(planetVisualConfigHashInput(), 3),
-    )
-
-    expect(repeatedHash).toBe(currentHash)
-    expect(currentHash).not.toBe('28407a6ebef33b2749fdd5531158540f2c7ff5214f647f0a7de464b087185dcb')
-
-    const schemaChanged = parsePlanetVisualConfig(currentPlanetConfig)
-    schemaChanged.schemaVersion = 4
-    expect(sha256(planetExportVisualConfigInput(JSON.stringify(schemaChanged), 3))).not.toBe(currentHash)
-
-    const emissionChanged = parsePlanetVisualConfig(currentPlanetConfig)
-    emissionChanged.focus.emission.intensityMax = 0.61
-    expect(sha256(planetExportVisualConfigInput(JSON.stringify(emissionChanged), 3))).not.toBe(sha256(currentPageConfig))
-
-    const anchorChanged = parsePlanetVisualConfig(currentPlanetConfig)
-    anchorChanged.focus.emission.ratingHighAnchor = 8.5
-    expect(sha256(planetExportVisualConfigInput(JSON.stringify(anchorChanged), 3))).not.toBe(sha256(currentPageConfig))
-
-    const modelChanged = parsePlanetVisualConfig(currentPlanetConfig)
-    modelChanged.focus.emission.modelVersion = 'vote-average-power-clamped-v2'
-    expect(sha256(planetExportVisualConfigInput(JSON.stringify(modelChanged), 3))).not.toBe(sha256(currentPageConfig))
-
-    const keyChanged = parsePlanetVisualConfig(currentPlanetConfig)
-    keyChanged.lighting.keyLightIntensity = 1.01
-    expect(sha256(planetExportVisualConfigInput(JSON.stringify(keyChanged), 3))).not.toBe(sha256(currentPageConfig))
-
-    const pipelineChanged = parsePlanetVisualConfig(currentPlanetConfig)
-    pipelineChanged.color.pipelineVersion = 'oklch-local-base-linear-emission-fixed-key-single-srgb-v2'
-    expect(sha256(planetExportVisualConfigInput(JSON.stringify(pipelineChanged), 3))).not.toBe(sha256(currentPageConfig))
+  it('does not choose a production profile when a caller has not resolved one', () => {
+    expect(() => resolvePlanetVisualConfig({
+      bloomEnabled: true,
+      emissionProvenance: LEGACY_FOCUS_EMISSION_FALLBACK_PROVENANCE,
+      emissionSource: 'legacy-fallback',
+    } as never)).toThrow()
   })
 })

@@ -1,4 +1,4 @@
-import type { ActiveFocusEmissionProfilePointer, FocusEmissionProfileProvenance } from '@/types/galaxy'
+import type { ActiveFocusEmissionProfilePointer, FocusEmissionProfileProvenance } from '../types/galaxy.js'
 
 export const FOCUS_EMISSION_MODEL_VERSION = 'vote-average-anchored-smoothstep-v1' as const
 export const RATING_MIDRANK_CDF_LUT_MODEL_VERSION = 'rating-midrank-cdf-lut-v1' as const

@@ -9,14 +9,46 @@ export type DataSource = {
   pageUrl?: string
   bytes?: Buffer
   version?: string
+  focusEmissionProfile?: ActiveProfilePointer
+  profileUrl?: string
+  allowLegacyProfile?: boolean
 }
 
-type Manifest = { galaxy_data_gzip_url?: unknown; version?: unknown }
+export type ActiveProfilePointer = {
+  profile_id: string
+  period: string
+  model_version: string
+  curve_sha256: string
+  source_data_version: string
+  source_movie_count: number
+  status: 'active'
+  activated_at: string
+}
+
+type Manifest = { galaxy_data_gzip_url?: unknown; version?: unknown; data_version?: unknown; focus_emission_profile?: unknown }
+
+function activeProfilePointer(raw: unknown): ActiveProfilePointer {
+  if (raw === null || Array.isArray(raw) || typeof raw !== 'object') throw new Error('focus_emission_profile missing')
+  const pointer = raw as Record<string, unknown>
+  const allowed = new Set(['profile_id', 'period', 'model_version', 'curve_sha256', 'source_data_version', 'source_movie_count', 'status', 'activated_at'])
+  if (Object.keys(pointer).some((key) => !allowed.has(key))) throw new Error('focus_emission_profile has unknown field')
+  if (
+    typeof pointer.profile_id !== 'string' || pointer.profile_id.trim() !== pointer.profile_id || !/^[a-z0-9][a-z0-9-]{2,127}$/.test(pointer.profile_id)
+    || typeof pointer.period !== 'string' || !/^\d{4}-(0[1-9]|1[0-2])$/.test(pointer.period)
+    || pointer.model_version !== 'rating-midrank-cdf-lut-v1'
+    || typeof pointer.curve_sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(pointer.curve_sha256)
+    || typeof pointer.source_data_version !== 'string' || pointer.source_data_version.trim() !== pointer.source_data_version || !pointer.source_data_version
+    || !Number.isSafeInteger(pointer.source_movie_count) || (pointer.source_movie_count as number) <= 0
+    || pointer.status !== 'active'
+    || typeof pointer.activated_at !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(pointer.activated_at) || !Number.isFinite(Date.parse(pointer.activated_at))
+  ) throw new Error('focus_emission_profile invalid')
+  return pointer as ActiveProfilePointer
+}
 
 export async function chooseDataSource(args: ExportArgs, manifestPath: string): Promise<DataSource> {
   if (args.dataFile) {
     try {
-      return { kind: 'file', label: `file:${args.dataFile}`, bytes: await fs.readFile(args.dataFile) }
+      return { kind: 'file', label: `file:${args.dataFile}`, bytes: await fs.readFile(args.dataFile), allowLegacyProfile: true }
     } catch (error) {
       throw new CliError(`unable to read --data-file: ${error instanceof Error ? error.message : String(error)}`, EXIT_CODES.data)
     }
@@ -26,11 +58,24 @@ export async function chooseDataSource(args: ExportArgs, manifestPath: string): 
     const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8')) as Manifest
     if (typeof manifest.galaxy_data_gzip_url !== 'string') throw new Error('galaxy_data_gzip_url missing')
     const url = new URL(manifest.galaxy_data_gzip_url)
-    if (!/^https?:$/.test(url.protocol) || !/\.json(?:\.gz)?$/i.test(url.pathname)) throw new Error('galaxy_data_gzip_url invalid')
-    return { kind: 'manifest', label: manifest.galaxy_data_gzip_url, pageUrl: manifest.galaxy_data_gzip_url, version: typeof manifest.version === 'string' ? manifest.version : undefined }
+    if (!/^https?:$/.test(url.protocol) || url.username || url.password || url.hash || !/\.json(?:\.gz)?$/i.test(url.pathname)) throw new Error('galaxy_data_gzip_url invalid')
+    const pointer = activeProfilePointer(manifest.focus_emission_profile)
+    const profileUrl = new URL(`data/focus-emission-profiles/${pointer.profile_id}.json`, new URL(manifest.galaxy_data_gzip_url)).toString()
+    return {
+      kind: 'manifest',
+      label: manifest.galaxy_data_gzip_url,
+      pageUrl: manifest.galaxy_data_gzip_url,
+      version: typeof manifest.data_version === 'string' ? manifest.data_version : typeof manifest.version === 'string' ? manifest.version : undefined,
+      focusEmissionProfile: pointer,
+      profileUrl,
+    }
   } catch (error) {
     throw new CliError(`unable to load data manifest: ${error instanceof Error ? error.message : String(error)}`, EXIT_CODES.data)
   }
+}
+
+export function isLegacyProfileCompatibilityFixture(source: DataSource): boolean {
+  return source.kind === 'file'
 }
 
 export function fileDataPlugin(source: DataSource): Plugin | undefined {

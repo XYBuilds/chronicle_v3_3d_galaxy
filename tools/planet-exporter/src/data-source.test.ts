@@ -3,7 +3,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import type { ExportArgs } from './args.js'
-import { chooseDataSource, outputMetadataPath, pageDataUrl } from './data-source.js'
+import { chooseDataSource, isLegacyProfileCompatibilityFixture, outputMetadataPath, pageDataUrl } from './data-source.js'
 
 const temporaryDirectories: string[] = []
 
@@ -44,6 +44,17 @@ describe('planet export data sources', () => {
     expect(pageDataUrl('http://127.0.0.1:4173/', source)).toBe('http://127.0.0.1:4173/__planet_export_data.json.gz')
   })
 
+  it('treats every explicit file source as a legacy compatibility fixture, never a URL source', async () => {
+    const directory = await temporaryDirectory()
+    const dataFile = path.join(directory, 'fixture.json')
+    await fs.writeFile(dataFile, '{"fixture":true}')
+
+    const chosenFile = await chooseDataSource({ ...baseArgs, dataFile }, path.join(directory, 'missing-manifest.json'))
+    expect(isLegacyProfileCompatibilityFixture(chosenFile)).toBe(true)
+    expect(isLegacyProfileCompatibilityFixture({ kind: 'file', label: 'historical fixture', bytes: Buffer.from('{}') })).toBe(true)
+    expect(isLegacyProfileCompatibilityFixture({ kind: 'url', label: 'https://example.test/data.json.gz', pageUrl: 'https://example.test/data.json.gz' })).toBe(false)
+  })
+
   it('uses data-url before reading the manifest', async () => {
     const source = await chooseDataSource({ ...baseArgs, dataUrl: 'https://example.test/explicit.json.gz' }, 'missing.json')
     expect(source).toMatchObject({
@@ -59,6 +70,11 @@ describe('planet export data sources', () => {
     await fs.writeFile(manifest, JSON.stringify({
       galaxy_data_gzip_url: 'https://example.test/versioned.json.gz',
       version: 'fixture-v1',
+      focus_emission_profile: {
+        profile_id: 'rating-emission-2026-07-a', period: '2026-07', model_version: 'rating-midrank-cdf-lut-v1',
+        curve_sha256: 'a'.repeat(64), source_data_version: 'fixture-v1', source_movie_count: 1,
+        status: 'active', activated_at: '2026-07-22T00:00:00.000Z',
+      },
     }))
 
     await expect(chooseDataSource(baseArgs, manifest)).resolves.toMatchObject({
@@ -68,6 +84,17 @@ describe('planet export data sources', () => {
     })
   })
 
+
+  it.each([
+    ['missing pointer', undefined],
+    ['unknown pointer field', { profile_id: 'rating-emission-2026-07-a', period: '2026-07', model_version: 'rating-midrank-cdf-lut-v1', curve_sha256: 'a'.repeat(64), source_data_version: 'fixture-v1', source_movie_count: 1, status: 'active', activated_at: '2026-07-22T00:00:00.000Z', extra: true }],
+    ['invalid activation time', { profile_id: 'rating-emission-2026-07-a', period: '2026-07', model_version: 'rating-midrank-cdf-lut-v1', curve_sha256: 'a'.repeat(64), source_data_version: 'fixture-v1', source_movie_count: 1, status: 'active', activated_at: 'not-an-iso-time' }],
+  ])('fails closed for manifest %s', async (_label, focus_emission_profile) => {
+    const directory = await temporaryDirectory()
+    const manifest = path.join(directory, 'manifest.json')
+    await fs.writeFile(manifest, JSON.stringify({ galaxy_data_gzip_url: 'https://example.test/versioned.json.gz', focus_emission_profile }))
+    await expect(chooseDataSource(baseArgs, manifest)).rejects.toThrow(/focus_emission_profile/)
+  })
   it('derives the metadata sidecar path from the absolute PNG path', () => {
     expect(outputMetadataPath(path.join('relative', 'planet.png'))).toBe(`${path.resolve('relative', 'planet.png')}.render.json`)
   })

@@ -20,8 +20,7 @@ import {
   type FocusEmissionCurve,
   type RatingMidrankCdfLutProfile,
 } from './focusEmission'
-import { resolvePlanetAppearance, resolvePlanetAppearanceWithEmissionProfile } from './planetAppearance'
-import { PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE } from './productionFocusEmissionProfile'
+import { resolvePlanetAppearance } from './planetAppearance'
 import type { Movie } from '@/types/galaxy'
 
 const curve: FocusEmissionCurve = {
@@ -94,18 +93,23 @@ describe('Focus anchored smoothstep emission', () => {
 })
 
 describe('planet appearance emission profiles', () => {
-  it('keeps the two-argument production resolver on the approved CDF/LUT profile', () => {
-    expect(resolvePlanetAppearance).toHaveLength(2)
-    expect(resolvePlanetAppearance(appearanceMovie, { Drama: '#336699' }).emissionCurve).toEqual(PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE)
+  it('requires an explicit active profile at the production resolver boundary', () => {
+    expect(resolvePlanetAppearance).toHaveLength(3)
+    expect(resolvePlanetAppearance(appearanceMovie, { Drama: '#336699' }, diagnosticProfile).emissionCurve).toBe(diagnosticProfile)
+
+    expect(() => {
+      // @ts-expect-error Production appearance resolution cannot omit the verified profile.
+      resolvePlanetAppearance(appearanceMovie, { Drama: '#336699' })
+    }).toBeTypeOf('function')
   })
 
   it('changes only emission intensity across diagnostic ratings', () => {
-    const low = resolvePlanetAppearanceWithEmissionProfile(
+    const low = resolvePlanetAppearance(
       { ...appearanceMovie, vote_average: 4.5 },
       { Drama: '#336699' },
       diagnosticProfile,
     )
-    const high = resolvePlanetAppearanceWithEmissionProfile(
+    const high = resolvePlanetAppearance(
       { ...appearanceMovie, vote_average: 7.5 },
       { Drama: '#336699' },
       diagnosticProfile,
@@ -118,7 +122,7 @@ describe('planet appearance emission profiles', () => {
   })
 
   it('uses a supplied diagnostic profile without calculating distribution statistics', () => {
-    const appearance = resolvePlanetAppearanceWithEmissionProfile(
+    const appearance = resolvePlanetAppearance(
       appearanceMovie,
       { Drama: '#336699' },
       diagnosticProfile,

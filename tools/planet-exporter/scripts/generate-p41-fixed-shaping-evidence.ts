@@ -298,8 +298,8 @@ function assertArtifactDiagnostics(artifact: DiagnosticArtifact, candidate: P41F
   assert(diagnostics.emission === P41_4_LOW_EMISSION_CURVE.intensityMin, `${artifact.png} emission must stay low and rating-independent`)
   const profile = profileFor(artifact)
   assert(profile.overrideProvenance === 'phase41-diagnostic-override', `${artifact.png} must record isolated override provenance`)
-  assert(text(profile.productionVisualConfigInput, `${artifact.png} production config`) !== text(profile.resolvedVisualConfigInput, `${artifact.png} resolved config`), `${artifact.png} override must not claim a production configuration`)
-  assert(profile.productionSource === 'PLANET_VISUAL_DEFAULTS', `${artifact.png} must retain production source provenance`)
+  assert(text(profile.resolvedVisualConfigInput, `${artifact.png} resolved config`) === text(diagnostics.visual_config_hash_input, `${artifact.png} canonical renderer config`), `${artifact.png} diagnostics must carry the same canonical resolved configuration`)
+  assert(profile.productionSource === 'resolved-emission-profile', `${artifact.png} must retain resolved-emission provenance`)
 }
 
 function assertMatrix(experiment: P41FixedShapingExperiment, artifacts: readonly DiagnosticArtifact[]): void {

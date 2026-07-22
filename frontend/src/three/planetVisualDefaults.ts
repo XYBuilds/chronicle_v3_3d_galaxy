@@ -2,6 +2,7 @@ import {
   DEFAULT_GALAXY_U_ACTIVE_SIZE_MUL,
   DEFAULT_GALAXY_U_SIZE_SCALE,
 } from './galaxyUniformDefaults.js'
+import { stableFocusEmissionJson } from './focusEmission.js'
 import { PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE } from './productionFocusEmissionProfile.js'
 
 const PHI = (1 + Math.sqrt(5)) / 2
@@ -48,8 +49,8 @@ export const PLANET_VISUAL_DEFAULTS = {
   focus: {
     lightness: 0.66,
     chroma: 0.15,
-    emission: PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE,
-    /** Final rating-response shaping applied after the immutable production CDF/LUT. */
+    /** Emission curve is supplied only by a verified active or explicit legacy profile at the consumer boundary. */
+    /** Final rating-response shaping applied after the resolved emission profile. */
     emissionTuning: {
       exponent: 3,
       intensityMin: 0.005,
@@ -100,15 +101,24 @@ export function productionPlanetBloomParams(enabled: boolean = PLANET_VISUAL_DEF
   }
 }
 
-/** Stable JSON input for CLI render metadata hashing. */
-export function planetVisualConfigHashInput(bloomEnabled: boolean = PLANET_VISUAL_DEFAULTS.focus.bloom.enabled): string {
+/**
+ * P39-only compatibility hash. It deliberately embeds the frozen profile actually rendered by
+ * historical evidence and is forbidden from normal production/browser export paths.
+ */
+export function p3911LegacyFrozenProfileVisualConfigHashInput(bloomEnabled: boolean = PLANET_VISUAL_DEFAULTS.focus.bloom.enabled): string {
   if (typeof bloomEnabled !== 'boolean') throw new Error('[PlanetVisualDefaults] bloom enabled must be boolean')
-  if (bloomEnabled === PLANET_VISUAL_DEFAULTS.focus.bloom.enabled) return JSON.stringify(PLANET_VISUAL_DEFAULTS)
-  return JSON.stringify({
-    ...PLANET_VISUAL_DEFAULTS,
-    focus: {
-      ...PLANET_VISUAL_DEFAULTS.focus,
-      bloom: productionPlanetBloomParams(bloomEnabled),
+  return stableFocusEmissionJson({
+    legacyCompatibility: 'p39.11-frozen-profile-fixture',
+    visual: {
+      ...PLANET_VISUAL_DEFAULTS,
+      focus: {
+        ...PLANET_VISUAL_DEFAULTS.focus,
+        emission: PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE,
+        bloom: {
+          ...PLANET_VISUAL_DEFAULTS.focus.bloom,
+          ...productionPlanetBloomParams(bloomEnabled),
+        },
+      },
     },
   })
 }

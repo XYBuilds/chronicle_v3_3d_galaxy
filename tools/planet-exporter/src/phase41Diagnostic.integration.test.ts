@@ -36,6 +36,7 @@ describe('Phase 41 Vite diagnostic entry', () => {
       radius: bloom.radius,
       threshold: bloom.threshold,
     })
-    expect(profile.bloom).toEqual({ enabled: false, strength: 0.01, radius: 1, threshold: 0 })
+    expect(render.visualDiagnostics.visual_config_hash_input).toBe(render.visualHash)
+    expect(render.visualDiagnostics.visual_config_payload).toEqual(expect.any(Object))
   }, 120_000)
 })

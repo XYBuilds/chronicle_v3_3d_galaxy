@@ -1,7 +1,7 @@
 import { PERLIN_BLOOM_COMPOSITION, type PerlinBloomParams } from '@/three/perlinBloomContract'
-import { planetVisualConfigHashInput } from '@/three/planetVisualDefaults'
+import { p3911LegacyFrozenProfileVisualConfigHashInput } from '@/three/planetVisualDefaults'
 import { parsePlanetExportRequest, type PlanetExportRequest } from './request'
-import { renderP3911DiagnosticPlanetImage, type PlanetRenderOptions, type PlanetRenderResult } from './renderPlanetImage'
+import { renderP3911DiagnosticPlanetImage, type P3911LegacyPlanetRenderOptions, type PlanetRenderResult } from './renderPlanetImage'
 import { planetExportVisualConfigInput } from './visualConfig'
 
 export const P3910_BLOOM_STRENGTH_ZERO = 0 as const
@@ -44,14 +44,14 @@ export function p3910BloomStrengthZeroVisualConfigInput(productionVisualConfig: 
   })
 }
 
-export function p3910ProductionVisualConfigInput(sizeRoot: PlanetRenderOptions['sizeRoot']): string {
-  return planetExportVisualConfigInput(planetVisualConfigHashInput(), sizeRoot)
+export function p3910ProductionVisualConfigInput(sizeRoot: P3911LegacyPlanetRenderOptions['sizeRoot']): string {
+  return planetExportVisualConfigInput(p3911LegacyFrozenProfileVisualConfigHashInput(), sizeRoot)
 }
 
 /** Dedicated historical renderer that changes only the P39.10 strength-zero evidence parameter. */
-export function renderP3910BloomStrengthZeroPlanetImage(options: PlanetRenderOptions): PlanetRenderResult {
+export function renderP3910BloomStrengthZeroPlanetImage(options: P3911LegacyPlanetRenderOptions): PlanetRenderResult {
   if (!options.bloom || options.renderMode !== 'shader') {
     throw new Error('[P39.10 diagnostics] strength-zero proof requires Bloom ON shader rendering')
   }
-  return renderP3911DiagnosticPlanetImage({ ...options, bloom: true, bloomParamsOverride: p3910BloomStrengthZeroParams() })
+  return renderP3911DiagnosticPlanetImage({ ...options, bloom: true, bloomParamsOverride: p3910BloomStrengthZeroParams(), legacyProfileCompatibility: 'p39.11-frozen-profile-fixture' })
 }

@@ -9,8 +9,8 @@ import {
 } from './focusEmission.js'
 
 /**
- * Frozen production input approved by the Phase 41.5.5 human Gate.  This is a
- * build-time profile, not a runtime read of the galaxy gzip or exporter output.
+ * Phase 41 frozen LUT retained only as an explicit legacy compatibility fixture.
+ * Active monthly runtime emission profiles are fetched and verified from their manifest pointer.
  */
 export const PRODUCTION_FOCUS_EMISSION_CDF_LUT_CONTRACT = {
   contractVersion: 'p41.8-production-focus-emission-cdf-lut-v1',

@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest'
 
 import { focusEmissionIntensityFromProfile } from './focusEmission'
 import { PLANET_VISUAL_DEFAULTS } from './planetVisualDefaults'
+import { PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE } from './productionFocusEmissionProfile'
 
 const source = readFileSync(fileURLToPath(new URL('./shaders/perlin.frag.glsl', import.meta.url)), 'utf8')
 
@@ -77,7 +78,7 @@ describe('Perlin linear-emission shader contract', () => {
   it('keeps the configured Key fixed while rating-derived emission brightens dark and lit sides without HDR clipping', () => {
     const base: LinearRgb = [0.25, 0.5, 0.75]
     const voteAverages = [0, 5.5, 6.5, 10] as const
-    const curve = PLANET_VISUAL_DEFAULTS.focus.emission
+    const curve = PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE
     const { intensityMin, intensityMax } = curve
     const keyLightIntensity = PLANET_VISUAL_DEFAULTS.lighting.keyLightIntensity
     const emissions = voteAverages.map((voteAverage) =>

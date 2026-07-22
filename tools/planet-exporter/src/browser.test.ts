@@ -3,7 +3,8 @@ import { createHash } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
 
 import type { ExportArgs } from './args.js'
-import { metadataFor, parsePhase41VisualDiagnostics, parseVisualDiagnostics, type BrowserRender } from './browser.js'
+import { stableFocusEmissionJson } from '../../../frontend/src/three/focusEmission.js'
+import { assertCanonicalVisualConfig, metadataFor, parsePhase41VisualDiagnostics, parseVisualDiagnostics, type BrowserRender } from './browser.js'
 import type { DataSource } from './data-source.js'
 
 const args: ExportArgs = {
@@ -98,14 +99,29 @@ describe('visual diagnostics parser', () => {
     expect(() => parseVisualDiagnostics(JSON.stringify(candidate))).toThrow(/visual diagnostics/)
   })
 
-  it('rejects malformed JSON', () => {
-    expect(() => parseVisualDiagnostics('{')).toThrow('invalid visual diagnostics JSON')
+  it('requires a complete canonical payload and an exact dataset hash on current exporter paths', () => {
+    const payload = { resolved: { bloom: true, emission: 'active-profile' } }
+    const canonicalInput = stableFocusEmissionJson(payload)
+    const canonical = { ...visualDiagnostics, visual_config_payload: payload, visual_config_hash_input: canonicalInput }
+    expect(() => assertCanonicalVisualConfig({ ...canonical, visual_config_payload: undefined }, canonicalInput, 'planet export')).toThrow(/visual_config_payload/)
+    expect(() => assertCanonicalVisualConfig({ ...canonical, visual_config_hash_input: '' }, '', 'planet export')).toThrow(/visual_config_hash_input/)
+    expect(() => assertCanonicalVisualConfig(canonical, 'different-input', 'planet export')).toThrow(/dataset visual hash disagrees/)
   })
-})
 
-describe('Phase 41 visual diagnostics parser', () => {
+  it('rejects a payload altered behind unchanged visual-config aliases', () => {
+    const payload = { resolved: { bloom: true, emission: 'active-profile' } }
+    const canonicalInput = stableFocusEmissionJson(payload)
+    const tampered = { ...visualDiagnostics, visual_config_payload: { resolved: { bloom: false, emission: 'active-profile' } }, visual_config_hash_input: canonicalInput }
+    expect(() => assertCanonicalVisualConfig(tampered, canonicalInput, 'planet export')).toThrow(/does not match its canonical payload/)
+  })
+
+  const phase41Payload = { resolved: { diagnostic: 'phase41' } }
+  const phase41HashInput = stableFocusEmissionJson(phase41Payload)
   const phase41 = {
     ...visualDiagnostics,
+    profile_provenance: { profile_id: 'fixture-profile', period: '2026-07', model_version: 'rating-midrank-cdf-lut-v1', curve_sha256: 'a'.repeat(64), source_data_version: 'fixture', source_movie_count: 1, source: 'active' },
+    visual_config_payload: phase41Payload,
+    visual_config_hash_input: phase41HashInput,
     phase41_resolved_profile: {
       curve: { modelVersion: 'vote-average-power-clamped-v1', exponent: 3, intensityMin: 0.06, intensityMax: 0.6 },
       lightness: 0.55,
@@ -114,8 +130,9 @@ describe('Phase 41 visual diagnostics parser', () => {
       direction: [0.7, 0.7, -0.14],
       flatShadingMix: 0.8,
       bloom: visualDiagnostics.bloom,
-      productionVisualConfigInput: 'production-input',
-      resolvedVisualConfigInput: 'resolved-input',
+      productionVisualConfigInput: phase41HashInput,
+      resolvedVisualConfigInput: phase41HashInput,
+      emissionSource: 'active',
       overrideProvenance: 'none',
       camera: visualDiagnostics.camera,
       seed: visualDiagnostics.noise.seed,
@@ -124,26 +141,43 @@ describe('Phase 41 visual diagnostics parser', () => {
   }
 
   it('requires the resolved profile to agree with renderer-owned values', () => {
-    expect(parsePhase41VisualDiagnostics(JSON.stringify(phase41))).toEqual(phase41)
+    expect(parsePhase41VisualDiagnostics(JSON.stringify(phase41), phase41.visual_config_hash_input)).toEqual(phase41)
+    expect(() => parsePhase41VisualDiagnostics(JSON.stringify({ ...phase41, visual_config_payload: undefined }), phase41.visual_config_hash_input)).toThrow(/visual_config_payload/)
+    expect(() => parsePhase41VisualDiagnostics(JSON.stringify({ ...phase41, visual_config_hash_input: '' }), '')).toThrow(/visual_config_hash_input/)
+    expect(() => parsePhase41VisualDiagnostics(JSON.stringify(phase41), 'different-input')).toThrow(/dataset visual hash disagrees/)
     expect(() => parsePhase41VisualDiagnostics(JSON.stringify({
       ...phase41,
       phase41_resolved_profile: { ...phase41.phase41_resolved_profile, curve: { ...phase41.phase41_resolved_profile.curve, exponent: 2 } },
-    }))).toThrow(/curve disagrees/)
+    }), phase41.visual_config_hash_input)).toThrow(/curve disagrees/)
     expect(() => parsePhase41VisualDiagnostics(JSON.stringify({
       ...phase41,
       phase41_resolved_profile: { ...phase41.phase41_resolved_profile, bloom: { ...visualDiagnostics.bloom, strength: 0 } },
-    }))).toThrow(/Bloom disagrees/)
+    }), phase41.visual_config_hash_input)).toThrow(/Bloom disagrees/)
+    const nonEmissionOverride = {
+      ...phase41,
+      phase41_resolved_profile: {
+        ...phase41.phase41_resolved_profile,
+        overrideProvenance: 'phase41-diagnostic-override',
+      },
+    }
+    expect(parsePhase41VisualDiagnostics(JSON.stringify(nonEmissionOverride), phase41.visual_config_hash_input)).toEqual(nonEmissionOverride)
+    expect(() => parsePhase41VisualDiagnostics(JSON.stringify({
+      ...nonEmissionOverride,
+      phase41_resolved_profile: { ...nonEmissionOverride.phase41_resolved_profile, emissionSource: 'diagnostic-override' },
+    }), phase41.visual_config_hash_input)).toThrow(/emission source disagrees/)
     const anchored = {
       ...phase41,
       emission: 0.3,
       emission_curve: { model_version: 'vote-average-anchored-smoothstep-v1', rating_low_anchor: 4.5, rating_high_anchor: 8.2, intensity_min: 0.005, intensity_max: 0.65 },
+      profile_provenance: { ...phase41.profile_provenance, source: 'diagnostic-override' },
       phase41_resolved_profile: {
         ...phase41.phase41_resolved_profile,
         curve: { modelVersion: 'vote-average-anchored-smoothstep-v1', ratingLowAnchor: 4.5, ratingHighAnchor: 8.2, intensityMin: 0.005, intensityMax: 0.65 },
+        emissionSource: 'diagnostic-override',
         overrideProvenance: 'phase41-diagnostic-override',
       },
     }
-    expect(parsePhase41VisualDiagnostics(JSON.stringify(anchored))).toEqual(anchored)
+    expect(parsePhase41VisualDiagnostics(JSON.stringify(anchored), anchored.visual_config_hash_input)).toEqual(anchored)
   })
 })
 

@@ -24,7 +24,7 @@ import {
 } from './planetSizing'
 import { createSelectionPlanet } from './planet'
 import { selectionPlanetBaseQuaternion } from './selectionPlanetRotation'
-import { PLANET_VISUAL_DEFAULTS, planetVisualConfigHashInput } from './planetVisualDefaults'
+import { PLANET_VISUAL_DEFAULTS, p3911LegacyFrozenProfileVisualConfigHashInput } from './planetVisualDefaults'
 
 const movie: Movie = {
   id: 157336,
@@ -92,7 +92,6 @@ describe('planet visual defaults', () => {
       focus: {
         lightness: 0.66,
         chroma: 0.15,
-        emission: PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE,
         emissionTuning: { exponent: 3, intensityMin: 0.005, intensityMax: 0.66 },
         bloom: {
           composition: 'pure-bloom-delta-v1',
@@ -124,12 +123,14 @@ describe('planet visual defaults', () => {
         depthTest: true,
       },
     })
-    expect(JSON.parse(planetVisualConfigHashInput())).toEqual(PLANET_VISUAL_DEFAULTS)
+    const legacyHashPayload = JSON.parse(p3911LegacyFrozenProfileVisualConfigHashInput())
+    expect(legacyHashPayload.legacyCompatibility).toBe('p39.11-frozen-profile-fixture')
+    expect(legacyHashPayload.visual.focus.emission).toEqual(PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE)
   })
 })
 
 describe('Focus production CDF/LUT emission', () => {
-  const curve = PLANET_VISUAL_DEFAULTS.focus.emission
+  const curve = PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE
 
   it('clamps finite ratings to the exact approved endpoints', () => {
     expect(focusEmissionIntensityFromProfile(0, curve)).toBe(0.005)
@@ -150,18 +151,18 @@ describe('Focus production CDF/LUT emission', () => {
 
 describe('planet appearance', () => {
   it('uses fixed Focus lightness, chroma, and key light from shared defaults', () => {
-    const appearance = resolvePlanetAppearance(movie, palette)
+    const appearance = resolvePlanetAppearance(movie, palette, PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE)
 
-    expect(resolvePlanetAppearance).toHaveLength(2)
+    expect(resolvePlanetAppearance).toHaveLength(3)
     expect(appearance.lightness).toBe(PLANET_VISUAL_DEFAULTS.focus.lightness)
     expect(appearance.chroma).toBe(PLANET_VISUAL_DEFAULTS.focus.chroma)
     expect(appearance.keyLightIntensity).toBe(PLANET_VISUAL_DEFAULTS.lighting.keyLightIntensity)
-    expect(appearance.emissionIntensity).toBe(focusEmissionIntensityFromProfile(movie.vote_average, PLANET_VISUAL_DEFAULTS.focus.emission))
+    expect(appearance.emissionIntensity).toBe(focusEmissionIntensityFromProfile(movie.vote_average, PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE))
   })
 
   it('is deterministic for noise, genres, hues, fixed appearance, emission, and base pose', () => {
-    const a = resolvePlanetAppearance(movie, palette)
-    const b = resolvePlanetAppearance(movie, palette)
+    const a = resolvePlanetAppearance(movie, palette, PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE)
+    const b = resolvePlanetAppearance(movie, palette, PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE)
 
     expect(planetNoiseSeed(movie.id)).toBe(planetNoiseSeed(movie.id))
     const randomA = createPlanetRandom(planetNoiseSeed(movie.id))
@@ -179,7 +180,7 @@ describe('planet appearance', () => {
   })
 
   it('writes fixed Focus L/C/key uniforms and rating-derived emission', () => {
-    const handle = createSelectionPlanet()
+    const handle = createSelectionPlanet(PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE)
     try {
       handle.setFromMovie(movie, palette, 2)
 
@@ -190,8 +191,8 @@ describe('planet appearance', () => {
       expect(handle.material.uniforms.uPerlinChroma.value).toBe(PLANET_VISUAL_DEFAULTS.focus.chroma)
       expect(handle.material.uniforms.uEmissionIntensity.value).toBe(
         remapFocusEmissionIntensity(
-          focusEmissionIntensityFromProfile(movie.vote_average, PLANET_VISUAL_DEFAULTS.focus.emission),
-          PLANET_VISUAL_DEFAULTS.focus.emission,
+          focusEmissionIntensityFromProfile(movie.vote_average, PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE),
+          PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE,
           PLANET_VISUAL_DEFAULTS.focus.emissionTuning,
         ),
       )
@@ -215,7 +216,7 @@ describe('planet appearance', () => {
   })
 
   it('keeps fixed Lightness, chroma, Key, direction, flatness, and Bloom stable while emission follows rating', () => {
-    const handle = createSelectionPlanet()
+    const handle = createSelectionPlanet(PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE)
     try {
       const uniforms = [4, 4.5, 5.5, 6.5, 7.5, 8.2, 9.5].map((voteAverage) => {
         handle.setFromMovie({ ...movie, vote_average: voteAverage }, palette, 2)
@@ -238,8 +239,8 @@ describe('planet appearance', () => {
       const emissions = uniforms.map(({ emission }) => emission)
       expect(emissions).toEqual(ratings.map((rating) =>
         remapFocusEmissionIntensity(
-          focusEmissionIntensityFromProfile(rating, PLANET_VISUAL_DEFAULTS.focus.emission),
-          PLANET_VISUAL_DEFAULTS.focus.emission,
+          focusEmissionIntensityFromProfile(rating, PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE),
+          PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE,
           PLANET_VISUAL_DEFAULTS.focus.emissionTuning,
         ),
       ))

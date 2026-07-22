@@ -1,7 +1,7 @@
 import { loadGalaxyData } from '@/utils/loadGalaxyData'
 import { findExportMovie, indexGalaxyMovies } from './request'
 import { computeGlobalPlanetRadius } from './sizing'
-import { planetVisualConfigHashInput } from '@/three/planetVisualDefaults'
+import { p3911LegacyFrozenProfileVisualConfigHashInput } from '@/three/planetVisualDefaults'
 import { planetExportVisualConfigInput } from './visualConfig'
 import {
   assertP3911CheckpointBProductionContract,
@@ -44,7 +44,7 @@ async function main(): Promise<void> {
     document.body.dataset.webglRenderer = String(gl.getParameter(gl.RENDERER) ?? 'unknown')
     document.body.dataset.dataVersion = data.meta.version
     const productionVisualConfig = planetExportVisualConfigInput(
-      planetVisualConfigHashInput(),
+      p3911LegacyFrozenProfileVisualConfigHashInput(),
       request.sizeRoot,
     )
     document.body.dataset.visualHash = p3911CheckpointBVisualConfigInput(productionVisualConfig, request.emissionExponent)

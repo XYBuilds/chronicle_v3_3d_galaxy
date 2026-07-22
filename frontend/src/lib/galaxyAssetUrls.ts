@@ -29,9 +29,11 @@ export interface GalaxyAssetsManifest {
   exported_at?: string
 }
 
-function parseActiveFocusEmissionProfilePointer(raw: unknown): ActiveFocusEmissionProfilePointer | null {
+export function parseActiveFocusEmissionProfilePointer(raw: unknown): ActiveFocusEmissionProfilePointer | null {
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return null
   const pointer = raw as Record<string, unknown>
+  const allowed = new Set(['profile_id', 'period', 'model_version', 'curve_sha256', 'source_data_version', 'source_movie_count', 'status', 'activated_at'])
+  if (Object.keys(pointer).some((key) => !allowed.has(key))) return null
   const profileId = pointer.profile_id
   const period = pointer.period
   const modelVersion = pointer.model_version
@@ -43,7 +45,7 @@ function parseActiveFocusEmissionProfilePointer(raw: unknown): ActiveFocusEmissi
   if (
     typeof profileId !== 'string' || !/^[a-z0-9][a-z0-9-]{2,127}$/.test(profileId) ||
     typeof period !== 'string' || !/^\d{4}-(0[1-9]|1[0-2])$/.test(period) ||
-    typeof modelVersion !== 'string' || !modelVersion ||
+    modelVersion !== 'rating-midrank-cdf-lut-v1' ||
     typeof curveSha256 !== 'string' || !/^[a-f0-9]{64}$/.test(curveSha256) ||
     typeof sourceDataVersion !== 'string' || !sourceDataVersion.trim() ||
     typeof sourceMovieCount !== 'number' || !Number.isSafeInteger(sourceMovieCount) || sourceMovieCount <= 0 ||
@@ -116,10 +118,17 @@ function fetchManifestOnce(): Promise<GalaxyAssetsManifest | null> {
             galaxy: m.galaxy_data_gzip_url.slice(0, 80),
           })
         } else {
+          // An omitted field is an old-manifest compatibility case. A declared field that
+          // fails the active-pointer contract is authoritative corruption and must not turn
+          // into a DEV legacy fallback.
+          if (typeof raw === 'object' && raw !== null && !Array.isArray(raw) && 'focus_emission_profile' in raw) {
+            throw new Error('[GalaxyAssets] declared focus_emission_profile has invalid shape')
+          }
           console.warn('[GalaxyAssets] manifest JSON invalid shape', { url })
         }
         return m
       } catch (e) {
+        if (e instanceof Error && e.message.startsWith('[GalaxyAssets] declared focus_emission_profile')) throw e
         console.log('[GalaxyAssets] manifest fetch failed', e)
         return null
       }

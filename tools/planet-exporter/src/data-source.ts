@@ -8,6 +8,8 @@ export type DataSource = {
   label: string
   pageUrl?: string
   bytes?: Buffer
+  /** Local fake-adapter profile bytes for integration evidence; never used for network publication. */
+  profileBytes?: Buffer
   version?: string
   focusEmissionProfile?: ActiveProfilePointer
   profileUrl?: string
@@ -102,15 +104,31 @@ export function isLegacyProfileCompatibilityFixture(source: DataSource): boolean
 }
 
 export function fileDataPlugin(source: DataSource): Plugin | undefined {
-  if (!source.bytes) return undefined
+  if (!source.bytes && !source.profileBytes) return undefined
   return {
     name: 'planet-export-file-data',
     configureServer(server: ViteDevServer) {
       server.middlewares.use('/__planet_export_data.json.gz', (_request, response) => {
+        if (!source.bytes) {
+          response.statusCode = 404
+          response.end()
+          return
+        }
         response.statusCode = 200
-        response.setHeader('content-type', source.bytes![0] === 0x1f && source.bytes![1] === 0x8b ? 'application/gzip' : 'application/json')
+        response.setHeader('content-type', source.bytes[0] === 0x1f && source.bytes[1] === 0x8b ? 'application/gzip' : 'application/json')
         response.setHeader('cache-control', 'no-store')
         response.end(source.bytes)
+      })
+      server.middlewares.use('/__planet_export_profile/focus-emission-profiles', (request, response) => {
+        if (!source.profileBytes || !source.focusEmissionProfile || request.url !== `/${source.focusEmissionProfile.profile_id}.json`) {
+          response.statusCode = 404
+          response.end()
+          return
+        }
+        response.statusCode = 200
+        response.setHeader('content-type', 'application/json')
+        response.setHeader('cache-control', 'no-store')
+        response.end(source.profileBytes)
       })
     },
   }
@@ -118,6 +136,12 @@ export function fileDataPlugin(source: DataSource): Plugin | undefined {
 
 export function pageDataUrl(serverUrl: string, source: DataSource): string {
   return source.bytes ? new URL('/__planet_export_data.json.gz', serverUrl).toString() : source.pageUrl!
+}
+
+/** Fakes only the immutable HTTP boundary for local evidence; production still requires manifest URLs. */
+export function pageProfileUrl(serverUrl: string, source: DataSource): string | undefined {
+  if (!source.profileBytes || !source.focusEmissionProfile) return source.profileUrl
+  return new URL(`/__planet_export_profile/focus-emission-profiles/${source.focusEmissionProfile.profile_id}.json`, serverUrl).toString()
 }
 
 export function outputMetadataPath(output: string): string {

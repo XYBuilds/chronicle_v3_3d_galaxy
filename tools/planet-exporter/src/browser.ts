@@ -5,7 +5,7 @@ import { createServer, type ViteDevServer } from 'vite'
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright'
 import { stableFocusEmissionJson } from '../../../frontend/src/three/focusEmission.js'
 import { CliError, EXIT_CODES, type ExportArgs } from './args.js'
-import { fileDataPlugin, isLegacyProfileCompatibilityFixture, pageDataUrl, type DataSource } from './data-source.js'
+import { fileDataPlugin, isLegacyProfileCompatibilityFixture, pageDataUrl, pageProfileUrl, type DataSource } from './data-source.js'
 
 export type BrowserRender = {
   png: Buffer
@@ -13,6 +13,8 @@ export type BrowserRender = {
   webglRenderer: string | undefined
   visualHash: string | undefined
   visualDiagnostics: Record<string, unknown>
+  /** Exact profile-resource requests observed in the isolated browser page. */
+  profileFetches?: string[]
   chromiumVersion: string
 }
 
@@ -325,10 +327,15 @@ export async function renderInBrowser(args: ExportArgs, source: DataSource, root
     await server.listen()
     const serverUrl = server.resolvedUrls?.local[0]
     if (!serverUrl) throw new CliError('Vite server did not expose a local URL', EXIT_CODES.render)
+    const requestedProfileUrl = source.focusEmissionProfile === undefined ? undefined : pageProfileUrl(serverUrl, source)
     browser = await chromium.launch({ headless: true })
     context = await browser.newContext({ viewport: { width: args.resolution, height: args.resolution }, deviceScaleFactor: 1 })
     page = await context.newPage()
     const pageDiagnostics: string[] = []
+    const profileFetches: string[] = []
+    page.on('request', (request) => {
+      if (requestedProfileUrl !== undefined && request.url() === requestedProfileUrl) profileFetches.push(request.url())
+    })
     page.on('console', (message) => {
       if (message.type() === 'error') pageDiagnostics.push(message.text())
     })
@@ -349,7 +356,7 @@ export async function renderInBrowser(args: ExportArgs, source: DataSource, root
       bloom: args.bloom,
       sizeRoot: String(args.sizeRoot),
       renderMode: args.renderMode,
-      ...(source.focusEmissionProfile === undefined ? {} : { profilePointer: JSON.stringify(source.focusEmissionProfile), profileUrl: source.profileUrl! }),
+      ...(source.focusEmissionProfile === undefined ? {} : { profilePointer: JSON.stringify(source.focusEmissionProfile), profileUrl: requestedProfileUrl! }),
       ...(isLegacyProfileCompatibilityFixture(source) ? { allowLegacyProfile: '1' } : {}),
     })
     await page.goto(new URL(`planet-export.html?${query.toString()}`, serverUrl).toString(), { waitUntil: 'networkidle', timeout: 120_000 })
@@ -381,6 +388,7 @@ export async function renderInBrowser(args: ExportArgs, source: DataSource, root
       webglRenderer: result.webglRenderer,
       visualHash: result.visualHash,
       visualDiagnostics,
+      profileFetches,
       chromiumVersion: browser.version(),
     }
   } catch (error) {

@@ -26,10 +26,11 @@ describe('parseGalaxyAssetsManifest (P18.6b)', () => {
     ).toBeNull()
   })
 
-  it('accepts only minimal active profile provenance and no profile URL', () => {
+  it('accepts active provenance only with its matching immutable profile URL', () => {
     const m = parseGalaxyAssetsManifest({
       galaxy_data_gzip_url: 'https://example.r2.dev/galaxy/galaxy_data.json.gz?v=1',
       data_version: '2026.07.22.monthly.1',
+      focus_emission_profile_url: 'https://example.r2.dev/galaxy/focus-emission-profiles/rating-emission-2026-07-a.json',
       focus_emission_profile: {
         profile_id: 'rating-emission-2026-07-a',
         period: '2026-07',
@@ -43,7 +44,7 @@ describe('parseGalaxyAssetsManifest (P18.6b)', () => {
     })
 
     expect(m?.focus_emission_profile?.profile_id).toBe('rating-emission-2026-07-a')
-    expect(m).not.toHaveProperty('focus_emission_profile_url')
+    expect(m?.focus_emission_profile_url).toBe('https://example.r2.dev/galaxy/focus-emission-profiles/rating-emission-2026-07-a.json')
   })
 
   it('rejects invalid active pointer provenance and resolves no arbitrary paths', () => {
@@ -56,5 +57,16 @@ describe('parseGalaxyAssetsManifest (P18.6b)', () => {
     expect(resolveFocusEmissionProfileResourceUrl({
       profile_id: 'rating-emission-2026-07-a', period: '2026-07', model_version: 'rating-midrank-cdf-lut-v1', curve_sha256: 'a'.repeat(64), source_data_version: 'x', source_movie_count: 1, status: 'active', activated_at: '2026-07-22T00:00:00.000Z',
     })).toContain('data/focus-emission-profiles/rating-emission-2026-07-a.json')
+  })
+  it('rejects userinfo credentials in every manifest asset URL', () => {
+    expect(parseGalaxyAssetsManifest({
+      galaxy_data_gzip_url: 'https://token@example.r2.dev/galaxy/galaxy_data.json.gz',
+      data_version: '2026.07.22.monthly.1',
+    })).toBeNull()
+    expect(parseGalaxyAssetsManifest({
+      galaxy_data_gzip_url: 'https://example.r2.dev/galaxy/galaxy_data.json.gz',
+      galaxy_search_index_gzip_url: 'https://user:pass@example.r2.dev/galaxy/search.json.gz',
+      data_version: '2026.07.22.monthly.1',
+    })).toBeNull()
   })
 })

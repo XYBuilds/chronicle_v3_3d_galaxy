@@ -153,4 +153,14 @@ describe('Focus emission runtime profile loader', () => {
       sha256: async (input) => sha256(input),
     })).rejects.toThrow()
   })
+
+  it('rejects userinfo in an explicit exporter profile URL before fetch', async () => {
+    const fetchImpl = vi.fn() as unknown as typeof fetch
+    await expect(loadFocusEmissionProfile({
+      manifest: manifestFor(),
+      profileUrl: 'https://user:password@example.test/data/focus-emission-profiles/rating-emission-2026-07-a.json',
+      fetchImpl,
+    })).rejects.toThrow(/controlled immutable resource contract/)
+    expect(fetchImpl).not.toHaveBeenCalled()
+  })
 })

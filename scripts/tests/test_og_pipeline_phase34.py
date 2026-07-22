@@ -47,7 +47,7 @@ class TestOgPipelinePhase34(unittest.TestCase):
                 text = workflow.read_text(encoding="utf-8")
                 self.assertEqual(text.count(f"name: {_SYNC_STEP}"), 1)
                 sync_start = text.index(f"name: {_SYNC_STEP}")
-                sync_end = text.index("      # P18.6b:", sync_start)
+                sync_end = text.index("      # P42.4", sync_start)
                 sync_block = text[sync_start:sync_end]
                 compute_block = text[:sync_start]
                 self.assertNotIn("bootstrap_og_index:", text)
@@ -73,13 +73,24 @@ class TestOgPipelinePhase34(unittest.TestCase):
             with self.subTest(workflow=workflow.name):
                 text = workflow.read_text(encoding="utf-8")
                 sync_start = text.index(f"name: {_SYNC_STEP}")
-                sync_end = text.index("      # P18.6b:", sync_start)
+                sync_end = text.index("      # P42.4", sync_start)
                 sync_block = text[sync_start:sync_end]
                 self.assertNotIn("workflow_dispatch", sync_block)
                 self.assertNotIn("--migrate-v1", sync_block)
                 self.assertNotIn("--allow-full-recovery", sync_block)
                 self.assertNotIn("--allow-over-quota", sync_block)
                 self.assertNotIn("--scope full", sync_block)
+    def test_p42_4_release_workflows_share_non_cancelling_lock_and_artifacts(self) -> None:
+        monthly = _MONTHLY_WORKFLOW.read_text(encoding="utf-8")
+        nightly = _NIGHTLY_WORKFLOW.read_text(encoding="utf-8")
+        for text in (monthly, nightly):
+            self.assertIn("group: galaxy-r2-pages-release", text)
+            self.assertIn("cancel-in-progress: false", text)
+            self.assertIn("if: always()", text)
+            self.assertIn("frontend/public/data/galaxy_assets_manifest.json", text)
+        self.assertIn("allow_profile_bootstrap:", monthly)
+        self.assertIn("args+=(--allow-bootstrap)", monthly)
+        self.assertNotIn("--allow-bootstrap", nightly)
 
 
 if __name__ == "__main__":

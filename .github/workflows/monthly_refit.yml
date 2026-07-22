@@ -17,13 +17,26 @@ on:
         type: boolean
         default: false
         description: "P20.2 Skip dimension drift check (emergency unblock only; bump palettes for real fixes)."
+      allow_profile_bootstrap:
+        type: boolean
+        default: false
+        description: "P42.4 Allow the first active profile only when R2 has no active pointer."
+      force_profile_activation:
+        type: boolean
+        default: false
+        description: "P42.4 Explicitly replace this month's active emission profile."
+      force_profile_reason:
+        type: string
+        required: false
+        description: "Required audit reason when force_profile_activation is true."
 
 permissions:
   contents: read
   deployments: write
 
 concurrency:
-  group: p18-5-monthly-refit
+  # Nightly starts at the same UTC minute on the first day; both workflows serialize through this lock.
+  group: galaxy-r2-pages-release
   cancel-in-progress: false
 
 jobs:
@@ -156,8 +169,10 @@ jobs:
           set -euo pipefail
           python scripts/cron/sync_og_index_kv.py --scope incremental
 
-      # P18.6b: large gzip → R2; Pages bundle keeps a small manifest only (when secrets are set).
-      - name: Upload galaxy gzip to R2 (P18.6b)
+      # P42.4 release order: candidate immutable profile → immutable galaxy/search → local Pages
+      # manifest + monthly metadata → active pointer final → best-effort cleanup. The pointer is
+      # the final publish mutation, so all local release state is prepared before it.
+      - name: Publish monthly galaxy and active emission profile to R2
         env:
           R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
@@ -166,16 +181,31 @@ jobs:
           R2_PUBLIC_BASE_URL: ${{ secrets.R2_PUBLIC_BASE_URL }}
           R2_KEY_PREFIX: galaxy
           R2_GALAXY_PRUNE_AFTER_UPLOAD: "1"
+          GITHUB_ACTOR: ${{ github.actor }}
+          FORCE_PROFILE_ACTIVATION: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.force_profile_activation || false }}
+          FORCE_PROFILE_REASON: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.force_profile_reason || '' }}
+          ALLOW_PROFILE_BOOTSTRAP: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.allow_profile_bootstrap || false }}
         run: |
           set -euo pipefail
-          python scripts/cron/upload_galaxy_r2.py
+          profile="$(python -c "from pathlib import Path; p=sorted(Path('data/output/monthly_profiles').glob('profile-*.json')); assert len(p) == 1, f'expected one generated profile, got {len(p)}'; print(p[0])")"
+          args=(--mode monthly --profile "$profile" --actor "github:${GITHUB_ACTOR}")
+          if [ "${FORCE_PROFILE_ACTIVATION}" = "true" ]; then
+            args+=(--force-activation --force-reason "${FORCE_PROFILE_REASON}")
+          fi
+          if [ "${ALLOW_PROFILE_BOOTSTRAP}" = "true" ]; then
+            args+=(--allow-bootstrap)
+          fi
+          python scripts/cron/upload_galaxy_r2.py "${args[@]}"
 
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: galaxy-export-monthly-${{ github.run_id }}
           if-no-files-found: warn
           path: |
             monthly_refit_meta.json
+            data/output/monthly_profiles/*.json
+            frontend/public/data/galaxy_assets_manifest.json
             frontend/public/data/galaxy_data.json
             frontend/public/data/galaxy_data.json.gz
             frontend/public/data/galaxy_search_index.json.gz

@@ -10,6 +10,7 @@ import { PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE } from '@/three/productionFoc
 import {
   resolveFocusEmissionProfileResourceUrl,
   parseActiveFocusEmissionProfilePointer,
+  parseFocusEmissionProfileUrl,
   type GalaxyAssetsManifest,
 } from '@/lib/galaxyAssetUrls'
 import type { FocusEmissionProfileProvenance } from '@/types/galaxy'
@@ -117,10 +118,12 @@ export async function loadFocusEmissionProfile(options: LoadFocusEmissionProfile
     return resolved
   }
 
-  const url = options.profileUrl ?? resolveFocusEmissionProfileResourceUrl(pointer)
-  const urlPath = new URL(url, typeof window === 'undefined' ? 'http://localhost/' : window.location.href).pathname
-  if (!urlPath.endsWith(`/${pointer.profile_id}.json`)) {
-    throw new Error('[FocusEmissionProfile] active profile URL does not match the controlled pointer resource')
+  const explicitUrl = options.profileUrl ?? options.manifest.focus_emission_profile_url
+  const url = explicitUrl === undefined
+    ? resolveFocusEmissionProfileResourceUrl(pointer)
+    : parseFocusEmissionProfileUrl(explicitUrl, pointer.profile_id)
+  if (url === null) {
+    throw new Error('[FocusEmissionProfile] active profile URL violates the controlled immutable resource contract')
   }
   const cacheKey = activeCacheKey(pointer, url)
   let pending = activeCache.get(cacheKey)

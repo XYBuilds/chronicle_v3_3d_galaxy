@@ -3,7 +3,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import type { ExportArgs } from './args.js'
-import { chooseDataSource, isLegacyProfileCompatibilityFixture, outputMetadataPath, pageDataUrl } from './data-source.js'
+import { chooseDataSource, isLegacyProfileCompatibilityFixture, outputMetadataPath, pageDataUrl, pageProfileUrl } from './data-source.js'
 
 const temporaryDirectories: string[] = []
 
@@ -42,6 +42,19 @@ describe('planet export data sources', () => {
     expect(source.kind).toBe('file')
     expect(source.bytes?.toString()).toBe('{"fixture":true}')
     expect(pageDataUrl('http://127.0.0.1:4173/', source)).toBe('http://127.0.0.1:4173/__planet_export_data.json.gz')
+  })
+
+  it('routes fake-adapter immutable profile bytes only to their active profile path', () => {
+    const source = {
+      kind: 'manifest' as const, label: 'local fake adapter', bytes: Buffer.from('{}'), profileBytes: Buffer.from('{}'),
+      focusEmissionProfile: {
+        profile_id: 'rating-emission-2026-07-a', period: '2026-07', model_version: 'rating-midrank-cdf-lut-v1',
+        curve_sha256: 'a'.repeat(64), source_data_version: 'fixture-v1', source_movie_count: 1,
+        status: 'active' as const, activated_at: '2026-07-22T00:00:00.000Z',
+      },
+      profileUrl: 'https://assets.example.test/galaxy/focus-emission-profiles/rating-emission-2026-07-a.json',
+    }
+    expect(pageProfileUrl('http://127.0.0.1:4173/', source)).toBe('http://127.0.0.1:4173/__planet_export_profile/focus-emission-profiles/rating-emission-2026-07-a.json')
   })
 
   it('treats every explicit file source as a legacy compatibility fixture, never a URL source', async () => {

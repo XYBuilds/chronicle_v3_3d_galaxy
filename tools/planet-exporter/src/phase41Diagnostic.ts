@@ -5,7 +5,7 @@ import { chromium, type Browser, type BrowserContext, type Page } from 'playwrig
 
 import { CliError, EXIT_CODES, type ExportArgs } from './args.js'
 import { parsePhase41VisualDiagnostics, type BrowserRender } from './browser.js'
-import { fileDataPlugin, isLegacyProfileCompatibilityFixture, pageDataUrl, type DataSource } from './data-source.js'
+import { fileDataPlugin, isLegacyProfileCompatibilityFixture, pageDataUrl, pageProfileUrl, type DataSource } from './data-source.js'
 
 export const PHASE41_DIAGNOSTIC_MARKER = 'phase41-visual-diagnostic-v1' as const
 
@@ -81,11 +81,17 @@ export async function renderPhase41DiagnosticInBrowser(
     await server.listen()
     const serverUrl = server.resolvedUrls?.local[0]
     if (!serverUrl) throw new CliError('Vite server did not expose a local URL', EXIT_CODES.render)
+    const requestedProfileUrl = source.focusEmissionProfile === undefined ? undefined : pageProfileUrl(serverUrl, source)
     query.set('dataUrl', pageDataUrl(serverUrl, source))
+    if (requestedProfileUrl !== undefined) query.set('profileUrl', requestedProfileUrl)
     browser = await chromium.launch({ headless: true })
     context = await browser.newContext({ viewport: { width: args.resolution, height: args.resolution }, deviceScaleFactor: 1 })
     page = await context.newPage()
     const pageDiagnostics: string[] = []
+    const profileFetches: string[] = []
+    page.on('request', (request) => {
+      if (requestedProfileUrl !== undefined && request.url() === requestedProfileUrl) profileFetches.push(request.url())
+    })
     page.on('console', (message) => { if (message.type() === 'error') pageDiagnostics.push(message.text()) })
     page.on('pageerror', (error) => pageDiagnostics.push(error.message))
     await page.goto(new URL(`phase41-diagnostics.html?${query.toString()}`, serverUrl).toString(), { waitUntil: 'networkidle', timeout: 120_000 })
@@ -117,6 +123,7 @@ export async function renderPhase41DiagnosticInBrowser(
       webglRenderer: result.webglRenderer,
       visualHash: result.visualHash,
       visualDiagnostics: parsePhase41VisualDiagnostics(result.visualDiagnostics, result.visualHash),
+      profileFetches,
       chromiumVersion: browser.version(),
     }
   } catch (error) {

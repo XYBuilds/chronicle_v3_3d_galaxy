@@ -15,7 +15,8 @@ permissions:
   deployments: write
 
 concurrency:
-  group: p18-4-nightly-vote-refresh
+  # Shares monthly's lock because both schedules fire at 20:00 UTC on the first.
+  group: galaxy-r2-pages-release
   cancel-in-progress: false
 
 jobs:
@@ -78,8 +79,9 @@ jobs:
           set -euo pipefail
           python scripts/cron/sync_og_index_kv.py --scope incremental
 
-      # P18.6b: large gzip → R2; Pages bundle keeps a small manifest only (when secrets are set).
-      - name: Upload galaxy gzip to R2 (P18.6b)
+      # P42.4: nightly may upload only current galaxy assets. It reads and verifies the
+      # existing immutable active profile; it never generates, uploads, or activates one.
+      - name: Publish nightly galaxy with unchanged active emission profile
         env:
           R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
@@ -90,13 +92,15 @@ jobs:
           R2_GALAXY_PRUNE_AFTER_UPLOAD: "1"
         run: |
           set -euo pipefail
-          python scripts/cron/upload_galaxy_r2.py
+          python scripts/cron/upload_galaxy_r2.py --mode nightly
 
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: galaxy-export-${{ github.run_id }}
           if-no-files-found: warn
           path: |
+            frontend/public/data/galaxy_assets_manifest.json
             frontend/public/data/galaxy_data.json
             frontend/public/data/galaxy_data.json.gz
             frontend/public/data/galaxy_search_index.json.gz

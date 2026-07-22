@@ -25,6 +25,8 @@ export interface GalaxyAssetsManifest {
   galaxy_search_index_gzip_url?: string
   /** Minimal provenance only; the full 201-sample artifact stays in its own controlled resource. */
   focus_emission_profile?: ActiveFocusEmissionProfilePointer
+  /** Immutable R2 artifact URL; path must end with the trusted profile_id resource. */
+  focus_emission_profile_url?: string
   data_version: string
   exported_at?: string
 }
@@ -65,6 +67,17 @@ export function parseActiveFocusEmissionProfilePointer(raw: unknown): ActiveFocu
   }
 }
 
+export function parseFocusEmissionProfileUrl(raw: unknown, profileId: string): string | null {
+  if (typeof raw !== 'string' || !raw.trim()) return null
+  try {
+    const url = new URL(raw.trim())
+    if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password || url.search || url.hash) return null
+    return url.pathname.endsWith(`/focus-emission-profiles/${profileId}.json`) ? url.toString() : null
+  } catch {
+    return null
+  }
+}
+
 function withBase(relativePath: string): string {
   const base = import.meta.env.BASE_URL
   const prefix = base.endsWith('/') ? base : `${base}/`
@@ -72,20 +85,32 @@ function withBase(relativePath: string): string {
   return `${prefix}${trimmed}`
 }
 
+function parseReleaseAssetUrl(raw: unknown): string | null {
+  if (typeof raw !== 'string' || !raw.trim()) return null
+  try {
+    const url = new URL(raw.trim())
+    return ['https:', 'http:'].includes(url.protocol) && !url.username && !url.password ? url.toString() : null
+  } catch {
+    return null
+  }
+}
+
 export function parseGalaxyAssetsManifest(raw: unknown): GalaxyAssetsManifest | null {
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return null
   const o = raw as Record<string, unknown>
-  const g = o.galaxy_data_gzip_url
+  const g = parseReleaseAssetUrl(o.galaxy_data_gzip_url)
   const dv = o.data_version
-  if (typeof g !== 'string' || !g.trim()) return null
+  if (g === null) return null
   if (typeof dv !== 'string' || !dv.trim()) return null
-  const si = o.galaxy_search_index_gzip_url
+  const si = parseReleaseAssetUrl(o.galaxy_search_index_gzip_url)
   const out: GalaxyAssetsManifest = {
-    galaxy_data_gzip_url: g.trim(),
+    galaxy_data_gzip_url: g,
     data_version: dv.trim(),
   }
-  if (typeof si === 'string' && si.trim()) {
-    out.galaxy_search_index_gzip_url = si.trim()
+  if (si !== null) {
+    out.galaxy_search_index_gzip_url = si
+  } else if (o.galaxy_search_index_gzip_url !== undefined) {
+    return null
   }
   if (typeof o.exported_at === 'string' && o.exported_at.trim()) {
     out.exported_at = o.exported_at.trim()
@@ -93,7 +118,12 @@ export function parseGalaxyAssetsManifest(raw: unknown): GalaxyAssetsManifest | 
   if (o.focus_emission_profile !== undefined) {
     const profile = parseActiveFocusEmissionProfilePointer(o.focus_emission_profile)
     if (profile === null) return null
+    const profileUrl = parseFocusEmissionProfileUrl(o.focus_emission_profile_url, profile.profile_id)
+    if (profileUrl === null) return null
     out.focus_emission_profile = profile
+    out.focus_emission_profile_url = profileUrl
+  } else if (o.focus_emission_profile_url !== undefined) {
+    return null
   }
   return out
 }

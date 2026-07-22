@@ -13,7 +13,7 @@ todos:
     status: completed
   - id: p42.4-release-workflows
     content: 接入 monthly/nightly workflow 与 R2/Pages manifest，保证 monthly 切换、nightly 复用和失败回滚
-    status: pending
+    status: completed
   - id: p42.5-regression-observability
     content: 补齐跨端测试、月中冻结不变量、同月重跑策略和可观测证据
     status: pending

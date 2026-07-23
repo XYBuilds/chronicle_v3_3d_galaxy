@@ -8,6 +8,7 @@ import {
   formatMovieSuggestionLabel,
   formatPersonRoleSuffix,
   moviePopularityScore,
+  movieSuggestionDisplay,
   normalizeForSearch,
   scoreGenresForQuery,
   scoreMoviesForQuery,
@@ -200,6 +201,61 @@ describe('scoreMoviesForQuery', () => {
     )
     expect(scoreMoviesForQuery(movies, 'thing').length).toBe(30)
   })
+  it('keeps title highlight ranges scoped to the display title', () => {
+    const movie = baseMovie({
+      id: 42,
+      title: 'Star Runner',
+      original_title: 'La course des étoiles',
+      title_normalized: 'star runner la course des etoiles',
+    })
+    const [hit] = scoreMoviesForQuery([movie], 'star')
+
+    expect(hit).toMatchObject({
+      displayTitle: 'Star Runner',
+      originalTitle: 'La course des étoiles',
+      releaseYear: '2020',
+      tmdbId: 42,
+      displayTitleHighlightRanges: [{ start: 0, end: 4 }],
+      originalTitleHighlightRanges: [],
+    })
+  })
+
+  it('highlights only the original-title field when that is the matching title', () => {
+    const movie = baseMovie({
+      id: 43,
+      title: 'The Mirror',
+      original_title: 'Zerkalo',
+      title_normalized: 'the mirror zerkalo',
+    })
+    const [hit] = scoreMoviesForQuery([movie], 'zerkalo')
+
+    expect(hit).toMatchObject({
+      displayTitle: 'The Mirror',
+      originalTitle: 'Zerkalo',
+      displayTitleHighlightRanges: [],
+      originalTitleHighlightRanges: [{ start: 0, end: 7 }],
+    })
+  })
+})
+
+describe('movie suggestion display metadata', () => {
+  it('omits duplicate original titles and malformed release years', () => {
+    const display = movieSuggestionDisplay(
+      baseMovie({
+        id: 7,
+        title: 'Alien',
+        original_title: ' alien ',
+        release_date: 'not-a-date',
+      }),
+    )
+
+    expect(display).toEqual({
+      displayTitle: 'Alien',
+      originalTitle: null,
+      releaseYear: null,
+      tmdbId: 7,
+    })
+  })
 })
 
 describe('scorePeopleForQuery', () => {
@@ -220,6 +276,7 @@ describe('scorePeopleForQuery', () => {
     expect(hits.length).toBe(1)
     expect(hits[0]!.personKey).toBe('christopher nolan')
     expect(hits[0]!.tier).toBe('prefix')
+    expect(hits[0]!.highlightRanges).toEqual([{ start: 12, end: 17 }])
   })
 
   it('treats substring prefix of a token as prefix tier (pac → pacino)', () => {

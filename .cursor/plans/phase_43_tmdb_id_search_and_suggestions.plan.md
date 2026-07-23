@@ -7,7 +7,7 @@ todos:
     status: completed
   - id: p43.2-shared-movie-suggestion-row
     content: 重构 Title/ID 共用的电影候选数据模型与响应式候选行
-    status: pending
+    status: completed
   - id: p43.3-id-tab-focus-flow
     content: 接入 ID Tab、键盘选择、无刷新 focus 与 TMDB ID 回显状态流
     status: pending

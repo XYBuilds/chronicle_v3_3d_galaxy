@@ -1,5 +1,4 @@
 import {
-  type ReactNode,
   useCallback,
   useDeferredValue,
   useEffect,
@@ -8,6 +7,8 @@ import {
   useRef,
   useState,
 } from 'react'
+import { HighlightedText } from '@/components/HighlightedText'
+import { MovieSuggestionRow } from '@/components/MovieSuggestionRow'
 import { GenreBadge } from '@/components/GenreBadge'
 import { getSearchBarTextPlaceholder } from '@/components/searchBarPlaceholder'
 import { buttonVariants } from '@/components/ui/button-variants'
@@ -26,7 +27,7 @@ import { useGalaxyDataStore } from '@/store/galaxyDataStore'
 import { useSearchIndexStore } from '@/store/searchIndexStore'
 import type { Movie } from '@/types/galaxy'
 import { enterPersonSearchSession, sortIdsByRelease } from '@/utils/personSearchSession'
-import type { TextHighlightRange } from '@/utils/searchScore'
+import type { MovieSearchHit, TextHighlightRange } from '@/utils/searchScore'
 import {
   SEARCH_QUERY_DEBOUNCE_MS,
   formatMovieSuggestionLabel,
@@ -47,35 +48,21 @@ export interface SearchBarProps {
 type ResultRow = {
   suggestion: SearchSuggestion
   ranges: TextHighlightRange[]
+  movieDisplay?: Pick<
+    MovieSearchHit,
+    | 'displayTitle'
+    | 'originalTitle'
+    | 'releaseYear'
+    | 'tmdbId'
+    | 'displayTitleHighlightRanges'
+    | 'originalTitleHighlightRanges'
+  >
 }
 
 function suggestionKey(s: SearchSuggestion): string {
   if (s.kind === 'movie') return `m:${s.movieId}`
   if (s.kind === 'person') return `p:${s.personKey}`
   return `g:${s.genreName}`
-}
-
-function HighlightedLabel({ label, ranges }: { label: string; ranges: TextHighlightRange[] }) {
-  if (ranges.length === 0) return <span className="truncate">{label}</span>
-  const sorted = [...ranges].sort((a, b) => a.start - b.start)
-  const parts: ReactNode[] = []
-  let cursor = 0
-  let k = 0
-  for (const r of sorted) {
-    if (r.start > cursor) {
-      parts.push(<span key={`t${k++}`}>{label.slice(cursor, r.start)}</span>)
-    }
-    parts.push(
-      <mark key={`m${k++}`} className="rounded-sm bg-primary/30 text-inherit">
-        {label.slice(r.start, r.end)}
-      </mark>,
-    )
-    cursor = r.end
-  }
-  if (cursor < label.length) {
-    parts.push(<span key={`t${k++}`}>{label.slice(cursor)}</span>)
-  }
-  return <span className="truncate">{parts}</span>
 }
 
 export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchBarProps) {
@@ -217,7 +204,15 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
       const hits = scoreMoviesForQuery(movies, q)
       return hits.map((h) => ({
         suggestion: { kind: 'movie' as const, movieId: h.movie.id, label: h.label },
-        ranges: h.highlightRanges,
+        ranges: h.displayTitleHighlightRanges,
+        movieDisplay: {
+          displayTitle: h.displayTitle,
+          originalTitle: h.originalTitle,
+          releaseYear: h.releaseYear,
+          tmdbId: h.tmdbId,
+          displayTitleHighlightRanges: h.displayTitleHighlightRanges,
+          originalTitleHighlightRanges: h.originalTitleHighlightRanges,
+        },
       }))
     }
     const hits = scorePeopleForQuery(searchIndex, q)
@@ -551,27 +546,37 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
                   const active = idx === activeRowIndex
                   return (
                     <li key={suggestionKey(row.suggestion)} role="presentation">
-                      <button
-                        type="button"
-                        role="option"
-                        aria-selected={active}
-                        className={cn(
-                          'flex w-full items-center gap-2 px-3 py-2 text-left transition-colors',
-                          active ? 'bg-muted text-foreground' : 'hover:bg-muted/60',
-                        )}
-                        onMouseEnter={() => setHighlightIndex(idx)}
-                        onMouseDown={(ev) => ev.preventDefault()}
-                        onClick={() => applySuggestion(row)}
-                      >
-                        <span className="min-w-0 flex-1">
-                          <HighlightedLabel label={row.suggestion.label} ranges={row.ranges} />
-                        </span>
-                        {row.suggestion.kind === 'person' && (
-                          <span className="shrink-0 text-xs text-muted-foreground">
-                            {row.suggestion.movieCount}
+                      {row.suggestion.kind === 'movie' && row.movieDisplay ? (
+                        <MovieSuggestionRow
+                          {...row.movieDisplay}
+                          active={active}
+                          onPointerEnter={() => setHighlightIndex(idx)}
+                          onMouseDown={(ev) => ev.preventDefault()}
+                          onSelect={() => applySuggestion(row)}
+                        />
+                      ) : (
+                        <button
+                          type="button"
+                          role="option"
+                          aria-selected={active}
+                          className={cn(
+                            'flex w-full items-center gap-2 px-3 py-2 text-left transition-colors',
+                            active ? 'bg-muted text-foreground' : 'hover:bg-muted/60',
+                          )}
+                          onMouseEnter={() => setHighlightIndex(idx)}
+                          onMouseDown={(ev) => ev.preventDefault()}
+                          onClick={() => applySuggestion(row)}
+                        >
+                          <span className="min-w-0 flex-1 truncate">
+                            <HighlightedText text={row.suggestion.label} ranges={row.ranges} />
                           </span>
-                        )}
-                      </button>
+                          {row.suggestion.kind === 'person' && (
+                            <span className="shrink-0 text-xs text-muted-foreground">
+                              {row.suggestion.movieCount}
+                            </span>
+                          )}
+                        </button>
+                      )}
                     </li>
                   )
                 })}

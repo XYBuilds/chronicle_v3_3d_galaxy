@@ -22,8 +22,18 @@ export interface MovieSearchHit {
   movie: Movie
   tier: MatchTier
   score: number
+  /** Legacy store/search-query label; presentation must use the structured fields below. */
   label: string
-  highlightRanges: TextHighlightRange[]
+  displayTitle: string
+  /** Present only when it differs from the displayed title. */
+  originalTitle: string | null
+  /** Valid four-digit release year, or null when the source date is unavailable/malformed. */
+  releaseYear: string | null
+  tmdbId: number
+  /** Ranges within `displayTitle`; TMDB IDs, years, and genres are never highlighted. */
+  displayTitleHighlightRanges: TextHighlightRange[]
+  /** Ranges within `originalTitle`; empty when no original title is displayed or matches. */
+  originalTitleHighlightRanges: TextHighlightRange[]
 }
 
 export interface PersonSearchHit {
@@ -85,16 +95,35 @@ function classifyPrefixContains(haystack: string, query: string): MatchTier | nu
   return null
 }
 
-/** Display: Title [Orig] (YYYY) Genre0 — Design §4.3. */
-export function formatMovieSuggestionLabel(m: Movie): string {
+/** Structured title metadata for movie suggestion rows. */
+export function movieSuggestionDisplay(m: Movie): Pick<
+  MovieSearchHit,
+  'displayTitle' | 'originalTitle' | 'releaseYear' | 'tmdbId'
+> {
   const title = m.title.trim()
-  const orig = m.original_title.trim()
-  const showOrig = orig.length > 0 && orig.toLowerCase() !== title.toLowerCase()
-  const year = m.release_date.length >= 4 ? m.release_date.slice(0, 4) : '????'
+  const original = m.original_title.trim()
+  const displayTitle = title || original || 'Untitled'
+  const originalTitle =
+    original.length > 0 && original.toLowerCase() !== displayTitle.toLowerCase()
+      ? original
+      : null
+  const yearMatch = m.release_date.trim().match(/^(\d{4})(?:-|$)/)
+
+  return {
+    displayTitle,
+    originalTitle,
+    releaseYear: yearMatch?.[1] ?? null,
+    tmdbId: m.id,
+  }
+}
+
+/** Legacy store/query label. Movie rows use {@link movieSuggestionDisplay} instead. */
+export function formatMovieSuggestionLabel(m: Movie): string {
+  const { displayTitle, originalTitle, releaseYear } = movieSuggestionDisplay(m)
   const g0 = m.genres[0] ?? ''
-  let s = title
-  if (showOrig) s += ` ${orig}`
-  s += ` (${year})`
+  let s = displayTitle
+  if (originalTitle) s += ` ${originalTitle}`
+  s += ` (${releaseYear ?? '????'})`
   if (g0) s += ` ${g0}`
   return s
 }
@@ -128,12 +157,20 @@ export function scoreMoviesForQuery(movies: readonly Movie[], queryRaw: string):
     const tier = classifyPrefixContains(hay, query)
     if (!tier) continue
     const label = formatMovieSuggestionLabel(m)
+    const display = movieSuggestionDisplay(m)
     hits.push({
       movie: m,
       tier,
       score: moviePopularityScore(m),
       label,
-      highlightRanges: rangesForCaseInsensitiveSubstring(label, queryRaw.trim()),
+      ...display,
+      displayTitleHighlightRanges: rangesForCaseInsensitiveSubstring(
+        display.displayTitle,
+        queryRaw.trim(),
+      ),
+      originalTitleHighlightRanges: display.originalTitle
+        ? rangesForCaseInsensitiveSubstring(display.originalTitle, queryRaw.trim())
+        : [],
     })
   }
 

@@ -4,7 +4,7 @@ overview: 为搜索 HUD 增加独立 TMDB ID 定位入口，并重构 Title/ID �
 todos:
   - id: p43.1-tmdb-id-search-contract
     content: 建立纯函数式 TMDB ID 索引、精确/前缀候选规则与确定性排序
-    status: pending
+    status: completed
   - id: p43.2-shared-movie-suggestion-row
     content: 重构 Title/ID 共用的电影候选数据模型与响应式候选行
     status: pending

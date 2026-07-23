@@ -9,9 +9,18 @@ import {
 } from 'react'
 import { HighlightedText } from '@/components/HighlightedText'
 import {
+  beginFocusEchoQueryEdit,
+  clearFocusEchoInput,
+  getFocusEchoInputValue,
+  INITIAL_FOCUS_ECHO_INPUT_STATE,
+  isFocusEchoActiveForTab,
+  isFocusEchoInput,
+  reconcileFocusEchoInput,
+  shouldClearQueriesForFocusChange,
+} from '@/components/focusEchoInputState'
+import {
   beginIdTabQueryEdit,
   clearIdTabInput,
-  enterIdTabFocusEcho,
   getIdTabInputValue,
   INITIAL_ID_TAB_INPUT_STATE,
   isIdQueryEvaluationCurrent,
@@ -41,6 +50,7 @@ import { enterPersonSearchSession, sortIdsByRelease } from '@/utils/personSearch
 import type { MovieSearchHit, TextHighlightRange } from '@/utils/searchScore'
 import {
   SEARCH_QUERY_DEBOUNCE_MS,
+  formatMovieFocusEchoLabel,
   formatMovieSuggestionLabel,
   movieSuggestionDisplay,
   scoreMoviesForQuery,
@@ -89,7 +99,12 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
   const genrePalette = useGalaxyDataStore((s) => s.data?.meta.genre_palette) ?? null
 
   const [hudTab, setHudTab] = useState<SearchHudTab>('movie')
-  const [idInputState, setIdInputState] = useState(INITIAL_ID_TAB_INPUT_STATE)
+  const [titleInputState, setTitleInputState] = useState(() =>
+    reconcileFocusEchoInput(INITIAL_FOCUS_ECHO_INPUT_STATE, selectedMovieId),
+  )
+  const [idInputState, setIdInputState] = useState(() =>
+    reconcileIdTabFocus(INITIAL_ID_TAB_INPUT_STATE, selectedMovieId),
+  )
   const [debouncedIdQuery, setDebouncedIdQuery] = useState('')
   const [listOpen, setListOpen] = useState(false)
   const [highlightIndex, setHighlightIndex] = useState(-1)
@@ -120,11 +135,31 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
   const idInputValue = getIdTabInputValue(idInputState, selectedMovieId)
   const idFocusEcho = isIdTabFocusEcho(idInputState, selectedMovieId)
 
-  useEffect(() =>
-    useGalaxyInteractionStore.subscribe((state) => {
-      setIdInputState((current) => reconcileIdTabFocus(current, state.selectedMovieId))
-    }),
-  [])
+  useLayoutEffect(
+    () =>
+      useGalaxyInteractionStore.subscribe((state, previous) => {
+        if (state.selectedMovieId === previous.selectedMovieId) return
+        setTitleInputState((current) =>
+          reconcileFocusEchoInput(current, state.selectedMovieId),
+        )
+        setIdInputState((current) => reconcileIdTabFocus(current, state.selectedMovieId))
+
+        if (
+          shouldClearQueriesForFocusChange(
+            previous.selectedMovieId,
+            state.selectedMovieId,
+          )
+        ) {
+          clearSearch()
+          setSelectedGenres([])
+          setDebouncedQuery('')
+          setDebouncedIdQuery('')
+          setListOpen(false)
+          setHighlightIndex(-1)
+        }
+      }),
+    [],
+  )
 
   useEffect(() => {
     const t = window.setTimeout(() => setDebouncedIdQuery(idInputState.query), SEARCH_QUERY_DEBOUNCE_MS)
@@ -138,6 +173,15 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
     for (const mv of movies) m.set(mv.id, mv)
     return m
   }, [movies])
+
+  const selectedMovie = selectedMovieId === null ? null : (movieById.get(selectedMovieId) ?? null)
+  const titleFocusEchoValue = selectedMovie ? formatMovieFocusEchoLabel(selectedMovie) : ''
+  const titleInputValue = getFocusEchoInputValue(
+    titleInputState,
+    selectedMovieId,
+    titleFocusEchoValue,
+  )
+  const titleFocusEcho = isFocusEchoInput(titleInputState, selectedMovieId)
 
   const tmdbIdSearchIndex = useMemo(() => buildTmdbIdSearchIndex(movies), [movies])
 
@@ -300,7 +344,8 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
     hudTab === 'id'
       ? hasCurrentIdEvaluation && deferredIdQuery.length > 0
       : debouncedTrimmed.length >= debouncedMinLen
-  const canShowList = !idFocusEcho && hasEligibleQuery && resultRows.length > 0
+  const activeFocusEcho = isFocusEchoActiveForTab(hudTab, titleFocusEcho, idFocusEcho)
+  const canShowList = !activeFocusEcho && hasEligibleQuery && resultRows.length > 0
   const panelVisible = hudTab !== 'genre' && listOpen && canShowList
 
   const isActive = hoverInside || focusInside || panelVisible
@@ -361,13 +406,13 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
           candidateCount: resultRows.length,
           selectedTmdbId: s.movieId,
         })
-        useGalaxyInteractionStore.setState({ selectedMovieId: s.movieId })
-        setIdInputState((state) => enterIdTabFocusEcho(state, s.movieId))
+        if (s.movieId !== selectedMovieId) {
+          useGalaxyInteractionStore.setState({ selectedMovieId: s.movieId })
+        }
       } else if (s.kind === 'movie') {
-        const m = movieById.get(s.movieId)
-        const q = m ? formatMovieSuggestionLabel(m) : s.label
-        useGalaxyInteractionStore.setState({ selectedMovieId: s.movieId, searchQuery: q })
-        setDebouncedQuery(q)
+        if (s.movieId !== selectedMovieId) {
+          useGalaxyInteractionStore.setState({ selectedMovieId: s.movieId })
+        }
       } else if (s.kind === 'person' && searchIndex) {
         const { applied, searchQuery: q } = enterPersonSearchSession({
           personKey: s.personKey,
@@ -387,19 +432,19 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
       movieById,
       resultRows.length,
       searchIndex,
+      selectedMovieId,
     ],
   )
 
   const onClear = useCallback(() => {
     if (hudTab === 'id') {
-      // ID query and focus echo are local; only the shared focus key must be cleared.
-      useGalaxyInteractionStore.setState({ selectedMovieId: null })
       setIdInputState((state) => clearIdTabInput(state))
     } else {
       clearSearch()
-      // P13.6 — align with ESC §4.6: exit focus in one action (no second ESC).
-      useGalaxyInteractionStore.setState({ selectedMovieId: null })
-      setSelectedGenres([])
+      setDebouncedQuery('')
+      if (hudTab === 'movie') {
+        setTitleInputState((state) => clearFocusEchoInput(state))
+      }
     }
     setListOpen(false)
     setHighlightIndex(-1)
@@ -575,7 +620,7 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
                 aria-label={searchPlaceholder}
                 className={cn(
                   'h-9 w-full min-w-0 rounded-lg border px-3 text-sm text-foreground outline-none',
-                  idFocusEcho ? 'pe-20' : 'pe-9',
+                  hudTab === 'id' && idFocusEcho ? 'pe-20' : 'pe-9',
                   'transition-[background-color,border-color,box-shadow,color] duration-150',
                   // Light HUD (no .dark): faint glass on black canvas — idle stays quiet
                   'group-data-[state=idle]:border-white/10 group-data-[state=idle]:bg-white/[0.05] group-data-[state=idle]:shadow-none',
@@ -589,7 +634,13 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
                   'dark:group-data-[state=active]:border-input dark:group-data-[state=active]:bg-background/80',
                   'focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40',
                 )}
-                value={hudTab === 'id' ? idInputValue : searchQuery}
+                value={
+                  hudTab === 'id'
+                    ? idInputValue
+                    : hudTab === 'movie'
+                      ? titleInputValue
+                      : searchQuery
+                }
                 inputMode={hudTab === 'id' ? 'numeric' : undefined}
                 onChange={(e) => {
                   if (hudTab === 'id') {
@@ -599,15 +650,24 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
                     setHighlightIndex(-1)
                     return
                   }
-                  setSearchQuery(e.target.value)
-                  const t = e.target.value.trim()
+                  const query = e.target.value
+                  if (hudTab === 'movie') {
+                    setTitleInputState((state) => beginFocusEchoQueryEdit(state, query))
+                  }
+                  setSearchQuery(query)
+                  const t = query.trim()
                   setListOpen(t.length >= searchMinQueryLengthForTrim(t))
                 }}
                 onFocus={() => {
-                  const query = hudTab === 'id' ? idInputState.query : searchQuery
+                  const query =
+                    hudTab === 'id'
+                      ? idInputState.query
+                      : hudTab === 'movie'
+                        ? titleInputState.query
+                        : searchQuery
                   const t = query.trim()
                   if (
-                    !idFocusEcho &&
+                    !activeFocusEcho &&
                     (hudTab === 'id'
                       ? t.length > 0 && resultRows.length > 0
                       : t.length >= searchMinQueryLengthForTrim(t) && resultRows.length > 0)
@@ -657,7 +717,12 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
                   {ui.searchBar.tmdbIdTag}
                 </span>
               )}
-              {(hudTab === 'id' ? idInputValue.length > 0 : searchQuery.length > 0) && !isBlocked && (
+              {(hudTab === 'id'
+                ? idInputValue.length > 0
+                : hudTab === 'movie'
+                  ? titleInputValue.length > 0
+                  : searchQuery.length > 0) &&
+                !isBlocked && (
                 <CloseButton
                   variant="ghostSm"
                   label={ui.searchBar.clear}

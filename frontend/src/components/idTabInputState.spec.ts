@@ -28,6 +28,15 @@ describe('ID tab focus echo state', () => {
     expect(isIdTabFocusEcho(editing, 550)).toBe(false)
   })
 
+  it('clears an old ID query when focus changes to another movie', () => {
+    const focused = reconcileIdTabFocus(INITIAL_ID_TAB_INPUT_STATE, 550)
+    const editing = beginIdTabQueryEdit(focused, '129')
+    const nextFocus = reconcileIdTabFocus(editing, 680)
+
+    expect(nextFocus.query).toBe('')
+    expect(getIdTabInputValue(nextFocus, 680)).toBe('680')
+  })
+
   it('clears the echo when focus exits but preserves a user query', () => {
     const focused = reconcileIdTabFocus(INITIAL_ID_TAB_INPUT_STATE, 550)
     const unfocused = reconcileIdTabFocus(focused, null)
@@ -38,9 +47,18 @@ describe('ID tab focus echo state', () => {
     expect(getIdTabInputValue(stillEditingAfterFocusExit, null)).toBe('5501')
   })
 
-  it('clears local query state when the search clear action runs', () => {
-    const state = beginIdTabQueryEdit(INITIAL_ID_TAB_INPUT_STATE, '550')
-    expect(clearIdTabInput(state)).toMatchObject({ query: '', isEditing: false })
+  it('clears local query state without restoring the current focus echo', () => {
+    const focused = reconcileIdTabFocus(INITIAL_ID_TAB_INPUT_STATE, 550)
+    const state = beginIdTabQueryEdit(focused, '5501')
+    const cleared = clearIdTabInput(state)
+
+    expect(cleared).toMatchObject({
+      query: '',
+      isEditing: true,
+      observedSelectedMovieId: 550,
+    })
+    expect(getIdTabInputValue(cleared, 550)).toBe('')
+    expect(isIdTabFocusEcho(cleared, 550)).toBe(false)
   })
 })
 

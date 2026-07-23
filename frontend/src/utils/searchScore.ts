@@ -117,6 +117,12 @@ export function movieSuggestionDisplay(m: Movie): Pick<
   }
 }
 
+/** Focus echo contains titles only; metadata remains exclusive to suggestion rows. */
+export function formatMovieFocusEchoLabel(m: Movie): string {
+  const { displayTitle, originalTitle } = movieSuggestionDisplay(m)
+  return originalTitle ? `${displayTitle} / ${originalTitle}` : displayTitle
+}
+
 /** Legacy store/query label. Movie rows use {@link movieSuggestionDisplay} instead. */
 export function formatMovieSuggestionLabel(m: Movie): string {
   const { displayTitle, originalTitle, releaseYear } = movieSuggestionDisplay(m)

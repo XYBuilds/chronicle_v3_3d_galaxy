@@ -215,7 +215,10 @@ jobs:
         with:
           node-version: "24"
 
-      - name: Install and build frontend (embed cron-exported galaxy_data)
+      - name: Prepare Pages deploy assets
+        run: node frontend/scripts/prepare-pages-deploy.mjs
+
+      - name: Install and build frontend (R2-backed galaxy assets)
         env:
           VITE_CF_BEACON_TOKEN: ${{ secrets.CF_WEB_ANALYTICS_BEACON_TOKEN }}
         run: |

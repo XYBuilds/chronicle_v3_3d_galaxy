@@ -12,6 +12,7 @@
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "test": "vitest run",
+    "test:pages-deploy-assets": "node --test scripts/prepare-pages-deploy.test.mjs",
     "test:watch": "vitest",
     "icons:export": "node scripts/export-icons.mjs"
   },

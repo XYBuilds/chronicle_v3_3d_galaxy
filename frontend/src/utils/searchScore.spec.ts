@@ -5,6 +5,7 @@ import type { SearchIndex } from '@/types/searchIndex'
 
 import {
   SEARCH_MIN_QUERY_LEN,
+  formatMovieFocusEchoLabel,
   formatMovieSuggestionLabel,
   formatPersonRoleSuffix,
   moviePopularityScore,
@@ -74,6 +75,29 @@ describe('normalizeForSearch (v2 Unicode)', () => {
   })
   it('strips combining marks when NFKC leaves a separate Mn', () => {
     expect(normalizeForSearch('q\u0307')).toBe('q')
+  })
+})
+
+describe('movie focus echo label', () => {
+  it('shows title and a distinct original title with a slash, without suggestion metadata', () => {
+    expect(
+      formatMovieFocusEchoLabel(
+        baseMovie({
+          id: 129,
+          title: 'Dracula of Exarcheia',
+          original_title: 'Ο Δράκουλας των Εξαρχείων',
+          release_date: '1983-01-01',
+        }),
+      ),
+    ).toBe('Dracula of Exarcheia / Ο Δράκουλας των Εξαρχείων')
+  })
+
+  it('does not duplicate an equivalent original title', () => {
+    expect(
+      formatMovieFocusEchoLabel(
+        baseMovie({ id: 550, title: 'Fight Club', original_title: 'fight club' }),
+      ),
+    ).toBe('Fight Club')
   })
 })
 

@@ -1,3 +1,14 @@
+import {
+  beginFocusEchoQueryEdit,
+  clearFocusEchoInput,
+  enterFocusEcho,
+  getFocusEchoInputValue,
+  INITIAL_FOCUS_ECHO_INPUT_STATE,
+  isFocusEchoInput,
+  reconcileFocusEchoInput,
+  type FocusEchoInputState,
+} from '@/components/focusEchoInputState'
+
 export function isIdQueryEvaluationCurrent(query: string, evaluatedQuery: string): boolean {
   return query === evaluatedQuery
 }
@@ -13,44 +24,32 @@ export function resolveEnterSuggestionIndex(
   return Math.min(highlightIndex, candidateCount - 1)
 }
 
-export interface IdTabInputState {
-  /** The user's independent ID-search text; never mirrored into the global search query. */
-  readonly query: string
-  /** Editing suppresses the selected-movie echo until selection changes again. */
-  readonly isEditing: boolean
-  /** Last focus value observed by the SearchBar. */
-  readonly observedSelectedMovieId: number | null
+export type IdTabInputState = FocusEchoInputState
+
+export const INITIAL_ID_TAB_INPUT_STATE = INITIAL_FOCUS_ECHO_INPUT_STATE
+
+export function enterIdTabFocusEcho(
+  state: IdTabInputState,
+  selectedMovieId: number,
+): IdTabInputState {
+  return enterFocusEcho(state, selectedMovieId)
 }
 
-export const INITIAL_ID_TAB_INPUT_STATE: IdTabInputState = Object.freeze({
-  query: '',
-  isEditing: false,
-  observedSelectedMovieId: null,
-})
-
-export function enterIdTabFocusEcho(state: IdTabInputState, selectedMovieId: number): IdTabInputState {
-  return { ...state, isEditing: false, observedSelectedMovieId: selectedMovieId }
-}
-
-/** Re-enter focus-echo mode only for a new focus value; editing remains local otherwise. */
 export function reconcileIdTabFocus(
   state: IdTabInputState,
   selectedMovieId: number | null,
 ): IdTabInputState {
-  if (state.observedSelectedMovieId === selectedMovieId) return state
-  return selectedMovieId === null
-    ? { ...state, isEditing: false, observedSelectedMovieId: null }
-    : enterIdTabFocusEcho(state, selectedMovieId)
+  return reconcileFocusEchoInput(state, selectedMovieId)
 }
 
 /** A user edit leaves focus-echo mode without changing the current movie focus. */
 export function beginIdTabQueryEdit(state: IdTabInputState, query: string): IdTabInputState {
-  return { ...state, query, isEditing: true }
+  return beginFocusEchoQueryEdit(state, query)
 }
 
-/** Explicit clear resets local search text; selected focus is cleared by the caller's store action. */
+/** Clear resets local search text while preserving the selected movie focus. */
 export function clearIdTabInput(state: IdTabInputState): IdTabInputState {
-  return { ...state, query: '', isEditing: false }
+  return clearFocusEchoInput(state)
 }
 
 /** The selected TMDB ID is presentation-only and never becomes the ID query. */
@@ -58,9 +57,16 @@ export function getIdTabInputValue(
   state: IdTabInputState,
   selectedMovieId: number | null,
 ): string {
-  return selectedMovieId !== null && !state.isEditing ? String(selectedMovieId) : state.query
+  return getFocusEchoInputValue(
+    state,
+    selectedMovieId,
+    selectedMovieId === null ? '' : String(selectedMovieId),
+  )
 }
 
-export function isIdTabFocusEcho(state: IdTabInputState, selectedMovieId: number | null): boolean {
-  return selectedMovieId !== null && !state.isEditing
+export function isIdTabFocusEcho(
+  state: IdTabInputState,
+  selectedMovieId: number | null,
+): boolean {
+  return isFocusEchoInput(state, selectedMovieId)
 }

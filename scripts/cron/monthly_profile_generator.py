@@ -24,7 +24,12 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-_REPO_ROOT = Path(__file__).resolve().parents[2]
+_SCRIPTS_DIR = Path(__file__).resolve().parents[1]
+_REPO_ROOT = _SCRIPTS_DIR.parent
+if str(_SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS_DIR))
+
+from export.export_contract import canonical_utc_timestamp  # noqa: E402
 
 SCHEMA_VERSION = "rating-emission-profile-v1"
 MODEL_VERSION = "rating-midrank-cdf-lut-v1"
@@ -275,6 +280,15 @@ def _utc_timestamp(value: str | None) -> str:
     return text
 
 
+def _source_utc_timestamp(value: Any) -> str:
+    _assert(value is not None and isinstance(value, str) and value.strip(), "generated_at is required in export metadata or arguments")
+    try:
+        canonical = canonical_utc_timestamp(value)
+    except ValueError as exc:
+        raise MonthlyProfileError("export generated_at must be a valid UTC timestamp") from exc
+    return _utc_timestamp(canonical)
+
+
 def _period_from_metadata(metadata: Mapping[str, Any]) -> str:
     explicit = str(metadata.get("period", "")).strip()
     if explicit:
@@ -382,7 +396,7 @@ def generate_monthly_profile(
     resolved_period = str(period or _period_from_metadata(metadata)).strip()
     _assert(_PERIOD_RE.fullmatch(resolved_period) is not None, "period must be YYYY-MM")
     source_hash = sha256_text(_canonical_source_records(records))
-    resolved_generated_at = _utc_timestamp(generated_at if generated_at is not None else metadata.get("generated_at"))
+    resolved_generated_at = _source_utc_timestamp(generated_at if generated_at is not None else metadata.get("generated_at"))
     resolved_commit = _valid_git_commit(git_commit if git_commit is not None else _git_commit())
     identity_payload: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,

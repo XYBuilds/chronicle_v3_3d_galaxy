@@ -19,6 +19,7 @@ _SCRIPTS_DIR = Path(__file__).resolve().parents[1]
 if str(_SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS_DIR))
 
+from export.export_contract import canonical_utc_timestamp  # noqa: E402
 from export.export_search_index import (  # noqa: E402
     build_search_index_dict,
     normalize_for_search_v2,
@@ -298,8 +299,7 @@ def build_galaxy_payload(
     focus_emission_profile: Mapping[str, Any] | None = None,
 ) -> tuple[dict[str, Any], list[str]]:
     """Build ``{"meta": ..., "movies": ...}`` from a cleaned frame + UMAP xy (same row order)."""
-    if generated_at is None:
-        generated_at = datetime.now(timezone.utc).isoformat()
+    generated_at = canonical_utc_timestamp(datetime.now(timezone.utc) if generated_at is None else generated_at)
     xy_arr = np.asarray(xy, dtype=np.float64)
     if xy_arr.ndim != 2 or xy_arr.shape[1] != 2:
         raise ValueError(f"umap_xy must be (n, 2), got {xy_arr.shape}")

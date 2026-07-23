@@ -13,7 +13,7 @@ todos:
     status: completed
   - id: p43.4-i18n-regression-gate
     content: 同步 locale、补齐回归测试并完成功能与视觉验收
-    status: pending
+    status: completed
 isProject: false
 ---
 

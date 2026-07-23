@@ -51,12 +51,6 @@ import { buildTmdbIdSearchIndex, searchTmdbId } from '@/utils/tmdbIdSearch'
 
 export type SearchHudTab = 'movie' | 'person' | 'genre' | 'id'
 
-const ID_TAB_LABEL = 'ID'
-const ID_TAB_PLACEHOLDER = 'TMDB ID'
-const ID_TAB_INVALID_MESSAGE = 'Enter TMDB ID digits only.'
-const ID_TAB_NO_RESULTS_MESSAGE = 'No TMDB ID matches.'
-const ID_TAB_ECHO_TAG = 'TMDB'
-
 export interface SearchBarProps {
   hasSearchIndex: boolean
   movies: readonly Movie[]
@@ -319,6 +313,13 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
         : Math.min(highlightIndex, resultRows.length - 1)
 
   useEffect(() => {
+    if (activeRowIndex < 0) return
+    document
+      .getElementById(`galaxy-search-suggestion-${activeRowIndex}`)
+      ?.scrollIntoView({ block: 'nearest' })
+  }, [activeRowIndex])
+
+  useEffect(() => {
     if (!panelVisible) return
     const onDocDown = (e: MouseEvent) => {
       const root = panelRootRef.current
@@ -424,13 +425,13 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
   const isBlocked = disabledReason !== null
 
   const searchPlaceholder =
-    hudTab === 'id' ? (isBlocked ? ui.searchBar.placeholderDisabled : ID_TAB_PLACEHOLDER) : getSearchBarTextPlaceholder(isBlocked, hudTab, ui.searchBar)
+    hudTab === 'id' ? (isBlocked ? ui.searchBar.placeholderDisabled : ui.searchBar.placeholderId) : getSearchBarTextPlaceholder(isBlocked, hudTab, ui.searchBar)
 
   return (
     <div
       className={cn(
         'pointer-events-auto fixed left-1/2 z-[var(--z-hud-search)] w-[var(--hud-search-width)] max-w-[var(--hud-search-max-w)] -translate-x-1/2 px-2',
-        'top-[max(var(--hud-inset-md),env(safe-area-inset-top,0px))]',
+        'top-[calc(max(var(--hud-inset-sm),env(safe-area-inset-top,0px))+var(--hud-top-tools-row-h)+var(--hud-gap-stack))] xl:top-[max(var(--hud-inset-md),env(safe-area-inset-top,0px))]',
       )}
       role="search"
     >
@@ -464,7 +465,7 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
               type="button"
               className={cn(
                 buttonVariants({ variant: 'ghost', size: 'xs' }),
-                'flex-1 capitalize',
+                'min-w-0 flex-1 justify-center truncate capitalize',
                 hudTab === tab
                   ? 'bg-foreground text-background shadow-sm hover:bg-foreground/90 hover:text-background dark:bg-secondary dark:text-secondary-foreground dark:hover:bg-secondary/80 dark:hover:text-secondary-foreground'
                   : 'bg-transparent text-muted-foreground hover:bg-muted/50 hover:text-muted-foreground dark:hover:bg-muted/50',
@@ -478,7 +479,7 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
                   ? ui.searchBar.tabPerson
                   : tab === 'genre'
                     ? ui.searchBar.tabGenre
-                    : ID_TAB_LABEL}
+                    : ui.searchBar.tabId}
             </button>
           ))}
         </div>
@@ -562,14 +563,19 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
                 enterKeyHint="search"
                 autoComplete="off"
                 spellCheck={false}
+                dir={hudTab === 'id' ? 'ltr' : undefined}
                 aria-autocomplete="list"
                 aria-expanded={panelVisible}
                 aria-controls="galaxy-search-suggestions"
+                aria-activedescendant={
+                  activeRowIndex >= 0 ? `galaxy-search-suggestion-${activeRowIndex}` : undefined
+                }
                 disabled={isBlocked}
                 placeholder={searchPlaceholder}
                 aria-label={searchPlaceholder}
                 className={cn(
-                  'h-9 w-full min-w-0 rounded-lg border px-3 pe-9 text-sm text-foreground outline-none',
+                  'h-9 w-full min-w-0 rounded-lg border px-3 text-sm text-foreground outline-none',
+                  idFocusEcho ? 'pe-20' : 'pe-9',
                   'transition-[background-color,border-color,box-shadow,color] duration-150',
                   // Light HUD (no .dark): faint glass on black canvas — idle stays quiet
                   'group-data-[state=idle]:border-white/10 group-data-[state=idle]:bg-white/[0.05] group-data-[state=idle]:shadow-none',
@@ -648,7 +654,7 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
                   className="pointer-events-none absolute end-10 top-1/2 -translate-y-1/2 rounded border border-border/70 bg-muted/60 px-1.5 py-0.5 text-[0.6875rem] font-medium leading-none text-muted-foreground"
                   dir="ltr"
                 >
-                  {ID_TAB_ECHO_TAG}
+                  {ui.searchBar.tmdbIdTag}
                 </span>
               )}
               {(hudTab === 'id' ? idInputValue.length > 0 : searchQuery.length > 0) && !isBlocked && (
@@ -667,7 +673,7 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
               idInputState.query.length > 0 &&
               idSearchStatus !== 'results' && (
               <p className="mt-2 px-1 text-xs leading-snug text-muted-foreground" role="status">
-                {idSearchStatus === 'invalid' ? ID_TAB_INVALID_MESSAGE : ID_TAB_NO_RESULTS_MESSAGE}
+                {idSearchStatus === 'invalid' ? ui.searchBar.idInvalid : ui.searchBar.idNoResults}
               </p>
             )}
 
@@ -687,6 +693,12 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
                       {row.suggestion.kind === 'movie' && row.movieDisplay ? (
                         <MovieSuggestionRow
                           {...row.movieDisplay}
+                          optionId={`galaxy-search-suggestion-${idx}`}
+                          tmdbIdTag={ui.searchBar.tmdbIdTag}
+                          ariaLabel={ui.searchBar.idSuggestionAriaLabel(
+                            row.movieDisplay.displayTitle,
+                            row.movieDisplay.tmdbId,
+                          )}
                           active={active}
                           onPointerEnter={() => setHighlightIndex(idx)}
                           onMouseDown={(ev) => ev.preventDefault()}
@@ -695,6 +707,7 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
                       ) : (
                         <button
                           type="button"
+                          id={`galaxy-search-suggestion-${idx}`}
                           role="option"
                           aria-selected={active}
                           className={cn(

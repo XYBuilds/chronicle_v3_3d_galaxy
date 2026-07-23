@@ -39,7 +39,11 @@ export function buildStrings(localeId: LocaleId) {
       jsonParseFailed: (detail: string) => interpolate(raw.galaxyData.jsonParseFailed, { detail }),
     },
     error: raw.error,
-    searchBar: raw.searchBar,
+    searchBar: {
+      ...raw.searchBar,
+      idSuggestionAriaLabel: (title: string, tmdbId: number | string) =>
+        interpolate(raw.searchBar.idSuggestionAriaLabel, { title, tmdbId: String(tmdbId) }),
+    },
     hud: raw.hud,
     attribution: raw.attribution,
     timeline: {

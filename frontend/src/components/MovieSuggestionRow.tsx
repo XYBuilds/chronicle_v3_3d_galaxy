@@ -9,6 +9,9 @@ export interface MovieSuggestionRowProps {
   originalTitle: string | null
   releaseYear: string | null
   tmdbId: number
+  tmdbIdTag: string
+  ariaLabel: string
+  optionId: string
   displayTitleHighlightRanges: TextHighlightRange[]
   originalTitleHighlightRanges: TextHighlightRange[]
   active: boolean
@@ -26,6 +29,9 @@ export function MovieSuggestionRow({
   originalTitle,
   releaseYear,
   tmdbId,
+  tmdbIdTag,
+  ariaLabel,
+  optionId,
   displayTitleHighlightRanges,
   originalTitleHighlightRanges,
   active,
@@ -36,7 +42,9 @@ export function MovieSuggestionRow({
   return (
     <button
       type="button"
+      id={optionId}
       role="option"
+      aria-label={ariaLabel}
       aria-selected={active}
       className={cn(
         'flex w-full min-w-0 flex-col gap-0.5 px-3 py-2 text-start transition-colors',
@@ -54,17 +62,16 @@ export function MovieSuggestionRow({
           dir="ltr"
           className="shrink-0 rounded border border-border/70 bg-muted/60 px-1.5 py-0.5 text-[0.6875rem] font-medium leading-none tabular-nums text-muted-foreground"
         >
-          TMDB {tmdbId}
+          {tmdbIdTag} {tmdbId}
         </span>
       </span>
       {(originalTitle || releaseYear) && (
         <span className="flex min-w-0 items-baseline gap-1.5 text-xs leading-snug text-muted-foreground">
           {originalTitle && (
-            <span className="min-w-0 flex-1 truncate">
+            <span className="min-w-0 truncate">
               <HighlightedText text={originalTitle} ranges={originalTitleHighlightRanges} />
             </span>
           )}
-          {originalTitle && releaseYear && <span aria-hidden="true">·</span>}
           {releaseYear && (
             <span dir="ltr" className="shrink-0 tabular-nums">
               {releaseYear}

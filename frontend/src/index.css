@@ -82,6 +82,8 @@
   --hud-inset-sm: 1rem;
   --hud-inset-md: 1rem;
   --hud-gap-stack: 0.5rem;
+  /** Height of the `size-10` top-control row; keeps compact and medium HUD regions physically separate. */
+  --hud-top-tools-row-h: 2.5rem;
   --hud-radius-chrome: var(--radius-md);
   --hud-search-max-w: 32rem;
   --hud-modal-max-w: 36rem;

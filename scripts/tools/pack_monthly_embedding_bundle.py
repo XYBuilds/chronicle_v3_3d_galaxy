@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import shutil
 import sys
 import zipfile
 from pathlib import Path
@@ -27,6 +28,18 @@ if str(_SCRIPTS_DIR) not in sys.path:
 from feature_engineering.language_palette import FROZEN_LANG_ORDER, LANG_PALETTE_VERSION  # noqa: E402
 
 _NAMES = ("cleaned.csv", "text_embeddings.npy", "genre_vectors.npy", "language_vectors.npy")
+_ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
+
+
+def _write_deterministic_zip(paths: dict[str, Path], output: Path) -> None:
+    with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
+        for name in _NAMES:
+            info = zipfile.ZipInfo(filename=name, date_time=_ZIP_TIMESTAMP)
+            info.compress_type = zipfile.ZIP_DEFLATED
+            info.create_system = 3
+            info.external_attr = 0o100644 << 16
+            with paths[name].open("rb") as source, archive.open(info, "w") as destination:
+                shutil.copyfileobj(source, destination, length=1024 * 1024)
 
 
 def _assert_matrix_contract(
@@ -96,9 +109,7 @@ def main(argv: list[str] | None = None) -> int:
     _assert_matrix_contract(name="language", matrix=le, expected_rows=n, expected_width=len(FROZEN_LANG_ORDER))
 
     out.parent.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-        for n in _NAMES:
-            zf.write(paths[n], arcname=n)
+    _write_deterministic_zip(paths, out)
     print(
         f"[pack] wrote {out} ({out.stat().st_size / (1024 * 1024):.1f} MiB) sha256prefix={_sha256_prefix(out)}",
         flush=True,

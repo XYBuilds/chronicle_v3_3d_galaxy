@@ -32,11 +32,10 @@ from feature_engineering.genre_encoding import (  # noqa: E402
 )
 from feature_engineering.genre_palette import FROZEN_GENRE_ORDER_V1  # noqa: E402
 from feature_engineering.language_encoding import (  # noqa: E402
-    UNKNOWN_LANG,
     l2_normalize_rows,
-    normalize_language_code,
-    one_hot_language_matrix_with_fallback,
+    one_hot_language_matrix,
 )
+from feature_engineering.language_palette import FROZEN_LANG_ORDER, LANG_PALETTE_VERSION  # noqa: E402
 from feature_engineering.text_embedding import (  # noqa: E402
     DEFAULT_MODEL_ID,
     build_embedding_text,
@@ -182,15 +181,20 @@ def _fetch_pending_ids(supabase: Any, *, page_size: int) -> set[int]:
     return ids
 
 
-def _build_lang_order_from_movies(rows: list[dict[str, Any]]) -> list[str]:
-    found: set[str] = set()
-    for r in rows:
-        found.add(normalize_language_code(r.get("original_language")))
-    # Keep a stable fallback slot even if current movies rows happen
-    # to contain no missing language values.
-    found.add(UNKNOWN_LANG)
-    out = sorted(found)
-    return out
+def _encode_active_language_matrix(series: pd.Series) -> np.ndarray:
+    lang_order = list(FROZEN_LANG_ORDER)
+    raw = one_hot_language_matrix(series, lang_order)
+    encoded = l2_normalize_rows(np.asarray(raw, dtype=np.float64).astype(np.float32))
+    assert encoded.shape == (len(series), len(lang_order)), (
+        f"active language matrix shape {encoded.shape} != ({len(series)}, {len(lang_order)})"
+    )
+    assert np.isfinite(encoded).all(), "active language matrix contains NaN or Inf"
+    print(
+        f"[P18.4 nightly] active language palette={LANG_PALETTE_VERSION} "
+        f"shape={encoded.shape} min={float(encoded.min()):.6g} max={float(encoded.max()):.6g}",
+        flush=True,
+    )
+    return encoded
 
 
 def _votes_changed(ex: dict[str, Any], row: pd.Series) -> bool:
@@ -218,7 +222,6 @@ def _merge_vote_fields(ex: dict[str, Any], row: pd.Series, *, now_iso: str) -> d
 def _encode_new_movies(
     sub: pd.DataFrame,
     *,
-    lang_order: list[str],
     model_id: str,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     genre_order = list(FROZEN_GENRE_ORDER_V1)
@@ -242,8 +245,7 @@ def _encode_new_movies(
     g_raw = rank_weighted_genre_matrix(sub["genres"], genre_order, weight_ratio=DEFAULT_GENRE_WEIGHT_RATIO)
     genre_emb = l2_normalize_rows(np.asarray(g_raw, dtype=np.float64).astype(np.float32))
 
-    l_raw = one_hot_language_matrix_with_fallback(sub["original_language"], lang_order)
-    lang_emb = l2_normalize_rows(np.asarray(l_raw, dtype=np.float64).astype(np.float32))
+    lang_emb = _encode_active_language_matrix(sub["original_language"])
     print(
         f"[P18.4 nightly] encoded pending n={n} text={text_emb.shape} genre={genre_emb.shape} lang={lang_emb.shape}",
         flush=True,
@@ -413,8 +415,10 @@ def main(argv: list[str] | None = None) -> int:
         movie_rows = _fetch_all_movie_rows(supabase, page_size=int(args.page_size))
         db_by_id: dict[int, dict[str, Any]] = {int(r["id"]): dict(r) for r in movie_rows}
         pending_ids = _fetch_pending_ids(supabase, page_size=int(args.page_size))
-        lang_order = _build_lang_order_from_movies(movie_rows)
-        print(f"[P18.4 nightly] lang_order dim={len(lang_order)}", flush=True)
+        print(
+            f"[P18.4 nightly] active lang_order={LANG_PALETTE_VERSION}:{len(FROZEN_LANG_ORDER)}",
+            flush=True,
+        )
 
         now_iso = datetime.now(timezone.utc).isoformat()
         to_upsert: list[dict[str, Any]] = []
@@ -447,7 +451,7 @@ def main(argv: list[str] | None = None) -> int:
             sub = cleaned.loc[id_series.isin(new_ids)].copy()
             sub = sub.sort_values("id")
             assert len(sub) == len(new_ids), f"new_ids row mismatch {len(sub)} vs {len(new_ids)}"
-            text_e, genre_e, lang_e = _encode_new_movies(sub, lang_order=lang_order, model_id=DEFAULT_MODEL_ID)
+            text_e, genre_e, lang_e = _encode_new_movies(sub, model_id=DEFAULT_MODEL_ID)
             pending_payloads: list[dict[str, Any]] = []
             for j, (_, row) in enumerate(sub.iterrows()):
                 pending_payloads.append(

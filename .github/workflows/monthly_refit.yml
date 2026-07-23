@@ -69,9 +69,9 @@ jobs:
             data/output/text_embeddings.npy
             data/output/genre_vectors.npy
             data/output/language_vectors.npy
-          key: ${{ runner.os }}-p18-monthly-emb-${{ hashFiles('requirements.cpu.txt') }}-v2
+          key: ${{ runner.os }}-p18-monthly-emb-v3-${{ hashFiles('requirements.cpu.txt') }}
           restore-keys: |
-            ${{ runner.os }}-p18-monthly-emb-
+            ${{ runner.os }}-p18-monthly-emb-v3-
 
       # Scheme C: canonical bundle from private URL (zip). When set, overwrites cache/repo
       # copies under data/output/. Zip must contain the four files in one directory (any nesting).

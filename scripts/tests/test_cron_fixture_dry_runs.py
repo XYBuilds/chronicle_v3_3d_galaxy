@@ -2,6 +2,7 @@
 """Fixture dry-run coverage for the Phase 37 cron safety boundary."""
 from __future__ import annotations
 
+import inspect
 import io
 import os
 import sys
@@ -94,6 +95,14 @@ class TestCronFixtureDryRuns(unittest.TestCase):
         self.assertIn("recomputed thresholds_json years=1 min_year=2020 max_year=2020", output)
         self.assertIn("final-membership.shape=(3, 6)", output)
         self.assertIn("--dry-run: skip Supabase / UMAP / export", output)
+
+    def test_nightly_pending_language_encoding_uses_active_palette_order(self) -> None:
+        encoded = nightly_vote_refresh._encode_active_language_matrix(pd.Series(["ab", "en"]))
+
+        self.assertEqual(encoded.shape, (2, len(FROZEN_LANG_ORDER)))
+        self.assertEqual(int(np.argmax(encoded[0])), FROZEN_LANG_ORDER.index("ab"))
+        self.assertEqual(int(np.argmax(encoded[1])), FROZEN_LANG_ORDER.index("en"))
+        self.assertNotIn("lang_order", inspect.signature(nightly_vote_refresh._encode_new_movies).parameters)
 
     def test_nightly_dry_run_reads_fixture_threshold_without_writes_or_export(self) -> None:
         rows = _fixture_rows()

@@ -19,6 +19,7 @@ _REPO_ROOT = _SCRIPTS_DIR.parent
 if str(_SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS_DIR))
 
+from export.export_contract import canonical_utc_timestamp  # noqa: E402
 from export.export_galaxy_json import (  # noqa: E402
     EMBEDDING_MODEL_ID,
     build_galaxy_payload,
@@ -369,7 +370,7 @@ def main(argv: list[str] | None = None) -> int:
     if branch not in ("daily", "monthly"):
         branch = "daily"
     version = f"{now.strftime('%Y.%m.%d')}.{branch}.{str(args.export_seq).strip()}"
-    generated_at = now.isoformat()
+    generated_at = canonical_utc_timestamp(now)
 
     payload, genre_order = build_galaxy_payload(
         df,

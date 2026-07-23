@@ -61,6 +61,20 @@ def test_profile_matches_contract_shape_endpoints_and_is_byte_stable(final_expor
     assert first["source_movie_count"] == len(movies)
 
 
+def test_profile_canonicalizes_export_utc_offset_to_contract_z(
+    final_export: tuple[list[dict[str, object]], dict[str, str]],
+) -> None:
+    movies, metadata = final_export
+    profile = generate_monthly_profile(
+        movies,
+        {**metadata, "generated_at": "2026-07-22T01:02:03.987654+00:00"},
+        git_commit="0123456789abcdef",
+    )
+
+    assert profile["generated_at"] == "2026-07-22T01:02:03.987Z"
+    assert _validate_profile(profile) == profile
+
+
 def test_python_fixture_matches_typescript_curve_hash(final_export: tuple[list[dict[str, object]], dict[str, str]]) -> None:
     movies, metadata = final_export
     profile = generate_monthly_profile(movies, metadata, git_commit="0123456789abcdef")

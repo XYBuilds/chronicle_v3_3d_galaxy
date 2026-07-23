@@ -8,6 +8,17 @@ import {
   useState,
 } from 'react'
 import { HighlightedText } from '@/components/HighlightedText'
+import {
+  beginIdTabQueryEdit,
+  clearIdTabInput,
+  enterIdTabFocusEcho,
+  getIdTabInputValue,
+  INITIAL_ID_TAB_INPUT_STATE,
+  isIdQueryEvaluationCurrent,
+  isIdTabFocusEcho,
+  reconcileIdTabFocus,
+  resolveEnterSuggestionIndex,
+} from '@/components/idTabInputState'
 import { MovieSuggestionRow } from '@/components/MovieSuggestionRow'
 import { GenreBadge } from '@/components/GenreBadge'
 import { getSearchBarTextPlaceholder } from '@/components/searchBarPlaceholder'
@@ -31,12 +42,20 @@ import type { MovieSearchHit, TextHighlightRange } from '@/utils/searchScore'
 import {
   SEARCH_QUERY_DEBOUNCE_MS,
   formatMovieSuggestionLabel,
+  movieSuggestionDisplay,
   scoreMoviesForQuery,
   scorePeopleForQuery,
   searchMinQueryLengthForTrim,
 } from '@/utils/searchScore'
+import { buildTmdbIdSearchIndex, searchTmdbId } from '@/utils/tmdbIdSearch'
 
-export type SearchHudTab = 'movie' | 'person' | 'genre'
+export type SearchHudTab = 'movie' | 'person' | 'genre' | 'id'
+
+const ID_TAB_LABEL = 'ID'
+const ID_TAB_PLACEHOLDER = 'TMDB ID'
+const ID_TAB_INVALID_MESSAGE = 'Enter TMDB ID digits only.'
+const ID_TAB_NO_RESULTS_MESSAGE = 'No TMDB ID matches.'
+const ID_TAB_ECHO_TAG = 'TMDB'
 
 export interface SearchBarProps {
   hasSearchIndex: boolean
@@ -68,6 +87,7 @@ function suggestionKey(s: SearchSuggestion): string {
 export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchBarProps) {
   const ui = useStrings()
   const searchQuery = useGalaxyInteractionStore((s) => s.searchQuery)
+  const selectedMovieId = useGalaxyInteractionStore((s) => s.selectedMovieId)
   const searchMode = useGalaxyInteractionStore((s) => s.searchMode)
   const indexStatus = useSearchIndexStore((s) => s.status)
   const searchIndex = useSearchIndexStore((s) => s.data)
@@ -75,6 +95,8 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
   const genrePalette = useGalaxyDataStore((s) => s.data?.meta.genre_palette) ?? null
 
   const [hudTab, setHudTab] = useState<SearchHudTab>('movie')
+  const [idInputState, setIdInputState] = useState(INITIAL_ID_TAB_INPUT_STATE)
+  const [debouncedIdQuery, setDebouncedIdQuery] = useState('')
   const [listOpen, setListOpen] = useState(false)
   const [highlightIndex, setHighlightIndex] = useState(-1)
   /** P21.4 — container idle/active: outline-only vs solid panel (hover | focus | suggestions open). */
@@ -101,11 +123,29 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
 
   const deferredQuery = useDeferredValue(debouncedQuery)
 
+  const idInputValue = getIdTabInputValue(idInputState, selectedMovieId)
+  const idFocusEcho = isIdTabFocusEcho(idInputState, selectedMovieId)
+
+  useEffect(() =>
+    useGalaxyInteractionStore.subscribe((state) => {
+      setIdInputState((current) => reconcileIdTabFocus(current, state.selectedMovieId))
+    }),
+  [])
+
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedIdQuery(idInputState.query), SEARCH_QUERY_DEBOUNCE_MS)
+    return () => window.clearTimeout(t)
+  }, [idInputState.query])
+
+  const deferredIdQuery = useDeferredValue(debouncedIdQuery)
+
   const movieById = useMemo(() => {
     const m = new Map<number, Movie>()
     for (const mv of movies) m.set(mv.id, mv)
     return m
   }, [movies])
+
+  const tmdbIdSearchIndex = useMemo(() => buildTmdbIdSearchIndex(movies), [movies])
 
   const allGenreNames = useMemo(() => {
     const fromPalette =
@@ -193,10 +233,31 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
     })
   }, [searchMode, hudTab, selectedGenres, currentIntersection, movieById])
 
+  const idSearchResult = useMemo(
+    () => searchTmdbId(tmdbIdSearchIndex, deferredIdQuery),
+    [deferredIdQuery, tmdbIdSearchIndex],
+  )
+
   const resultRows = useMemo((): ResultRow[] => {
+    if (hudTab === 'genre') return []
+
+    if (hudTab === 'id') {
+      return idSearchResult.movies.map((movie) => {
+        const display = movieSuggestionDisplay(movie)
+        return {
+          suggestion: { kind: 'movie' as const, movieId: movie.id, label: formatMovieSuggestionLabel(movie) },
+          ranges: [],
+          movieDisplay: {
+            ...display,
+            displayTitleHighlightRanges: [],
+            originalTitleHighlightRanges: [],
+          },
+        }
+      })
+    }
+
     const q = deferredQuery
     const trimmed = q.trim()
-    if (hudTab === 'genre') return []
     if (trimmed.length < searchMinQueryLengthForTrim(trimmed)) return []
     if (!searchIndex) return []
 
@@ -225,20 +286,27 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
       },
       ranges: h.highlightRanges,
     }))
-  }, [deferredQuery, hudTab, movies, searchIndex])
+  }, [deferredQuery, hudTab, idSearchResult, movies, searchIndex])
 
   useEffect(() => {
+    if (hudTab === 'id') return
     if (hudTab === 'genre') {
       setSearchResults([])
       return
     }
-    const suggestions = resultRows.map((r) => r.suggestion)
-    setSearchResults(suggestions)
+    setSearchResults(resultRows.map((r) => r.suggestion))
   }, [resultRows, hudTab])
 
   const debouncedTrimmed = debouncedQuery.trim()
   const debouncedMinLen = searchMinQueryLengthForTrim(debouncedTrimmed)
-  const canShowList = debouncedTrimmed.length >= debouncedMinLen && resultRows.length > 0
+  const hasCurrentIdEvaluation = isIdQueryEvaluationCurrent(idInputState.query, deferredIdQuery)
+  const idSearchStatus =
+    hudTab === 'id' && hasCurrentIdEvaluation ? idSearchResult.status : null
+  const hasEligibleQuery =
+    hudTab === 'id'
+      ? hasCurrentIdEvaluation && deferredIdQuery.length > 0
+      : debouncedTrimmed.length >= debouncedMinLen
+  const canShowList = !idFocusEcho && hasEligibleQuery && resultRows.length > 0
   const panelVisible = hudTab !== 'genre' && listOpen && canShowList
 
   const isActive = hoverInside || focusInside || panelVisible
@@ -264,11 +332,14 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
     if (hudTab === 'genre' && next !== 'genre') {
       setSelectedGenres([])
       clearSearch()
+    } else if (hudTab !== 'id' && next !== 'id') {
+      // Preserve the established Title ↔ Person reset without coupling ID-local state to it.
+      setSearchQuery('')
+      setDebouncedQuery('')
     }
-    setHudTab(next)
-    setSearchQuery('')
+    // ID candidates are local-only; discard stale global suggestions when entering or leaving it.
     setSearchResults([])
-    setDebouncedQuery('')
+    setHudTab(next)
     setListOpen(false)
     setHighlightIndex(-1)
   }, [hudTab])
@@ -283,7 +354,15 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
   const applySuggestion = useCallback(
     (row: ResultRow) => {
       const s = row.suggestion
-      if (s.kind === 'movie') {
+      if (hudTab === 'id' && s.kind === 'movie') {
+        console.log('[Search] TMDB ID select', {
+          query: idInputState.query,
+          candidateCount: resultRows.length,
+          selectedTmdbId: s.movieId,
+        })
+        useGalaxyInteractionStore.setState({ selectedMovieId: s.movieId })
+        setIdInputState((state) => enterIdTabFocusEcho(state, s.movieId))
+      } else if (s.kind === 'movie') {
         const m = movieById.get(s.movieId)
         const q = m ? formatMovieSuggestionLabel(m) : s.label
         useGalaxyInteractionStore.setState({ selectedMovieId: s.movieId, searchQuery: q })
@@ -300,41 +379,58 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
       setListOpen(false)
       setHighlightIndex(-1)
     },
-    [animateZCurrentTo, movieById, searchIndex],
+    [
+      animateZCurrentTo,
+      hudTab,
+      idInputState.query,
+      movieById,
+      resultRows.length,
+      searchIndex,
+    ],
   )
 
   const onClear = useCallback(() => {
-    clearSearch()
-    // P13.6 — align with ESC §4.6: exit focus in one action (no second ESC).
-    useGalaxyInteractionStore.setState({ selectedMovieId: null })
-    setSelectedGenres([])
+    if (hudTab === 'id') {
+      // ID query and focus echo are local; only the shared focus key must be cleared.
+      useGalaxyInteractionStore.setState({ selectedMovieId: null })
+      setIdInputState((state) => clearIdTabInput(state))
+    } else {
+      clearSearch()
+      // P13.6 — align with ESC §4.6: exit focus in one action (no second ESC).
+      useGalaxyInteractionStore.setState({ selectedMovieId: null })
+      setSelectedGenres([])
+    }
     setListOpen(false)
     setHighlightIndex(-1)
-  }, [])
+  }, [hudTab])
 
   const disabledReason =
-    !hasSearchIndex
-      ? ui.searchBar.noIndexInBundle
-      : indexStatus === 'skipped'
-        ? ui.searchBar.indexNotExported
-        : indexStatus === 'loading'
-          ? ui.searchBar.indexLoading
-          : indexStatus === 'error'
-            ? (indexError ?? ui.searchBar.indexLoadFailed)
-            : indexStatus !== 'ready'
-              ? ui.searchBar.indexNotReady
-              : null
+    hudTab === 'id'
+      ? movies.length === 0
+        ? ui.searchBar.noIndexInBundle
+        : null
+      : !hasSearchIndex
+        ? ui.searchBar.noIndexInBundle
+        : indexStatus === 'skipped'
+          ? ui.searchBar.indexNotExported
+          : indexStatus === 'loading'
+            ? ui.searchBar.indexLoading
+            : indexStatus === 'error'
+              ? (indexError ?? ui.searchBar.indexLoadFailed)
+              : indexStatus !== 'ready'
+                ? ui.searchBar.indexNotReady
+                : null
 
   const isBlocked = disabledReason !== null
 
-  const searchPlaceholder = getSearchBarTextPlaceholder(isBlocked, hudTab, ui.searchBar)
+  const searchPlaceholder =
+    hudTab === 'id' ? (isBlocked ? ui.searchBar.placeholderDisabled : ID_TAB_PLACEHOLDER) : getSearchBarTextPlaceholder(isBlocked, hudTab, ui.searchBar)
 
   return (
     <div
       className={cn(
         'pointer-events-auto fixed left-1/2 z-[var(--z-hud-search)] w-[var(--hud-search-width)] max-w-[var(--hud-search-max-w)] -translate-x-1/2 px-2',
         'top-[max(var(--hud-inset-md),env(safe-area-inset-top,0px))]',
-        isBlocked && 'opacity-60',
       )}
       role="search"
     >
@@ -354,9 +450,7 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
           isActive
             ? 'border border-border/80 bg-popover/95 backdrop-blur-md shadow-lg'
             : HUD_GALAXY_GLASS_SURFACE_CLASSNAME,
-          isBlocked && 'pointer-events-none',
         )}
-        title={isBlocked ? disabledReason ?? undefined : undefined}
       >
         <div
           className={cn(
@@ -364,7 +458,7 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
             'group-data-[state=idle]:bg-muted/20 group-data-[state=active]:bg-muted/40',
           )}
         >
-          {(['movie', 'person', 'genre'] as const).map((tab) => (
+          {(['movie', 'person', 'genre', 'id'] as const).map((tab) => (
             <button
               key={tab}
               type="button"
@@ -382,11 +476,18 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
                 ? ui.searchBar.tabMovie
                 : tab === 'person'
                   ? ui.searchBar.tabPerson
-                  : ui.searchBar.tabGenre}
+                  : tab === 'genre'
+                    ? ui.searchBar.tabGenre
+                    : ID_TAB_LABEL}
             </button>
           ))}
         </div>
 
+        <div
+          aria-disabled={isBlocked || undefined}
+          className={cn(isBlocked && 'pointer-events-none opacity-60')}
+          title={isBlocked ? disabledReason ?? undefined : undefined}
+        >
         {hudTab === 'genre' ? (
           <>
             {/*
@@ -482,15 +583,29 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
                   'dark:group-data-[state=active]:border-input dark:group-data-[state=active]:bg-background/80',
                   'focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40',
                 )}
-                value={searchQuery}
+                value={hudTab === 'id' ? idInputValue : searchQuery}
+                inputMode={hudTab === 'id' ? 'numeric' : undefined}
                 onChange={(e) => {
+                  if (hudTab === 'id') {
+                    const query = e.target.value
+                    setIdInputState((state) => beginIdTabQueryEdit(state, query))
+                    setListOpen(query.length > 0)
+                    setHighlightIndex(-1)
+                    return
+                  }
                   setSearchQuery(e.target.value)
                   const t = e.target.value.trim()
                   setListOpen(t.length >= searchMinQueryLengthForTrim(t))
                 }}
                 onFocus={() => {
-                  const t = searchQuery.trim()
-                  if (t.length >= searchMinQueryLengthForTrim(t) && resultRows.length > 0) {
+                  const query = hudTab === 'id' ? idInputState.query : searchQuery
+                  const t = query.trim()
+                  if (
+                    !idFocusEcho &&
+                    (hudTab === 'id'
+                      ? t.length > 0 && resultRows.length > 0
+                      : t.length >= searchMinQueryLengthForTrim(t) && resultRows.length > 0)
+                  ) {
                     setListOpen(true)
                   }
                 }}
@@ -516,14 +631,27 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
                     return
                   }
                   if (e.key === 'Enter') {
-                    if (!listOpen || activeRowIndex < 0 || activeRowIndex >= resultRows.length) return
+                    const selectionIndex = resolveEnterSuggestionIndex(
+                      panelVisible,
+                      resultRows.length,
+                      highlightIndex,
+                    )
+                    if (selectionIndex === null) return
                     e.preventDefault()
-                    applySuggestion(resultRows[activeRowIndex]!)
+                    applySuggestion(resultRows[selectionIndex]!)
                     return
                   }
                 }}
               />
-              {searchQuery.length > 0 && !isBlocked && (
+              {hudTab === 'id' && idFocusEcho && (
+                <span
+                  className="pointer-events-none absolute end-10 top-1/2 -translate-y-1/2 rounded border border-border/70 bg-muted/60 px-1.5 py-0.5 text-[0.6875rem] font-medium leading-none text-muted-foreground"
+                  dir="ltr"
+                >
+                  {ID_TAB_ECHO_TAG}
+                </span>
+              )}
+              {(hudTab === 'id' ? idInputValue.length > 0 : searchQuery.length > 0) && !isBlocked && (
                 <CloseButton
                   variant="ghostSm"
                   label={ui.searchBar.clear}
@@ -532,6 +660,16 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
                 />
               )}
             </div>
+
+            {hudTab === 'id' &&
+              !idFocusEcho &&
+              hasCurrentIdEvaluation &&
+              idInputState.query.length > 0 &&
+              idSearchStatus !== 'results' && (
+              <p className="mt-2 px-1 text-xs leading-snug text-muted-foreground" role="status">
+                {idSearchStatus === 'invalid' ? ID_TAB_INVALID_MESSAGE : ID_TAB_NO_RESULTS_MESSAGE}
+              </p>
+            )}
 
             {panelVisible && (
               <ul
@@ -588,6 +726,7 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
         {isBlocked && (
           <p className="mt-2 px-1 text-xs leading-snug text-muted-foreground">{disabledReason}</p>
         )}
+        </div>
       </div>
     </div>
   )

@@ -10,7 +10,7 @@ todos:
     status: completed
   - id: p43.3-id-tab-focus-flow
     content: 接入 ID Tab、键盘选择、无刷新 focus 与 TMDB ID 回显状态流
-    status: pending
+    status: completed
   - id: p43.4-i18n-regression-gate
     content: 同步 locale、补齐回归测试并完成功能与视觉验收
     status: pending

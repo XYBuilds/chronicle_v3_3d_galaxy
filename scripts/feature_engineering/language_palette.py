@@ -136,11 +136,17 @@ FROZEN_LANG_ORDER_V2: tuple[str, ...] = tuple(sorted((*FROZEN_LANG_ORDER_V1, "rm
 FROZEN_LANG_CODES_V2: frozenset[str] = frozenset(FROZEN_LANG_ORDER_V2)
 assert len(FROZEN_LANG_ORDER_V2) == len(FROZEN_LANG_CODES_V2), "duplicate language code in FROZEN_LANG_ORDER_V2"
 
-# Active palette SSOT. The v2 switch is valid only with the matching rebuilt
-# canonical bundle; see ``audit_final_membership_languages.py`` and pack tool.
-LANG_PALETTE_VERSION = "v2"
-FROZEN_LANG_ORDER: tuple[str, ...] = FROZEN_LANG_ORDER_V2
-FROZEN_LANG_CODES: frozenset[str] = FROZEN_LANG_CODES_V2
+# v3 admits Abkhazian after TMDB movie 1057001 first crossed the frozen final-
+# membership threshold on 2026-07-22. Existing v2 vectors migrate exactly by
+# inserting a zero-valued ``ab`` column; historical palettes remain immutable.
+FROZEN_LANG_ORDER_V3: tuple[str, ...] = tuple(sorted((*FROZEN_LANG_ORDER_V2, "ab")))
+FROZEN_LANG_CODES_V3: frozenset[str] = frozenset(FROZEN_LANG_ORDER_V3)
+assert len(FROZEN_LANG_ORDER_V3) == len(FROZEN_LANG_CODES_V3), "duplicate language code in FROZEN_LANG_ORDER_V3"
+
+# Active palette SSOT. Switching versions requires a matching canonical bundle.
+LANG_PALETTE_VERSION = "v3"
+FROZEN_LANG_ORDER: tuple[str, ...] = FROZEN_LANG_ORDER_V3
+FROZEN_LANG_CODES: frozenset[str] = FROZEN_LANG_CODES_V3
 
 assert len(FROZEN_LANG_ORDER) == len(set(FROZEN_LANG_ORDER)), "duplicate language code in active frozen palette"
 

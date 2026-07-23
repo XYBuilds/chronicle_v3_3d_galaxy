@@ -20,7 +20,7 @@ from feature_engineering.language_palette import (
 
 
 class DimDriftError(Exception):
-    """Raised when cleaned data references genres or languages outside frozen v1 palettes."""
+    """Raised when cleaned data references values outside the active frozen palettes."""
 
     def __init__(self, report: dict[str, Any]) -> None:
         self.report = report
@@ -29,8 +29,9 @@ class DimDriftError(Exception):
         super().__init__(
             "Dimension drift detected: "
             f"unknown_genres={ug!r} unknown_languages={ul!r}. "
-            "Bump GENRE_PALETTE_VERSION / LANG_PALETTE_VERSION and re-embed, "
-            "or set DIM_DRIFT_FORCE_SKIP for a logged one-off bypass."
+            "Bump GENRE_PALETTE_VERSION / LANG_PALETTE_VERSION and publish a matching canonical bundle "
+            "(append-only one-hot changes may use exact column migration), or set DIM_DRIFT_FORCE_SKIP "
+            "for a logged one-off bypass."
         )
 
 
@@ -86,7 +87,7 @@ def assert_no_dim_drift(
     *,
     force_skip: bool = False,
 ) -> dict[str, Any]:
-    """Compare ``genres`` / ``original_language`` columns against frozen v1 palettes.
+    """Compare ``genres`` / ``original_language`` columns against active frozen palettes.
 
     Aggregates **all** unknown labels before failing (operator sees full diff).
     When ``force_skip`` is True, never raises; caller should persist the report (e.g. monthly meta).

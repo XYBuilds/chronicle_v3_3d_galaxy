@@ -1,0 +1,26 @@
+# Chronicle Repository Guidance
+
+Chronicle is the product-control repository for The Movie Cosmos. It owns the primary site, galaxy data pipeline, planet-export producer, and the product-level system map. The OG Worker and Daily Stargazing remain separate repositories and deployment units.
+
+## Agent skills
+
+### Issue tracker
+
+GitHub Issues are the public entry point for new work in this repository. Use `gh` for issue operations. Accepted specifications are published as Issues; implementation work stays in the repository that owns the code. See `docs/agents/issue-tracker.md`.
+
+### Domain docs
+
+Chronicle uses a single repository context plus a federated system map under `docs/system/`. Read the relevant product documents and system maps before designing work. Create or update `CONTEXT.md` and ADRs only when domain terms or durable design decisions are actually resolved through the domain-modeling workflow. See `docs/agents/domain.md`.
+
+## Product-control rules
+
+- Historical `.cursor/plans/` and `docs/reports/` are archival records. Index them; do not migrate or renumber them.
+- New cross-repository work starts as one parent Initiative and has one implementation Issue per affected repository.
+- The parent Initiative owns the product goal, contract, dependency order, compatibility window, rollback plan, and integration acceptance.
+- Each repository owns its branch, tests, PR, deployment, and implementation evidence.
+- Chronicle is the temporary coordination owner for product-level Initiatives. It does not own Worker or Daily runtime behavior.
+- Cross-repository contracts must be recorded in `docs/system/contract-index.md`.
+
+## Delivery workflow
+
+The existing `.cursor/rules/workflow-adapter.mdc` remains authoritative for branches, tests, human acceptance, reports, PRs, and merge delivery. Matt Skills add discovery, specification, and review; they do not replace this repository's delivery adapter.

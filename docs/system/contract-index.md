@@ -20,11 +20,12 @@ This index names the boundaries between Chronicle, the OG Worker, and Daily Star
 - **Status:** active / maintenance
 - **Producer:** Chronicle `scripts/cron/` projection and sync workflow
 - **Consumer:** [themoviecosmos-og-worker](https://github.com/XYBuilds/themoviecosmos-og-worker)
+- **Current contract:** [`og-index-worker-contract.md`](./og-index-worker-contract.md)
 - **Active keys:** `movie:{id}` and `meta:G`.
-- **Historical key:** `today` is retired in the current Chronicle product path; any remaining consumer must be verified before removal or reintroduction.
-- **Projection fields:** movie title, release date, genres, and poster URL, subject to the current producer implementation.
-- **Evidence:** Phase 38 KV incremental sync Plan, Phase 40 retirement reports, Worker source.
-- **Change rule:** projection field, key, hash, generation, or fallback changes require producer/consumer tests and a coordinated deployment order.
+- **Retired key and routes:** KV `today`, `/today`, `/og/today.png`, and `/share/today` are reserved historical surfaces and remain unsupported.
+- **Projection fields:** required `title`, `release_date`, `genres`, and `poster_url`; see the current contract for types, fallback, generation, checkpoint, HTTP, and release semantics.
+- **Evidence:** current producer and Worker source/tests; Phase 38 and Phase 40 records remain historical evidence.
+- **Change rule:** classify compatibility against the current contract. Breaking field, key, generation, version, or fallback changes require a coordinated best-effort cutover and producer-first rollback.
 
 ### C-003 · Planet Export CLI
 

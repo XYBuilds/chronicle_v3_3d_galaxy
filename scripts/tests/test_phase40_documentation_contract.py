@@ -10,6 +10,16 @@ _TECH = _ROOT / "docs/project_docs/TMDB 电影宇宙 Tech Spec.md"
 _DESIGN = _ROOT / "docs/project_docs/TMDB 电影宇宙 Design Spec.md"
 _DATA_PIPELINE = _ROOT / "docs/project_docs/TMDB 电影宇宙 Data Pipeline.md"
 _OG_GUIDE = _ROOT / "docs/guides/P34.3 OG Index KV 上线操作指南.md"
+_CONTRACT = _ROOT / "docs/system/og-index-worker-contract.md"
+_R2_GUIDE = _ROOT / "docs/guides/P18.6b Cloudflare R2 上线操作手册.md"
+_HISTORICAL_OG_GUIDES = (
+    _ROOT / "docs/guides/P23.1 The Movie Today 验收指南.md",
+    _ROOT / "docs/guides/P23.5 OG image 验收指南.md",
+    _ROOT / "docs/guides/P23.6 自定义域名上线后运维清单.md",
+    _ROOT / "docs/guides/P34.4 OG Worker PNG 部署说明.md",
+    _ROOT / "docs/guides/P34.5 OG Worker HTML meta 部署说明.md",
+    _ROOT / "docs/guides/P34.9 测试与验收回滚指南.md",
+)
 
 
 class TestPhase40DocumentationContracts(unittest.TestCase):
@@ -55,6 +65,38 @@ class TestPhase40DocumentationContracts(unittest.TestCase):
         self.assertNotIn("`projection: \"og-index-v2\"`", text)
         self.assertNotIn("state-v1.json.gz 是", text)
         self.assertNotIn("影片 PUT → 影片 DELETE → 变化的 `today`", text)
+
+    def test_historical_og_guides_are_marked_non_executable(self) -> None:
+        inline_markers = {
+            "P23.1 The Movie Today 验收指南.md": "历史 Today 命令：不可执行。",
+            "P23.5 OG image 验收指南.md": "历史 Today 命令：不可执行。",
+            "P23.6 自定义域名上线后运维清单.md": "历史 Today 命令：不可执行。",
+            "P34.4 OG Worker PNG 部署说明.md": "历史 Today 命令：不可执行。",
+            "P34.5 OG Worker HTML meta 部署说明.md": "历史 Today 命令：不可执行。",
+            "P34.9 测试与验收回滚指南.md": "历史 Today 命令：不可执行。",
+        }
+        for path in _HISTORICAL_OG_GUIDES:
+            text = path.read_text(encoding="utf-8")
+            with self.subTest(path=path.name):
+                self.assertIn("> **历史资料，不可按此执行。**", text[:800])
+                self.assertIn(inline_markers[path.name], text)
+
+    def test_current_cross_repository_contract_keeps_runtime_boundaries(self) -> None:
+        text = _CONTRACT.read_text(encoding="utf-8")
+        self.assertIn("coordinated best-effort cutover", text)
+        self.assertIn("ordered completion marker", text.lower())
+        self.assertIn("The Worker does not consume the R2 checkpoint", text)
+        self.assertIn("`meta:G` is an ordered completion marker, not a transactional generation barrier", text)
+        self.assertNotIn("On 2026-08-02", text)
+        self.assertNotIn("atomic release", text.lower())
+
+    def test_r2_guide_matches_producer_commit_order(self) -> None:
+        text = _R2_GUIDE.read_text(encoding="utf-8")
+        self.assertIn(
+            "影片 PUT → 影片 DELETE → read-back 验证影片变化 → 写入并验证 `meta:G` → snapshot commit",
+            text,
+        )
+        self.assertIn("退役 Today 边界", text)
 
 
 if __name__ == "__main__":

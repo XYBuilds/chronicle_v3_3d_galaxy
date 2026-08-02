@@ -1,5 +1,10 @@
 import { create } from 'zustand'
 
+import type {
+  GenreSelectConditions,
+  PersonSelectMetadata,
+} from '@/lib/exploration'
+
 /** Phase 12 — Search HUD tab + select session (Design Spec §4 / 状态机 §3.6). */
 export type SearchMode = 'idle' | 'movie' | 'person' | 'genre'
 
@@ -40,6 +45,12 @@ export interface GalaxyInteractionState {
    * `null` when not in a person select session.
    */
   selectionPersonKey: string | null
+  /** Stable relation identity for the active person/genre session. */
+  selectionRelationKey: string | null
+  /** Person session metadata required to reconstruct the canonical exploration context. */
+  selectionPersonMetadata: PersonSelectMetadata | null
+  /** Genre session conditions required to reconstruct the canonical exploration context. */
+  selectionGenreConditions: GenreSelectConditions | null
   /** Person-mode constellation lines; product HUD has no toggle — use `window.__galaxy.constellationEnabled` in dev (P12.7). Default on. */
   constellationEnabled: boolean
 
@@ -65,6 +76,9 @@ export const useGalaxyInteractionStore = create<GalaxyInteractionState>(() => ({
   searchResults: [],
   selectionIds: null,
   selectionPersonKey: null,
+  selectionRelationKey: null,
+  selectionPersonMetadata: null,
+  selectionGenreConditions: null,
   constellationEnabled: true,
 
   focusNeighborRadius: 5,
@@ -101,9 +115,15 @@ export function setSearchMode(mode: SearchMode): void {
     next.searchResults = []
     next.selectionIds = null
     next.selectionPersonKey = null
+    next.selectionRelationKey = null
+    next.selectionPersonMetadata = null
+    next.selectionGenreConditions = null
   } else if (mode === 'movie') {
     next.selectionIds = null
     next.selectionPersonKey = null
+    next.selectionRelationKey = null
+    next.selectionPersonMetadata = null
+    next.selectionGenreConditions = null
   }
   useGalaxyInteractionStore.setState(next)
   if (prev !== mode) {
@@ -158,6 +178,9 @@ export function clearSearch(): void {
     searchResults: [],
     selectionIds: null,
     selectionPersonKey: null,
+    selectionRelationKey: null,
+    selectionPersonMetadata: null,
+    selectionGenreConditions: null,
   })
   logSearchTransition('clearSearch', {
     searchMode: 'idle',

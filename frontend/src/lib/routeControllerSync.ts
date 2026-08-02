@@ -1,26 +1,59 @@
+import {
+  dispatchExplorationIntent,
+  type ExplorationIntent,
+} from '@/lib/exploration'
 import { replaceRoutePath } from '@/lib/routeActions'
 import { buildHomePath, type ParsedRoute } from '@/lib/routes'
-import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
 import type { Movie } from '@/types/galaxy'
 
 export function movieExistsInGalaxy(movies: Movie[], id: number): boolean {
   return movies.some((m) => m.id === id)
 }
 
-/** R1 — unknown logical path → replace `/` and treat as home. */
-export function normalizeUnknownRoute(route: ParsedRoute, search: string): ParsedRoute {
-  if (route.kind !== 'unknown') return route
-  console.warn('[route] unknown path → home (R1)', { pathname: window.location.pathname })
-  replaceRoutePath(buildHomePath(search))
-  return { kind: 'home' }
+export interface RouteExplorationDecision {
+  intent: Extract<ExplorationIntent, { type: 'focus/requested' | 'focus/exited' }>
+  canonicalRoute: 'home' | null
+  missingMovieId: number | null
 }
 
-export function clearSelection(): void {
-  useGalaxyInteractionStore.setState({ selectedMovieId: null })
-}
-
-export function applyMovieFocusToStores(movieId: number): void {
-  useGalaxyInteractionStore.setState({ selectedMovieId: movieId })
+/**
+ * Pure route boundary: URLs express only a focus target. Select sessions stay in memory and
+ * are interpreted later by the exploration decision module.
+ */
+export function decideRouteExploration(
+  rawRoute: ParsedRoute,
+  movies: Movie[],
+): RouteExplorationDecision {
+  if (rawRoute.kind === 'unknown') {
+    return {
+      intent: { type: 'focus/exited' },
+      canonicalRoute: 'home',
+      missingMovieId: null,
+    }
+  }
+  if (rawRoute.kind === 'movie' && rawRoute.movieId != null) {
+    if (movieExistsInGalaxy(movies, rawRoute.movieId)) {
+      return {
+        intent: {
+          type: 'focus/requested',
+          movieId: rawRoute.movieId,
+          policy: 'preserve-if-member',
+        },
+        canonicalRoute: null,
+        missingMovieId: null,
+      }
+    }
+    return {
+      intent: { type: 'focus/exited' },
+      canonicalRoute: 'home',
+      missingMovieId: rawRoute.movieId,
+    }
+  }
+  return {
+    intent: { type: 'focus/exited' },
+    canonicalRoute: null,
+    missingMovieId: null,
+  }
 }
 
 export interface ApplyParsedRouteOptions {
@@ -36,21 +69,19 @@ export function applyParsedRouteToStores(
 ): void {
   const { movies } = options
   const search = options.search ?? window.location.search
-  const route = normalizeUnknownRoute(rawRoute, search)
+  const decision = decideRouteExploration(rawRoute, movies)
 
-  if (route.kind === 'movie' && route.movieId != null) {
-    const id = route.movieId
-    if (!movieExistsInGalaxy(movies, id)) {
-      console.warn('[route] movie not in galaxy (R2)', { id })
-      replaceRoutePath(buildHomePath(search))
-      clearSelection()
-      return
-    }
-    applyMovieFocusToStores(id)
-    return
+  if (rawRoute.kind === 'unknown') {
+    console.warn('[route] unknown path → home (R1)', { pathname: window.location.pathname })
+  }
+  if (decision.missingMovieId !== null) {
+    console.warn('[route] movie not in galaxy (R2)', { id: decision.missingMovieId })
+  }
+  if (decision.canonicalRoute === 'home') {
+    replaceRoutePath(buildHomePath(search))
   }
 
-  clearSelection()
+  dispatchExplorationIntent(decision.intent)
 }
 
 /** Initial boot applies the parsed home/movie state without any Today fallback. */

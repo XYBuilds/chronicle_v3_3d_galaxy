@@ -28,7 +28,7 @@ describe('routeActions', () => {
     vi.stubGlobal('location', locationStub)
 
     vi.stubGlobal('history', {
-      state: {},
+      state: { explorationContext: { kind: 'select', session: { relation: 'legacy' } } },
       pushState: vi.fn((_state: unknown, _title: string, url?: string | URL | null) => {
         if (typeof url === 'string') {
           const q = url.indexOf('?')
@@ -65,15 +65,21 @@ describe('routeActions', () => {
     expect(pathname).toBe('/')
   })
 
-  it('does not push during popstate or suppress guard', () => {
+  it('does not mutate history during popstate or URL-to-store suppression', () => {
+    pathname = '/movie/1'
+    routeSyncGuard.lastAppliedPath = '/movie/1'
     routeSyncGuard.isPopstate = true
     pushMovieRoute(1)
+    replaceHomeRoute()
     expect(history.pushState).not.toHaveBeenCalled()
+    expect(history.replaceState).not.toHaveBeenCalled()
 
     routeSyncGuard.isPopstate = false
     routeSyncGuard.suppressStoreToUrl = true
     pushMovieRoute(2)
+    replaceHomeRoute()
     expect(history.pushState).not.toHaveBeenCalled()
+    expect(history.replaceState).not.toHaveBeenCalled()
   })
 
   it('preserves query on pushMovieRoute (T6)', () => {
@@ -88,6 +94,21 @@ describe('routeActions', () => {
     pathname = '/movie/1'
     pushMovieRoute(1)
     expect(history.pushState).not.toHaveBeenCalled()
+  })
+
+  it('does not carry Select snapshots into route history state', () => {
+    pushMovieRoute(550)
+    expect(history.pushState).toHaveBeenCalledWith(null, '', '/movie/550')
+
+    pathname = '/movie/550'
+    routeSyncGuard.lastAppliedPath = '/movie/550'
+    replaceHomeRoute()
+    expect(history.replaceState).toHaveBeenCalledWith(null, '', '/')
+  })
+
+  it('clears stale history state during canonical replacement', () => {
+    replaceRoutePath('/?lang=ja')
+    expect(history.replaceState).toHaveBeenCalledWith(null, '', '/?lang=ja')
   })
 
   it('replaceRoutePath updates location (R1/R2)', () => {

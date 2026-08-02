@@ -1,13 +1,12 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 
 import { pushMovieRoute, replaceHomeRoute } from '@/lib/routeActions'
 import {
   applyParsedRouteToStores,
-  normalizeUnknownRoute,
   runInitialRouteBoot,
 } from '@/lib/routeControllerSync'
 import { routeSyncGuard } from '@/lib/routeSyncGuard'
-import { parseRoute, type ParsedRoute } from '@/lib/routes'
+import { parseRoute } from '@/lib/routes'
 import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
 import type { Movie } from '@/types/galaxy'
 
@@ -26,26 +25,31 @@ function withStoreToUrlSuppressed<T>(fn: () => T): T {
   }
 }
 
+export interface RouteStoreWrite {
+  previousMovieId: number | null
+  movieId: number | null
+}
+
+export function decideRouteHistoryWrite(change: RouteStoreWrite):
+  | { kind: 'push-movie'; movieId: number }
+  | { kind: 'replace-home' }
+  | null {
+  if (change.movieId === change.previousMovieId) return null
+  if (change.movieId !== null) return { kind: 'push-movie', movieId: change.movieId }
+  return change.previousMovieId === null ? null : { kind: 'replace-home' }
+}
+
 /**
  * URL → Zustand (30.3) + store → URL (30.4 B1–B6) via `selectedMovieId` subscription.
  */
 export function useRouteController(options: UseRouteControllerOptions): void {
   const { routeReady, movies } = options
 
-  const pendingRouteRef = useRef<ParsedRoute | null>(null)
   const initialBootHandledRef = useRef(false)
 
   useEffect(() => {
-    if (pendingRouteRef.current !== null) return
-    const cached = parseRoute(window.location)
-    pendingRouteRef.current = cached
     routeSyncGuard.lastAppliedPath = `${window.location.pathname}${window.location.search}`
-    console.log('[route] pendingRoute cached', cached)
-  }, [])
-
-  const applyRouteToStore = useCallback((rawRoute: ParsedRoute, ctx: { movies: Movie[] }) => {
-    routeSyncGuard.lastAppliedPath = `${window.location.pathname}${window.location.search}`
-    applyParsedRouteToStores(rawRoute, { movies: ctx.movies })
+    console.log('[route] initial target cached', parseRoute(window.location))
   }, [])
 
   /** Initial boot applies home idle or a valid movie focus after data and index readiness. */
@@ -54,9 +58,8 @@ export function useRouteController(options: UseRouteControllerOptions): void {
 
     initialBootHandledRef.current = true
     const search = window.location.search
-    const raw = pendingRouteRef.current ?? parseRoute(window.location)
-    const route = normalizeUnknownRoute(raw, search)
-    pendingRouteRef.current = route
+    // Read again after readiness so a traversal during data hydration cannot apply a stale boot route.
+    const route = parseRoute(window.location)
     routeSyncGuard.lastAppliedPath = `${window.location.pathname}${window.location.search}`
 
     withStoreToUrlSuppressed(() => runInitialRouteBoot(route, movies, search))
@@ -71,7 +74,10 @@ export function useRouteController(options: UseRouteControllerOptions): void {
       console.log('[route] popstate', route)
       routeSyncGuard.isPopstate = true
       try {
-        withStoreToUrlSuppressed(() => applyRouteToStore(route, { movies }))
+        withStoreToUrlSuppressed(() => {
+          routeSyncGuard.lastAppliedPath = `${window.location.pathname}${window.location.search}`
+          applyParsedRouteToStores(route, { movies })
+        })
       } finally {
         routeSyncGuard.isPopstate = false
       }
@@ -79,23 +85,20 @@ export function useRouteController(options: UseRouteControllerOptions): void {
 
     window.addEventListener('popstate', onPopstate)
     return () => window.removeEventListener('popstate', onPopstate)
-  }, [routeReady, movies, applyRouteToStore])
+  }, [routeReady, movies])
 
   /** Store → URL (B1–B6): focus changes from user actions, not URL→store or popstate. */
   useEffect(() => {
     if (!routeReady) return
 
     return useGalaxyInteractionStore.subscribe((state, prev) => {
-      const next = state.selectedMovieId
-      const prevId = prev.selectedMovieId
-      if (next === prevId) return
-
-      if (next !== null) {
-        pushMovieRoute(next)
-        return
-      }
-
-      if (prevId !== null) {
+      const write = decideRouteHistoryWrite({
+        previousMovieId: prev.selectedMovieId,
+        movieId: state.selectedMovieId,
+      })
+      if (write?.kind === 'push-movie') {
+        pushMovieRoute(write.movieId)
+      } else if (write?.kind === 'replace-home') {
         replaceHomeRoute()
       }
     })

@@ -1,6 +1,8 @@
 import { buildHomePath, buildMoviePath } from '@/lib/routes'
 import { routeSyncGuard } from '@/lib/routeSyncGuard'
 
+const EMPTY_ROUTE_HISTORY_STATE = null
+
 function currentPathWithSearch(): string {
   return `${window.location.pathname}${window.location.search}`
 }
@@ -16,7 +18,7 @@ export function pushMovieRoute(id: number): void {
   if (routeSyncGuard.lastAppliedPath === path) return
   routeSyncGuard.active = true
   try {
-    history.pushState(history.state, '', path)
+    history.pushState(EMPTY_ROUTE_HISTORY_STATE, '', path)
     routeSyncGuard.lastAppliedPath = path
     console.log('[route] push movie (B1/B2)', { id, path })
   } finally {
@@ -35,7 +37,7 @@ export function replaceHomeRoute(): void {
   }
   routeSyncGuard.active = true
   try {
-    history.replaceState(history.state, '', path)
+    history.replaceState(EMPTY_ROUTE_HISTORY_STATE, '', path)
     routeSyncGuard.lastAppliedPath = path
     console.log('[route] replace home (B3–B6)', { path })
   } finally {
@@ -48,7 +50,7 @@ export function replaceRoutePath(pathWithSearch: string): void {
   if (routeSyncGuard.active) return
   routeSyncGuard.active = true
   try {
-    history.replaceState(history.state, '', pathWithSearch)
+    history.replaceState(EMPTY_ROUTE_HISTORY_STATE, '', pathWithSearch)
     routeSyncGuard.lastAppliedPath = pathWithSearch
   } finally {
     routeSyncGuard.active = false

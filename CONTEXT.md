@@ -45,3 +45,21 @@ _Avoid_: repository-only readiness, deployable-in-principle
 **Current contract SSOT**:
 The single Chronicle-owned document for the cross-repository compatibility rules. The OG Worker README links to it and remains authoritative for Worker-local implementation and deployment instructions.
 _Avoid_: duplicated runbook, historical Phase plan
+
+## Galaxy exploration
+
+**Focus**:
+A single-film viewing context that takes precedence over the surrounding galaxy or an active select session.
+_Avoid_: Selection, selected movie state
+
+**Select session**:
+A person- or genre-scoped exploration context with a stable set of films. It can remain beneath a nested focus and resume when that focus ends.
+_Avoid_: Multi-select, search results, selection state
+
+**Nested focus**:
+A focus whose film belongs to the current select session. The select session remains the parent context only while that membership holds; focusing a non-member produces a replacing focus.
+_Avoid_: Focus with search, preserving selection
+
+**Replacing focus**:
+A focus entered from an independent film intent, such as title search, TMDB ID search, or direct navigation. It replaces any existing select session rather than nesting inside it.
+_Avoid_: External focus, standalone selection

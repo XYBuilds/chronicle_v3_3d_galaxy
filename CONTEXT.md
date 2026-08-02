@@ -34,6 +34,14 @@ _Avoid_: atomic deployment, zero-downtime guarantee
 
 ## Current documentation model
 
+**Contract conformance defect**:
+A repository implementation or deployed runtime that disagrees with an already accepted cross-repository contract while the contract itself remains unchanged. Remediation belongs to the nonconforming repository; it does not require a contract migration or cross-repository Initiative unless the desired semantics also change.
+_Avoid_: contract change, coordinated cutover
+
+**Setup-ready**:
+A runtime readiness gate reached only when the current contract, repository implementation and tests, auditable deployment control plane, and production-observed behavior agree. Source and tests may establish implementation readiness, but cannot compensate for an inactive route or other production drift.
+_Avoid_: repository-only readiness, deployable-in-principle
+
 **Current contract SSOT**:
 The single Chronicle-owned document for the cross-repository compatibility rules. The OG Worker README links to it and remains authoritative for Worker-local implementation and deployment instructions.
 _Avoid_: duplicated runbook, historical Phase plan

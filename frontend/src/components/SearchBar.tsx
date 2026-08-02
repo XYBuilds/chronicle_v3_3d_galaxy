@@ -34,10 +34,16 @@ import { getSearchBarTextPlaceholder } from '@/components/searchBarPlaceholder'
 import { buttonVariants } from '@/components/ui/button-variants'
 import { CloseButton } from '@/components/ui/close-button'
 import { HUD_GALAXY_GLASS_SURFACE_CLASSNAME } from '@/hud/hudTopToolButtonChrome'
+import {
+  alignSearchTabToActiveSelect,
+  applySearchExplicitClear,
+  applySearchTabChangeClear,
+  enterGenreSelectSession,
+  requestReplacingMovieFocus,
+} from '@/lib/exploration'
 import { useStrings } from '@/lib/strings'
 import { cn } from '@/lib/utils'
 import {
-  clearSearch,
   setSearchQuery,
   setSearchResults,
   useGalaxyInteractionStore,
@@ -46,7 +52,7 @@ import {
 import { useGalaxyDataStore } from '@/store/galaxyDataStore'
 import { useSearchIndexStore } from '@/store/searchIndexStore'
 import type { Movie } from '@/types/galaxy'
-import { enterPersonSearchSession, sortIdsByRelease } from '@/utils/personSearchSession'
+import { enterPersonSearchSession } from '@/utils/personSearchSession'
 import type { MovieSearchHit, TextHighlightRange } from '@/utils/searchScore'
 import {
   SEARCH_QUERY_DEBOUNCE_MS,
@@ -115,11 +121,15 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
 
   /** P21.3 — Genre tab AND multi-select (badges); orthogonal to movie/person query text. */
   const [selectedGenres, setSelectedGenres] = useState<string[]>([])
-  const [prevSearchModeForGenres, setPrevSearchModeForGenres] = useState(searchMode)
-  if (searchMode !== prevSearchModeForGenres) {
-    const prev = prevSearchModeForGenres
-    setPrevSearchModeForGenres(searchMode)
-    if (prev === 'genre' && searchMode === 'idle' && selectedGenres.length > 0) {
+  const [prevLifecycleSearchMode, setPrevLifecycleSearchMode] = useState(searchMode)
+  if (searchMode !== prevLifecycleSearchMode) {
+    const prev = prevLifecycleSearchMode
+    setPrevLifecycleSearchMode(searchMode)
+    const activeRelation =
+      searchMode === 'person' || searchMode === 'genre' ? searchMode : null
+    const alignedTab = alignSearchTabToActiveSelect(hudTab, activeRelation)
+    if (alignedTab !== hudTab) setHudTab(alignedTab)
+    if (prev === 'genre' && searchMode !== 'genre' && selectedGenres.length > 0) {
       setSelectedGenres([])
     }
   }
@@ -150,10 +160,6 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
             state.selectedMovieId,
           )
         ) {
-          clearSearch()
-          setSelectedGenres([])
-          setDebouncedQuery('')
-          setDebouncedIdQuery('')
           setListOpen(false)
           setHighlightIndex(-1)
         }
@@ -242,34 +248,30 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
     [allGenreNames, selectedGenres],
   )
 
-  /** Genre ↔ store: layout-only so ESC (`clearSearch`) cannot race a late `useEffect` re-applying `searchMode: 'genre'`. */
-  const prevSearchModeRef = useRef(searchMode)
+  /** Genre ↔ exploration: one complete session payload per condition change. */
   useLayoutEffect(() => {
-    prevSearchModeRef.current = searchMode
-
     if (hudTab !== 'genre') return
 
     if (selectedGenres.length === 0) {
-      if (useGalaxyInteractionStore.getState().searchMode === 'genre') {
-        clearSearch()
-      }
+      const clearAction = applySearchExplicitClear('genre')
+      if (clearAction.clearTextQuery) setSearchQuery('')
       return
     }
+    if (searchIndex === null) return
 
-    const intersectionSet = currentIntersection ?? new Set<number>()
-    const ids = sortIdsByRelease([...intersectionSet], movieById)
+    const entered = enterGenreSelectSession({
+      genreNames: selectedGenres,
+      searchIndex,
+      movieById,
+    })
+    if (entered === null) return
+
     console.log('[Search] genre AND filter', {
-      genres: selectedGenres.join(' + '),
-      selectionLen: ids.length,
+      genres: entered.searchQuery,
+      selectionLen: entered.session.movieIds.length,
     })
-    useGalaxyInteractionStore.setState({
-      searchMode: 'genre',
-      selectionIds: ids,
-      selectionPersonKey: null,
-      selectedMovieId: null,
-      searchQuery: selectedGenres.join(' + '),
-    })
-  }, [searchMode, hudTab, selectedGenres, currentIntersection, movieById])
+    setSearchQuery(entered.searchQuery)
+  }, [hudTab, selectedGenres, searchIndex, movieById])
 
   const idSearchResult = useMemo(
     () => searchTmdbId(tmdbIdSearchIndex, deferredIdQuery),
@@ -375,11 +377,9 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
   }, [panelVisible])
 
   const onTabChange = useCallback((next: SearchHudTab) => {
-    if (hudTab === 'genre' && next !== 'genre') {
-      setSelectedGenres([])
-      clearSearch()
-    } else if (hudTab !== 'id' && next !== 'id') {
-      // Preserve the established Title ↔ Person reset without coupling ID-local state to it.
+    const clearAction = applySearchTabChangeClear(hudTab, next)
+    if (clearAction.clearGenreSelection) setSelectedGenres([])
+    if (clearAction.clearTextQuery) {
       setSearchQuery('')
       setDebouncedQuery('')
     }
@@ -406,13 +406,9 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
           candidateCount: resultRows.length,
           selectedTmdbId: s.movieId,
         })
-        if (s.movieId !== selectedMovieId) {
-          useGalaxyInteractionStore.setState({ selectedMovieId: s.movieId })
-        }
+        requestReplacingMovieFocus(s.movieId)
       } else if (s.kind === 'movie') {
-        if (s.movieId !== selectedMovieId) {
-          useGalaxyInteractionStore.setState({ selectedMovieId: s.movieId })
-        }
+        requestReplacingMovieFocus(s.movieId)
       } else if (s.kind === 'person' && searchIndex) {
         const { applied, searchQuery: q } = enterPersonSearchSession({
           personKey: s.personKey,
@@ -420,7 +416,10 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
           movieById,
           animateZCurrentTo,
         })
-        if (applied) setDebouncedQuery(q)
+        if (applied) {
+          setSearchQuery(q)
+          setDebouncedQuery(q)
+        }
       }
       setListOpen(false)
       setHighlightIndex(-1)
@@ -432,19 +431,21 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
       movieById,
       resultRows.length,
       searchIndex,
-      selectedMovieId,
     ],
   )
 
   const onClear = useCallback(() => {
+    const clearAction = applySearchExplicitClear(hudTab)
     if (hudTab === 'id') {
       setIdInputState((state) => clearIdTabInput(state))
-    } else {
-      clearSearch()
+    } else if (hudTab === 'movie') {
+      // Title draft/echo is local presentation state; never clear lifecycle context here.
+      setTitleInputState((state) => clearFocusEchoInput(state))
+    }
+    if (clearAction.clearGenreSelection) setSelectedGenres([])
+    if (clearAction.clearTextQuery) {
+      setSearchQuery('')
       setDebouncedQuery('')
-      if (hudTab === 'movie') {
-        setTitleInputState((state) => clearFocusEchoInput(state))
-      }
     }
     setListOpen(false)
     setHighlightIndex(-1)
@@ -567,6 +568,12 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
                     <span className="shrink-0 self-start pt-0.5 text-xs tabular-nums text-muted-foreground">
                       {currentIntersection?.size ?? 0} {ui.searchBar.genreMultiMatches}
                     </span>
+                    <CloseButton
+                      variant="ghostSm"
+                      label={ui.searchBar.clear}
+                      className="shrink-0"
+                      onClick={onClear}
+                    />
                   </div>
                 ) : (
                   <div className="flex min-h-8 items-center">

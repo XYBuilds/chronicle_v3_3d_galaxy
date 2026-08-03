@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 
 import {
+  dispatchExplorationIntent,
   readExplorationContext,
   selectExploration,
   subscribeExplorationContext,
@@ -8,6 +9,7 @@ import {
 import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
 import type { Movie } from '@/types/galaxy'
 
+import { decideThreeClick, type ThreeClickTarget } from './interactionAdapter'
 import type { SelectionPlanetHandle } from './planet'
 import {
   computeActiveMeshScreenRadiusCss,
@@ -277,6 +279,16 @@ export function attachGalaxyActiveMeshInteraction(options: {
     setHoverFromClient(e.clientX, e.clientY)
   }
 
+  const applyClickDecision = (target: ThreeClickTarget): void => {
+    const action = decideThreeClick({
+      context: readExplorationContext(),
+      target,
+    })
+    if (action.type === 'lifecycle-intent') {
+      dispatchExplorationIntent(action.intent)
+    }
+  }
+
   const onWindowPointerUp = (e: PointerEvent) => {
     if (!primaryPressActive || e.button !== 0) return
     window.removeEventListener('pointerup', onWindowPointerUp, true)
@@ -284,15 +296,15 @@ export function attachGalaxyActiveMeshInteraction(options: {
     primaryPressActive = false
     if (dragExceededDuringPress) return
     if (focusPlanetBeatsActiveAlongRay(e.clientX, e.clientY, true)) {
+      applyClickDecision({ type: 'focus-planet' })
       return
     }
     const picked = pickAlongRay(e.clientX, e.clientY, true)
-    // P13.3 — blank click in focus: do not clear selectedMovieId (only ESC / drawer / search X).
-    if (picked === null && explorationSelection.focusMovieId !== null) {
+    if (picked === null) {
+      applyClickDecision({ type: 'blank' })
       return
     }
-    const id = picked === null ? null : movies[picked.index].id
-    useGalaxyInteractionStore.setState({ selectedMovieId: id })
+    applyClickDecision({ type: 'active-movie', movieId: movies[picked.index].id })
   }
 
   const onWindowPointerCancel = () => {

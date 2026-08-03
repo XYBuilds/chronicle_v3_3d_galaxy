@@ -1,5 +1,6 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { readExplorationContext } from '@/lib/exploration'
 import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
 import type { Movie } from '@/types/galaxy'
 import type { SearchIndex } from '@/types/searchIndex'
@@ -52,6 +53,30 @@ function baseMovie(over: Partial<Movie> & Pick<Movie, 'id' | 'title'>): Movie {
   }
 }
 
+function resetExplorationStore(): void {
+  useGalaxyInteractionStore.setState({
+    selectedMovieId: null,
+    searchMode: 'idle',
+    searchQuery: '',
+    searchResults: [],
+    selectionIds: null,
+    selectionPersonKey: null,
+    selectionRelationKey: null,
+    selectionPersonMetadata: null,
+    selectionGenreConditions: null,
+  })
+}
+
+beforeEach(() => {
+  resetExplorationStore()
+  vi.spyOn(console, 'log').mockImplementation(() => undefined)
+})
+
+afterEach(() => {
+  vi.restoreAllMocks()
+  resetExplorationStore()
+})
+
 describe('sortIdsByRelease', () => {
   it('orders by release_date string', () => {
     const a = baseMovie({ id: 1, title: 'A', release_date: '2010-01-01', z: 2010 })
@@ -91,7 +116,7 @@ describe('enterPersonSearchSession', () => {
     const index: SearchIndex = {
       version: 't',
       people: {
-        [key]: { full: 'Pat Example', role_mask: 2, movie_ids: [10, 20] },
+        [key]: { full: 'Pat Example', role_mask: 2, movie_ids: [10, 20], movie_roles: { '10': 2 } },
       },
       genres: {},
     }
@@ -112,17 +137,81 @@ describe('enterPersonSearchSession', () => {
     expect(applied).toBe(true)
     expect(searchQuery).toBe('Pat Example')
     expect(setSpy).toHaveBeenCalledWith({
+      selectedMovieId: null,
       searchMode: 'person',
       selectionIds: [10, 20],
       selectionPersonKey: key,
-      selectedMovieId: null,
-      searchQuery: 'Pat Example',
+      selectionRelationKey: key,
+      selectionPersonMetadata: {
+        fullName: 'Pat Example',
+        roleMask: 2,
+        movieRoles: { '10': 2 },
+      },
+      selectionGenreConditions: null,
     })
     expect(zAnim).toHaveBeenCalledWith(1990.5, 700)
   })
 })
 
 describe('tryEnterPersonSearchFromRawName', () => {
+  it('builds the complete Drawer person session, projects its UI query, and notifies lifecycle once', () => {
+    const key = normalizeForSearch('Pat Example')
+    const index: SearchIndex = {
+      version: 't',
+      people: {
+        [key]: {
+          full: 'Pat Example',
+          role_mask: 3,
+          movie_ids: [20, 10],
+          movie_roles: { '10': 1, '20': 2 },
+        },
+      },
+      genres: {},
+    }
+    const movieById = new Map<number, Movie>([
+      [10, baseMovie({ id: 10, title: 'Old', release_date: '1990-01-01', z: 1990 })],
+      [20, baseMovie({ id: 20, title: 'New', release_date: '2020-01-01', z: 2020 })],
+    ])
+    const lifecycleSnapshots: ReturnType<typeof readExplorationContext>[] = []
+    const unsubscribe = useGalaxyInteractionStore.subscribe((state, previous) => {
+      if (
+        state.selectedMovieId !== previous.selectedMovieId ||
+        state.searchMode !== previous.searchMode ||
+        state.selectionIds !== previous.selectionIds ||
+        state.selectionPersonKey !== previous.selectionPersonKey ||
+        state.selectionRelationKey !== previous.selectionRelationKey ||
+        state.selectionPersonMetadata !== previous.selectionPersonMetadata ||
+        state.selectionGenreConditions !== previous.selectionGenreConditions
+      ) {
+        lifecycleSnapshots.push(readExplorationContext())
+      }
+    })
+
+    const applied = tryEnterPersonSearchFromRawName({
+      rawName: ' Pat Example ',
+      searchIndex: index,
+      movieById,
+    })
+    unsubscribe()
+
+    const expectedContext = {
+      kind: 'select' as const,
+      session: {
+        relation: { kind: 'person' as const, key },
+        movieIds: [10, 20],
+        metadata: {
+          fullName: 'Pat Example',
+          roleMask: 3,
+          movieRoles: { '10': 1, '20': 2 },
+        },
+      },
+    }
+    expect(applied).toBe(true)
+    expect(readExplorationContext()).toEqual(expectedContext)
+    expect(useGalaxyInteractionStore.getState().searchQuery).toBe('Pat Example')
+    expect(lifecycleSnapshots).toEqual([expectedContext])
+  })
+
   it('returns false without index', () => {
     const movieById = new Map<number, Movie>()
     expect(

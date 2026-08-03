@@ -155,6 +155,18 @@ export function setSearchResults(results: SearchSuggestion[]): void {
   }
 }
 
+/** Clear only local query/results after exploration has cleared its Select session. */
+export function clearSearchDraft(): void {
+  const state = useGalaxyInteractionStore.getState()
+  useGalaxyInteractionStore.setState({ searchQuery: '', searchResults: [] })
+  logSearchTransition('clearSearchDraft', {
+    searchMode: state.searchMode,
+    selectionIds: state.selectionIds,
+    searchResults: [],
+    searchQuery: '',
+  })
+}
+
 export function setSelectionIds(ids: number[] | null): void {
   const prev = useGalaxyInteractionStore.getState().selectionIds
   const prevLen = prev?.length ?? 0

@@ -20,9 +20,14 @@ import { SupportButton } from '@/hud/SupportButton'
 import { TmdbAttribution } from '@/hud/TmdbAttribution'
 import { useRouteController } from '@/lib/useRouteController'
 import { getGalaxyAssetsManifest } from '@/lib/galaxyAssetUrls'
+import {
+  decideEscapePriority,
+  dispatchExplorationIntent,
+  readExplorationContext,
+} from '@/lib/exploration'
 import { loadFocusEmissionProfile, type ResolvedFocusEmissionProfile } from '@/lib/focusEmissionProfileLoader'
 import { useStrings } from '@/lib/strings'
-import { clearSearch, useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
+import { clearSearchDraft } from '@/store/galaxyInteractionStore'
 import { useGalaxyDataStore } from '@/store/galaxyDataStore'
 import { useSearchIndexStore } from '@/store/searchIndexStore'
 import { mountGalaxyScene } from '@/three/scene'
@@ -173,30 +178,38 @@ function App() {
       if (e.key !== 'Escape') return
 
       const ae = document.activeElement
-      if (ae instanceof HTMLElement && ae.closest('#app-info-dialog')) return
+      const searchInputFocused =
+        ae instanceof HTMLInputElement && ae.hasAttribute('data-galaxy-search-input')
+      const infoDialogActive =
+        ae instanceof HTMLElement && ae.closest('#app-info-dialog') !== null
+      const escapeAction = decideEscapePriority({
+        infoDialogActive,
+        searchInputFocused,
+        context:
+          infoDialogActive || searchInputFocused
+            ? { kind: 'idle' }
+            : readExplorationContext(),
+      })
 
-      if (ae instanceof HTMLInputElement && ae.hasAttribute('data-galaxy-search-input')) {
-        ae.blur()
+      if (escapeAction.type === 'ignored') return
+
+      if (escapeAction.type === 'blur-search-input') {
+        if (searchInputFocused) ae.blur()
         e.preventDefault()
         e.stopPropagation()
         return
       }
 
-      const { selectedMovieId, searchMode } = useGalaxyInteractionStore.getState()
-      if (selectedMovieId !== null) {
-        useGalaxyInteractionStore.setState({ selectedMovieId: null })
-        console.log('[ESC] clear selectedMovieId (keep search select session if any)', { searchMode })
-        e.preventDefault()
-        e.stopPropagation()
-        return
+      dispatchExplorationIntent(escapeAction.intent)
+      if (escapeAction.intent.type === 'select/cleared') {
+        clearSearchDraft()
       }
-
-      if (searchMode !== 'idle') {
-        clearSearch()
-        console.log('[ESC] clearSearch (exit person/genre select)')
-        e.preventDefault()
-        e.stopPropagation()
-      }
+      console.log('[ESC] handle one exploration layer', {
+        intent: escapeAction.intent.type,
+      })
+      e.preventDefault()
+      e.stopPropagation()
+      return
     }
 
     window.addEventListener('keydown', onKeyDownCapture, true)

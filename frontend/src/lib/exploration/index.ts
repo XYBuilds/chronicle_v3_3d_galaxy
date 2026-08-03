@@ -35,3 +35,5 @@ export type {
   SelectRelationKind,
 } from './searchAdapter'
 export { dispatchExplorationIntent, readExplorationContext } from './storeAdapter'
+export { exitFocus } from './focusExit'
+export { decideEscapePriority } from './escapeAdapter'

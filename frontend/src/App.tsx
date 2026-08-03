@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { executeAppEscape } from '@/appEscapeAdapter'
 import { MovieDetailDrawer } from '@/components/Drawer'
 import { LoadFailurePage } from '@/components/LoadFailurePage'
 import { Loading } from '@/components/Loading'
@@ -20,14 +21,24 @@ import { SupportButton } from '@/hud/SupportButton'
 import { TmdbAttribution } from '@/hud/TmdbAttribution'
 import { useRouteController } from '@/lib/useRouteController'
 import { getGalaxyAssetsManifest } from '@/lib/galaxyAssetUrls'
+import {
+  dispatchExplorationIntent,
+  readExplorationContext,
+} from '@/lib/exploration'
 import { loadFocusEmissionProfile, type ResolvedFocusEmissionProfile } from '@/lib/focusEmissionProfileLoader'
 import { useStrings } from '@/lib/strings'
-import { clearSearch, useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
+import { clearSearchDraft } from '@/store/galaxyInteractionStore'
 import { useGalaxyDataStore } from '@/store/galaxyDataStore'
 import { useSearchIndexStore } from '@/store/searchIndexStore'
 import { mountGalaxyScene } from '@/three/scene'
 
 import './App.css'
+
+const APP_ESCAPE_DEPENDENCIES = {
+  readContext: readExplorationContext,
+  dispatchIntent: dispatchExplorationIntent,
+  clearSearchDraft,
+}
 
 function App() {
   useThemeFromQuery()
@@ -173,30 +184,20 @@ function App() {
       if (e.key !== 'Escape') return
 
       const ae = document.activeElement
-      if (ae instanceof HTMLElement && ae.closest('#app-info-dialog')) return
+      const searchInput =
+        ae instanceof HTMLInputElement && ae.hasAttribute('data-galaxy-search-input')
+          ? ae
+          : null
+      const infoDialogActive =
+        ae instanceof HTMLElement && ae.closest('#app-info-dialog') !== null
 
-      if (ae instanceof HTMLInputElement && ae.hasAttribute('data-galaxy-search-input')) {
-        ae.blur()
-        e.preventDefault()
-        e.stopPropagation()
-        return
-      }
-
-      const { selectedMovieId, searchMode } = useGalaxyInteractionStore.getState()
-      if (selectedMovieId !== null) {
-        useGalaxyInteractionStore.setState({ selectedMovieId: null })
-        console.log('[ESC] clear selectedMovieId (keep search select session if any)', { searchMode })
-        e.preventDefault()
-        e.stopPropagation()
-        return
-      }
-
-      if (searchMode !== 'idle') {
-        clearSearch()
-        console.log('[ESC] clearSearch (exit person/genre select)')
-        e.preventDefault()
-        e.stopPropagation()
-      }
+      executeAppEscape({
+        event: e,
+        infoDialogActive,
+        searchInput,
+        dependencies: APP_ESCAPE_DEPENDENCIES,
+      })
+      return
     }
 
     window.addEventListener('keydown', onKeyDownCapture, true)

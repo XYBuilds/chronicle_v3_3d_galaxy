@@ -28,6 +28,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { useGalaxyDataStore } from '@/store/galaxyDataStore'
+import { exitFocus } from '@/lib/exploration'
 import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
 import { useSearchIndexStore } from '@/store/searchIndexStore'
 import { tryEnterPersonSearchFromRawName } from '@/utils/personSearchSession'
@@ -545,7 +546,7 @@ export function MovieDetailDrawer({
   useEffect(() => {
     if (selectedMovieId === null || !movies) return
     if (!movies.some((m) => m.id === selectedMovieId)) {
-      useGalaxyInteractionStore.setState({ selectedMovieId: null })
+      exitFocus()
     }
   }, [selectedMovieId, movies])
 
@@ -597,7 +598,7 @@ export function MovieDetailDrawer({
       hasSearchIndex={hasSearchIndex}
       animateZCurrentTo={animateZCurrentTo}
       onOpenChange={(next) => {
-        if (!next) useGalaxyInteractionStore.setState({ selectedMovieId: null })
+        if (!next) exitFocus()
       }}
     />
   )

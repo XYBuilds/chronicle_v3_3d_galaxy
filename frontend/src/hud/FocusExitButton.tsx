@@ -1,4 +1,5 @@
 import { HUD_GALAXY_GLASS_SURFACE_CLASSNAME } from '@/hud/hudTopToolButtonChrome'
+import { exitFocus } from '@/lib/exploration'
 import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
 import { useStrings } from '@/lib/strings'
 import { cn } from '@/lib/utils'
@@ -26,7 +27,7 @@ export function FocusExitButton() {
         aria-label={t.hud.exitFocus}
         onClick={() => {
           console.log('[FocusExitButton] exit focus', { selectedMovieId })
-          useGalaxyInteractionStore.setState({ selectedMovieId: null })
+          exitFocus()
         }}
         className={cn(
           'pointer-events-auto rounded-full px-5 py-2 text-sm font-medium',

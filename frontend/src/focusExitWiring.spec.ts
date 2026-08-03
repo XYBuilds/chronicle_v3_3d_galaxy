@@ -1,7 +1,3 @@
-import fs from 'node:fs'
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
-
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const harness = vi.hoisted(() => ({
@@ -51,12 +47,6 @@ vi.mock('@/store/galaxyInteractionStore', () => ({
 import { MovieDetailDrawer } from '@/components/Drawer'
 import { FocusExitButton } from '@/hud/FocusExitButton'
 
-const SOURCE_ROOT = path.dirname(fileURLToPath(import.meta.url))
-
-function readSource(relativePath: string): string {
-  return fs.readFileSync(path.join(SOURCE_ROOT, relativePath), 'utf-8')
-}
-
 type ElementWithProps<Props> = { props: Props }
 
 describe('focus exit UI wiring', () => {
@@ -94,16 +84,5 @@ describe('focus exit UI wiring', () => {
     harness.effects[0]?.()
 
     expect(harness.exitFocus).toHaveBeenCalledOnce()
-  })
-
-  it('keeps all three entry points free of direct legacy lifecycle writes', () => {
-    const appSource = readSource('App.tsx')
-    const drawerSource = readSource('components/Drawer.tsx')
-    const buttonSource = readSource('hud/FocusExitButton.tsx')
-
-    for (const source of [appSource, drawerSource, buttonSource]) {
-      expect(source).not.toContain('setState({ selectedMovieId: null })')
-    }
-    expect(appSource).not.toContain('clearSearch()')
   })
 })

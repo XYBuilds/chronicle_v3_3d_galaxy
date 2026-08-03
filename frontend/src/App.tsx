@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { executeAppEscape } from '@/appEscapeAdapter'
 import { MovieDetailDrawer } from '@/components/Drawer'
 import { LoadFailurePage } from '@/components/LoadFailurePage'
 import { Loading } from '@/components/Loading'
@@ -21,7 +22,6 @@ import { TmdbAttribution } from '@/hud/TmdbAttribution'
 import { useRouteController } from '@/lib/useRouteController'
 import { getGalaxyAssetsManifest } from '@/lib/galaxyAssetUrls'
 import {
-  decideEscapePriority,
   dispatchExplorationIntent,
   readExplorationContext,
 } from '@/lib/exploration'
@@ -33,6 +33,12 @@ import { useSearchIndexStore } from '@/store/searchIndexStore'
 import { mountGalaxyScene } from '@/three/scene'
 
 import './App.css'
+
+const APP_ESCAPE_DEPENDENCIES = {
+  readContext: readExplorationContext,
+  dispatchIntent: dispatchExplorationIntent,
+  clearSearchDraft,
+}
 
 function App() {
   useThemeFromQuery()
@@ -178,37 +184,19 @@ function App() {
       if (e.key !== 'Escape') return
 
       const ae = document.activeElement
-      const searchInputFocused =
+      const searchInput =
         ae instanceof HTMLInputElement && ae.hasAttribute('data-galaxy-search-input')
+          ? ae
+          : null
       const infoDialogActive =
         ae instanceof HTMLElement && ae.closest('#app-info-dialog') !== null
-      const escapeAction = decideEscapePriority({
+
+      executeAppEscape({
+        event: e,
         infoDialogActive,
-        searchInputFocused,
-        context:
-          infoDialogActive || searchInputFocused
-            ? { kind: 'idle' }
-            : readExplorationContext(),
+        searchInput,
+        dependencies: APP_ESCAPE_DEPENDENCIES,
       })
-
-      if (escapeAction.type === 'ignored') return
-
-      if (escapeAction.type === 'blur-search-input') {
-        if (searchInputFocused) ae.blur()
-        e.preventDefault()
-        e.stopPropagation()
-        return
-      }
-
-      dispatchExplorationIntent(escapeAction.intent)
-      if (escapeAction.intent.type === 'select/cleared') {
-        clearSearchDraft()
-      }
-      console.log('[ESC] handle one exploration layer', {
-        intent: escapeAction.intent.type,
-      })
-      e.preventDefault()
-      e.stopPropagation()
       return
     }
 

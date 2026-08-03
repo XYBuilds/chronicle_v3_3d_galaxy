@@ -3,12 +3,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   decideEscapePriority,
   dispatchExplorationIntent,
+  exitFocus,
   readExplorationContext,
   type ExplorationContext,
   type ExplorationIntent,
   type SelectSession,
 } from '@/lib/exploration'
-import { exitFocus } from '@/lib/exploration/focusExit'
 import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
 
 const parentSession = {

@@ -3,8 +3,10 @@ import { describe, expect, it } from 'vitest'
 import {
   decideEscapePriority,
   type EscapePriorityInput,
-} from '@/lib/exploration/escapeAdapter'
-import type { ExplorationContext, ExplorationIntent, SelectSession } from '@/lib/exploration'
+  type ExplorationContext,
+  type ExplorationIntent,
+  type SelectSession,
+} from '@/lib/exploration'
 
 const session = {
   relation: { kind: 'genre', key: 'genre:escape' },

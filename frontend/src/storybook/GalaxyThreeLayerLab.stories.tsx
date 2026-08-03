@@ -54,7 +54,7 @@ const meta = {
     bloomStrength: { control: { type: 'range', min: 0, max: 2.5, step: 0.02 } },
     bloomRadius: { control: { type: 'range', min: 0, max: 1.5, step: 0.01 } },
     bloomThreshold: { control: { type: 'range', min: 0, max: 1, step: 0.01 } },
-    selectedMovieId: { control: 'select', options: [null, ...SUBSAMPLE_LAB_MOVIES.map((m) => m.id)] },
+    focusMovieId: { control: 'select', options: [null, ...SUBSAMPLE_LAB_MOVIES.map((m) => m.id)] },
     planetUScale: { control: { type: 'range', min: 0.5, max: 6, step: 0.05 } },
     planetOctaves: { control: { type: 'range', min: 1, max: 8, step: 1 } },
     planetPersistence: { control: { type: 'range', min: 0.08, max: 0.98, step: 0.01 } },
@@ -85,7 +85,7 @@ const meta = {
     bloomStrength: 0.95,
     bloomRadius: 0.52,
     bloomThreshold: 0.82,
-    selectedMovieId: null,
+    focusMovieId: null,
     planetUScale: 2.35,
     planetOctaves: 4,
     planetPersistence: 0.52,
@@ -105,9 +105,9 @@ export const PointsAndBloom: Story = {
   },
 }
 
-/** Pre-select a movie so the Perlin planet is visible after the fly-to (~0.7s). */
-export const WithSelectedPlanet: Story = {
+/** Pre-focus a movie so the Perlin planet is visible after the fly-to (~0.7s). */
+export const WithFocusedPlanet: Story = {
   args: {
-    selectedMovieId: subsampleMovieMarthasVineyard.id,
+    focusMovieId: subsampleMovieMarthasVineyard.id,
   },
 }

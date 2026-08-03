@@ -1,6 +1,39 @@
 import * as THREE from 'three'
 
+import type {
+  ExplorationMaskMode,
+  ExplorationSelection,
+} from '@/lib/exploration'
 import type { Movie } from '@/types/galaxy'
+
+export interface SelectionMaskProjection {
+  readonly mode: ExplorationMaskMode
+  readonly movieIds: readonly number[] | null
+}
+
+export function resolveSelectionMask(
+  exploration: ExplorationSelection,
+  focusNeighborIds: readonly number[] | null,
+): SelectionMaskProjection {
+  if (exploration.maskMode === 0) {
+    return { mode: 0, movieIds: null }
+  }
+  if (exploration.maskMode === 1) {
+    if (exploration.selectionMovieIds === null) {
+      throw new Error('[SelectionMask] Select session requires movie IDs')
+    }
+    return { mode: 1, movieIds: exploration.selectionMovieIds }
+  }
+  return { mode: 2, movieIds: focusNeighborIds ?? [] }
+}
+
+export function getSelectionMaskPickSet(
+  selectionMask: SelectionMaskProjection,
+): Set<number> | null {
+  return selectionMask.mode === 0
+    ? null
+    : new Set(selectionMask.movieIds ?? [])
+}
 
 /** P12.5 — uniforms shared by idle/active galaxy shaders for `uSelectionMask` + mode. */
 export interface SelectionMaskUniformBag {
@@ -52,25 +85,26 @@ export function buildMovieIdToIndexMap(movies: Movie[]): Map<number, number> {
 }
 
 /**
- * Writes R8 selection mask (0/255 per instance). `uSelectionMode` is driven each frame in `scene.ts`
- * from `searchMode` (P12.6) so person/genre select stays in sync with the mask texture.
+ * Writes one resolved R8 selection mask projection (0/255 per instance) and its explicit mode.
  */
 export function setSelectionMask(
-  idsOrNull: number[] | null,
+  selectionMask: SelectionMaskProjection,
   idToIndex: Map<number, number>,
   uniforms: SelectionMaskUniformBag,
 ): void {
+  const idsOrNull = selectionMask.movieIds
   const tex = uniforms.uSelectionMask.value
   const data = (tex.image as { data: Uint8Array }).data
   const atlasW = uniforms.uSelectionAtlasWidth.value
   const movieN = uniforms.uMovieCount.value
+  uniforms.uSelectionMode.value = selectionMask.mode
   console.assert(atlasW >= 1, '[SelectionMask] uSelectionAtlasWidth')
 
   if (idsOrNull === null || idsOrNull.length === 0) {
     data.fill(0)
     tex.needsUpdate = true
     uniforms.uSelectionCount.value = 0
-    console.log('[SelectionMask] cleared | movieCount=', movieN)
+    console.log('[SelectionMask] cleared | mode=', selectionMask.mode, '| movieCount=', movieN)
     return
   }
 
@@ -92,5 +126,12 @@ export function setSelectionMask(
   }
   tex.needsUpdate = true
   uniforms.uSelectionCount.value = written
-  console.log('[SelectionMask] written=', written, '| requested=', idsOrNull.length)
+  console.log(
+    '[SelectionMask] written=',
+    written,
+    '| requested=',
+    idsOrNull.length,
+    '| mode=',
+    selectionMask.mode,
+  )
 }

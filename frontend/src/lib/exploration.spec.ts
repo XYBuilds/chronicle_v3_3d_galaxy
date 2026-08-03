@@ -4,6 +4,7 @@ import {
   decideExploration,
   dispatchExplorationIntent,
   readExplorationContext,
+  subscribeExplorationContext,
   type ExplorationContext,
   type ExplorationIntent,
   type SelectSession,
@@ -343,6 +344,22 @@ describe('legacy Zustand adapter', () => {
     unsubscribe()
 
     expect(snapshots).toEqual([idle])
+  })
+
+  it('notifies canonical subscribers once and ignores implementation-state changes', () => {
+    const notifications: Array<{
+      context: ExplorationContext
+      previousContext: ExplorationContext
+    }> = []
+    const unsubscribe = subscribeExplorationContext((context, previousContext) => {
+      notifications.push({ context, previousContext })
+    })
+
+    useGalaxyInteractionStore.setState({ focusNeighborIds: [20] })
+    dispatchExplorationIntent({ type: 'select/entered', session: personSession })
+    unsubscribe()
+
+    expect(notifications).toEqual([{ context: selected, previousContext: idle }])
   })
 
   it('does not notify for an idempotent dispatch', () => {

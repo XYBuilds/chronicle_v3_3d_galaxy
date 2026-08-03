@@ -1,5 +1,10 @@
 import * as THREE from 'three'
 
+import {
+  readExplorationContext,
+  selectExploration,
+  subscribeExplorationContext,
+} from '@/lib/exploration'
 import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
 import type { Movie } from '@/types/galaxy'
 
@@ -7,11 +12,15 @@ import type { SelectionPlanetHandle } from './planet'
 import {
   computeActiveMeshScreenRadiusCss,
   computeWorldSphereScreenRadiusCss,
-  getSelectionMaskPickSet,
   pickClosestActiveMovieAlongRay,
   rayPositiveSphereFirstT,
   worldToScreenCss,
 } from './screenRadius'
+import {
+  getSelectionMaskPickSet,
+  resolveSelectionMask,
+  type SelectionMaskProjection,
+} from './selectionMask'
 
 /**
  * Legacy Points path (P6.3.1) — kept for benchmarks / docs; production uses {@link attachGalaxyActiveMeshInteraction}.
@@ -77,24 +86,33 @@ export function attachGalaxyActiveMeshInteraction(options: {
   getIdleMacroFadesBlend?: () => number
 }): () => void {
   const { camera, domElement, activeMesh, movies, activeMaterial, selectionPlanet, getIdleMacroFadesBlend } = options
-  const maskPickFromState = () => {
-    const s = useGalaxyInteractionStore.getState()
-    return getSelectionMaskPickSet(s.selectedMovieId, s.focusNeighborIds, s.searchMode, s.selectionIds)
+  let explorationSelection = selectExploration(readExplorationContext())
+  const selectionMaskFromState = (): SelectionMaskProjection =>
+    resolveSelectionMask(
+      explorationSelection,
+      useGalaxyInteractionStore.getState().focusNeighborIds,
+    )
+  const maskPickFromState = () =>
+    getSelectionMaskPickSet(selectionMaskFromState())
+  const logMaskPick = (): void => {
+    const mask = selectionMaskFromState()
+    console.log(
+      '[Interaction] selectionMaskPickSet refreshed | mode=',
+      mask.mode,
+      '| size=',
+      mask.movieIds?.length ?? 0,
+    )
   }
-  const unsubMaskPick = useGalaxyInteractionStore.subscribe((state, prev) => {
-    if (
-      state.searchMode === prev.searchMode &&
-      state.selectionIds === prev.selectionIds &&
-      state.selectedMovieId === prev.selectedMovieId &&
-      state.focusNeighborIds === prev.focusNeighborIds &&
-      state.focusNeighborRadius === prev.focusNeighborRadius
-    ) {
-      return
-    }
-    const maskSize =
-      state.selectedMovieId !== null ? (state.focusNeighborIds?.length ?? 0) : (state.selectionIds?.length ?? 0)
-    console.log('[Interaction] selectionMaskPickSet refreshed | mode=', state.selectedMovieId !== null ? 2 : state.searchMode, '| size=', maskSize)
+  const unsubExplorationMaskPick = subscribeExplorationContext((context) => {
+    explorationSelection = selectExploration(context)
+    logMaskPick()
   })
+  const unsubImplementationMaskPick = useGalaxyInteractionStore.subscribe(
+    (state, previousState) => {
+      if (state.focusNeighborIds === previousState.focusNeighborIds) return
+      logMaskPick()
+    },
+  )
   const hvsAttr = activeMesh.geometry.getAttribute('aHueVoteSize') as THREE.InstancedBufferAttribute | undefined
   console.assert(!!hvsAttr && hvsAttr.itemSize === 4, '[Interaction] active mesh must have aHueVoteSize (vec4) InstancedBufferAttribute')
   console.assert(
@@ -127,8 +145,8 @@ export function attachGalaxyActiveMeshInteraction(options: {
     camera.getWorldPosition(_pickCameraWorldPos)
   }
 
-  /** Perlin + hover ring anchor follows the selected focus movie. */
-  const planetAnchorMovieId = (): number | null => useGalaxyInteractionStore.getState().selectedMovieId
+  /** Perlin + hover ring anchor follows the canonical Focus movie. */
+  const planetAnchorMovieId = (): number | null => explorationSelection.focusMovieId
 
   const buildActivePickOptions = (ray: THREE.Ray, requireSlabInteraction: boolean) => {
     syncCameraWorldForPick()
@@ -143,7 +161,7 @@ export function attachGalaxyActiveMeshInteraction(options: {
       requireSlabInteraction,
       selectionMaskPickSet: maskPickFromState(),
       cameraWorldPos: _pickCameraWorldPos,
-      idleNearFadeExemptMovieId: st.selectedMovieId,
+      idleNearFadeExemptMovieId: explorationSelection.focusMovieId,
       idleMacroFadesBlend: macroFadeBlend,
     }
   }
@@ -270,7 +288,7 @@ export function attachGalaxyActiveMeshInteraction(options: {
     }
     const picked = pickAlongRay(e.clientX, e.clientY, true)
     // P13.3 — blank click in focus: do not clear selectedMovieId (only ESC / drawer / search X).
-    if (picked === null && useGalaxyInteractionStore.getState().selectedMovieId !== null) {
+    if (picked === null && explorationSelection.focusMovieId !== null) {
       return
     }
     const id = picked === null ? null : movies[picked.index].id
@@ -313,7 +331,8 @@ export function attachGalaxyActiveMeshInteraction(options: {
   domElement.addEventListener('pointerleave', onPointerLeave)
 
   return () => {
-    unsubMaskPick()
+    unsubExplorationMaskPick()
+    unsubImplementationMaskPick()
     window.removeEventListener('pointerup', onWindowPointerUp, true)
     window.removeEventListener('pointercancel', onWindowPointerCancel, true)
     primaryPressActive = false

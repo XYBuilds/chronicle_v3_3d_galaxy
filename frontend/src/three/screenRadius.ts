@@ -1,30 +1,10 @@
 import * as THREE from 'three'
 
-import type { SearchMode } from '@/store/galaxyInteractionStore'
 import type { Movie } from '@/types/galaxy'
 
 import { applyMacroFadeBlend, computeIdleNearFadeAlpha } from './idleNearFade'
 import { computeActiveShellWorldRadius, resolveSelectionRadiusValues } from './planetSizing'
 import { computeIdleZFadeAlpha } from './idleZFade'
-
-/**
- * P12.6+ / P13.2 — CPU pick/hover must match shader `inFocus`.
- * Focus (`selectedMovieId`) wins over person/genre search mask (D1).
- */
-export function getSelectionMaskPickSet(
-  selectedMovieId: number | null,
-  focusNeighborIds: number[] | null,
-  searchMode: SearchMode,
-  selectionIds: number[] | null,
-): Set<number> | null {
-  // P13.6 — mask mode whenever focus ids are committed (incl. empty Set); avoids vis-slab fallback during focus.
-  if (selectedMovieId !== null && focusNeighborIds !== null) {
-    return new Set(focusNeighborIds)
-  }
-  if (searchMode !== 'person' && searchMode !== 'genre') return null
-  if (!selectionIds?.length) return null
-  return new Set(selectionIds)
-}
 
 const _worldScreenProject = new THREE.Vector3()
 
@@ -196,7 +176,7 @@ export function pickClosestActiveMovieAlongRay(options: {
   for (let i = 0; i < movies.length; i++) {
     const m = movies[i]
     let inF: number
-    if (selectionMaskPickSet && selectionMaskPickSet.size > 0) {
+    if (selectionMaskPickSet !== undefined && selectionMaskPickSet !== null) {
       if (!selectionMaskPickSet.has(m.id)) continue
       inF = 1
     } else {

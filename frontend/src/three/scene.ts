@@ -3,13 +3,17 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js'
 
+import {
+  readExplorationContext,
+  selectExploration,
+  subscribeExplorationContext,
+} from '@/lib/exploration'
 import { createHdrCapabilitiesDebug, type HdrCapabilitiesDebug } from '@/lib/hdrCapabilities'
 import { createHdrProofDebug, type HdrProofDebug } from '@/lib/hdrProof'
 import { createSdrFallbackDebug, SDR_FALLBACK_OUTPUT_COLOR_SPACE, type SdrFallbackDebug } from '@/lib/sdrFallback'
 import { setGalaxyCameraZ } from '@/lib/galaxyCameraZBridge'
 import { getStrings } from '@/lib/strings'
 import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
-import { useSearchIndexStore } from '@/store/searchIndexStore'
 import type { Meta, Movie } from '@/types/galaxy'
 
 import {
@@ -42,9 +46,16 @@ import {
   selectionPlanetRotationAxisForMovie,
   selectionPlanetSpinAngleRad,
 } from './selectionPlanetRotation'
-import { computeActiveWorldRadius, getSelectionMaskPickSet, resolveSelectionWorldRadius } from './screenRadius'
+import { computeActiveWorldRadius, resolveSelectionWorldRadius } from './screenRadius'
 import { computeFocusNeighborIds } from './focusNeighborMask'
-import { buildMovieIdToIndexMap, setSelectionMask, type SelectionMaskUniformBag } from './selectionMask'
+import {
+  buildMovieIdToIndexMap,
+  getSelectionMaskPickSet,
+  resolveSelectionMask,
+  setSelectionMask,
+  type SelectionMaskProjection,
+  type SelectionMaskUniformBag,
+} from './selectionMask'
 import { createTransitionDriver } from './transitionDriver'
 import {
   applyUniverseBackgroundColor,
@@ -346,61 +357,69 @@ export function mountGalaxyScene(
     uSelectionAtlasHeight: galUniforms.uSelectionAtlasHeight as THREE.Uniform<number>,
   }
 
-  const syncSelectionMaskToGPU = () => {
-    const st = useGalaxyInteractionStore.getState()
-    if (st.selectedMovieId !== null) {
-      let ids = st.focusNeighborIds
-      if (!ids?.length) {
-        const movie = movies.find((m) => m.id === st.selectedMovieId)
-        if (!movie) {
-          setSelectionMask(null, movieIdToIndex, selectionMaskUniforms)
-          return
-        }
-        ids = computeFocusNeighborIds(
-          movies,
-          { x: movie.x, y: movie.y, z: movie.z },
-          st.focusNeighborRadius,
-        )
-        useGalaxyInteractionStore.setState({ focusNeighborIds: ids })
-      }
-      setSelectionMask(ids, movieIdToIndex, selectionMaskUniforms)
-      return
-    }
-    if (st.searchMode === 'person' || st.searchMode === 'genre') {
-      setSelectionMask(st.selectionIds, movieIdToIndex, selectionMaskUniforms)
-      return
-    }
-    setSelectionMask(null, movieIdToIndex, selectionMaskUniforms)
-  }
-  syncSelectionMaskToGPU()
-  const unsubSelectionMask = useGalaxyInteractionStore.subscribe((state, prev) => {
-    if (
-      state.selectionIds === prev.selectionIds &&
-      state.selectedMovieId === prev.selectedMovieId &&
-      state.focusNeighborIds === prev.focusNeighborIds &&
-      state.focusNeighborRadius === prev.focusNeighborRadius &&
-      state.searchMode === prev.searchMode
-    ) {
-      return
-    }
-    if (
-      state.selectedMovieId !== null &&
-      (state.selectedMovieId !== prev.selectedMovieId || state.focusNeighborRadius !== prev.focusNeighborRadius)
-    ) {
-      const pivot = movies.find((m) => m.id === state.selectedMovieId)
-      if (pivot) {
-        const ids = computeFocusNeighborIds(
-          movies,
-          { x: pivot.x, y: pivot.y, z: pivot.z },
-          state.focusNeighborRadius,
-        )
-        useGalaxyInteractionStore.setState({ focusNeighborIds: ids })
-      }
-    }
-    syncSelectionMaskToGPU()
-  })
+  let explorationSelection = selectExploration(readExplorationContext())
 
-  const uSelectionMode = galUniforms.uSelectionMode as THREE.Uniform<number>
+  const computeCurrentFocusNeighborIds = (
+    focusMovieId: number,
+    radius: number,
+  ): number[] => {
+    const pivot = movies.find((movie) => movie.id === focusMovieId)
+    if (!pivot) {
+      console.warn(`[SelectionMask] unknown focus movie id=${focusMovieId}`)
+      return []
+    }
+    return computeFocusNeighborIds(
+      movies,
+      { x: pivot.x, y: pivot.y, z: pivot.z },
+      radius,
+    )
+  }
+
+  if (explorationSelection.focusMovieId !== null) {
+    const state = useGalaxyInteractionStore.getState()
+    useGalaxyInteractionStore.setState({
+      focusNeighborIds: computeCurrentFocusNeighborIds(
+        explorationSelection.focusMovieId,
+        state.focusNeighborRadius,
+      ),
+    })
+  }
+
+  const currentSelectionMask = (): SelectionMaskProjection =>
+    resolveSelectionMask(
+      explorationSelection,
+      useGalaxyInteractionStore.getState().focusNeighborIds,
+    )
+
+  const syncSelectionMaskToGPU = () => {
+    setSelectionMask(currentSelectionMask(), movieIdToIndex, selectionMaskUniforms)
+  }
+
+  syncSelectionMaskToGPU()
+  const unsubSelectionMaskImplementation = useGalaxyInteractionStore.subscribe(
+    (state, previousState) => {
+      if (
+        state.focusNeighborIds === previousState.focusNeighborIds &&
+        state.focusNeighborRadius === previousState.focusNeighborRadius
+      ) {
+        return
+      }
+      if (
+        explorationSelection.focusMovieId !== null &&
+        state.focusNeighborRadius !== previousState.focusNeighborRadius
+      ) {
+        useGalaxyInteractionStore.setState({
+          focusNeighborIds: computeCurrentFocusNeighborIds(
+            explorationSelection.focusMovieId,
+            state.focusNeighborRadius,
+          ),
+        })
+        return
+      }
+      syncSelectionMaskToGPU()
+    },
+  )
+
   const uZ = galUniforms.uZCurrent as THREE.Uniform<number>
   const uZw = galUniforms.uZVisWindow as THREE.Uniform<number>
   const uFocused = galUniforms.uFocusedInstanceId as THREE.Uniform<number>
@@ -434,53 +453,64 @@ export function mountGalaxyScene(
   const constellation = createConstellation()
   scene.add(constellation.group)
 
-  const syncConstellationFromStores = () => {
-    const st = useGalaxyInteractionStore.getState()
-    const index = useSearchIndexStore.getState().data
-    const entry =
-      st.searchMode === 'person' && st.selectionPersonKey && index
-        ? index.people[st.selectionPersonKey]
-        : undefined
-    const maskPick = getSelectionMaskPickSet(
-      st.selectedMovieId,
-      st.focusNeighborIds,
-      st.searchMode,
-      st.selectionIds,
-    )
-    const mat = galaxy.activeMaterial
+  const syncConstellation = () => {
+    const state = useGalaxyInteractionStore.getState()
+    const selectionMovieIds = explorationSelection.selectionMovieIds
+    const personMetadata = explorationSelection.personMetadata
+    const maskPick = getSelectionMaskPickSet(currentSelectionMask())
+    const material = galaxy.activeMaterial
     constellation.sync({
       visible:
-        st.searchMode === 'person' &&
-        st.constellationEnabled &&
-        (st.selectionIds?.length ?? 0) >= 2,
-      hasFilmFocus: st.selectedMovieId !== null,
+        explorationSelection.maskMode === 1 &&
+        personMetadata !== null &&
+        state.constellationEnabled &&
+        (selectionMovieIds?.length ?? 0) >= 2,
+      hasFilmFocus: explorationSelection.focusMovieId !== null,
       movieById: movieByIdForConstellation,
-      selectionIds: st.selectionIds,
-      movieRoles: entry?.movie_roles ?? null,
+      selectionIds: selectionMovieIds,
+      movieRoles: personMetadata?.movieRoles ?? null,
       surfaceGapWorld: CONSTELLATION_SURFACE_GAP_WORLD,
-      getActiveWorldRadius: (m) => computeActiveWorldRadius(m, st.zCurrent, st.zVisWindow, mat, maskPick),
+      getActiveWorldRadius: (movie) =>
+        computeActiveWorldRadius(
+          movie,
+          state.zCurrent,
+          state.zVisWindow,
+          material,
+          maskPick,
+        ),
     })
   }
-  syncConstellationFromStores()
-  const unsubConstellation = useGalaxyInteractionStore.subscribe((state, prev) => {
-    if (
-      state.searchMode === prev.searchMode &&
-      state.constellationEnabled === prev.constellationEnabled &&
-      state.selectionIds === prev.selectionIds &&
-      state.selectionPersonKey === prev.selectionPersonKey &&
-      state.selectedMovieId === prev.selectedMovieId &&
-      state.focusNeighborIds === prev.focusNeighborIds &&
-      state.focusNeighborRadius === prev.focusNeighborRadius &&
-      state.zCurrent === prev.zCurrent &&
-      state.zVisWindow === prev.zVisWindow
-    ) {
-      return
+  syncConstellation()
+  const unsubConstellationImplementation = useGalaxyInteractionStore.subscribe(
+    (state, previousState) => {
+      if (
+        state.constellationEnabled === previousState.constellationEnabled &&
+        state.focusNeighborIds === previousState.focusNeighborIds &&
+        state.focusNeighborRadius === previousState.focusNeighborRadius &&
+        state.zCurrent === previousState.zCurrent &&
+        state.zVisWindow === previousState.zVisWindow
+      ) {
+        return
+      }
+      syncConstellation()
+    },
+  )
+
+  const unsubExplorationRendering = subscribeExplorationContext((context) => {
+    explorationSelection = selectExploration(context)
+    const state = useGalaxyInteractionStore.getState()
+    if (explorationSelection.focusMovieId !== null) {
+      useGalaxyInteractionStore.setState({
+        focusNeighborIds: computeCurrentFocusNeighborIds(
+          explorationSelection.focusMovieId,
+          state.focusNeighborRadius,
+        ),
+      })
+    } else {
+      useGalaxyInteractionStore.setState({ focusNeighborIds: null })
+      syncSelectionMaskToGPU()
+      syncConstellation()
     }
-    syncConstellationFromStores()
-  })
-  const unsubConstellationIndex = useSearchIndexStore.subscribe((state, prev) => {
-    if (state.data === prev.data) return
-    syncConstellationFromStores()
   })
 
   const planet = createSelectionPlanet(focusEmissionProfile)
@@ -657,14 +687,14 @@ export function mountGalaxyScene(
     const idx = pendingSelectInstanceIndex
     if (idx < 0 || idx >= movies.length) return
     const m = movies[idx]!
-    const stPick = useGalaxyInteractionStore.getState()
-    const maskPick = getSelectionMaskPickSet(
-      stPick.selectedMovieId,
-      stPick.focusNeighborIds,
-      stPick.searchMode,
-      stPick.selectionIds,
+    const maskPick = getSelectionMaskPickSet(currentSelectionMask())
+    const { r } = resolveSelectionWorldRadius(
+      m,
+      uZ.value,
+      uZw.value,
+      galaxy.activeMaterial,
+      maskPick,
     )
-    const { r } = resolveSelectionWorldRadius(m, uZ.value, uZw.value, galaxy.activeMaterial, maskPick)
     const stepH = planet.material.uniforms.uStepHeight.value as number
     const cuts = planet.material.uniforms.uCutCount.value as number
     planet.lastRadius = r * (1 + cuts * stepH)
@@ -678,11 +708,10 @@ export function mountGalaxyScene(
     planet.material.uniforms.uAlpha.value = 1
     pendingSelectInstanceIndex = movies.findIndex((m) => m.id === movie.id)
     console.assert(pendingSelectInstanceIndex >= 0, '[Selection] movie must exist in mounted list')
-    const stPick = useGalaxyInteractionStore.getState()
-    const neighborIds = computeFocusNeighborIds(
-      movies,
-      { x: movie.x, y: movie.y, z: movie.z },
-      stPick.focusNeighborRadius,
+    const state = useGalaxyInteractionStore.getState()
+    const neighborIds = computeCurrentFocusNeighborIds(
+      movie.id,
+      state.focusNeighborRadius,
     )
     // First macro focus resets orbit; focus-to-focus retargeting preserves it.
     useGalaxyInteractionStore.setState(
@@ -691,10 +720,7 @@ export function mountGalaxyScene(
         : { focusNeighborIds: neighborIds },
     )
     const maskPick = getSelectionMaskPickSet(
-      movie.id,
-      neighborIds,
-      stPick.searchMode,
-      stPick.selectionIds,
+      resolveSelectionMask(explorationSelection, neighborIds),
     )
     const { r, rActive } = resolveSelectionWorldRadius(movie, uZ.value, uZw.value, galaxy.activeMaterial, maskPick)
     const { yaw, pitch } = useGalaxyInteractionStore.getState().focusOrbit
@@ -734,22 +760,22 @@ export function mountGalaxyScene(
     console.log(`[Selection] phase=deselecting | duration=${DESELECT_MS}ms`)
   }
 
-  const onSelectionStore = (
-    state: { selectedMovieId: number | null },
-    prev: { selectedMovieId: number | null },
+  const onExplorationSelection = (
+    context: ReturnType<typeof readExplorationContext>,
+    previousContext: ReturnType<typeof readExplorationContext>,
   ) => {
-    const id = state.selectedMovieId
-    if (id === prev.selectedMovieId) return
+    const id = selectExploration(context).focusMovieId
+    const previousId = selectExploration(previousContext).focusMovieId
+    if (id === previousId) return
 
     if (id === null) {
-      useGalaxyInteractionStore.setState({ focusNeighborIds: null })
       if (selectionPhase === 'selected' || selectionPhase === 'selecting') {
         beginDeselect()
       }
       return
     }
 
-    const movie = movies.find((m) => m.id === id)
+    const movie = movies.find((candidate) => candidate.id === id)
     if (!movie) {
       console.warn(`[Selection] unknown movie id=${id}`)
       return
@@ -761,11 +787,8 @@ export function mountGalaxyScene(
     beginSelect(movie)
   }
 
-  const unsubSelection = useGalaxyInteractionStore.subscribe(onSelectionStore)
-  onSelectionStore(
-    useGalaxyInteractionStore.getState(),
-    { selectedMovieId: null },
-  )
+  const unsubSelectionAnimation = subscribeExplorationContext(onExplorationSelection)
+  onExplorationSelection(readExplorationContext(), { kind: 'idle' })
 
   const composer = new EffectComposer(renderer)
   composer.setPixelRatio(renderer.getPixelRatio())
@@ -1390,7 +1413,7 @@ export function mountGalaxyScene(
   )
 
   let raf = 0
-  let prevSearchSelectMode = -1
+  let previousSelectionMode = -1
   const tick = () => {
     raf = requestAnimationFrame(tick)
     const nowMs = performance.now()
@@ -1403,10 +1426,11 @@ export function mountGalaxyScene(
     }
     const st = useGalaxyInteractionStore.getState()
     // P16.3 / P19 — active material dual path (state machine §3.2.1): macro browse
-    // (`selectionPhase === 'idle'` && no selectedMovieId) uses opaque + depthWrite so strip
-    // actives depth-sort correctly (movie search, Space dolly, person/genre select pre-focus).
+    // (`selectionPhase === 'idle'` and no Focus) uses opaque + depthWrite so strip
+    // actives depth-sort correctly (movie search, Space dolly, Select session pre-focus).
     // `selectionPhase` is this closure (not Zustand). Focus phases need path B for P11.1.
-    const wantOpaque = selectionPhase === 'idle' && st.selectedMovieId === null
+    const wantOpaque =
+      selectionPhase === 'idle' && explorationSelection.focusMovieId === null
     const activeMat = galaxy.activeMaterial
     if (activeMat.transparent !== !wantOpaque || activeMat.depthWrite !== wantOpaque) {
       activeMat.transparent = !wantOpaque
@@ -1440,13 +1464,10 @@ export function mountGalaxyScene(
           : 'opaque + depthWrite (idle alpha fades off)',
       )
     }
-    // P12.6 / P13.2 — person/genre mask vs focus spherical neighborhood vs timeline slab
-    const selectionDrawMode =
-      st.selectedMovieId !== null ? 2 : st.searchMode === 'person' || st.searchMode === 'genre' ? 1 : 0
-    uSelectionMode.value = selectionDrawMode
-    if (selectionDrawMode !== prevSearchSelectMode) {
-      prevSearchSelectMode = selectionDrawMode
-      console.log('[Scene] uSelectionMode=', selectionDrawMode, '| searchMode=', st.searchMode, '| filmFocus=', st.selectedMovieId !== null)
+    const selectionMode = explorationSelection.maskMode
+    if (selectionMode !== previousSelectionMode) {
+      previousSelectionMode = selectionMode
+      console.log('[Scene] exploration mask mode=', selectionMode)
     }
     uZ.value = st.zCurrent
     uZw.value = st.zVisWindow
@@ -1456,18 +1477,18 @@ export function mountGalaxyScene(
       uHoveredInstanceId.value = hid === null ? -1 : movieIdToIndex.get(hid) ?? -1
     }
     {
+      const personMetadata = explorationSelection.personMetadata
       const constellationActive =
-        st.searchMode === 'person' &&
+        explorationSelection.maskMode === 1 &&
+        personMetadata !== null &&
         st.constellationEnabled &&
-        (st.selectionIds?.length ?? 0) >= 2 &&
-        st.selectedMovieId === null &&
+        (explorationSelection.selectionMovieIds?.length ?? 0) >= 2 &&
         constellation.group.visible
-      if (!constellationActive || st.selectionPersonKey === null || st.hoveredMovieId === null) {
+      if (!constellationActive || st.hoveredMovieId === null) {
         constellation.resetChainOpacities()
       } else {
-        const index = useSearchIndexStore.getState().data
         const roleMask =
-          index?.people[st.selectionPersonKey]?.movie_roles?.[String(st.hoveredMovieId)] ?? 0
+          personMetadata.movieRoles?.[String(st.hoveredMovieId)] ?? 0
         constellation.updateHoverFromRoleMask(roleMask === 0 ? null : roleMask)
       }
     }
@@ -1507,10 +1528,10 @@ export function mountGalaxyScene(
     cancelAnimationFrame(raf)
     ro?.disconnect()
     window.removeEventListener('resize', resize)
-    unsubSelection()
-    unsubSelectionMask()
-    unsubConstellation()
-    unsubConstellationIndex()
+    unsubSelectionAnimation()
+    unsubExplorationRendering()
+    unsubSelectionMaskImplementation()
+    unsubConstellationImplementation()
     constellation.group.removeFromParent()
     constellation.dispose()
     detachControls()

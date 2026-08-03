@@ -5,11 +5,11 @@ import { GalaxyThreeLayerLabCore, type GalaxyThreeLayerLabProps } from './Galaxy
 
 const NONE = '__none__'
 
-function selectedToLeva(id: number | null): string {
+function focusToLeva(id: number | null): string {
   return id == null ? NONE : String(id)
 }
 
-function levaToSelected(s: string): number | null {
+function levaToFocus(s: string): number | null {
   return s === NONE ? null : Number(s)
 }
 
@@ -81,9 +81,9 @@ export function GalaxyThreeLayerLabLevaHost(props: GalaxyThreeLayerLabProps) {
       bloomStrength: { value: props.bloomStrength, label: 'Bloom · strength', min: 0, max: 2.5, step: 0.02 },
       bloomRadius: { value: props.bloomRadius, label: 'Bloom · radius', min: 0, max: 1.5, step: 0.01 },
       bloomThreshold: { value: props.bloomThreshold, label: 'Bloom · threshold', min: 0, max: 1, step: 0.01 },
-      selectedMovieId: {
-        value: selectedToLeva(props.selectedMovieId),
-        label: 'Perlin · selectedMovieId',
+      focusMovieId: {
+        value: focusToLeva(props.focusMovieId),
+        label: 'Perlin · focusMovieId',
         options: selectOptions,
       },
       planetUScale: { value: props.planetUScale, label: 'Perlin · uScale', min: 0.5, max: 6, step: 0.05 },
@@ -148,7 +148,7 @@ export function GalaxyThreeLayerLabLevaHost(props: GalaxyThreeLayerLabProps) {
       bloomStrength: props.bloomStrength,
       bloomRadius: props.bloomRadius,
       bloomThreshold: props.bloomThreshold,
-      selectedMovieId: selectedToLeva(props.selectedMovieId),
+      focusMovieId: focusToLeva(props.focusMovieId),
       planetUScale: props.planetUScale,
       planetOctaves: props.planetOctaves,
       planetPersistence: props.planetPersistence,
@@ -177,7 +177,7 @@ export function GalaxyThreeLayerLabLevaHost(props: GalaxyThreeLayerLabProps) {
     props.bloomStrength,
     props.bloomRadius,
     props.bloomThreshold,
-    props.selectedMovieId,
+    props.focusMovieId,
     props.planetUScale,
     props.planetOctaves,
     props.planetPersistence,
@@ -208,7 +208,7 @@ export function GalaxyThreeLayerLabLevaHost(props: GalaxyThreeLayerLabProps) {
     bloomStrength: v.bloomStrength,
     bloomRadius: v.bloomRadius,
     bloomThreshold: v.bloomThreshold,
-    selectedMovieId: levaToSelected(v.selectedMovieId),
+    focusMovieId: levaToFocus(v.focusMovieId),
     planetUScale: v.planetUScale,
     planetOctaves: Math.round(v.planetOctaves),
     planetPersistence: v.planetPersistence,

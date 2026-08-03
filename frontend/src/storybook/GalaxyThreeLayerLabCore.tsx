@@ -1,9 +1,39 @@
 import { useEffect, useRef } from 'react'
 
+import {
+  dispatchExplorationIntent,
+  readExplorationContext,
+} from '@/lib/exploration'
 import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
 import { mountGalaxyScene } from '@/three/scene'
 import { PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE } from '@/three/productionFocusEmissionProfile'
 import type { Meta, Movie } from '@/types/galaxy'
+
+function synchronizeLabFocus(focusMovieId: number | null): void {
+  if (focusMovieId !== null) {
+    const context = readExplorationContext()
+    if (
+      context.kind === 'focus' &&
+      context.movieId === focusMovieId &&
+      context.parent === undefined
+    ) {
+      return
+    }
+    dispatchExplorationIntent({
+      type: 'focus/requested',
+      movieId: focusMovieId,
+      policy: 'replace',
+    })
+    return
+  }
+
+  if (readExplorationContext().kind === 'focus') {
+    dispatchExplorationIntent({ type: 'focus/exited' })
+  }
+  if (readExplorationContext().kind === 'select') {
+    dispatchExplorationIntent({ type: 'select/cleared' })
+  }
+}
 
 export interface GalaxyThreeLayerLabProps {
   meta: Pick<Meta, 'z_range' | 'xy_range' | 'count' | 'genre_palette'>
@@ -39,8 +69,8 @@ export interface GalaxyThreeLayerLabProps {
   bloomStrength: number
   bloomRadius: number
   bloomThreshold: number
-  /** When set, runs the same selection path as the app (fly-to + planet). */
-  selectedMovieId: number | null
+  /** When set, enters replacing focus through the canonical exploration lifecycle. */
+  focusMovieId: number | null
   planetUScale: number
   planetOctaves: number
   planetPersistence: number
@@ -85,7 +115,7 @@ export function GalaxyThreeLayerLabCore(props: GalaxyThreeLayerLabProps) {
     bloomStrength,
     bloomRadius,
     bloomThreshold,
-    selectedMovieId,
+    focusMovieId,
     planetUScale,
     planetOctaves,
     planetPersistence,
@@ -109,10 +139,14 @@ export function GalaxyThreeLayerLabCore(props: GalaxyThreeLayerLabProps) {
   }, [meta, movies])
 
   useEffect(() => {
+    synchronizeLabFocus(focusMovieId)
+  }, [focusMovieId])
+
+  useEffect(() => {
     const m = mountHandle.current
     if (!m) return
 
-    useGalaxyInteractionStore.setState({ zCurrent, zVisWindow, zCamDistance: uZCamDistance, selectedMovieId })
+    useGalaxyInteractionStore.setState({ zCurrent, zVisWindow, zCamDistance: uZCamDistance })
 
     const gm = m.galaxyMaterial
     gm.uniforms.uActiveSizeMul.value = uActiveSizeMul
@@ -159,7 +193,6 @@ export function GalaxyThreeLayerLabCore(props: GalaxyThreeLayerLabProps) {
     bloomStrength,
     bloomRadius,
     bloomThreshold,
-    selectedMovieId,
   ])
 
   /** P8.3 CPU Perlin — only recompute when planet tuning knobs change (not every zCurrent tick). */

@@ -159,6 +159,35 @@ function logDispatch(current: ExplorationContext, next: ExplorationContext): voi
   })
 }
 
+export type ExplorationContextListener = (
+  context: ExplorationContext,
+  previousContext: ExplorationContext,
+) => void
+
+function lifecycleProjectionChanged(
+  state: GalaxyInteractionState,
+  previousState: GalaxyInteractionState,
+): boolean {
+  return (
+    state.selectedMovieId !== previousState.selectedMovieId ||
+    state.searchMode !== previousState.searchMode ||
+    state.selectionIds !== previousState.selectionIds ||
+    state.selectionPersonKey !== previousState.selectionPersonKey ||
+    state.selectionRelationKey !== previousState.selectionRelationKey ||
+    state.selectionPersonMetadata !== previousState.selectionPersonMetadata ||
+    state.selectionGenreConditions !== previousState.selectionGenreConditions
+  )
+}
+
+export function subscribeExplorationContext(
+  listener: ExplorationContextListener,
+): () => void {
+  return useGalaxyInteractionStore.subscribe((state, previousState) => {
+    if (!lifecycleProjectionChanged(state, previousState)) return
+    listener(readContextFromState(state), readContextFromState(previousState))
+  })
+}
+
 export function readExplorationContext(): ExplorationContext {
   return readContextFromState(useGalaxyInteractionStore.getState())
 }

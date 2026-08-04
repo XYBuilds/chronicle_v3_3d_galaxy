@@ -362,6 +362,20 @@ describe('legacy Zustand adapter', () => {
     expect(notifications).toEqual([{ context: selected, previousContext: idle }])
   })
 
+  it('keeps the readable context snapshot stable until lifecycle state changes', () => {
+    const idleSnapshot = readExplorationContext()
+
+    expect(readExplorationContext()).toBe(idleSnapshot)
+    useGalaxyInteractionStore.setState({ zCurrent: 1999 })
+    expect(readExplorationContext()).toBe(idleSnapshot)
+
+    dispatchExplorationIntent({ type: 'select/entered', session: personSession })
+    const selectSnapshot = readExplorationContext()
+
+    expect(selectSnapshot).not.toBe(idleSnapshot)
+    expect(readExplorationContext()).toBe(selectSnapshot)
+  })
+
   it('does not notify for an idempotent dispatch', () => {
     let notifications = 0
     const unsubscribe = useGalaxyInteractionStore.subscribe(() => {

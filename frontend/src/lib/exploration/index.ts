@@ -50,6 +50,7 @@ export {
   subscribeExplorationContext,
 } from './storeAdapter'
 export type { ExplorationContextListener } from './storeAdapter'
+export { useExplorationSelector } from './useExplorationSelector'
 export { exitFocus } from './focusExit'
 export { decideEscapePriority } from './escapeAdapter'
 export type { EscapePriorityAction, EscapePriorityInput } from './escapeAdapter'

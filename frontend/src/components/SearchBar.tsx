@@ -40,6 +40,11 @@ import {
   applySearchTabChangeClear,
   enterGenreSelectSession,
   requestReplacingMovieFocus,
+  selectFocusMovieId,
+  selectGenreConditions,
+  selectParentSession,
+  subscribeExplorationContext,
+  useExplorationSelector,
 } from '@/lib/exploration'
 import { useStrings } from '@/lib/strings'
 import { cn } from '@/lib/utils'
@@ -94,22 +99,30 @@ function suggestionKey(s: SearchSuggestion): string {
   return `g:${s.genreName}`
 }
 
+function orderedStringsEqual(a: readonly string[], b: readonly string[]): boolean {
+  return a.length === b.length && a.every((value, index) => value === b[index])
+}
+
 export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchBarProps) {
   const ui = useStrings()
   const searchQuery = useGalaxyInteractionStore((s) => s.searchQuery)
-  const selectedMovieId = useGalaxyInteractionStore((s) => s.selectedMovieId)
-  const searchMode = useGalaxyInteractionStore((s) => s.searchMode)
+  const focusMovieId = useExplorationSelector(selectFocusMovieId)
+  const activeSelectSession = useExplorationSelector(selectParentSession)
+  const committedGenreConditions = useExplorationSelector(selectGenreConditions)
+  const activeSelectRelation = activeSelectSession?.relation.kind ?? null
   const indexStatus = useSearchIndexStore((s) => s.status)
   const searchIndex = useSearchIndexStore((s) => s.data)
   const indexError = useSearchIndexStore((s) => s.errorMessage)
   const genrePalette = useGalaxyDataStore((s) => s.data?.meta.genre_palette) ?? null
 
-  const [hudTab, setHudTab] = useState<SearchHudTab>('movie')
+  const [hudTab, setHudTab] = useState<SearchHudTab>(() =>
+    alignSearchTabToActiveSelect('movie', activeSelectRelation),
+  )
   const [titleInputState, setTitleInputState] = useState(() =>
-    reconcileFocusEchoInput(INITIAL_FOCUS_ECHO_INPUT_STATE, selectedMovieId),
+    reconcileFocusEchoInput(INITIAL_FOCUS_ECHO_INPUT_STATE, focusMovieId),
   )
   const [idInputState, setIdInputState] = useState(() =>
-    reconcileIdTabFocus(INITIAL_ID_TAB_INPUT_STATE, selectedMovieId),
+    reconcileIdTabFocus(INITIAL_ID_TAB_INPUT_STATE, focusMovieId),
   )
   const [debouncedIdQuery, setDebouncedIdQuery] = useState('')
   const [listOpen, setListOpen] = useState(false)
@@ -120,16 +133,23 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
   const panelRootRef = useRef<HTMLDivElement>(null)
 
   /** P21.3 — Genre tab AND multi-select (badges); orthogonal to movie/person query text. */
-  const [selectedGenres, setSelectedGenres] = useState<string[]>([])
-  const [prevLifecycleSearchMode, setPrevLifecycleSearchMode] = useState(searchMode)
-  if (searchMode !== prevLifecycleSearchMode) {
-    const prev = prevLifecycleSearchMode
-    setPrevLifecycleSearchMode(searchMode)
-    const activeRelation =
-      searchMode === 'person' || searchMode === 'genre' ? searchMode : null
-    const alignedTab = alignSearchTabToActiveSelect(hudTab, activeRelation)
+  const initialCommittedGenreNames = committedGenreConditions?.genres ?? []
+  const [selectedGenres, setSelectedGenres] = useState<string[]>(() => [
+    ...initialCommittedGenreNames,
+  ])
+  const [previousParentSession, setPreviousParentSession] = useState(activeSelectSession)
+  if (activeSelectSession !== previousParentSession) {
+    const previousRelation = previousParentSession?.relation.kind ?? null
+    setPreviousParentSession(activeSelectSession)
+    const alignedTab = alignSearchTabToActiveSelect(hudTab, activeSelectRelation)
     if (alignedTab !== hudTab) setHudTab(alignedTab)
-    if (prev === 'genre' && searchMode !== 'genre' && selectedGenres.length > 0) {
+
+    if (activeSelectRelation === 'genre' && committedGenreConditions !== null) {
+      const committedGenres = [...committedGenreConditions.genres]
+      if (!orderedStringsEqual(committedGenres, selectedGenres)) {
+        setSelectedGenres(committedGenres)
+      }
+    } else if (previousRelation === 'genre' && selectedGenres.length > 0) {
       setSelectedGenres([])
     }
   }
@@ -142,22 +162,24 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
 
   const deferredQuery = useDeferredValue(debouncedQuery)
 
-  const idInputValue = getIdTabInputValue(idInputState, selectedMovieId)
-  const idFocusEcho = isIdTabFocusEcho(idInputState, selectedMovieId)
+  const idInputValue = getIdTabInputValue(idInputState, focusMovieId)
+  const idFocusEcho = isIdTabFocusEcho(idInputState, focusMovieId)
 
   useLayoutEffect(
     () =>
-      useGalaxyInteractionStore.subscribe((state, previous) => {
-        if (state.selectedMovieId === previous.selectedMovieId) return
+      subscribeExplorationContext((context, previousContext) => {
+        const nextFocusMovieId = selectFocusMovieId(context)
+        const previousFocusMovieId = selectFocusMovieId(previousContext)
+        if (nextFocusMovieId === previousFocusMovieId) return
         setTitleInputState((current) =>
-          reconcileFocusEchoInput(current, state.selectedMovieId),
+          reconcileFocusEchoInput(current, nextFocusMovieId),
         )
-        setIdInputState((current) => reconcileIdTabFocus(current, state.selectedMovieId))
+        setIdInputState((current) => reconcileIdTabFocus(current, nextFocusMovieId))
 
         if (
           shouldClearQueriesForFocusChange(
-            previous.selectedMovieId,
-            state.selectedMovieId,
+            previousFocusMovieId,
+            nextFocusMovieId,
           )
         ) {
           setListOpen(false)
@@ -180,14 +202,14 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
     return m
   }, [movies])
 
-  const selectedMovie = selectedMovieId === null ? null : (movieById.get(selectedMovieId) ?? null)
-  const titleFocusEchoValue = selectedMovie ? formatMovieFocusEchoLabel(selectedMovie) : ''
+  const focusedMovie = focusMovieId === null ? null : (movieById.get(focusMovieId) ?? null)
+  const titleFocusEchoValue = focusedMovie ? formatMovieFocusEchoLabel(focusedMovie) : ''
   const titleInputValue = getFocusEchoInputValue(
     titleInputState,
-    selectedMovieId,
+    focusMovieId,
     titleFocusEchoValue,
   )
-  const titleFocusEcho = isFocusEchoInput(titleInputState, selectedMovieId)
+  const titleFocusEcho = isFocusEchoInput(titleInputState, focusMovieId)
 
   const tmdbIdSearchIndex = useMemo(() => buildTmdbIdSearchIndex(movies), [movies])
 

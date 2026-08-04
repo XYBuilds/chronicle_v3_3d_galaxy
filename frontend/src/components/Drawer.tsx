@@ -28,8 +28,11 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { useGalaxyDataStore } from '@/store/galaxyDataStore'
-import { exitFocus } from '@/lib/exploration'
-import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
+import {
+  exitFocus,
+  selectFocusMovieId,
+  useExplorationSelector,
+} from '@/lib/exploration'
 import { useSearchIndexStore } from '@/store/searchIndexStore'
 import { tryEnterPersonSearchFromRawName } from '@/utils/personSearchSession'
 import type { LocaleStrings } from '@/lib/strings'
@@ -533,34 +536,34 @@ export function MovieDetailDrawer({
   hasSearchIndex = false,
   animateZCurrentTo,
 }: MovieDetailDrawerProps) {
-  const selectedMovieId = useGalaxyInteractionStore((s) => s.selectedMovieId)
+  const focusMovieId = useExplorationSelector(selectFocusMovieId)
   const movies = useGalaxyDataStore((s) => s.data?.movies)
-  const prevSelectedRef = useRef<number | null>(null)
+  const previousFocusRef = useRef<number | null>(null)
   const [sheetDelayedOpen, setSheetDelayedOpen] = useState(false)
 
   const movie = useMemo(() => {
-    if (selectedMovieId === null || !movies) return null
-    return movies.find((m) => m.id === selectedMovieId) ?? null
-  }, [selectedMovieId, movies])
+    if (focusMovieId === null || !movies) return null
+    return movies.find((m) => m.id === focusMovieId) ?? null
+  }, [focusMovieId, movies])
 
   useEffect(() => {
-    if (selectedMovieId === null || !movies) return
-    if (!movies.some((m) => m.id === selectedMovieId)) {
+    if (focusMovieId === null || !movies) return
+    if (!movies.some((m) => m.id === focusMovieId)) {
       exitFocus()
     }
-  }, [selectedMovieId, movies])
+  }, [focusMovieId, movies])
 
   useEffect(() => {
-    if (selectedMovieId === null) {
+    if (focusMovieId === null) {
       const tid = window.setTimeout(() => {
-        prevSelectedRef.current = null
+        previousFocusRef.current = null
         setSheetDelayedOpen(false)
       }, 0)
       return () => window.clearTimeout(tid)
     }
 
-    const wasNull = prevSelectedRef.current === null
-    prevSelectedRef.current = selectedMovieId
+    const wasNull = previousFocusRef.current === null
+    previousFocusRef.current = focusMovieId
 
     if (wasNull) {
       const ensureClosed = window.setTimeout(() => {
@@ -579,9 +582,9 @@ export function MovieDetailDrawer({
       setSheetDelayedOpen(true)
     }, 0)
     return () => window.clearTimeout(tid)
-  }, [selectedMovieId])
+  }, [focusMovieId])
 
-  const open = sheetDelayedOpen && selectedMovieId !== null && movie !== null
+  const open = sheetDelayedOpen && focusMovieId !== null && movie !== null
 
   useEffect(() => {
     if (open && movie) {

@@ -1,6 +1,9 @@
 import { HUD_GALAXY_GLASS_SURFACE_CLASSNAME } from '@/hud/hudTopToolButtonChrome'
-import { exitFocus } from '@/lib/exploration'
-import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
+import {
+  exitFocus,
+  selectFocusMovieId,
+  useExplorationSelector,
+} from '@/lib/exploration'
 import { useStrings } from '@/lib/strings'
 import { cn } from '@/lib/utils'
 
@@ -9,10 +12,10 @@ import { cn } from '@/lib/utils'
  * P25.1 — Vertical offset 定稿：`50%+22rem`（`lg+` `24rem`），并受 safe-area / 短视口上限约束。
  */
 export function FocusExitButton() {
-  const selectedMovieId = useGalaxyInteractionStore((s) => s.selectedMovieId)
+  const focusMovieId = useExplorationSelector(selectFocusMovieId)
   const t = useStrings()
 
-  if (selectedMovieId === null) return null
+  if (focusMovieId === null) return null
 
   return (
     <div
@@ -26,7 +29,7 @@ export function FocusExitButton() {
         type="button"
         aria-label={t.hud.exitFocus}
         onClick={() => {
-          console.log('[FocusExitButton] exit focus', { selectedMovieId })
+          console.log('[FocusExitButton] exit focus', { focusMovieId })
           exitFocus()
         }}
         className={cn(

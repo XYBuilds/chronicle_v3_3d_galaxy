@@ -1,5 +1,9 @@
 import { useEffect, useRef } from 'react'
 
+import {
+  selectFocusMovieId,
+  subscribeExplorationContext,
+} from '@/lib/exploration'
 import { pushMovieRoute, replaceHomeRoute } from '@/lib/routeActions'
 import {
   applyParsedRouteToStores,
@@ -7,7 +11,6 @@ import {
 } from '@/lib/routeControllerSync'
 import { routeSyncGuard } from '@/lib/routeSyncGuard'
 import { parseRoute } from '@/lib/routes'
-import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
 import type { Movie } from '@/types/galaxy'
 
 export interface UseRouteControllerOptions {
@@ -40,7 +43,7 @@ export function decideRouteHistoryWrite(change: RouteStoreWrite):
 }
 
 /**
- * URL → Zustand (30.3) + store → URL (30.4 B1–B6) via `selectedMovieId` subscription.
+ * URL → exploration intents (30.3) + exploration focus → URL (30.4 B1–B6).
  */
 export function useRouteController(options: UseRouteControllerOptions): void {
   const { routeReady, movies } = options
@@ -91,10 +94,10 @@ export function useRouteController(options: UseRouteControllerOptions): void {
   useEffect(() => {
     if (!routeReady) return
 
-    return useGalaxyInteractionStore.subscribe((state, prev) => {
+    return subscribeExplorationContext((context, previousContext) => {
       const write = decideRouteHistoryWrite({
-        previousMovieId: prev.selectedMovieId,
-        movieId: state.selectedMovieId,
+        previousMovieId: selectFocusMovieId(previousContext),
+        movieId: selectFocusMovieId(context),
       })
       if (write?.kind === 'push-movie') {
         pushMovieRoute(write.movieId)

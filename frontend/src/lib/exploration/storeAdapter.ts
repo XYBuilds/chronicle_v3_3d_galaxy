@@ -179,17 +179,38 @@ function lifecycleProjectionChanged(
   )
 }
 
+let cachedState: GalaxyInteractionState | null = null
+let cachedContext: ExplorationContext | null = null
+
+function readStableContextFromState(state: GalaxyInteractionState): ExplorationContext {
+  if (
+    cachedState !== null &&
+    cachedContext !== null &&
+    !lifecycleProjectionChanged(state, cachedState)
+  ) {
+    cachedState = state
+    return cachedContext
+  }
+
+  const context = readContextFromState(state)
+  cachedState = state
+  cachedContext = context
+  return context
+}
+
 export function subscribeExplorationContext(
   listener: ExplorationContextListener,
 ): () => void {
   return useGalaxyInteractionStore.subscribe((state, previousState) => {
     if (!lifecycleProjectionChanged(state, previousState)) return
-    listener(readContextFromState(state), readContextFromState(previousState))
+    const previousContext = readContextFromState(previousState)
+    const context = readStableContextFromState(state)
+    listener(context, previousContext)
   })
 }
 
 export function readExplorationContext(): ExplorationContext {
-  return readContextFromState(useGalaxyInteractionStore.getState())
+  return readStableContextFromState(useGalaxyInteractionStore.getState())
 }
 
 export function dispatchExplorationIntent(intent: ExplorationIntent): ExplorationContext {

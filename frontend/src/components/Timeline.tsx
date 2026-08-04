@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react'
 
 import { getGalaxyCameraZ, setGalaxyCameraZ, subscribeGalaxyCameraZ } from '@/lib/galaxyCameraZBridge'
+import { selectFocusMovieId, useExplorationSelector } from '@/lib/exploration'
 import { useStrings } from '@/lib/strings'
 import { useGalaxyDataStore } from '@/store/galaxyDataStore'
 import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
@@ -395,7 +396,7 @@ export function Timeline({ orientation = 'vertical' }: TimelineProps) {
   const zRange = useGalaxyDataStore((s) => s.data?.meta.z_range)
   const cameraZ = useSyncExternalStore(subscribeGalaxyCameraZ, getGalaxyCameraZ, getGalaxyCameraZ)
   /** P25.2 — Film focus: timeline stays visible (bridge `cameraZ`) but must not write `zCurrent`. */
-  const filmFocus = useGalaxyInteractionStore((s) => s.selectedMovieId !== null)
+  const filmFocus = useExplorationSelector(selectFocusMovieId) !== null
 
   const onZCurrentChange = useCallback(
     (z: number) => {

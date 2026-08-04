@@ -26,7 +26,18 @@ vi.mock('react', async (importOriginal) => {
 
 vi.mock('@/lib/exploration', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/exploration')>()
-  return { ...actual, exitFocus: harness.exitFocus }
+  return {
+    ...actual,
+    exitFocus: harness.exitFocus,
+    useExplorationSelector: <Selection,>(
+      selector: (context: ReturnType<typeof actual.readExplorationContext>) => Selection,
+    ): Selection =>
+      selector(
+        harness.selectedMovieId === null
+          ? { kind: 'idle' }
+          : { kind: 'focus', movieId: harness.selectedMovieId },
+      ),
+  }
 })
 
 vi.mock('@/lib/strings', async (importOriginal) => {
@@ -37,11 +48,6 @@ vi.mock('@/lib/strings', async (importOriginal) => {
 vi.mock('@/store/galaxyDataStore', () => ({
   useGalaxyDataStore: (selector: (state: unknown) => unknown) =>
     selector({ data: { movies: harness.movies } }),
-}))
-
-vi.mock('@/store/galaxyInteractionStore', () => ({
-  useGalaxyInteractionStore: (selector: (state: unknown) => unknown) =>
-    selector({ selectedMovieId: harness.selectedMovieId }),
 }))
 
 import { MovieDetailDrawer } from '@/components/Drawer'

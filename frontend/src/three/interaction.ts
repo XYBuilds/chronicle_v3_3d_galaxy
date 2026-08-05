@@ -353,8 +353,8 @@ export function attachGalaxyActiveMeshInteraction(options: {
     domElement.removeEventListener('pointerdown', onPointerDown)
     domElement.removeEventListener('pointerleave', onPointerLeave)
     lastEmitted = { id: null, ax: Number.NaN, ay: Number.NaN, planetR: Number.NaN }
-    // Do not clear `selectedMovieId` / `focusNeighborIds` here — scene dispose (e.g. React Strict
-    // Mode remount, phase gate) must not wipe route deep-link focus; selection is store/route owned.
+    // Scene disposal (for example, a React Strict Mode remount) must not wipe the
+    // route-owned exploration context or the scene-owned focus-neighborhood cache.
     useGalaxyInteractionStore.setState({
       hoveredMovieId: null,
       hoverAnchorCss: null,

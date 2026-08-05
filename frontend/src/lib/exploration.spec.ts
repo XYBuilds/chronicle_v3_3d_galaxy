@@ -38,13 +38,7 @@ const replacingFocus = { kind: 'focus', movieId: 40 } satisfies ExplorationConte
 
 function resetStore(): void {
   useGalaxyInteractionStore.setState({
-    selectedMovieId: null,
-    searchMode: 'idle',
-    selectionIds: null,
-    selectionPersonKey: null,
-    selectionRelationKey: null,
-    selectionPersonMetadata: null,
-    selectionGenreConditions: null,
+    explorationContext: idle,
   })
 }
 
@@ -284,7 +278,7 @@ describe('validation and idempotence', () => {
   })
 })
 
-describe('legacy Zustand adapter', () => {
+describe('canonical Zustand adapter', () => {
   beforeEach(() => {
     resetStore()
     vi.spyOn(console, 'log').mockImplementation(() => undefined)
@@ -295,7 +289,23 @@ describe('legacy Zustand adapter', () => {
     resetStore()
   })
 
-  it('projects a nested focus in one complete store notification', () => {
+  it('stores lifecycle truth only in explorationContext', () => {
+    const state = useGalaxyInteractionStore.getState() as unknown as Record<
+      string,
+      unknown
+    >
+
+    expect(state.explorationContext).toEqual(idle)
+    expect(state).not.toHaveProperty('selectedMovieId')
+    expect(state).not.toHaveProperty('searchMode')
+    expect(state).not.toHaveProperty('selectionIds')
+    expect(state).not.toHaveProperty('selectionPersonKey')
+    expect(state).not.toHaveProperty('selectionRelationKey')
+    expect(state).not.toHaveProperty('selectionPersonMetadata')
+    expect(state).not.toHaveProperty('selectionGenreConditions')
+  })
+
+  it('commits a nested focus in one complete store notification', () => {
     dispatchExplorationIntent({ type: 'select/entered', session: personSession })
     const snapshots: Array<ReturnType<typeof useGalaxyInteractionStore.getState>> = []
     const unsubscribe = useGalaxyInteractionStore.subscribe((state) => snapshots.push(state))
@@ -308,15 +318,7 @@ describe('legacy Zustand adapter', () => {
     unsubscribe()
 
     expect(snapshots).toHaveLength(1)
-    expect(snapshots[0]).toMatchObject({
-      selectedMovieId: 20,
-      searchMode: 'person',
-      selectionIds: [10, 20, 30],
-      selectionPersonKey: 'pat-example',
-      selectionRelationKey: 'pat-example',
-      selectionPersonMetadata: personSession.metadata,
-      selectionGenreConditions: null,
-    })
+    expect(snapshots[0]?.explorationContext).toEqual(nestedFocus)
     expect(readExplorationContext()).toEqual(nestedFocus)
   })
 
@@ -397,25 +399,40 @@ describe('legacy Zustand adapter', () => {
     })
   })
 
-  it('fails fast when legacy lifecycle fields are structurally incomplete', () => {
+  it('fails fast when the canonical lifecycle context is structurally invalid', () => {
     useGalaxyInteractionStore.setState({
-      searchMode: 'person',
-      selectionIds: [10],
-      selectionPersonKey: 'pat-example',
-      selectionRelationKey: 'pat-example',
-      selectionPersonMetadata: null,
+      explorationContext: {
+        kind: 'select',
+        session: {
+          relation: { kind: 'person', key: 'pat-example' },
+          movieIds: [10],
+          metadata: null,
+        },
+      } as unknown as ExplorationContext,
     })
 
-    expect(() => readExplorationContext()).toThrow(/metadata/)
+    expect(() =>
+      dispatchExplorationIntent({ type: 'focus/exited' }),
+    ).toThrow(/metadata/)
   })
 
-  it('fails fast for invalid or non-member legacy focus IDs', () => {
-    useGalaxyInteractionStore.setState({ selectedMovieId: 0 })
-    expect(() => readExplorationContext()).toThrow(/movieId/)
+  it('fails fast for invalid or non-member canonical focus IDs', () => {
+    useGalaxyInteractionStore.setState({
+      explorationContext: { kind: 'focus', movieId: 0 },
+    })
+    expect(() => dispatchExplorationIntent({ type: 'focus/exited' })).toThrow(
+      /movieId/,
+    )
 
-    resetStore()
-    dispatchExplorationIntent({ type: 'select/entered', session: personSession })
-    useGalaxyInteractionStore.setState({ selectedMovieId: 99 })
-    expect(() => readExplorationContext()).toThrow(/belong/)
+    useGalaxyInteractionStore.setState({
+      explorationContext: {
+        kind: 'focus',
+        movieId: 99,
+        parent: personSession,
+      },
+    })
+    expect(() => dispatchExplorationIntent({ type: 'focus/exited' })).toThrow(
+      /belong/,
+    )
   })
 })

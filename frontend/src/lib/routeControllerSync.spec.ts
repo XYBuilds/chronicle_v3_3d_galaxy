@@ -39,13 +39,7 @@ const personSession = {
 } satisfies SelectSession
 
 const initialLifecycle = {
-  selectedMovieId: null,
-  searchMode: 'idle',
-  selectionIds: null,
-  selectionPersonKey: null,
-  selectionRelationKey: null,
-  selectionPersonMetadata: null,
-  selectionGenreConditions: null,
+  explorationContext: { kind: 'idle' },
 } as const
 
 function resetStore(): void {
@@ -88,7 +82,7 @@ describe('routeControllerSync home idle and movie focus', () => {
 
   it('focuses an in-galaxy movie without a fallback request', () => {
     applyParsedRouteToStores({ kind: 'movie', movieId: 1 }, { movies, search: '' })
-    expect(useGalaxyInteractionStore.getState().selectedMovieId).toBe(1)
+    expect(readExplorationContext()).toEqual({ kind: 'focus', movieId: 1 })
     expect(replaceRoutePath).not.toHaveBeenCalled()
   })
 
@@ -115,19 +109,15 @@ describe('routeControllerSync home idle and movie focus', () => {
   it('re-dispatches the same movie ID after Nested becomes Replacing in memory', () => {
     dispatchExplorationIntent({ type: 'select/entered', session: personSession })
     applyParsedRouteToStores({ kind: 'movie', movieId: 1 }, { movies, search: '' })
-    const observedMovieIds: Array<number | null> = []
-    const unsubscribe = useGalaxyInteractionStore.subscribe((state) => {
-      observedMovieIds.push(state.selectedMovieId)
+    const observedContexts: ReturnType<typeof readExplorationContext>[] = []
+    const unsubscribe = useGalaxyInteractionStore.subscribe((state, previousState) => {
+      if (state.explorationContext !== previousState.explorationContext) {
+        observedContexts.push(state.explorationContext)
+      }
     })
 
     useGalaxyInteractionStore.setState({
-      selectedMovieId: 1,
-      searchMode: 'idle',
-      selectionIds: null,
-      selectionPersonKey: null,
-      selectionRelationKey: null,
-      selectionPersonMetadata: null,
-      selectionGenreConditions: null,
+      explorationContext: { kind: 'focus', movieId: 1 },
     })
     expect(readExplorationContext()).toEqual({ kind: 'focus', movieId: 1 })
     vi.mocked(dispatchExplorationIntent).mockClear()
@@ -135,7 +125,7 @@ describe('routeControllerSync home idle and movie focus', () => {
     applyParsedRouteToStores({ kind: 'movie', movieId: 1 }, { movies, search: '' })
     unsubscribe()
 
-    expect(observedMovieIds).toEqual([1])
+    expect(observedContexts).toEqual([{ kind: 'focus', movieId: 1 }])
     expect(dispatchExplorationIntent).toHaveBeenCalledOnce()
     expect(dispatchExplorationIntent).toHaveBeenCalledWith({
       type: 'focus/requested',
@@ -148,7 +138,7 @@ describe('routeControllerSync home idle and movie focus', () => {
   it('canonicalizes a missing movie to home and leaves the galaxy idle', () => {
     applyParsedRouteToStores({ kind: 'movie', movieId: 999_999_999 }, { movies, search: '' })
     expect(replaceRoutePath).toHaveBeenCalledWith('/')
-    expect(useGalaxyInteractionStore.getState().selectedMovieId).toBeNull()
+    expect(readExplorationContext()).toEqual({ kind: 'idle' })
   })
 
   it('treats home and Back as focus exit, restoring a nested parent', () => {
@@ -208,7 +198,7 @@ describe('routeControllerSync home idle and movie focus', () => {
   it('clears a prior selection for home', () => {
     dispatchExplorationIntent({ type: 'focus/requested', movieId: 1, policy: 'replace' })
     applyParsedRouteToStores({ kind: 'home' }, { movies })
-    expect(useGalaxyInteractionStore.getState().selectedMovieId).toBeNull()
+    expect(readExplorationContext()).toEqual({ kind: 'idle' })
   })
 
 })
@@ -228,7 +218,7 @@ describe('runInitialRouteBoot', () => {
 
   it('initially focuses a known movie deep link', () => {
     runInitialRouteBoot({ kind: 'movie', movieId: 1 }, movies)
-    expect(useGalaxyInteractionStore.getState().selectedMovieId).toBe(1)
+    expect(readExplorationContext()).toEqual({ kind: 'focus', movieId: 1 })
   })
 
   it('forms replacing focus on a refreshed movie URL without restoring history state', () => {
@@ -245,12 +235,12 @@ describe('runInitialRouteBoot', () => {
 
   it('initially enters idle for home and never resolves today.json', () => {
     runInitialRouteBoot({ kind: 'home' }, movies)
-    expect(useGalaxyInteractionStore.getState().selectedMovieId).toBeNull()
+    expect(readExplorationContext()).toEqual({ kind: 'idle' })
   })
 
   it('initially canonicalizes a missing deep link to idle', () => {
     runInitialRouteBoot({ kind: 'movie', movieId: 999_999_999 }, movies, '')
     expect(replaceRoutePath).toHaveBeenCalledWith('/')
-    expect(useGalaxyInteractionStore.getState().selectedMovieId).toBeNull()
+    expect(readExplorationContext()).toEqual({ kind: 'idle' })
   })
 })

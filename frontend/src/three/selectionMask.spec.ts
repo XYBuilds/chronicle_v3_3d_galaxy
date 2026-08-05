@@ -52,7 +52,9 @@ describe('selection mask projection', () => {
 
     expect(uniforms.uSelectionMode.value).toBe(projection.mode)
     expect(uniforms.uSelectionCount.value).toBe(3)
-    expect(Array.from(texture.image.data)).toEqual([255, 0, 255, 255])
+    const maskData = texture.image.data
+    if (maskData === null) throw new Error('selection mask texture data is missing')
+    expect(Array.from(maskData)).toEqual([255, 0, 255, 255])
     expect(getSelectionMaskPickSet(projection)).toEqual(new Set([10, 20, 30]))
     texture.dispose()
   })

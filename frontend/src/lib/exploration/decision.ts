@@ -322,8 +322,3 @@ export function decideExploration(
         : { kind: 'select', session: current.parent }
   }
 }
-
-export function copyValidatedSelectSession(session: SelectSession): SelectSession {
-  assertSelectSession(session)
-  return copySession(session)
-}

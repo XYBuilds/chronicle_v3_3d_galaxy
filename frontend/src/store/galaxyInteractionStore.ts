@@ -1,12 +1,6 @@
 import { create } from 'zustand'
 
-import type {
-  GenreSelectConditions,
-  PersonSelectMetadata,
-} from '@/lib/exploration'
-
-/** Phase 12 — Search HUD tab + select session (Design Spec §4 / 状态机 §3.6). */
-export type SearchMode = 'idle' | 'movie' | 'person' | 'genre'
+import type { ExplorationContext } from '@/lib/exploration'
 
 /** One row in the autocomplete list (P12.3 fills scoring; store only holds the payload). */
 export type SearchSuggestion =
@@ -14,12 +8,11 @@ export type SearchSuggestion =
   | { kind: 'person'; personKey: string; label: string; movieCount: number }
   | { kind: 'genre'; genreName: string; label: string; count: number }
 
-/** Phase 4.1 — Raycaster-driven HUD prep: hover / selection ids (TMDB `Movie.id`). */
-/** Phase 5.1.5 — Macro view: time focus + visible Z span + camera standoff (Design Spec 方案 1). */
-/** Phase 12.2 — Search + multi-film select (`selectionIds`) for person/genre sessions. */
+/** Interaction, camera, local search draft, and canonical exploration state. */
 export interface GalaxyInteractionState {
   hoveredMovieId: number | null
-  selectedMovieId: number | null
+  /** Sole writable Focus/Select lifecycle state. */
+  explorationContext: ExplorationContext
   /** Viewport CSS pixels — planet center `(x,y,z)` projected (fixed ring / tooltip anchor). */
   hoverAnchorCss: { x: number; y: number } | null
   /** Active-mesh silhouette radius in CSS px (drives ring inner opening + tooltip `sideOffset`). */
@@ -31,26 +24,8 @@ export interface GalaxyInteractionState {
   /** Camera sits at world `z = zCurrent - zCamDistance` (looking +Z). */
   zCamDistance: number
 
-  /** `'idle'` = no active search select session (movie tab still uses this until P12.3 wires tabs). */
-  searchMode: SearchMode
   searchQuery: string
   searchResults: SearchSuggestion[]
-  /**
-   * Person/genre hit: stable `Movie.id[]` ordered ascending by `release_date` (pipeline / P12.3).
-   * `null` when not in a multi-select session.
-   */
-  selectionIds: number[] | null
-  /**
-   * Normalized search-index key for the selected person (`searchIndex.people[key]`); drives per-film `movie_roles` for constellation.
-   * `null` when not in a person select session.
-   */
-  selectionPersonKey: string | null
-  /** Stable relation identity for the active person/genre session. */
-  selectionRelationKey: string | null
-  /** Person session metadata required to reconstruct the canonical exploration context. */
-  selectionPersonMetadata: PersonSelectMetadata | null
-  /** Genre session conditions required to reconstruct the canonical exploration context. */
-  selectionGenreConditions: GenreSelectConditions | null
   /** Person-mode constellation lines; product HUD has no toggle — use `window.__galaxy.constellationEnabled` in dev (P12.7). Default on. */
   constellationEnabled: boolean
 
@@ -64,21 +39,15 @@ export interface GalaxyInteractionState {
 
 export const useGalaxyInteractionStore = create<GalaxyInteractionState>(() => ({
   hoveredMovieId: null,
-  selectedMovieId: null,
+  explorationContext: { kind: 'idle' },
   hoverAnchorCss: null,
   hoverPlanetRadiusCss: null,
   zCurrent: 0,
   zVisWindow: 1,
   zCamDistance: 30,
 
-  searchMode: 'idle',
   searchQuery: '',
   searchResults: [],
-  selectionIds: null,
-  selectionPersonKey: null,
-  selectionRelationKey: null,
-  selectionPersonMetadata: null,
-  selectionGenreConditions: null,
   constellationEnabled: true,
 
   focusNeighborRadius: 5,
@@ -86,55 +55,14 @@ export const useGalaxyInteractionStore = create<GalaxyInteractionState>(() => ({
   focusOrbit: { yaw: 0, pitch: 0 },
 }))
 
-/** Derived: timeline vis-window must not drive `inFocus` when in person/genre select (Tech Spec §4.5). */
-export function selectViswindowDisabled(state: GalaxyInteractionState): boolean {
-  return state.searchMode === 'person' || state.searchMode === 'genre'
-}
-
-function logSearchTransition(
+function logSearchDraft(
   label: string,
-  partial: Pick<GalaxyInteractionState, 'searchMode' | 'selectionIds' | 'searchResults' | 'searchQuery'>,
+  draft: Pick<GalaxyInteractionState, 'searchResults' | 'searchQuery'>,
 ): void {
-  const selLen = partial.selectionIds === undefined ? '…' : partial.selectionIds?.length ?? 0
-  const resLen = partial.searchResults === undefined ? '…' : partial.searchResults.length
-  const qLen =
-    partial.searchQuery === undefined ? '…' : partial.searchQuery.trim().length
   console.log('[Search]', label, {
-    mode: partial.searchMode,
-    selectionLen: selLen,
-    resultsLen: resLen,
-    queryTrimLen: qLen,
+    resultsLen: draft.searchResults.length,
+    queryTrimLen: draft.searchQuery.trim().length,
   })
-}
-
-export function setSearchMode(mode: SearchMode): void {
-  const prev = useGalaxyInteractionStore.getState().searchMode
-  const next: Partial<GalaxyInteractionState> = { searchMode: mode }
-  if (mode === 'idle') {
-    next.searchQuery = ''
-    next.searchResults = []
-    next.selectionIds = null
-    next.selectionPersonKey = null
-    next.selectionRelationKey = null
-    next.selectionPersonMetadata = null
-    next.selectionGenreConditions = null
-  } else if (mode === 'movie') {
-    next.selectionIds = null
-    next.selectionPersonKey = null
-    next.selectionRelationKey = null
-    next.selectionPersonMetadata = null
-    next.selectionGenreConditions = null
-  }
-  useGalaxyInteractionStore.setState(next)
-  if (prev !== mode) {
-    const s = useGalaxyInteractionStore.getState()
-    logSearchTransition('setSearchMode', {
-      searchMode: s.searchMode,
-      selectionIds: s.selectionIds,
-      searchResults: s.searchResults,
-      searchQuery: s.searchQuery,
-    })
-  }
 }
 
 export function setSearchQuery(query: string): void {
@@ -142,61 +70,20 @@ export function setSearchQuery(query: string): void {
 }
 
 export function setSearchResults(results: SearchSuggestion[]): void {
-  const prevLen = useGalaxyInteractionStore.getState().searchResults.length
+  const state = useGalaxyInteractionStore.getState()
   useGalaxyInteractionStore.setState({ searchResults: results })
-  const nextLen = results.length
-  if (prevLen !== nextLen) {
-    logSearchTransition('results', {
-      searchMode: useGalaxyInteractionStore.getState().searchMode,
-      selectionIds: useGalaxyInteractionStore.getState().selectionIds,
+  if (state.searchResults.length !== results.length) {
+    logSearchDraft('results', {
       searchResults: results,
-      searchQuery: useGalaxyInteractionStore.getState().searchQuery,
+      searchQuery: state.searchQuery,
     })
   }
 }
 
 /** Clear only local query/results after exploration has cleared its Select session. */
 export function clearSearchDraft(): void {
-  const state = useGalaxyInteractionStore.getState()
   useGalaxyInteractionStore.setState({ searchQuery: '', searchResults: [] })
-  logSearchTransition('clearSearchDraft', {
-    searchMode: state.searchMode,
-    selectionIds: state.selectionIds,
-    searchResults: [],
-    searchQuery: '',
-  })
-}
-
-export function setSelectionIds(ids: number[] | null): void {
-  const prev = useGalaxyInteractionStore.getState().selectionIds
-  const prevLen = prev?.length ?? 0
-  const nextLen = ids?.length ?? 0
-  useGalaxyInteractionStore.setState({ selectionIds: ids })
-  if (prevLen !== nextLen || (ids === null) !== (prev === null)) {
-    logSearchTransition('selectionIds', {
-      searchMode: useGalaxyInteractionStore.getState().searchMode,
-      selectionIds: ids,
-      searchResults: useGalaxyInteractionStore.getState().searchResults,
-      searchQuery: useGalaxyInteractionStore.getState().searchQuery,
-    })
-  }
-}
-
-/** Full exit from search select session: `selectionIds` cleared (P12.8 stack level 4). */
-export function clearSearch(): void {
-  useGalaxyInteractionStore.setState({
-    searchMode: 'idle',
-    searchQuery: '',
-    searchResults: [],
-    selectionIds: null,
-    selectionPersonKey: null,
-    selectionRelationKey: null,
-    selectionPersonMetadata: null,
-    selectionGenreConditions: null,
-  })
-  logSearchTransition('clearSearch', {
-    searchMode: 'idle',
-    selectionIds: null,
+  logSearchDraft('clearSearchDraft', {
     searchResults: [],
     searchQuery: '',
   })

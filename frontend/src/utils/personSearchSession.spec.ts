@@ -1,7 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { readExplorationContext } from '@/lib/exploration'
+import {
+  readExplorationContext,
+  subscribeExplorationContext,
+} from '@/lib/exploration'
 import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
+import { resetExplorationContext } from '@/lib/exploration/testHelpers'
 import type { Movie } from '@/types/galaxy'
 import type { SearchIndex } from '@/types/searchIndex'
 import { normalizeForSearch } from '@/utils/searchScore'
@@ -54,8 +58,8 @@ function baseMovie(over: Partial<Movie> & Pick<Movie, 'id' | 'title'>): Movie {
 }
 
 function resetExplorationStore(): void {
+  resetExplorationContext()
   useGalaxyInteractionStore.setState({
-    explorationContext: { kind: 'idle' },
     searchQuery: '',
     searchResults: [],
   })
@@ -103,8 +107,7 @@ describe('lookupPersonKeyForRawName', () => {
 })
 
 describe('enterPersonSearchSession', () => {
-  it('updates interaction store and calls z animator', () => {
-    const setSpy = vi.spyOn(useGalaxyInteractionStore, 'setState')
+  it('enters one complete canonical session and calls z animator', () => {
     const zAnim = vi.fn()
     const key = normalizeForSearch('Pat Example')
     const index: SearchIndex = {
@@ -130,9 +133,8 @@ describe('enterPersonSearchSession', () => {
 
     expect(applied).toBe(true)
     expect(searchQuery).toBe('Pat Example')
-    expect(setSpy).toHaveBeenCalledWith({
-      explorationContext: {
-        kind: 'select',
+    expect(readExplorationContext()).toEqual({
+      kind: 'select',
         session: {
           relation: { kind: 'person', key },
           movieIds: [10, 20],
@@ -142,7 +144,6 @@ describe('enterPersonSearchSession', () => {
             movieRoles: { '10': 2 },
           },
         },
-      },
     })
     expect(zAnim).toHaveBeenCalledWith(1990.5, 700)
   })
@@ -168,10 +169,8 @@ describe('tryEnterPersonSearchFromRawName', () => {
       [20, baseMovie({ id: 20, title: 'New', release_date: '2020-01-01', z: 2020 })],
     ])
     const lifecycleSnapshots: ReturnType<typeof readExplorationContext>[] = []
-    const unsubscribe = useGalaxyInteractionStore.subscribe((state, previous) => {
-      if (state.explorationContext !== previous.explorationContext) {
-        lifecycleSnapshots.push(readExplorationContext())
-      }
+    const unsubscribe = subscribeExplorationContext((context) => {
+      lifecycleSnapshots.push(context)
     })
 
     const applied = tryEnterPersonSearchFromRawName({

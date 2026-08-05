@@ -102,7 +102,7 @@ export function attachGalaxyActiveMeshInteraction(options: {
       '[Interaction] selectionMaskPickSet refreshed | mode=',
       mask.mode,
       '| size=',
-      mask.movieIds?.length ?? 0,
+      mask.memberMovieIds?.length ?? 0,
     )
   }
   const unsubExplorationMaskPick = subscribeExplorationContext((context) => {

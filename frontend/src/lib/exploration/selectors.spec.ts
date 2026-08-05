@@ -34,7 +34,7 @@ describe('selectExploration', () => {
     expect(selectExploration(idle)).toEqual({
       focusMovieId: null,
       parentSession: null,
-      selectionMovieIds: null,
+      collectionMovieIds: null,
       personMetadata: null,
       genreConditions: null,
       maskMode: 0,
@@ -43,7 +43,7 @@ describe('selectExploration', () => {
     expect(selectExploration({ kind: 'select', session: personSession })).toEqual({
       focusMovieId: null,
       parentSession: personSession,
-      selectionMovieIds: personSession.movieIds,
+      collectionMovieIds: personSession.movieIds,
       personMetadata: personSession.metadata,
       genreConditions: null,
       maskMode: 1,
@@ -54,7 +54,7 @@ describe('selectExploration', () => {
     ).toMatchObject({
       focusMovieId: 22,
       parentSession: personSession,
-      selectionMovieIds: personSession.movieIds,
+      collectionMovieIds: personSession.movieIds,
       personMetadata: personSession.metadata,
       genreConditions: null,
       maskMode: 2,
@@ -65,7 +65,7 @@ describe('selectExploration', () => {
     expect(selectExploration({ kind: 'select', session: genreSession })).toEqual({
       focusMovieId: null,
       parentSession: genreSession,
-      selectionMovieIds: genreSession.movieIds,
+      collectionMovieIds: genreSession.movieIds,
       personMetadata: null,
       genreConditions: genreSession.conditions,
       maskMode: 1,
@@ -81,16 +81,16 @@ describe('selectExploration', () => {
     const replacing = { kind: 'focus', movieId: 99 } satisfies ExplorationContext
 
     expect(selectExploration(exit(nested)).maskMode).toBe(1)
-    expect(selectExploration(exit(nested)).selectionMovieIds).toBe(personSession.movieIds)
+    expect(selectExploration(exit(nested)).collectionMovieIds).toBe(personSession.movieIds)
     expect(selectExploration(exit(replacing)).maskMode).toBe(0)
-    expect(selectExploration(exit(replacing)).selectionMovieIds).toBeNull()
+    expect(selectExploration(exit(replacing)).collectionMovieIds).toBeNull()
   })
 
   it('does not expose scene-owned focus neighborhood, orbit, or animation phase', () => {
     expect(Object.keys(selectExploration({ kind: 'focus', movieId: 22 }))).toEqual([
       'focusMovieId',
       'parentSession',
-      'selectionMovieIds',
+      'collectionMovieIds',
       'personMetadata',
       'genreConditions',
       'maskMode',

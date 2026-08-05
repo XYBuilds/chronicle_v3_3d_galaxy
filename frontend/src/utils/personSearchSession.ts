@@ -48,7 +48,7 @@ export function enterPersonSearchSession(args: {
     .map((id) => movieById.get(id)?.z)
     .filter((z): z is number => typeof z === 'number' && Number.isFinite(z))
   if (zs.length === 0) {
-    console.warn('[personSearch] no finite z for selectionIds', { key: personKey, idsLen: ids.length })
+    console.warn('[personSearch] no finite z for collectionMovieIds', { key: personKey, idsLen: ids.length })
   } else {
     const zMin = Math.min(...zs)
     animateZCurrentTo?.(zMin, 700)

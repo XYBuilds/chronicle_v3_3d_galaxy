@@ -3,10 +3,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   dispatchExplorationIntent,
   readExplorationContext,
+  subscribeExplorationContext,
   type SelectSession,
 } from '@/lib/exploration'
 import { replaceRoutePath } from '@/lib/routeActions'
-import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
+import { resetExplorationContext } from './exploration/testHelpers'
 import { galaxyMinimalFixture } from '@/types/galaxyMinimalFixture'
 
 import {
@@ -38,12 +39,8 @@ const personSession = {
   metadata: { fullName: 'Route Session', roleMask: 1 },
 } satisfies SelectSession
 
-const initialLifecycle = {
-  explorationContext: { kind: 'idle' },
-} as const
-
 function resetStore(): void {
-  useGalaxyInteractionStore.setState(initialLifecycle)
+  resetExplorationContext()
 }
 
 describe('decideRouteExploration', () => {
@@ -110,14 +107,14 @@ describe('routeControllerSync home idle and movie focus', () => {
     dispatchExplorationIntent({ type: 'select/entered', session: personSession })
     applyParsedRouteToStores({ kind: 'movie', movieId: 1 }, { movies, search: '' })
     const observedContexts: ReturnType<typeof readExplorationContext>[] = []
-    const unsubscribe = useGalaxyInteractionStore.subscribe((state, previousState) => {
-      if (state.explorationContext !== previousState.explorationContext) {
-        observedContexts.push(state.explorationContext)
-      }
+    const unsubscribe = subscribeExplorationContext((context) => {
+      observedContexts.push(context)
     })
 
-    useGalaxyInteractionStore.setState({
-      explorationContext: { kind: 'focus', movieId: 1 },
+    dispatchExplorationIntent({
+      type: 'focus/requested',
+      movieId: 1,
+      policy: 'replace',
     })
     expect(readExplorationContext()).toEqual({ kind: 'focus', movieId: 1 })
     vi.mocked(dispatchExplorationIntent).mockClear()

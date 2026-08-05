@@ -18,7 +18,7 @@ export {
   selectMaskMode,
   selectParentSession,
   selectPersonMetadata,
-  selectSelectionMovieIds,
+  selectCollectionMovieIds,
 } from './selectors'
 export type { ExplorationMaskMode, ExplorationSelection } from './selectors'
 export {

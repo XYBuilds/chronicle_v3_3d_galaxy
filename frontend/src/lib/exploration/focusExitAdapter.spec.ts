@@ -5,11 +5,12 @@ import {
   dispatchExplorationIntent,
   exitFocus,
   readExplorationContext,
+  subscribeExplorationContext,
   type ExplorationContext,
   type ExplorationIntent,
   type SelectSession,
 } from '@/lib/exploration'
-import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
+import { resetExplorationContext } from './testHelpers'
 
 const parentSession = {
   relation: { kind: 'person', key: 'focus-exit-person' },
@@ -26,9 +27,7 @@ const nestedFocus = {
 const replacingFocus = { kind: 'focus', movieId: 303 } satisfies ExplorationContext
 
 function resetStore(): void {
-  useGalaxyInteractionStore.setState({
-    explorationContext: { kind: 'idle' },
-  })
+  resetExplorationContext()
 }
 
 function pressExplorationEscape(): ExplorationIntent | null {
@@ -62,8 +61,8 @@ describe('focus exit adapter', () => {
     })
     expect(readExplorationContext()).toEqual(nestedFocus)
     const snapshots: ExplorationContext[] = []
-    const unsubscribe = useGalaxyInteractionStore.subscribe(() => {
-      snapshots.push(readExplorationContext())
+    const unsubscribe = subscribeExplorationContext((context) => {
+      snapshots.push(context)
     })
 
     exitFocus()
@@ -82,8 +81,8 @@ describe('focus exit adapter', () => {
       policy: 'replace',
     })
     const snapshots: ExplorationContext[] = []
-    const unsubscribe = useGalaxyInteractionStore.subscribe(() => {
-      snapshots.push(readExplorationContext())
+    const unsubscribe = subscribeExplorationContext((context) => {
+      snapshots.push(context)
     })
 
     exitFocus()
@@ -101,8 +100,8 @@ describe('focus exit adapter', () => {
       policy: 'preserve-if-member',
     })
     const snapshots: ExplorationContext[] = []
-    const unsubscribe = useGalaxyInteractionStore.subscribe(() => {
-      snapshots.push(readExplorationContext())
+    const unsubscribe = subscribeExplorationContext((context) => {
+      snapshots.push(context)
     })
 
     expect(pressExplorationEscape()).toEqual({ type: 'focus/exited' })
@@ -119,8 +118,8 @@ describe('focus exit adapter', () => {
   it('is safe when no focus is active and does not clear a select session', () => {
     dispatchExplorationIntent({ type: 'select/entered', session: parentSession })
     const snapshots: ExplorationContext[] = []
-    const unsubscribe = useGalaxyInteractionStore.subscribe(() => {
-      snapshots.push(readExplorationContext())
+    const unsubscribe = subscribeExplorationContext((context) => {
+      snapshots.push(context)
     })
 
     exitFocus()

@@ -20,12 +20,15 @@ import {
   hasActiveSelectRelation,
   readExplorationContext,
   requestReplacingMovieFocus,
+  subscribeExplorationContext,
 } from '@/lib/exploration'
 import {
   setSearchQuery,
   useGalaxyInteractionStore,
 } from '@/store/galaxyInteractionStore'
 import type { SearchIndex } from '@/types/searchIndex'
+
+import { resetExplorationContext } from './testHelpers'
 
 const genreIndex: SearchIndex = {
   version: 'test',
@@ -38,8 +41,8 @@ const genreIndex: SearchIndex = {
 }
 
 function resetStore(): void {
+  resetExplorationContext()
   useGalaxyInteractionStore.setState({
-    explorationContext: { kind: 'idle' },
     searchQuery: '',
     searchResults: [],
   })
@@ -86,8 +89,8 @@ describe('search exploration adapter', () => {
       policy: 'preserve-if-member',
     })
     const snapshots: ReturnType<typeof readExplorationContext>[] = []
-    const unsubscribe = useGalaxyInteractionStore.subscribe(() => {
-      snapshots.push(readExplorationContext())
+    const unsubscribe = subscribeExplorationContext((context) => {
+      snapshots.push(context)
     })
 
     const replacement = enterGenreSelectSession({
@@ -155,7 +158,7 @@ describe('search exploration adapter', () => {
         policy: 'preserve-if-member',
       })
       let notifications = 0
-      const unsubscribe = useGalaxyInteractionStore.subscribe(() => {
+      const unsubscribe = subscribeExplorationContext(() => {
         notifications += 1
       })
 
@@ -188,7 +191,7 @@ describe('search exploration adapter', () => {
       policy: 'preserve-if-member',
     })
     let notifications = 0
-    const unsubscribe = useGalaxyInteractionStore.subscribe(() => {
+    const unsubscribe = subscribeExplorationContext(() => {
       notifications += 1
     })
 

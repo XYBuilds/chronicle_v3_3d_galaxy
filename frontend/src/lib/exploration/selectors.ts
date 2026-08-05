@@ -12,7 +12,7 @@ export type ExplorationMaskMode = 0 | 1 | 2
 export interface ExplorationSelection {
   readonly focusMovieId: number | null
   readonly parentSession: SelectSession | null
-  readonly selectionMovieIds: readonly number[] | null
+  readonly collectionMovieIds: readonly number[] | null
   readonly personMetadata: PersonSelectMetadata | null
   readonly genreConditions: GenreSelectConditions | null
   readonly maskMode: ExplorationMaskMode
@@ -36,7 +36,7 @@ export function selectParentSession(context: ExplorationContext): SelectSession 
   return null
 }
 
-export function selectSelectionMovieIds(
+export function selectCollectionMovieIds(
   context: ExplorationContext,
 ): readonly number[] | null {
   return selectParentSession(context)?.movieIds ?? null
@@ -67,7 +67,7 @@ export function selectExploration(context: ExplorationContext): ExplorationSelec
   return Object.freeze({
     focusMovieId: selectFocusMovieId(context),
     parentSession,
-    selectionMovieIds: parentSession?.movieIds ?? null,
+    collectionMovieIds: parentSession?.movieIds ?? null,
     personMetadata: selectPersonMetadata(context),
     genreConditions: selectGenreConditions(context),
     maskMode: selectMaskMode(context),

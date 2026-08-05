@@ -136,7 +136,7 @@ function makeSharedUniforms(
       /** P12.5 — R8 per-instance mask packed in a 2D atlas (each dimension ≤ gl.MAX_TEXTURE_SIZE). */
       uSelectionMask: { value: selectionMaskTex },
       uSelectionCount: { value: 0 },
-      /** 0 = timeline vis slab; 1 = search mask (`selectionIds`); 2 = focus spherical neighborhood (`focusNeighborIds`). */
+      /** 0 = timeline vis slab; 1 = Select collection mask; 2 = focus spherical neighborhood (`focusNeighborIds`). */
       uSelectionMode: { value: 0 },
       uMovieCount: { value: movieCount },
       uSelectionAtlasWidth: { value: atlasW },

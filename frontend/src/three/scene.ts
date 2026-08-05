@@ -117,10 +117,8 @@ interface GalaxyColorDebug {
   log: () => void
 }
 
-/** Dev console: `window.__galaxyInteraction` — Phase 5.1.5 time-axis & camera standoff. */
+/** Dev console: `window.__galaxyInteraction` — narrow controls for time-axis, camera standoff, and constellation rendering. */
 interface GalaxyInteractionDebug {
-  /** Same Zustand store as the app: `getState` / `setState` / `subscribe`. */
-  readonly store: typeof useGalaxyInteractionStore
   zCurrent: number
   zVisWindow: number
   zCamDistance: number
@@ -455,7 +453,7 @@ export function mountGalaxyScene(
 
   const syncConstellation = () => {
     const state = useGalaxyInteractionStore.getState()
-    const selectionMovieIds = explorationSelection.selectionMovieIds
+    const collectionMovieIds = explorationSelection.collectionMovieIds
     const personMetadata = explorationSelection.personMetadata
     const maskPick = getSelectionMaskPickSet(currentSelectionMask())
     const material = galaxy.activeMaterial
@@ -464,10 +462,10 @@ export function mountGalaxyScene(
         explorationSelection.maskMode === 1 &&
         personMetadata !== null &&
         state.constellationEnabled &&
-        (selectionMovieIds?.length ?? 0) >= 2,
+        (collectionMovieIds?.length ?? 0) >= 2,
       hasFilmFocus: explorationSelection.focusMovieId !== null,
       movieById: movieByIdForConstellation,
-      selectionIds: selectionMovieIds,
+      collectionMovieIds,
       movieRoles: personMetadata?.movieRoles ?? null,
       surfaceGapWorld: CONSTELLATION_SURFACE_GAP_WORLD,
       getActiveWorldRadius: (movie) =>
@@ -1310,9 +1308,8 @@ export function mountGalaxyScene(
   window.__planetTerrace = planetTerraceDebug
   planetTerraceDebug.log()
 
-  /** Phase 5.1.5 — e.g. `__galaxyInteraction.zCamDistance = 30` or `__galaxyInteraction.store.setState({ zCurrent: 2000 })`. */
+  /** Narrow debug surface; it cannot observe or mutate exploration lifecycle state. */
   const interactionDebug: GalaxyInteractionDebug = {
-    store: useGalaxyInteractionStore,
     get zCurrent() {
       return useGalaxyInteractionStore.getState().zCurrent
     },
@@ -1482,7 +1479,7 @@ export function mountGalaxyScene(
         explorationSelection.maskMode === 1 &&
         personMetadata !== null &&
         st.constellationEnabled &&
-        (explorationSelection.selectionMovieIds?.length ?? 0) >= 2 &&
+        (explorationSelection.collectionMovieIds?.length ?? 0) >= 2 &&
         constellation.group.visible
       if (!constellationActive || st.hoveredMovieId === null) {
         constellation.resetChainOpacities()

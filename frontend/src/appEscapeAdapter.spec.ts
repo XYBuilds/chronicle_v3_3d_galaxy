@@ -22,13 +22,7 @@ const parentSession = {
 
 function resetStore(): void {
   useGalaxyInteractionStore.setState({
-    selectedMovieId: null,
-    searchMode: 'idle',
-    selectionIds: null,
-    selectionPersonKey: null,
-    selectionRelationKey: null,
-    selectionPersonMetadata: null,
-    selectionGenreConditions: null,
+    explorationContext: { kind: 'idle' },
   })
 }
 

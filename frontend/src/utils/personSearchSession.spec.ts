@@ -55,15 +55,9 @@ function baseMovie(over: Partial<Movie> & Pick<Movie, 'id' | 'title'>): Movie {
 
 function resetExplorationStore(): void {
   useGalaxyInteractionStore.setState({
-    selectedMovieId: null,
-    searchMode: 'idle',
+    explorationContext: { kind: 'idle' },
     searchQuery: '',
     searchResults: [],
-    selectionIds: null,
-    selectionPersonKey: null,
-    selectionRelationKey: null,
-    selectionPersonMetadata: null,
-    selectionGenreConditions: null,
   })
 }
 
@@ -137,17 +131,18 @@ describe('enterPersonSearchSession', () => {
     expect(applied).toBe(true)
     expect(searchQuery).toBe('Pat Example')
     expect(setSpy).toHaveBeenCalledWith({
-      selectedMovieId: null,
-      searchMode: 'person',
-      selectionIds: [10, 20],
-      selectionPersonKey: key,
-      selectionRelationKey: key,
-      selectionPersonMetadata: {
-        fullName: 'Pat Example',
-        roleMask: 2,
-        movieRoles: { '10': 2 },
+      explorationContext: {
+        kind: 'select',
+        session: {
+          relation: { kind: 'person', key },
+          movieIds: [10, 20],
+          metadata: {
+            fullName: 'Pat Example',
+            roleMask: 2,
+            movieRoles: { '10': 2 },
+          },
+        },
       },
-      selectionGenreConditions: null,
     })
     expect(zAnim).toHaveBeenCalledWith(1990.5, 700)
   })
@@ -174,15 +169,7 @@ describe('tryEnterPersonSearchFromRawName', () => {
     ])
     const lifecycleSnapshots: ReturnType<typeof readExplorationContext>[] = []
     const unsubscribe = useGalaxyInteractionStore.subscribe((state, previous) => {
-      if (
-        state.selectedMovieId !== previous.selectedMovieId ||
-        state.searchMode !== previous.searchMode ||
-        state.selectionIds !== previous.selectionIds ||
-        state.selectionPersonKey !== previous.selectionPersonKey ||
-        state.selectionRelationKey !== previous.selectionRelationKey ||
-        state.selectionPersonMetadata !== previous.selectionPersonMetadata ||
-        state.selectionGenreConditions !== previous.selectionGenreConditions
-      ) {
+      if (state.explorationContext !== previous.explorationContext) {
         lifecycleSnapshots.push(readExplorationContext())
       }
     })

@@ -70,13 +70,7 @@ const routeSession = {
 
 function resetLifecycle(): void {
   useGalaxyInteractionStore.setState({
-    selectedMovieId: null,
-    searchMode: 'idle',
-    selectionIds: null,
-    selectionPersonKey: null,
-    selectionRelationKey: null,
-    selectionPersonMetadata: null,
-    selectionGenreConditions: null,
+    explorationContext: { kind: 'idle' },
   })
 }
 

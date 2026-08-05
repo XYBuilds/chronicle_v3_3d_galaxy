@@ -10,7 +10,7 @@
 | **active** | 片元在 `uZCurrent … uZCurrent+uZVisWindow` 清晰条带内，且非 focus；可参与拾取 | 生产：仅对 **`galaxyActive`** 拾取（`interaction.ts`） |
 | **hover** | `hoveredMovieId` 命中；**不改变** mesh 尺度，仅 HUD（tooltip + HTML hover ring，**无 CSS transition**，即时显隐） | 已有 store 字段；P8.4 对齐 ring |
 | **focus** | 选中飞入完成：相机对准目标片、Perlin 球独占；双 galaxy mesh 上该 `instanceId` **scale 归零** | 现有 planet + 相机动画；P8.3/P8.4 调整 |
-| **select**（正式 · Phase 12+） | **`selectionIds` 非空** 且 **`viswindowDisabled`**：时间轴条带内的 **`inFocus`** 由 **selectionMask** 覆盖（见 §3.6）；与搜索人名 / genre 联动 | Phase 12 起实装 |
+| **select**（正式 · Phase 12+） | canonical `explorationContext` 为 `select(session)`；`session.movieIds` 是稳定有序影片集合，时间轴条带内的 **`inFocus`** 由 **selectionMask** 覆盖（见 §3.6），并由 person / genre 关系身份驱动 | Phase 12 起实装；当前生命周期契约见 [ADR 0001](../adr/0001-focus-select-lifecycle.md) |
 
 ## 2. 共享数学：Z 条带与 smoothstep 过渡
 
@@ -53,14 +53,14 @@ inFocus = smoothstep(zLo - W, zLo, aZ) × (1 - smoothstep(zHi, zHi + W, aZ))
 
 #### 3.2.1 active 材质双路径（Phase 16 → Phase 19）
 
-**动机**：路径 **B**（透明、不写深度）下，条带或 mask 内大量 active 同帧 **alpha≈1** 时，透明排序会导致远处球体错误压在近处之上。**Phase 16** 先在 **`person` / `genre` select 单态**切入路径 **A**（opaque + `depthWrite`）。**Phase 19** 将路径 **A** 收敛为**全部宏观无 focus**：与 **`searchMode` 细分无关**，统一为 **`selectionPhase === 'idle'`** 且 **`selectedMovieId === null`**（含 idle / `movie` 联想未点片、Space dolly 推近等）；**唯一**路径 **B** 特例为 **focus 管线**（`selectionPhase ∈ { selecting, selected, deselecting }` **或** 已持有 **`selectedMovieId`**），以保留 **P11.1** 非目标 active **alpha**。仍在 **`scene.ts` RAF** 内切换 **`galaxyActive` ShaderMaterial**（**无**第二套 mesh）。
+**动机**：路径 **B**（透明、不写深度）下，条带或 mask 内大量 active 同帧 **alpha≈1** 时，透明排序会导致远处球体错误压在近处之上。**Phase 16** 先在 **`person` / `genre` select 单态**切入路径 **A**（opaque + `depthWrite`）。**Phase 19** 将路径 **A** 收敛为**全部宏观无 focus**：与搜索 Tab 细分无关，统一为 **`selectionPhase === 'idle'`** 且 canonical context 不含 focus；**唯一**路径 **B** 特例为 **focus 管线**（`selectionPhase ∈ { selecting, selected, deselecting }` **或** canonical context 为 `focus`），以保留 **P11.1** 非目标 active **alpha**。仍在 **`scene.ts` RAF** 内切换 **`galaxyActive` ShaderMaterial**（**无**第二套 mesh）。
 
 | 路径 | 条件 | `transparent` | `depthWrite` | `alphaTest` | 备注 |
 |------|------|---------------|--------------|-------------|------|
-| **A — opaque（宏观默认）** | **`selectionPhase === 'idle'`**（**`scene.ts` 闭包**，非 Zustand）且 **`selectedMovieId === null`**（store） | `false` | `true` | `0.01` | 条带 / mask 内 **`sActive > 0`** 片元写深度；宏观浏览与 **Phase 17** Space dolly 推近后遮挡正确 |
-| **B — transparent（focus 特例）** | **`selectionPhase`** 为 **`selecting` / `selected` / `deselecting`** **或** **`selectedMovieId !== null`** | `true` | `false` | `0.01` | **P11.1** **`vFocusAlphaMult`**；压暗由 **`uFocusActiveDimBlend`**（与 **`uFocusNonTargetActiveAlpha`**）驱动，**`uFocusCameraBlend`** 主司相机插值（**Phase 25.3** 起二者在 focus 内换星时解耦） |
+| **A — opaque（宏观默认）** | **`selectionPhase === 'idle'`**（**`scene.ts` 闭包**，非 Zustand）且 `selectFocusMovieId(explorationContext) === null` | `false` | `true` | `0.01` | 条带 / mask 内 **`sActive > 0`** 片元写深度；宏观浏览与 **Phase 17** Space dolly 推近后遮挡正确 |
+| **B — transparent（focus 特例）** | **`selectionPhase`** 为 **`selecting` / `selected` / `deselecting`** **或** `selectFocusMovieId(explorationContext) !== null` | `true` | `false` | `0.01` | **P11.1** **`vFocusAlphaMult`**；压暗由 **`uFocusActiveDimBlend`**（与 **`uFocusNonTargetActiveAlpha`**）驱动，**`uFocusCameraBlend`** 主司相机插值（**Phase 25.3** 起二者在 focus 内换星时解耦） |
 
-* **切换**：由 **`scene.ts`** 每帧用 **`selectionPhase`（闭包）× `selectedMovieId`（store）** 判定路径，仅在 **`transparent` / `depthWrite`** 与目标不一致时设置 **`material.needsUpdate = true`**（触发 shader 重编译；用户操作边界上频率极低）。切换**无**时间插值动画。  
+* **切换**：由 **`scene.ts`** 每帧用 **`selectionPhase`（闭包）× canonical exploration selector** 判定路径，仅在 **`transparent` / `depthWrite`** 与目标不一致时设置 **`material.needsUpdate = true`**（触发 shader 重编译；用户操作边界上频率极低）。切换**无**时间插值动画。
 * **与 P11.1 兼容**：路径 **A** 下宏观 active 片元 **alpha 恒为 1**（mask / 条带外 **`sActive = 0`** 已丢弃），与 opaque 深度写入无冲突；路径 **B** 下 focus 飞入/保持/飞出仍走 **§3.4.3**。
 
 ### 3.3 hover
@@ -81,7 +81,7 @@ inFocus = smoothstep(zLo - W, zLo, aZ) × (1 - smoothstep(zHi, zHi + W, aZ))
 | **z 范围** | 相机与目标 world 位置对齐；**Phase 13 起**：focus 会话中 **active** 可视/可拾取子集由 **`uSelectionMode = 2`** 球形邻域 mask 决定（见 **§3.4.5**），**不再**由 viswindow 条带单独承担「邻域探索」语义；时间轴读数与 **`zCurrent`** 对齐见 Tech Spec §1.4.1 |
 | **大小** | 双 mesh 上该 instance **零尺度**；Perlin 球 **detail = 8**（P11.3；取代早期文档中的 detail 6） |
 | **色彩** | Perlin **K 档**（≤8）噪声阈值分区 + **固定 OKLab Lightness/Chroma**（当前 `0.55 / 0.15`）；评分不再写入 `uPerlinL` 或 Key，而是经版本化 power curve 只驱动逐片元局部底色 Emission。固定 Key `0.35` 只塑形；**主 genre** 优先 **`movie.genre_hue`**；**vote_count** 在 focus 态仍通过 **worldRadius** 影响球尺度；**小 vote 片 focus 后视觉偏小为 intended**（产品接受） |
-| **可交互性** | 抽屉/详情；**邻域内 active** 可点击**切换 focus**（仍经 Phase 11.6 拾取分流与 Perlin 球优先级）；**退出 focus** 仅 **ESC**、档案抽屉关闭、搜索栏清除（**X**）——**不**再支持「点击画布空白」退出（与 Design Spec §4.6 一致） |
+| **可交互性** | 抽屉/详情；**邻域内 active** 可点击**切换 focus**（仍经 Phase 11.6 拾取分流与 Perlin 球优先级）；**退出 focus** 仅由语义 `focus/exited` 入口触发（ESC 的 Focus 层、档案抽屉关闭、focus 退出按钮、route home/Back）——**不**再支持「点击画布空白」退出。Person/Genre 的 parent-context Clear 发 `select/cleared` 并原子退出 nested focus；Title/TMDB ID Clear 只清本地输入或 echo，不改变 lifecycle。 |
 | **进入/退出** | 相机动画时长沿用现 `SELECT_MS` / `DESELECT_MS`（数值以《视觉参数总表》为准）；P8.4 起 `flyToFocus` 使用**物理距离常数** `FOCUS_CAM_DIST`；**Phase 13 起**进出 focus 的相机位姿与 **`uFocusCameraBlend`** 等通道由统一 **`transitionDriver`**（`focusDriver.progress`）驱动；**selected** 段为**轨道相机**（§3.4.6） |
 
 #### 3.4.1 focus 视觉降级（Phase 11.2 · **idle 层**；**Phase 17 默认禁用**）
@@ -123,19 +123,19 @@ inFocus = smoothstep(zLo - W, zLo, aZ) × (1 - smoothstep(zHi, zHi + W, aZ))
 
 #### 3.4.5 focus 态周边邻域 active（Phase 13 · **mask 语义**）
 
-- **`uSelectionMode = 2`**（focus 邻域）：GPU 顶点路径上 **`inFocus` 与 `uSelectionMode = 1` 一致**——即按 **`uSelectionMask`** 纹理采样结果**覆盖**条带公式算出的 `inFocus`；**区别仅在 CPU 写 mask 的数据源**（本模式为**球形邻域 id 集合**，而非人名/genre 搜索的 `selectionIds`）。
+- **`uSelectionMode = 2`**（focus 邻域）：GPU 顶点路径上 **`inFocus` 与 `uSelectionMode = 1` 一致**——即按 **`uSelectionMask`** 纹理采样结果**覆盖**条带公式算出的 `inFocus`；**区别仅在 CPU 写 mask 的数据源**（本模式为**球形邻域 id 集合**，而非 person/genre session 的 `movieIds`）。
 - **邻域定义**：以**焦点影片**的 world 位置为球心、store **`focusNeighborRadius`**（世界单位）为半径 **R**，凡满足欧氏距离 **≤ R** 的影片 id 写入 mask（**含**焦点 id 与否以实现为准，拾取仍以 Perlin 球优先，见 §3.5.2）。
 - **默认值**：`focusNeighborRadius` **5** world units（Leva **`__galaxy.focusNeighborRadius`** 可调；与《视觉参数总表》§6 一致）。
 - **Phase 17 hover 读回**：邻域 mask 与 **§3.4.3** 的 **`uHoveredInstanceId` / `uFocusHoveredActiveAlpha`** 正交——mask 决定 **R 内**谁画 **active**；hover 仅在 **`uSelectionMode === 2`** 下微调 **active** 的 **`vFocusAlphaMult`**，**不**把 R 外 idle 升为 active。
-- **退出 focus**：清空邻域 mask；**`uSelectionMode` 回到 `0`**（idle）或 **`1`**（若仍处于 person/genre **select** 会话且须在下一帧恢复 search mask，见下条 **D1**）；**`uHoveredInstanceId → -1`**。
+- **退出 focus**：清空邻域 mask；`focus/exited` 后若 canonical context 恢复为父 `select(session)`，**`uSelectionMode` 回到 `1`** 并在下一帧恢复该 session 的 search mask；若 replacing focus 退出到 `idle`，则回到 `0`。两种路径都令 **`uHoveredInstanceId → -1`**。
 
 #### 3.4.6 focus 态轨道相机（Phase 13 · **相机契约破例**）
 
-- **`selectionPhase === 'selected'`** 且存在单片 focus 时：**`GALAXY_CAMERA_EULER` 恒定约束破例失效**；相机**位置** = **`pivot + offset(yaw, pitch)`**，其中 **pivot** 为焦点 world 位置，**offset** 由 store **`focusOrbit.{ yaw, pitch }`** 推导，**半径恒为 `FOCUS_PERLIN_CAMERA_STANDOFF`**（与 `camera.ts` 定稿一致；**不可**用滚轮改变该距离）。
+- **`selectionPhase === 'selected'`** 且 `selectFocusMovieId(explorationContext)` 返回单片 focus 时：**`GALAXY_CAMERA_EULER` 恒定约束破例失效**；相机**位置** = **`pivot + offset(yaw, pitch)`**，其中 **pivot** 为焦点 world 位置，**offset** 由 store **`focusOrbit.{ yaw, pitch }`** 推导，**半径恒为 `FOCUS_PERLIN_CAMERA_STANDOFF`**（与 `camera.ts` 定稿一致；**不可**用滚轮改变该距离）。
 - **朝向**：恒 **`lookAt(pivot)`**。
 - **`selecting` / `deselecting`**：与抽屉/非目标 alpha 等一致，经 **`transitionDriver`** 同时对**世界坐标位置**（`lerpVectors`）与**四元数**（`slerp`）插值，自宏观机位过渡到轨道机位或反向。
 - **`selectionPhase === 'idle'`**（无 focus）：恢复 **`GALAXY_CAMERA_EULER`**；**`focusOrbit.yaw` / `focusOrbit.pitch` 重置为 `0`**（**不含**径向 **`r`** 字段）。
-- **滚轮**：整条 focus 相关相位（与单片 `selectedMovieId` 关联的 **`selecting` / `selected` / `deselecting`**）内滚轮 **noop**（不推进 `zCurrent`、不 dolly `camera.position.z`、不改变 standoff），以保证 Perlin 球屏幕尺寸严格映射 **`vote_count`**（见 Tech Spec §1.4.3）。**Phase 17**：含 **Space + 滚轮** 的 **dolly-to-cursor**（改 `zCamDistance`）在 focus 态同样 **noop**（与 P13.3 一致，保护 Perlin 距离恒定）。
+- **滚轮**：整条 focus 相关相位（与 canonical context 的 focus movie ID 关联的 **`selecting` / `selected` / `deselecting`**）内滚轮 **noop**（不推进 `zCurrent`、不 dolly `camera.position.z`、不改变 standoff），以保证 Perlin 球屏幕尺寸严格映射 **`vote_count`**（见 Tech Spec §1.4.3）。**Phase 17**：含 **Space + 滚轮** 的 **dolly-to-cursor**（改 `zCamDistance`）在 focus 态同样 **noop**（与 P13.3 一致，保护 Perlin 距离恒定）。
 
 ### 3.5 Perlin 球 · 阶梯地形（Phase 11.3 起）
 
@@ -162,39 +162,43 @@ Perlin focus 球在片元侧按 **`vNoise`** 与 **`uThresh[0..K−2]`**（**K**
 
 #### 3.5.2 focus 态拾取分流（Phase 11.6 · **已实装**）
 
-- **优先级**：当 `selectedMovieId != null` 且 focus 球包围球（半径 `selectionPlanet.lastRadius`）沿射线命中距离 **早于** active 命中时，hover/click 视为焦点星交互。  
+- **优先级**：当 canonical context 为 `focus` 且 focus 球包围球（半径 `selectionPlanet.lastRadius`）沿射线命中距离 **早于** active 命中时，hover/click 视为焦点星交互。
 - **回落**：若未命中 focus 球，或 active 命中更近，则按既有 `pickClosestActiveMovieAlongRay` 路径处理，可切换到另一颗 active 星。  
 - **语义**：focus 球 hover 继续写 `hoveredMovieId`（单一来源），tooltip 与 ring 逻辑不分叉；点击 focus 球保持当前 focus，不误切后景。
 
-### 3.6 select（正式态 · Phase 12）
+### 3.6 select（正式态 · Phase 12；canonical lifecycle）
 
-**语义**：前端 **`selectionIds: number[]`** 非空、`searchMode ∈ {'person','genre'}` 时即为 **select 会话**。该会话下，**宏观 active 可视集合完全由 `selectionIds` 决定**，**与时间轴 `viswindow` 解耦**：shader 内 `uSelectionMode == 1` 时 **`inFocus`** 由 **`uSelectionMask`** 重写，**不再读取** `uZCurrent / uZVisWindow` 推导的 `inFocus_band`。Timeline UI 与 store `zCurrent / zVisWindow` 的写入通路保持运转（保留状态以便随时退出 select 回到时间轴态），但**视觉无反馈**（用户拖时间轴不会改变 active 集合）。
+**语义**：Focus/Select 生命周期唯一事实源是 Zustand 的 canonical **`explorationContext`** 判别联合：`idle | select(session) | focus(movieId, parent?)`。`session` 同时保存 person/genre 关系身份、稳定有序的 `movieIds`，以及 person metadata 或 genre conditions；这些值不再拆成可独立写入的 store 字段。完整决策与父子关系见 [ADR 0001](../adr/0001-focus-select-lifecycle.md)。
+
+当 context 为 **`select(session)`** 时，宏观 active 可视集合完全由 **`session.movieIds`** 决定，并与时间轴 `viswindow` 解耦：shader 内 `uSelectionMode == 1` 时 **`inFocus`** 由 **`uSelectionMask`** 重写，不再读取 `uZCurrent / uZVisWindow` 推导的 `inFocus_band`。Timeline UI 与 store `zCurrent / zVisWindow` 的写入通路保持运转（保留状态以便退出 select 后回到时间轴态），但此时不会改变 active 集合。
 
 **与 focus 的优先级**：**`focus > select > active / idle / hover`**。
 
-- **focus 嵌套**：用户在 select 会话中点击 active 影片可同时进入 focus；focus 实例走 Perlin / 双 mesh 隐藏（`uFocusedInstanceId`），**mask 仅作用于非焦点实例**（与 §3.4.2 `uFocusDimMode` 联动）。**Phase 13（D1）**：当 **focus 与 person/genre select 并存**时，**focus 邻域 mask（`uSelectionMode = 2`）替换** search mask（`mode = 1`）对非焦点的可视/拾取语义；**退出 focus** 后若 **`selectedMovieId === null`** 且 **`searchMode ∈ { 'person','genre' }`**，在随后 RAF **自动恢复** `uSelectionMode = 1` 与 search mask。**ESC 取消 focus 时保留 select 上下文**（`searchMode` / `selectionIds` / 连线不清）；再次 ESC 才退出 select（与 Design Spec §4.6 焦点栈一致）。
-- **搜电影名并点选**：直接走 `selectedMovieId` → focus，**不**进入 §3.6 select。
+- **Nested focus**：从当前 Select session 请求 member 影片且 policy 为 `preserve-if-member` 时，context 变为 `focus(movieId, parent=session)`；focus 邻域 mask（`uSelectionMode = 2`）暂时替换 search mask。`focus/exited` 原子恢复父 `select(session)`，下一帧恢复 mode 1 与该 session 的 mask；再次 ESC 才发送 `select/cleared` 退出 Select session。
+- **Replacing focus**：Title/TMDB ID lookup 使用 `replace`；macro、route 或 focus-neighborhood 的 `preserve-if-member` 请求若无父 session 或目标不是 member，也不携带 parent。退出该 focus 返回 `idle`，不会恢复无关 Select session。
+- **清除 Select session**：Person/Genre 显式 parent-context Clear 或离开对应 Tab 发送同一个 `select/cleared` intent；若当前为 Nested focus，Focus 与 parent 在一次 transition 中共同退出到 `idle`。Title/TMDB ID Clear 只清输入或 echo，不发送 lifecycle clear intent。
+- **写入边界**：调用方只发送 `select/entered`、`select/cleared`、`focus/requested`、`focus/exited` 四类语义 intent；exploration store adapter 验证 payload、计算完整 next context，并最多执行一次 lifecycle `set`。
 
 **selectionMask 数据流**：
 
-- **GPU**：`uSelectionMask` = `DataTexture(RedFormat, UnsignedByte)`，宽 `movieCount`、高 1，每实例 **0/1**；`uSelectionMode` ∈ **`{0,1,2}`**：`0` = 关闭（与 Phase 8–11 行为一致，inFocus 由条带驱动），`1` = **search** mask 覆盖 inFocus（仅非焦点实例），`2` = **focus 邻域球** mask 覆盖 inFocus（§3.4.5；CPU 来源为 pivot+R 内 id 列表）。
-- **CPU**：`selectionIds → idToIndex → DataTexture` 写入并 `needsUpdate=true`；清空 → mode=0 + 全零。
+- **GPU**：`uSelectionMask` = `DataTexture(RedFormat, UnsignedByte)`，宽 `movieCount`、高 1，每实例 **0/1**；`uSelectionMode` ∈ **`{0,1,2}`**：`0` = 关闭（inFocus 由条带驱动），`1` = **Select session** mask 覆盖 inFocus（仅非焦点实例），`2` = **focus 邻域球** mask 覆盖 inFocus（§3.4.5；CPU 来源为 pivot+R 内 id 列表）。
+- **CPU**：`selectSelectionMovieIds(explorationContext) → idToIndex → DataTexture` 写入并 `needsUpdate=true`；canonical context 无 Select session 时清空对应 search mask。
 
-**人名连线**：`searchMode === 'person'` 且 `constellationEnabled` 时，`LineSegments` 按 **`release_date` 升序**连接 mask 内影片；`constellationEnabled` 默认 `true`，**产品 UI 不暴露**；调试通过 **`window.__galaxy.constellationEnabled`**（见《视觉参数总表》§4a）。`searchMode === 'genre'` 不画连线。
+**人名连线**：父 Select session 的 `relation.kind === 'person'` 且 `constellationEnabled` 时，`LineSegments` 按 **`release_date` 升序**连接 session mask 内影片；`constellationEnabled` 默认 `true`，**产品 UI 不暴露**；调试通过 **`window.__galaxy.constellationEnabled`**（见《视觉参数总表》§4a）。Genre session 不画连线。
 
-#### 3.6.1 ESC 焦点栈（Phase 12.8 · 实现收口）
+#### 3.6.1 ESC 焦点栈（Phase 12.8；canonical lifecycle 收口）
 
 与 [Design Spec §4.6](./TMDB%20电影宇宙%20Design%20Spec.md) 一致；`App.tsx` 在 **`window` `keydown` capture** 阶段自上而下处理，**命中一级即 `preventDefault` + `stopPropagation`**（避免与 Radix Sheet 重复闭合并保证顺序）。
 
 | 级 | 条件 | 行为 |
 |----|------|------|
-| 1 | `document.activeElement` 为带 `data-galaxy-search-input` 的搜索框 | **仅 `blur()`**；不清 query、不收联想、不改 `searchMode` / `selectionIds` |
-| 2–3 | `selectedMovieId !== null`（含 Sheet 已打开或飞入途中） | **`selectedMovieId → null`** 取消 focus；**若 `searchMode ∈ {'person','genre'}` 则保留 select**（mask / 连线 / `selectionIds` 不变） |
-| 4 | `searchMode !== 'idle'` | 调用 **`clearSearch()`**（`selectionIds` 清空、mask 归零、连线隐藏、`searchMode → 'idle'`） |
+| 1 | `document.activeElement` 为带 `data-galaxy-search-input` 的搜索框 | **仅 `blur()`**；不清 query、不收联想、不发送 lifecycle intent |
+| 2–3 | canonical context 为 `focus`（含 Sheet 已打开或飞入途中） | 发送 **`focus/exited`**；Nested focus 恢复其 parent `select(session)`，Replacing focus 返回 `idle` |
+| 4 | canonical context 为 `select(session)` | 发送 **`select/cleared`**，同时清本地 search draft；mask 归零、person 连线隐藏、context 变为 `idle` |
 
 **与 INFO Modal 不交叠**：焦点在 `#app-info-dialog` 内时不处理上表（交由 Radix Dialog 默认 Esc 关闭）。
 
-**搜电影名**：仅走 `selectedMovieId`，`searchMode` 保持 `'idle'`，故第 4 级不触发；两次 Esc 行为以实现为准（先 blur → 再取消 focus）。
+**Title/TMDB ID lookup**：选片发送 policy 为 `replace` 的 `focus/requested`，不会继承 Select parent；对应 Clear 只处理本地输入或 focus echo，不发送 `select/cleared`。
 
 ## 4. 渲染与能力约定
 
@@ -228,3 +232,4 @@ Perlin focus 球在片元侧按 **`vNoise`** 与 **`uThresh[0..K−2]`**（**K**
 | 2026-05-03 | **Phase 19 P19**：§3.2.1 路径 **A** = **`selectionPhase === 'idle'` ∧ `selectedMovieId === null`**（宏观默认 opaque）；路径 **B** = focus 特例；演进说明 **Phase 16 → 19**（收敛 **`searchMode`** 矩阵口径） |
 | 2026-05-13 | **Phase 26 P26.4**：§3.1 idle 材质 **P26.3** 运行时透明路径与色彩链分工；§3.2 **active** 可交互性补 **idle 近距 fade** 下 CPU 拾取门限（对齐 Tech Spec §1.5） |
 | 2026-07-19 | **Phase 39 收口**：§3.4 与 §3.5.1 将 Focus 从评分→`uPerlinL` 迁移为固定 L/C + 评分→局部底色 Emission + 固定 Key；补 linear RGB 单次 sRGB、`pure-bloom-delta-v1` 三端合同与最终参数。P39.8 以带保留项的 Go 结束：生产数据评分 `5.1` 与 `8.482` 亮度差异目测不明确，后续手调不属于 Phase 39。 |
+| 2026-03-14 | **Exploration lifecycle 收口**：§1、§3.2.1、§3.4、§3.6 改用 canonical `explorationContext` 与四类语义 intent；明确 Nested/Replacing focus、Person/Genre parent-context Clear、Title/TMDB ID local Clear、ESC 分层及 selector→mask 数据流，移除现行描述中的 legacy lifecycle store 字段与 setter。 |

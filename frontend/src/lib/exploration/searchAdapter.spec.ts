@@ -39,15 +39,9 @@ const genreIndex: SearchIndex = {
 
 function resetStore(): void {
   useGalaxyInteractionStore.setState({
-    selectedMovieId: null,
-    searchMode: 'idle',
+    explorationContext: { kind: 'idle' },
     searchQuery: '',
     searchResults: [],
-    selectionIds: null,
-    selectionPersonKey: null,
-    selectionRelationKey: null,
-    selectionPersonMetadata: null,
-    selectionGenreConditions: null,
   })
 }
 

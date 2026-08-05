@@ -52,10 +52,13 @@ function butlerPublicFontsBasePlugin(viteBase: string): Plugin {
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, dirname, '')
   const rawBase = (env.VITE_BASE_PATH ?? process.env.VITE_BASE_PATH)?.trim()
+  const rawPublicDirectory = process.env.PAGES_PUBLIC_DIR?.trim()
+  const publicDir = rawPublicDirectory || path.resolve(dirname, 'public')
   const base = rawBase && rawBase !== '' ? (rawBase.endsWith('/') ? rawBase : `${rawBase}/`) : '/'
 
   return {
     base,
+    publicDir,
     plugins: [
       butlerPublicFontsBasePlugin(base),
       react(),

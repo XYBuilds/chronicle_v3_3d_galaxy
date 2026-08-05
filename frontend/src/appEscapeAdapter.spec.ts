@@ -12,7 +12,7 @@ import {
   type ExplorationIntent,
   type SelectSession,
 } from '@/lib/exploration'
-import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
+import { resetExplorationContext } from './lib/exploration/testHelpers'
 
 const parentSession = {
   relation: { kind: 'genre', key: 'genre:app-escape' },
@@ -21,9 +21,7 @@ const parentSession = {
 } satisfies SelectSession
 
 function resetStore(): void {
-  useGalaxyInteractionStore.setState({
-    explorationContext: { kind: 'idle' },
-  })
+  resetExplorationContext()
 }
 
 function enterSelect(): void {

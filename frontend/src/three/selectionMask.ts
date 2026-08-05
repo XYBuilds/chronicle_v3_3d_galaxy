@@ -8,7 +8,7 @@ import type { Movie } from '@/types/galaxy'
 
 export interface SelectionMaskProjection {
   readonly mode: ExplorationMaskMode
-  readonly movieIds: readonly number[] | null
+  readonly memberMovieIds: readonly number[] | null
 }
 
 export function resolveSelectionMask(
@@ -16,15 +16,15 @@ export function resolveSelectionMask(
   focusNeighborIds: readonly number[] | null,
 ): SelectionMaskProjection {
   if (exploration.maskMode === 0) {
-    return { mode: 0, movieIds: null }
+    return { mode: 0, memberMovieIds: null }
   }
   if (exploration.maskMode === 1) {
-    if (exploration.selectionMovieIds === null) {
-      throw new Error('[SelectionMask] Select session requires movie IDs')
+    if (exploration.collectionMovieIds === null) {
+      throw new Error('[SelectionMask] Select session requires collection movie IDs')
     }
-    return { mode: 1, movieIds: exploration.selectionMovieIds }
+    return { mode: 1, memberMovieIds: exploration.collectionMovieIds }
   }
-  return { mode: 2, movieIds: focusNeighborIds ?? [] }
+  return { mode: 2, memberMovieIds: focusNeighborIds ?? [] }
 }
 
 export function getSelectionMaskPickSet(
@@ -32,7 +32,7 @@ export function getSelectionMaskPickSet(
 ): Set<number> | null {
   return selectionMask.mode === 0
     ? null
-    : new Set(selectionMask.movieIds ?? [])
+    : new Set(selectionMask.memberMovieIds ?? [])
 }
 
 /** P12.5 — uniforms shared by idle/active galaxy shaders for `uSelectionMask` + mode. */
@@ -92,7 +92,7 @@ export function setSelectionMask(
   idToIndex: Map<number, number>,
   uniforms: SelectionMaskUniformBag,
 ): void {
-  const idsOrNull = selectionMask.movieIds
+  const idsOrNull = selectionMask.memberMovieIds
   const tex = uniforms.uSelectionMask.value
   const data = (tex.image as { data: Uint8Array }).data
   const atlasW = uniforms.uSelectionAtlasWidth.value

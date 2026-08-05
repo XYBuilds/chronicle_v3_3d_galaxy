@@ -81,7 +81,7 @@ export interface ConstellationSyncParams {
   /** When true (single-film focus / Perlin), constellation is hidden. */
   hasFilmFocus: boolean
   movieById: ReadonlyMap<number, Movie>
-  selectionIds: readonly number[] | null
+  collectionMovieIds: readonly number[] | null
   /**
    * Per-film role mask for the selected person (`searchIndex.people[].movie_roles`).
    * When null/undefined, falls back to one polyline on the **producers** mesh only (legacy).
@@ -296,7 +296,7 @@ export function createConstellation(maxSegmentsPerChain = 140): ConstellationHan
   }
 
   const sync = (p: ConstellationSyncParams): void => {
-    if (!p.visible || p.hasFilmFocus || !p.selectionIds || p.selectionIds.length < 2) {
+    if (!p.visible || p.hasFilmFocus || !p.collectionMovieIds || p.collectionMovieIds.length < 2) {
       group.visible = false
       snapOpacityState(chains, opacityDisplay, opacityTargetMode, opacityFade)
       for (const { key } of CHAIN_ORDER) {
@@ -320,7 +320,7 @@ export function createConstellation(maxSegmentsPerChain = 140): ConstellationHan
       for (const { key, mask } of CHAIN_ORDER) {
         const ch = chains[key]
         const cap = ch.positions.length / 3
-        const inGroup = p.selectionIds.filter((id) => ((roles[String(id)] ?? 0) & mask) !== 0)
+        const inGroup = p.collectionMovieIds.filter((id) => ((roles[String(id)] ?? 0) & mask) !== 0)
         const sorted = sortIdsByRelease(inGroup, p.movieById)
         const vi = emitChainIntoBuffer(ch.positions, sorted, p, cap, gap)
         if (vi < 2) {
@@ -343,7 +343,7 @@ export function createConstellation(maxSegmentsPerChain = 140): ConstellationHan
           continue
         }
         const cap = ch.positions.length / 3
-        const sorted = sortIdsByRelease(p.selectionIds, p.movieById)
+        const sorted = sortIdsByRelease(p.collectionMovieIds, p.movieById)
         const vi = emitChainIntoBuffer(ch.positions, sorted, p, cap, gap)
         if (vi < 2) {
           ch.mesh.visible = false

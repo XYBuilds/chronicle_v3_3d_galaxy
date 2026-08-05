@@ -61,20 +61,20 @@ describe('selection mask projection', () => {
 
   it('uses one projection for shader mode and CPU pick membership', () => {
     const searchMask = maskFor({ kind: 'select', session })
-    expect(searchMask).toEqual({ mode: 1, movieIds: session.movieIds })
+    expect(searchMask).toEqual({ mode: 1, memberMovieIds: session.movieIds })
     expect(getSelectionMaskPickSet(searchMask)).toEqual(new Set(session.movieIds))
 
     const focusMask = maskFor(
       { kind: 'focus', movieId: 20, parent: session },
       [20, 99],
     )
-    expect(focusMask).toEqual({ mode: 2, movieIds: [20, 99] })
+    expect(focusMask).toEqual({ mode: 2, memberMovieIds: [20, 99] })
     expect(getSelectionMaskPickSet(focusMask)).toEqual(new Set([20, 99]))
   })
 
   it('keeps focus mode when its scene-owned neighborhood cache is not ready', () => {
     const focusMask = maskFor({ kind: 'focus', movieId: 99 })
-    expect(focusMask).toEqual({ mode: 2, movieIds: [] })
+    expect(focusMask).toEqual({ mode: 2, memberMovieIds: [] })
     expect(getSelectionMaskPickSet(focusMask)).toEqual(new Set())
   })
 
@@ -88,11 +88,11 @@ describe('selection mask projection', () => {
 
     expect(maskFor(decideExploration(nested, { type: 'focus/exited' }))).toEqual({
       mode: 1,
-      movieIds: session.movieIds,
+      memberMovieIds: session.movieIds,
     })
     expect(maskFor(decideExploration(replacing, { type: 'focus/exited' }))).toEqual({
       mode: 0,
-      movieIds: null,
+      memberMovieIds: null,
     })
   })
 })

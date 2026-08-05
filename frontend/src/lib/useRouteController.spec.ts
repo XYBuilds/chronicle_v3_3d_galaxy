@@ -8,7 +8,7 @@ import {
 } from '@/lib/exploration'
 import { pushMovieRoute, replaceHomeRoute } from '@/lib/routeActions'
 import { routeSyncGuard } from '@/lib/routeSyncGuard'
-import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
+import { resetExplorationContext } from './exploration/testHelpers'
 import { galaxyMinimalFixture } from '@/types/galaxyMinimalFixture'
 
 import { decideRouteHistoryWrite, useRouteController } from './useRouteController'
@@ -69,9 +69,7 @@ const routeSession = {
 } satisfies SelectSession
 
 function resetLifecycle(): void {
-  useGalaxyInteractionStore.setState({
-    explorationContext: { kind: 'idle' },
-  })
+  resetExplorationContext()
 }
 
 function createRouteWindowHarness(initialPathname: string): RouteWindowHarness {

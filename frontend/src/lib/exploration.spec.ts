@@ -11,6 +11,9 @@ import {
 } from '@/lib/exploration'
 import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
 
+import { assertValidExplorationContext } from './exploration/decision'
+import { resetExplorationContext } from './exploration/testHelpers'
+
 const personSession = {
   relation: { kind: 'person', key: 'pat-example' },
   movieIds: [10, 20, 30],
@@ -37,9 +40,7 @@ const nestedFocus = {
 const replacingFocus = { kind: 'focus', movieId: 40 } satisfies ExplorationContext
 
 function resetStore(): void {
-  useGalaxyInteractionStore.setState({
-    explorationContext: idle,
-  })
+  resetExplorationContext()
 }
 
 describe('decideExploration transition matrix', () => {
@@ -307,8 +308,8 @@ describe('canonical Zustand adapter', () => {
 
   it('commits a nested focus in one complete store notification', () => {
     dispatchExplorationIntent({ type: 'select/entered', session: personSession })
-    const snapshots: Array<ReturnType<typeof useGalaxyInteractionStore.getState>> = []
-    const unsubscribe = useGalaxyInteractionStore.subscribe((state) => snapshots.push(state))
+    const snapshots: ExplorationContext[] = []
+    const unsubscribe = subscribeExplorationContext((context) => snapshots.push(context))
 
     dispatchExplorationIntent({
       type: 'focus/requested',
@@ -318,7 +319,7 @@ describe('canonical Zustand adapter', () => {
     unsubscribe()
 
     expect(snapshots).toHaveLength(1)
-    expect(snapshots[0]?.explorationContext).toEqual(nestedFocus)
+    expect(snapshots[0]).toEqual(nestedFocus)
     expect(readExplorationContext()).toEqual(nestedFocus)
   })
 
@@ -339,8 +340,8 @@ describe('canonical Zustand adapter', () => {
       policy: 'preserve-if-member',
     })
     const snapshots: ExplorationContext[] = []
-    const unsubscribe = useGalaxyInteractionStore.subscribe(() => {
-      snapshots.push(readExplorationContext())
+    const unsubscribe = subscribeExplorationContext((context) => {
+      snapshots.push(context)
     })
     dispatchExplorationIntent({ type: 'select/cleared' })
     unsubscribe()
@@ -380,7 +381,7 @@ describe('canonical Zustand adapter', () => {
 
   it('does not notify for an idempotent dispatch', () => {
     let notifications = 0
-    const unsubscribe = useGalaxyInteractionStore.subscribe(() => {
+    const unsubscribe = subscribeExplorationContext(() => {
       notifications += 1
     })
     dispatchExplorationIntent({ type: 'focus/exited' })
@@ -399,40 +400,30 @@ describe('canonical Zustand adapter', () => {
     })
   })
 
-  it('fails fast when the canonical lifecycle context is structurally invalid', () => {
-    useGalaxyInteractionStore.setState({
-      explorationContext: {
+  it('fails fast for structurally invalid canonical context fixtures', () => {
+    expect(() =>
+      assertValidExplorationContext({
         kind: 'select',
         session: {
           relation: { kind: 'person', key: 'pat-example' },
           movieIds: [10],
           metadata: null,
         },
-      } as unknown as ExplorationContext,
-    })
-
-    expect(() =>
-      dispatchExplorationIntent({ type: 'focus/exited' }),
+      }),
     ).toThrow(/metadata/)
   })
 
-  it('fails fast for invalid or non-member canonical focus IDs', () => {
-    useGalaxyInteractionStore.setState({
-      explorationContext: { kind: 'focus', movieId: 0 },
-    })
-    expect(() => dispatchExplorationIntent({ type: 'focus/exited' })).toThrow(
-      /movieId/,
-    )
+  it('fails fast for invalid or non-member canonical focus fixtures', () => {
+    expect(() =>
+      assertValidExplorationContext({ kind: 'focus', movieId: 0 }),
+    ).toThrow(/movieId/)
 
-    useGalaxyInteractionStore.setState({
-      explorationContext: {
+    expect(() =>
+      assertValidExplorationContext({
         kind: 'focus',
         movieId: 99,
         parent: personSession,
-      },
-    })
-    expect(() => dispatchExplorationIntent({ type: 'focus/exited' })).toThrow(
-      /belong/,
-    )
+      }),
+    ).toThrow(/belong/)
   })
 })

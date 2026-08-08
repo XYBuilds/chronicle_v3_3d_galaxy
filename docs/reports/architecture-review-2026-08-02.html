@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Architecture review — chronicle_v3_3d_galaxy</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module">
+      import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+      mermaid.initialize({
+        startOnLoad: true,
+        theme: "neutral",
+        securityLevel: "loose",
+        flowchart: { curve: "basis", htmlLabels: true },
+        themeVariables: {
+          fontFamily: "ui-sans-serif, system-ui, sans-serif",
+          primaryColor: "#f8fafc",
+          primaryBorderColor: "#64748b",
+          lineColor: "#64748b",
+          tertiaryColor: "#ecfdf5"
+        }
+      });
+    </script>
+    <style>
+      :root { color-scheme: light; }
+      html { scroll-behavior: smooth; }
+      body { background-image: radial-gradient(circle at 18% 0%, rgba(16,185,129,.08), transparent 30rem); }
+      .seam { border-style: dashed; }
+      .deep { background: linear-gradient(135deg, #0f172a, #1e293b); color: white; }
+      .leak { color: #b91c1c; }
+      .diagram-grid { background-image: linear-gradient(rgba(148,163,184,.12) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,.12) 1px, transparent 1px); background-size: 20px 20px; }
+      .arrow { position: relative; }
+      .arrow::after { content: "→"; position: absolute; right: -1.05rem; top: 50%; transform: translateY(-50%); color: #64748b; font-weight: 700; }
+      .mass-interface { background: #fef2f2; border-color: #ef4444; }
+      .mass-implementation { background: #f8fafc; border-color: #94a3b8; }
+      .mass-deep { background: linear-gradient(180deg, #1e293b, #0f172a); border-color: #0f172a; color: white; }
+      code { overflow-wrap: anywhere; }
+    </style>
+  </head>
+  <body class="bg-stone-50 text-slate-900 font-sans">
+    <main class="max-w-6xl mx-auto px-5 py-10 md:px-8 md:py-14 space-y-12">
+      <header class="border-b border-slate-300 pb-8">
+        <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p class="text-xs uppercase tracking-[0.22em] text-emerald-700 font-semibold">Architecture review</p>
+            <h1 class="mt-2 text-3xl md:text-5xl font-serif font-semibold tracking-tight">chronicle_v3_3d_galaxy</h1>
+            <p class="mt-3 text-sm text-slate-600">2026-08-02 · 最近 100 次提交加权 · 只读扫描</p>
+          </div>
+          <div class="flex flex-wrap gap-2 text-xs">
+            <span class="rounded-full border border-slate-300 bg-white px-3 py-1.5">实线框 = module</span>
+            <span class="rounded-full border border-dashed border-slate-500 bg-white px-3 py-1.5">虚线 = seam</span>
+            <span class="rounded-full border border-red-300 bg-red-50 px-3 py-1.5 text-red-700">红线 = leakage</span>
+            <span class="rounded-full bg-slate-900 px-3 py-1.5 text-white">深色框 = deep module</span>
+          </div>
+        </div>
+      </header>
+
+      <section id="candidates" class="space-y-12">
+        <article id="focus-select-lifecycle" class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div class="p-6 md:p-8 space-y-6">
+            <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+              <div>
+                <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Candidate 01</p>
+                <h2 class="mt-1 text-2xl md:text-3xl font-serif font-semibold">收拢 focus / select 生命周期</h2>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800">Strong</span>
+                <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">in-process</span>
+              </div>
+            </div>
+
+            <div class="rounded-xl bg-slate-50 p-4 font-mono text-xs leading-6 text-slate-700">
+              <div>frontend/src/components/SearchBar.tsx:138–157</div>
+              <div>frontend/src/store/galaxyInteractionStore.ts:15–169</div>
+              <div>frontend/src/App.tsx:185–201</div>
+              <div>frontend/src/three/scene.ts:350–410</div>
+              <div>docs/project_docs/星球状态机 spec.md:126–128, 172–199</div>
+            </div>
+
+            <div class="grid gap-5 lg:grid-cols-2">
+              <div class="rounded-xl border border-red-200 bg-red-50/40 p-4 diagram-grid">
+                <p class="mb-3 text-xs uppercase tracking-wider font-semibold text-red-700">Before · 状态职责跨 seam 泄漏</p>
+                <pre class="mermaid">
+flowchart TB
+  SB[SearchBar echo module] -->|focus changed| CS[clearSearch]
+  CS -->|clears searchMode + selectionIds| ST[(Zustand state)]
+  APP[App ESC module] -->|direct selectedMovieId=null| ST
+  INT[Three interaction] -->|direct selectedMovieId| ST
+  ST --> SC[scene mask projection]
+  SC -->|focus mask / search mask| GPU[GPU + picker]
+  SPEC[State-machine SSOT] -. expects select preserved .-> APP
+  SB -. semantic leakage .-> SC
+  classDef bad fill:#fff1f2,stroke:#dc2626,stroke-width:2px,color:#7f1d1d;
+  class SB,CS,APP bad;
+                </pre>
+              </div>
+              <div class="rounded-xl border border-emerald-200 bg-emerald-50/40 p-4 diagram-grid">
+                <p class="mb-3 text-xs uppercase tracking-wider font-semibold text-emerald-700">After · 一个 deep 生命周期 module</p>
+                <pre class="mermaid">
+flowchart TB
+  I1[Search intent adapter] --> D
+  I2[ESC adapter] --> D
+  I3[Route adapter] --> D
+  I4[Three click adapter] --> D
+  D[Focus / select lifecycle module] --> ST[(Coherent state)]
+  ST --> R[Route projection]
+  ST --> V[Three visual projection]
+  ST --> E[Search echo projection]
+  classDef deep fill:#0f172a,stroke:#0f172a,color:#fff,stroke-width:3px;
+  class D deep;
+                </pre>
+              </div>
+            </div>
+
+            <div class="grid gap-4 md:grid-cols-2">
+              <div><p class="text-xs uppercase tracking-wider text-slate-500">Problem</p><p class="mt-1 text-sm">搜索回显 module 决定 select 生命周期；`clearSearch()` 当前清掉规范要求保留的 `selectionIds`。</p></div>
+              <div><p class="text-xs uppercase tracking-wider text-slate-500">Solution</p><p class="mt-1 text-sm">把进入 focus、切换 focus、退出 focus、保留或退出 select 的状态转移集中到一个 deep module。</p></div>
+            </div>
+            <div class="flex flex-wrap gap-2 text-xs">
+              <span class="rounded bg-emerald-50 px-2.5 py-1 text-emerald-800">locality：状态规则集中</span>
+              <span class="rounded bg-emerald-50 px-2.5 py-1 text-emerald-800">leverage：四个入口复用</span>
+              <span class="rounded bg-emerald-50 px-2.5 py-1 text-emerald-800">测试命中完整序列</span>
+              <span class="rounded bg-emerald-50 px-2.5 py-1 text-emerald-800">修复规范漂移</span>
+            </div>
+            <div class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"><strong>约束：</strong>保留 `selectionPhase` 为 `scene.ts` 的时间驱动 implementation；不要把它迁入 Zustand。</div>
+            <p class="text-xs text-slate-500"><strong>Deletion test：</strong>删除该 module 后，focus/select 优先级、清理时机、邻域 mask 与 ESC 恢复规则会重新散落到 SearchBar、App、interaction、scene 与 store 调用方。</p>
+          </div>
+        </article>
+
+        <article id="visual-config" class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div class="p-6 md:p-8 space-y-6">
+            <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+              <div>
+                <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Candidate 02</p>
+                <h2 class="mt-1 text-2xl md:text-3xl font-serif font-semibold">深化运行时 / 导出的视觉配置 module</h2>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800">Strong</span>
+                <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">local-substitutable</span>
+              </div>
+            </div>
+
+            <div class="rounded-xl bg-slate-50 p-4 font-mono text-xs leading-6 text-slate-700">
+              <div>frontend/src/planet-export/visualConfig.ts:18–149</div>
+              <div>frontend/src/planet-export/renderPlanetImage.ts:374–417</div>
+              <div>frontend/src/App.tsx:54–78, 121–127</div>
+              <div>frontend/src/three/planetAppearance.ts:14–24, 69–94</div>
+              <div>frontend/src/three/scene.ts:825–920</div>
+            </div>
+
+            <div class="grid gap-5 lg:grid-cols-2">
+              <div class="rounded-xl border border-red-200 bg-stone-50 p-5 diagram-grid">
+                <p class="mb-4 text-xs uppercase tracking-wider font-semibold text-red-700">Before · 两套调用方知识</p>
+                <div class="grid grid-cols-2 gap-4 h-72 items-end">
+                  <div class="space-y-2 text-center">
+                    <div class="mass-interface rounded-t border-2 p-3 text-xs font-semibold h-28 flex items-center justify-center">Runtime interface<br/>profile LUT + defaults + debug mutation</div>
+                    <div class="mass-implementation rounded-b border-2 p-3 text-xs h-24 flex items-center justify-center">scene → appearance → planet uniforms</div>
+                  </div>
+                  <div class="space-y-2 text-center">
+                    <div class="mass-interface rounded-t border-2 p-3 text-xs font-semibold h-28 flex items-center justify-center">Exporter interface<br/>resolved config + overrides + hash</div>
+                    <div class="mass-implementation rounded-b border-2 p-3 text-xs h-24 flex items-center justify-center">renderer manually reapplies uniforms</div>
+                  </div>
+                </div>
+              </div>
+              <div class="rounded-xl border border-emerald-200 bg-stone-50 p-5 diagram-grid">
+                <p class="mb-4 text-xs uppercase tracking-wider font-semibold text-emerald-700">After · 小 interface，高 depth</p>
+                <div class="mx-auto max-w-md h-72 flex flex-col justify-center">
+                  <div class="rounded-t-lg border-2 border-emerald-500 bg-emerald-50 p-3 text-center text-xs font-semibold">Resolved visual state</div>
+                  <div class="mass-deep rounded-b-lg border-2 p-6 min-h-40 flex flex-col items-center justify-center text-center gap-2">
+                    <div class="text-sm font-semibold">Deep visual config module</div>
+                    <div class="text-xs text-slate-300">validate · provenance · hash · uniform application · diagnostics</div>
+                    <div class="mt-3 flex gap-2 text-[10px]"><span class="rounded bg-white/10 px-2 py-1">runtime adapter</span><span class="rounded bg-white/10 px-2 py-1">export adapter</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid gap-4 md:grid-cols-2">
+              <div><p class="text-xs uppercase tracking-wider text-slate-500">Problem</p><p class="mt-1 text-sm">`visualConfig.ts` 声称权威，但只覆盖 exporter；runtime 仍直接拆解 defaults、profile、debug state 与 uniforms。</p></div>
+              <div><p class="text-xs uppercase tracking-wider text-slate-500">Solution</p><p class="mt-1 text-sm">让同一 module 拥有配置解析、renderer 应用、provenance 与 diagnostics，runtime/export 只保留 adapter。</p></div>
+            </div>
+            <div class="flex flex-wrap gap-2 text-xs">
+              <span class="rounded bg-emerald-50 px-2.5 py-1 text-emerald-800">locality：视觉概念集中</span>
+              <span class="rounded bg-emerald-50 px-2.5 py-1 text-emerald-800">leverage：两端同实现</span>
+              <span class="rounded bg-emerald-50 px-2.5 py-1 text-emerald-800">测试一个 render seam</span>
+              <span class="rounded bg-emerald-50 px-2.5 py-1 text-emerald-800">减少 uniform 泄漏</span>
+            </div>
+            <div class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"><strong>约束：</strong>保持 C-003 的 `visual_config_hash`、metadata 与 PNG 结果；不要把 runtime diagnostic override 混入生产 hash。</div>
+            <p class="text-xs text-slate-500"><strong>Deletion test：</strong>删除 `visualConfig.ts` 会迫使 main、diagnostics 与 metadata 调用方重新组合 defaults、validation、provenance 和 hash；继续加深能阻止 uniform application 再次扩散。</p>
+          </div>
+        </article>
+
+        <article id="browser-session" class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div class="p-6 md:p-8 space-y-6">
+            <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+              <div>
+                <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Candidate 03</p>
+                <h2 class="mt-1 text-2xl md:text-3xl font-serif font-semibold">收拢 Planet Export 浏览器会话</h2>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800">Strong</span>
+                <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">ports &amp; adapters</span>
+              </div>
+            </div>
+
+            <div class="rounded-xl bg-slate-50 p-4 font-mono text-xs leading-6 text-slate-700">
+              <div>tools/planet-exporter/src/browser.ts:278–403</div>
+              <div>tools/planet-exporter/src/phase41Diagnostic.ts:68–138</div>
+              <div>tools/planet-exporter/src/p3911CheckpointA.ts:39–113</div>
+              <div>tools/planet-exporter/src/p3910BloomStrengthZero.ts:43–107</div>
+            </div>
+
+            <div class="grid gap-5 lg:grid-cols-2">
+              <div class="rounded-xl border border-red-200 bg-stone-50 p-5 diagram-grid">
+                <p class="mb-4 text-xs uppercase tracking-wider font-semibold text-red-700">Before · 每个 adapter 穿过全部薄层</p>
+                <div class="grid grid-cols-3 gap-2 text-center text-[10px]">
+                  <div class="space-y-1"><div class="rounded border bg-white p-2 font-semibold">normal export</div><div class="rounded border bg-red-50 p-2">Vite</div><div class="rounded border bg-red-50 p-2">Chromium</div><div class="rounded border bg-red-50 p-2">context/page</div><div class="rounded border bg-red-50 p-2">wait/extract</div><div class="rounded border bg-red-50 p-2">cleanup</div></div>
+                  <div class="space-y-1"><div class="rounded border bg-white p-2 font-semibold">Phase 41</div><div class="rounded border bg-red-50 p-2">Vite</div><div class="rounded border bg-red-50 p-2">Chromium</div><div class="rounded border bg-red-50 p-2">context/page</div><div class="rounded border bg-red-50 p-2">wait/extract</div><div class="rounded border bg-red-50 p-2">cleanup</div></div>
+                  <div class="space-y-1"><div class="rounded border bg-white p-2 font-semibold">P39 evidence</div><div class="rounded border bg-red-50 p-2">Vite</div><div class="rounded border bg-red-50 p-2">Chromium</div><div class="rounded border bg-red-50 p-2">context/page</div><div class="rounded border bg-red-50 p-2">wait/extract</div><div class="rounded border bg-red-50 p-2">cleanup</div></div>
+                </div>
+              </div>
+              <div class="rounded-xl border border-emerald-200 bg-stone-50 p-5 diagram-grid">
+                <p class="mb-4 text-xs uppercase tracking-wider font-semibold text-emerald-700">After · 页面差异留在 adapter</p>
+                <div class="space-y-3 text-center">
+                  <div class="grid grid-cols-3 gap-2 text-[10px]"><div class="rounded border border-dashed border-slate-500 bg-white p-3">normal page adapter</div><div class="rounded border border-dashed border-slate-500 bg-white p-3">Phase 41 adapter</div><div class="rounded border border-dashed border-slate-500 bg-white p-3">P39 adapter</div></div>
+                  <div class="text-slate-500">↓</div>
+                  <div class="deep rounded-xl border-2 border-slate-900 p-6">
+                    <p class="text-sm font-semibold">Browser render-session module</p>
+                    <p class="mt-2 text-xs text-slate-300">server · browser · page · ready/error · extraction · cleanup</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid gap-4 md:grid-cols-2">
+              <div><p class="text-xs uppercase tracking-wider text-slate-500">Problem</p><p class="mt-1 text-sm">多个阶段 adapter 复制完整的 Vite/Playwright 生命周期，调用方必须理解资源清理与页面协议。</p></div>
+              <div><p class="text-xs uppercase tracking-wider text-slate-500">Solution</p><p class="mt-1 text-sm">一个 deep browser-session module 拥有生命周期；阶段 adapter 只声明页面目标、query 与 diagnostics 解析。</p></div>
+            </div>
+            <div class="flex flex-wrap gap-2 text-xs">
+              <span class="rounded bg-emerald-50 px-2.5 py-1 text-emerald-800">locality：生命周期集中</span>
+              <span class="rounded bg-emerald-50 px-2.5 py-1 text-emerald-800">leverage：多阶段复用</span>
+              <span class="rounded bg-emerald-50 px-2.5 py-1 text-emerald-800">测试资源释放</span>
+              <span class="rounded bg-emerald-50 px-2.5 py-1 text-emerald-800">减少端口残留</span>
+            </div>
+            <div class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"><strong>约束：</strong>保持 C-003 的 args、exit code、stdout JSON、PNG、metadata 与 environment discovery。</div>
+            <p class="text-xs text-slate-500"><strong>Deletion test：</strong>删除任一阶段浏览器 implementation 后，同样的启动、等待、提取和清理代码会立刻回流到阶段脚本。</p>
+          </div>
+        </article>
+
+        <article id="scheduled-refresh" class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div class="p-6 md:p-8 space-y-6">
+            <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+              <div>
+                <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Candidate 04</p>
+                <h2 class="mt-1 text-2xl md:text-3xl font-serif font-semibold">深化 scheduled refresh 执行 module</h2>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">Worth exploring</span>
+                <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">local-substitutable</span>
+              </div>
+            </div>
+
+            <div class="rounded-xl bg-slate-50 p-4 font-mono text-xs leading-6 text-slate-700">
+              <div>scripts/cron/nightly_vote_refresh.py:77–111, 487–513</div>
+              <div>scripts/cron/monthly_refit.py:282–316, 851–912</div>
+              <div>scripts/tests/test_cron_fixture_dry_runs.py:70–149</div>
+              <div>docs/project_docs/TMDB 电影宇宙 Data Pipeline.md:553–637</div>
+            </div>
+
+            <div class="grid gap-5 lg:grid-cols-2">
+              <div class="rounded-xl border border-red-200 bg-red-50/30 p-4 diagram-grid">
+                <p class="mb-3 text-xs uppercase tracking-wider font-semibold text-red-700">Before · 公共步骤复制，策略混入</p>
+                <pre class="mermaid">
+flowchart LR
+  N[Nightly CLI] --> NK[Kaggle fallback]
+  NK --> NC[clean + drift guard]
+  NC --> NP[frozen threshold policy]
+  NP --> NE[export subprocess]
+  NE --> NV[validate JSON]
+  M[Monthly CLI] --> MK[Kaggle fallback]
+  MK --> MC[clean + drift guard]
+  MC --> MP[refit policy]
+  MP --> ME[export subprocess]
+  ME --> MV[validate JSON]
+  classDef dup fill:#fff1f2,stroke:#dc2626,color:#7f1d1d;
+  class NK,NC,NE,NV,MK,MC,ME,MV dup;
+                </pre>
+              </div>
+              <div class="rounded-xl border border-emerald-200 bg-emerald-50/30 p-4 diagram-grid">
+                <p class="mb-3 text-xs uppercase tracking-wider font-semibold text-emerald-700">After · 两个策略 adapter，一个执行 seam</p>
+                <pre class="mermaid">
+flowchart TB
+  N[Nightly policy adapter] --> D
+  M[Monthly policy adapter] --> D
+  D[Scheduled refresh execution module] --> K[input acquisition]
+  D --> C[clean + shared validation]
+  D --> E[export + artifact validation]
+  N --> FN[frozen thresholds]
+  M --> FM[UMAP + Procrustes]
+  classDef deep fill:#0f172a,stroke:#0f172a,color:#fff,stroke-width:3px;
+  class D deep;
+                </pre>
+              </div>
+            </div>
+
+            <div class="grid gap-4 md:grid-cols-2">
+              <div><p class="text-xs uppercase tracking-wider text-slate-500">Problem</p><p class="mt-1 text-sm">nightly 与 monthly 重复 Kaggle fallback、公共前置校验、export 子进程和 JSON validator。</p></div>
+              <div><p class="text-xs uppercase tracking-wider text-slate-500">Solution</p><p class="mt-1 text-sm">公共执行职责进入 deep module；frozen threshold 与 UMAP/Procrustes 继续留在两个策略 adapter。</p></div>
+            </div>
+            <div class="flex flex-wrap gap-2 text-xs">
+              <span class="rounded bg-emerald-50 px-2.5 py-1 text-emerald-800">locality：运行准备集中</span>
+              <span class="rounded bg-emerald-50 px-2.5 py-1 text-emerald-800">leverage：两条任务复用</span>
+              <span class="rounded bg-emerald-50 px-2.5 py-1 text-emerald-800">策略测试更窄</span>
+              <span class="rounded bg-emerald-50 px-2.5 py-1 text-emerald-800">调用顺序少泄漏</span>
+            </div>
+            <div class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"><strong>约束：</strong>Data Pipeline SSOT 要求 nightly 冻结 threshold、monthly 重算 threshold；不能用一个宽条件分支抹平差异。</div>
+            <p class="text-xs text-slate-500"><strong>Deletion test：</strong>删除公共执行 module 后，两份下载 fallback、环境准备、export 和 validator 编排会再次出现；两个实际 adapter 已证明 seam 真实存在。</p>
+          </div>
+        </article>
+
+        <article id="release-transaction" class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div class="p-6 md:p-8 space-y-6">
+            <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+              <div>
+                <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Candidate 05</p>
+                <h2 class="mt-1 text-2xl md:text-3xl font-serif font-semibold">显式化 profile-safe release transaction</h2>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">Worth exploring</span>
+                <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">ports &amp; adapters</span>
+              </div>
+            </div>
+
+            <div class="rounded-xl bg-slate-50 p-4 font-mono text-xs leading-6 text-slate-700">
+              <div>scripts/cron/upload_galaxy_r2.py:254–272, 390–531</div>
+              <div>scripts/cron/emission_profile_release.py:85–253</div>
+              <div>.github/workflows/nightly_vote_refresh.yml:69–99</div>
+              <div>.github/workflows/monthly_refit.yml:159–211</div>
+              <div>scripts/tests/test_upload_galaxy_r2.py:215–217</div>
+            </div>
+
+            <div class="grid gap-5 lg:grid-cols-2">
+              <div class="rounded-xl border border-red-200 bg-red-50/30 p-4 diagram-grid">
+                <p class="mb-3 text-xs uppercase tracking-wider font-semibold text-red-700">Before · transaction 隐藏在 main 编排</p>
+                <pre class="mermaid">
+sequenceDiagram
+  participant W as Workflow
+  participant M as upload_galaxy_r2.main
+  participant P as release policy
+  participant R as R2
+  participant F as Local files
+  W->>M: mode + flags + env
+  M->>P: activation decision
+  M->>R: immutable profile
+  M->>R: galaxy/search assets
+  M->>F: manifest + monthly meta
+  M->>R: active pointer LAST
+  Note over M,R: tests inspect exact event order
+                </pre>
+              </div>
+              <div class="rounded-xl border border-emerald-200 bg-emerald-50/30 p-4 diagram-grid">
+                <p class="mb-3 text-xs uppercase tracking-wider font-semibold text-emerald-700">After · transaction 成为 deep module</p>
+                <pre class="mermaid">
+flowchart TB
+  N[Nightly policy adapter] --> T
+  M[Monthly policy adapter] --> T
+  T[Profile-safe release transaction] --> R[R2 adapter]
+  T --> F[Filesystem adapter]
+  T --> O[Release outcome]
+  O --> W[Workflow reporting]
+  classDef deep fill:#0f172a,stroke:#0f172a,color:#fff,stroke-width:3px;
+  class T deep;
+                </pre>
+              </div>
+            </div>
+
+            <div class="grid gap-4 md:grid-cols-2">
+              <div><p class="text-xs uppercase tracking-wider text-slate-500">Problem</p><p class="mt-1 text-sm">pointer-last、回滚与失败语义依赖一个超长 CLI main 的隐含顺序，测试被迫观察 implementation 事件。</p></div>
+              <div><p class="text-xs uppercase tracking-wider text-slate-500">Solution</p><p class="mt-1 text-sm">让一次 profile-safe release 的状态与结果成为 deep module；workflow 仅提供 nightly/monthly 策略。</p></div>
+            </div>
+            <div class="flex flex-wrap gap-2 text-xs">
+              <span class="rounded bg-emerald-50 px-2.5 py-1 text-emerald-800">locality：失败状态集中</span>
+              <span class="rounded bg-emerald-50 px-2.5 py-1 text-emerald-800">leverage：双模式复用</span>
+              <span class="rounded bg-emerald-50 px-2.5 py-1 text-emerald-800">测试稳定 release outcome</span>
+              <span class="rounded bg-emerald-50 px-2.5 py-1 text-emerald-800">减少顺序断言</span>
+            </div>
+            <div class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"><strong>约束：</strong>C-004 的 immutable assets 与 pointer-last 是硬约束；C-002 的 OG sync 必须继续位于 R2 release 之前。</div>
+            <p class="text-xs text-slate-500"><strong>Deletion test：</strong>删除 transaction 后，pointer 校验、manifest 准备、失败回退与 final commit 规则会重新泄漏到 workflow、policy module 和上传调用方。</p>
+          </div>
+        </article>
+      </section>
+
+      <section id="top-recommendation" class="rounded-2xl border-2 border-emerald-500 bg-emerald-950 p-7 md:p-9 text-white shadow-lg">
+        <p class="text-xs uppercase tracking-[0.2em] text-emerald-300 font-semibold">Top recommendation</p>
+        <div class="mt-3 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+          <div>
+            <h2 class="text-2xl md:text-4xl font-serif font-semibold">先做 focus / select 生命周期 module</h2>
+            <p class="mt-3 max-w-3xl text-sm md:text-base text-emerald-100">这是唯一已从架构摩擦演变为现行语义冲突的候选：SearchBar 的回显处理正在清除状态机要求保留的 select 上下文。</p>
+          </div>
+          <a href="#focus-select-lifecycle" class="shrink-0 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-emerald-950 hover:bg-emerald-100">查看 Candidate 01 ↑</a>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

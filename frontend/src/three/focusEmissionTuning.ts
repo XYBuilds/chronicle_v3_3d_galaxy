@@ -1,4 +1,4 @@
-import type { FocusEmissionProfile } from './focusEmission'
+import type { FocusEmissionProfile } from './focusEmission.js'
 
 export type FocusEmissionRuntimeTuning = {
   exponent: number

@@ -115,6 +115,84 @@ describe('visual diagnostics parser', () => {
     expect(() => assertCanonicalVisualConfig(tampered, canonicalInput, 'planet export')).toThrow(/does not match its canonical payload/)
   })
 
+  it('requires the production renderer snapshot to agree with final diagnostics and active provenance', () => {
+    const provenance = {
+      profile_id: 'rating-emission-2026-08-a',
+      period: '2026-08',
+      model_version: 'rating-midrank-cdf-lut-v1',
+      curve_sha256: 'a'.repeat(64),
+      source_data_version: 'fixture-v1',
+      source_movie_count: 1,
+      source: 'active',
+    }
+    const payload = {
+      resolved: { bloom: true, emission: 'active-profile' },
+      emission_profile: provenance,
+    }
+    const canonicalInput = stableFocusEmissionJson(payload)
+    const rendererSnapshot = {
+      canonicalHashInput: canonicalInput,
+      profileProvenance: {
+        profile_id: provenance.profile_id,
+        period: provenance.period,
+        model_version: provenance.model_version,
+        curve_sha256: provenance.curve_sha256,
+        source_data_version: provenance.source_data_version,
+        source_movie_count: provenance.source_movie_count,
+      },
+      profileSource: 'active',
+      movieId: visualDiagnostics.movie_id,
+      worldRadius: visualDiagnostics.world_radius,
+      outerRadius: visualDiagnostics.outer_radius,
+      emission: visualDiagnostics.emission,
+      focus: { lightness: visualDiagnostics.fixed_lightness, chroma: visualDiagnostics.fixed_chroma },
+      lighting: {
+        enabled: visualDiagnostics.key_light.enabled,
+        direction: visualDiagnostics.key_light.direction,
+        keyLightIntensity: visualDiagnostics.key_light.intensity,
+        flatShadingMix: visualDiagnostics.key_light.flat_shading_mix,
+      },
+      noise: visualDiagnostics.noise,
+      bands: { bandCount: visualDiagnostics.band_count },
+      bloom: {
+        enabled: visualDiagnostics.bloom.enabled,
+        strength: visualDiagnostics.bloom.strength,
+        radius: visualDiagnostics.bloom.radius,
+        threshold: visualDiagnostics.bloom.threshold,
+      },
+    }
+    const canonical = {
+      ...visualDiagnostics,
+      visual_config_payload: payload,
+      visual_config_hash_input: canonicalInput,
+      profile_provenance: provenance,
+      renderer_snapshot: rendererSnapshot,
+    }
+
+    expect(assertCanonicalVisualConfig(canonical, canonicalInput, 'planet export', true)).toBe(canonicalInput)
+    expect(() => assertCanonicalVisualConfig({
+      ...canonical,
+      renderer_snapshot: { ...rendererSnapshot, emission: rendererSnapshot.emission + 0.1 },
+    }, canonicalInput, 'planet export', true)).toThrow(/renderer snapshot disagrees/)
+    expect(() => assertCanonicalVisualConfig({
+      ...canonical,
+      profile_provenance: { ...provenance, source: 'legacy-fallback' },
+    }, canonicalInput, 'planet export', true)).toThrow(/active profile provenance/)
+
+    const mismatchedPayload = {
+      ...payload,
+      emission_profile: { ...provenance, profile_id: 'different-active-profile' },
+    }
+    const mismatchedHashInput = stableFocusEmissionJson(mismatchedPayload)
+    expect(() => assertCanonicalVisualConfig({
+      ...canonical,
+      visual_config_payload: mismatchedPayload,
+      visual_config_hash_input: mismatchedHashInput,
+      renderer_snapshot: { ...rendererSnapshot, canonicalHashInput: mismatchedHashInput },
+    }, mismatchedHashInput, 'planet export', true)).toThrow(/active profile provenance/)
+  })
+
+
   const phase41Payload = { resolved: { diagnostic: 'phase41' } }
   const phase41HashInput = stableFocusEmissionJson(phase41Payload)
   const phase41 = {

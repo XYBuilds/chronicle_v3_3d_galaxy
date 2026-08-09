@@ -1,4 +1,4 @@
-import { parsePlanetExportRequest, type PlanetExportRequest } from './request'
+import { parsePlanetExportRequest, type LegacyCompatiblePlanetExportRequest } from './request'
 import {
   PHASE41_DIAGNOSTIC_MARKER,
   parsePhase41DiagnosticOverride,
@@ -8,7 +8,7 @@ import {
   type ResolvedPhase41VisualProfile,
 } from './phase41DiagnosticProfile'
 
-export type Phase41DiagnosticRequest = PlanetExportRequest & {
+export type Phase41DiagnosticRequest = LegacyCompatiblePlanetExportRequest & {
   diagnostic_only: typeof PHASE41_DIAGNOSTIC_MARKER
   profileOverride?: Phase41DiagnosticOverride
 }
@@ -43,7 +43,7 @@ export function parsePhase41DiagnosticRequest(search: string): Phase41Diagnostic
   }
   params.delete('diagnostic_only')
   params.delete('profile')
-  const request = parsePlanetExportRequest(`?${params.toString()}`)
+  const request = parsePlanetExportRequest(`?${params.toString()}`, { allowLegacyProfile: true })
   if (profileOverride?.bloom !== undefined && profileOverride.bloom.enabled !== request.bloom) {
     throw new Error('[Phase41 diagnostic] profile.bloom.enabled must match the bloom request parameter')
   }

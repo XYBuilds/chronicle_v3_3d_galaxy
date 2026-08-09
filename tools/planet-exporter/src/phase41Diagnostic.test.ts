@@ -30,10 +30,10 @@ describe('Phase 41 diagnostic adapter', () => {
   })
 
 
-  it('treats every file data source as an explicit legacy compatibility fixture', () => {
+  it('does not add the legacy compatibility channel to a diagnostic request implicitly', () => {
     const file = { kind: 'file', label: 'manual fixture', bytes: Buffer.from('{}') } as const
     const url = { kind: 'url', label: 'https://example.test/data.json.gz', pageUrl: 'https://example.test/data.json.gz' } as const
-    expect(phase41DiagnosticSearchParams(args, undefined, file).get('allowLegacyProfile')).toBe('1')
+    expect(phase41DiagnosticSearchParams(args, undefined, file).has('allowLegacyProfile')).toBe(false)
     expect(phase41DiagnosticSearchParams(args, undefined, url).has('allowLegacyProfile')).toBe(false)
   })
 

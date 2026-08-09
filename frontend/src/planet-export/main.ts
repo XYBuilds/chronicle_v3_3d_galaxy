@@ -24,7 +24,6 @@ async function main(): Promise<void> {
     const emissionProfile = await loadFocusEmissionProfile({
       manifest,
       profileUrl: request.profileUrl,
-      allowLegacyFallback: request.allowLegacyProfile === true,
     })
     failureKind = 'render'
     const canvas = document.createElement('canvas')
@@ -47,7 +46,11 @@ async function main(): Promise<void> {
     document.body.dataset.maxTextureSize = String(gl.getParameter(gl.MAX_TEXTURE_SIZE))
     document.body.dataset.webglRenderer = String(gl.getParameter(gl.RENDERER) ?? 'unknown')
     document.body.dataset.dataVersion = data.meta.version
-    document.body.dataset.visualHash = visualConfig.hashInput
+    const appliedVisualHash = result.diagnostics.visual_config_hash_input
+    if (appliedVisualHash === undefined) {
+      throw new Error('[PlanetExport] canonical renderer diagnostics did not expose a visual hash')
+    }
+    document.body.dataset.visualHash = appliedVisualHash
     document.body.dataset.visualDiagnostics = JSON.stringify(result.diagnostics)
     document.body.dataset.exportReady = '1'
     console.log(`[PlanetExport] ready movieId=${movie.id} resolution=${request.resolution} bloom=${request.bloom ? 'on' : 'off'} mode=${request.renderMode}`)

@@ -5,7 +5,7 @@ import { chromium, type Browser, type BrowserContext, type Page } from 'playwrig
 
 import { CliError, EXIT_CODES, type ExportArgs } from './args.js'
 import { parsePhase41VisualDiagnostics, type BrowserRender } from './browser.js'
-import { fileDataPlugin, isLegacyProfileCompatibilityFixture, pageDataUrl, pageProfileUrl, type DataSource } from './data-source.js'
+import { fileDataPlugin, pageDataUrl, pageProfileUrl, type DataSource } from './data-source.js'
 
 export const PHASE41_DIAGNOSTIC_MARKER = 'phase41-visual-diagnostic-v1' as const
 
@@ -52,7 +52,6 @@ export function phase41DiagnosticSearchParams(args: ExportArgs, override?: Phase
     diagnostic_only: PHASE41_DIAGNOSTIC_MARKER,
     ...(override === undefined ? {} : { profile: JSON.stringify(override) }),
     ...(source?.focusEmissionProfile === undefined ? {} : { profilePointer: JSON.stringify(source.focusEmissionProfile), profileUrl: source.profileUrl! }),
-    ...(source !== undefined && isLegacyProfileCompatibilityFixture(source) ? { allowLegacyProfile: '1' } : {}),
   })
 }
 

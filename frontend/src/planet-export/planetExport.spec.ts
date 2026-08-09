@@ -1,6 +1,3 @@
-import { readFileSync } from 'node:fs'
-import { fileURLToPath } from 'node:url'
-
 import * as THREE from 'three'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -14,7 +11,14 @@ import {
   mapMovieSizeForExport,
 } from './sizing'
 import { findExportMovie, indexGalaxyMovies, parsePlanetExportRequest } from './request'
-import { capturePlanetRenderDiagnostics, positionExportCamera, prepareExportPlanet } from './renderPlanetImage'
+import { parsePhase41DiagnosticRequest } from './phase41DiagnosticRequest'
+import { PHASE41_DIAGNOSTIC_MARKER } from './phase41DiagnosticProfile'
+import {
+  capturePlanetRenderDiagnostics,
+  positionExportCamera,
+  prepareExportPlanet,
+  prepareProductionExportPlanet,
+} from './renderPlanetImage'
 import { assertP3911CheckpointAKeyLightIntensity, parseP3911CheckpointARequest } from './p3911CheckpointADiagnostics'
 import {
   P3911_CHECKPOINT_B,
@@ -44,15 +48,20 @@ import {
   parseP3911CheckpointCStrengthRequest,
 } from './p3911CheckpointCStrengthDiagnostics'
 import { planetNoiseSeed } from '@/three/planetAppearance'
-import { focusEmissionIntensityFromProfile } from '@/three/focusEmission'
+import {
+  focusEmissionIntensityFromProfile,
+  LEGACY_FOCUS_EMISSION_FALLBACK_PROVENANCE,
+} from '@/three/focusEmission'
 import { remapFocusEmissionIntensity } from '@/three/focusEmissionTuning'
 import { PLANET_VISUAL_DEFAULTS } from '@/three/planetVisualDefaults'
 import { PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE } from '@/three/productionFocusEmissionProfile'
 import type { GalaxyData, Movie } from '@/types/galaxy'
+import { resolvePlanetVisualConfig } from './visualConfig'
 
-const sceneSource = readFileSync(fileURLToPath(new URL('../three/scene.ts', import.meta.url)), 'utf8')
-const exportRendererSource = readFileSync(fileURLToPath(new URL('./renderPlanetImage.ts', import.meta.url)), 'utf8')
-const exportPageSource = readFileSync(fileURLToPath(new URL('./main.ts', import.meta.url)), 'utf8')
+const activeProvenance = {
+  ...LEGACY_FOCUS_EMISSION_FALLBACK_PROVENANCE,
+  profile_id: 'rating-emission-2026-08-exporter-test',
+}
 
 const movie = (id: number, size: number, genres: string[]): Movie => ({
   id, size, genres, x: 0, y: 0, z: 0, emissive: 0, genre_color: [1, 1, 1], title: `Movie ${id}`,
@@ -72,6 +81,13 @@ const galaxy = (movies: Movie[]): GalaxyData => ({
     genre_palette: { Drama: '#ffffff', Action: '#ff0000' }, feature_weights: { text: 1, genre: 1, lang: 1 },
     z_range: [0, 1], xy_range: { x: [0, 1], y: [0, 1] },
   }, movies,
+})
+
+const productionVisualConfig = (bloomEnabled = false) => resolvePlanetVisualConfig({
+  curve: PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE,
+  emissionProvenance: activeProvenance,
+  emissionSource: 'active',
+  bloomEnabled,
 })
 
 describe('planet export request and sizing', () => {
@@ -182,12 +198,21 @@ describe('planet export request and sizing', () => {
     const profileRequest = `${request()}&profilePointer=${pointer}&profileUrl=https%3A%2F%2Fexample.test%2Fdata%2Ffocus-emission-profiles%2Frating-emission-2026-07-a.json`
     expect(parsePlanetExportRequest(profileRequest).profilePointer?.profile_id).toBe('rating-emission-2026-07-a')
     for (const invalid of [
+      `${request()}&allowLegacyProfile=1`,
       `${request()}&allowLegacyProfile=0`,
       `${request()}&allowLegacyProfile=1&allowLegacyProfile=1`,
       `${request()}&profilePointer=${pointer}`,
       `${request()}&profileUrl=https%3A%2F%2Fexample.test%2Fdata%2Ffocus-emission-profiles%2Frating-emission-2026-07-a.json`,
       `${request()}&profilePointer=${pointer}&profileUrl=https%3A%2F%2Fuser%3Apass%40example.test%2Fdata%2Ffocus-emission-profiles%2Frating-emission-2026-07-a.json`,
     ]) expect(() => parsePlanetExportRequest(invalid)).toThrow(/profile|Legacy/)
+  })
+
+  it('keeps legacy profile compatibility behind the explicit Phase 41 diagnostic parser', () => {
+    const diagnostic = `${request()}&diagnostic_only=${PHASE41_DIAGNOSTIC_MARKER}&allowLegacyProfile=1`
+
+    expect(() => parsePlanetExportRequest(diagnostic)).toThrow(/unknown request parameter/)
+    expect(parsePhase41DiagnosticRequest(diagnostic).allowLegacyProfile).toBe(true)
+    expect(() => parsePhase41DiagnosticRequest(`${request()}&diagnostic_only=${PHASE41_DIAGNOSTIC_MARKER}&allowLegacyProfile=0`)).toThrow(/allowLegacyProfile/)
   })
 
   it('indexes once and rejects duplicate or absent movie IDs', () => {
@@ -198,17 +223,20 @@ describe('planet export request and sizing', () => {
     expect(() => indexGalaxyMovies(galaxy([first, movie(1, 3, ['Action'])]))).toThrow(/duplicate movieId 1/)
   })
 
-  it('selects an explicitly visible basic or shader material path', () => {
+  it('validates shader state before exposing the basic-material fallback', () => {
     const target = movie(7, 2, ['Drama'])
     const data = galaxy([target])
-    const shader = prepareExportPlanet(target, data.meta, 'shader', 2, PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE)
-    const basic = prepareExportPlanet(target, data.meta, 'basic', 2, PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE)
-    expect(shader.mesh.visible).toBe(true)
-    expect(shader.mesh.material).toBe(shader.material)
-    expect(basic.mesh.visible).toBe(true)
-    expect(basic.mesh.material).toBeInstanceOf(THREE.MeshBasicMaterial)
-    shader.dispose()
-    basic.dispose()
+    const shader = prepareProductionExportPlanet(target, data.meta, 'shader', 2, productionVisualConfig())
+    const basic = prepareProductionExportPlanet(target, data.meta, 'basic', 2, productionVisualConfig())
+    expect(shader.planet.mesh.visible).toBe(true)
+    expect(shader.planet.mesh.material).toBe(shader.planet.material)
+    expect(basic.planet.mesh.visible).toBe(true)
+    expect(basic.planet.mesh.material).toBeInstanceOf(THREE.MeshBasicMaterial)
+    expect(basic.visualState.appliedSnapshot.emission).toBe(
+      basic.visualState.application.emission.finalIntensity,
+    )
+    shader.planet.dispose()
+    basic.planet.dispose()
   })
 
   it('captures renderer-owned P39 diagnostics while rating changes only emission', () => {
@@ -333,29 +361,90 @@ describe('planet export request and sizing', () => {
     handle.dispose()
   })
 
-  it('routes website focus and static export through the shared three-argument planet setter', () => {
-    expect(sceneSource.match(/planet\.setFromMovie\(movie, meta\.genre_palette, r\)/g)).toHaveLength(1)
-    expect(sceneSource).toMatch(/perlinBloom\.renderFrame\(\{/)
-    expect(sceneSource).not.toContain('perlinBloom.renderFrame(renderer, scene, camera')
-    expect(exportRendererSource).toContain("from '@/three/perlinBloomContract'")
-    expect(exportRendererSource).toContain('withCameraLayer(camera, PERLIN_BLOOM_LAYER')
-    expect(exportRendererSource).toContain('const delta = createPerlinBloomDeltaCompositor(renderer, scene, camera)')
-    expect(exportRendererSource).toContain('delta.renderDelta()')
-    expect(exportRendererSource).toContain('delta.compositeDelta()')
-    expect(exportRendererSource).not.toMatch(/new (EffectComposer|RenderPass|UnrealBloomPass)\(/)
-    expect(exportRendererSource).toContain('composition: PERLIN_BLOOM_COMPOSITION')
+  it.each([4, 6, 10])(
+    'applies profile lookup followed by production tuning at rating %s',
+    (vote_average) => {
+      const target = { ...movie(157336, 2, ['Drama']), vote_average }
+      const config = productionVisualConfig(false)
+      const prepared = prepareProductionExportPlanet(target, galaxy([target]).meta, 'shader', 3, config)
+      try {
+        const profileEmission = focusEmissionIntensityFromProfile(vote_average, config.curve)
+        const expectedEmission = remapFocusEmissionIntensity(
+          profileEmission,
+          config.curve,
+          config.focus.emissionTuning,
+        )
+        const snapshot = prepared.rendererHandle.readAppliedState()
 
-    expect(exportRendererSource).toContain('export function renderPlanetImage(options: PlanetRenderOptions): PlanetRenderResult')
-    expect(exportRendererSource).toContain('export function renderPhase41DiagnosticPlanetImage(options: Phase41DiagnosticPlanetRenderOptions)')
-    expect(exportRendererSource).toContain('diagnostic_only !== PHASE41_DIAGNOSTIC_MARKER')
-  })
+        expect(snapshot.profileEmission).toBeCloseTo(profileEmission, 12)
+        expect(snapshot.emission).toBeCloseTo(expectedEmission, 12)
+        expect(snapshot.emission).not.toBeCloseTo(profileEmission, 12)
+        expect(snapshot).toMatchObject({
+          canonicalHashInput: config.hashInput,
+          profileProvenance: activeProvenance,
+          profileSource: 'active',
+          movieId: target.id,
+          focus: {
+            lightness: config.focus.lightness,
+            chroma: config.focus.chroma,
+          },
+          lighting: {
+            enabled: config.lighting.enabled,
+            keyLightIntensity: config.lighting.keyLightIntensity,
+            flatShadingMix: config.lighting.flatShadingMix,
+          },
+          noise: config.noise,
+          bloom: config.bloom,
+        })
+      } finally {
+        prepared.planet.dispose()
+      }
+    },
+  )
 
-  it('builds page visual identity once from the resolved canonical helper', () => {
-    expect(exportPageSource).toContain("import { resolvePlanetVisualConfig } from './visualConfig'")
-    expect(exportPageSource).toContain('const visualConfig = resolvePlanetVisualConfig({')
-    expect(exportPageSource).toContain('visualConfig })')
-    expect(exportPageSource).toContain('document.body.dataset.visualHash = visualConfig.hashInput')
-    expect(exportPageSource).toContain('document.body.dataset.visualDiagnostics = JSON.stringify(result.diagnostics)')
+  it('builds diagnostics from the final canonical renderer snapshot and rejects later overrides', () => {
+    const target = { ...movie(157336, 2, ['Drama']), vote_average: 6 }
+    const config = productionVisualConfig(true)
+    const prepared = prepareProductionExportPlanet(target, galaxy([target]).meta, 'shader', 3, config)
+    const camera = new THREE.OrthographicCamera(-10, 10, 10, -10, 0.01, 40)
+    positionExportCamera(camera, 10)
+    try {
+      const diagnostics = capturePlanetRenderDiagnostics(target, prepared.planet, camera, {
+        sizeRoot: 3,
+        padding: 0.08,
+        bloom: true,
+        visualConfig: config,
+        appliedVisualState: prepared.visualState,
+      })
+
+      expect(diagnostics.visual_config_payload).toBe(config.payload)
+      expect(diagnostics.visual_config_hash_input).toBe(config.hashInput)
+      expect(diagnostics.profile_provenance).toEqual({ ...activeProvenance, source: 'active' })
+      expect(diagnostics.renderer_snapshot).toBe(prepared.visualState.appliedSnapshot)
+      expect(diagnostics.emission).toBe(prepared.visualState.appliedSnapshot.emission)
+      expect(diagnostics.bloom).toEqual({
+        ...prepared.visualState.appliedSnapshot.bloom,
+        composition: 'pure-bloom-delta-v1',
+      })
+      expect(diagnostics.key_light).toMatchObject({
+        enabled: prepared.visualState.appliedSnapshot.lighting.enabled,
+        direction: prepared.visualState.appliedSnapshot.lighting.direction,
+        intensity: prepared.visualState.appliedSnapshot.lighting.keyLightIntensity,
+        flat_shading_mix: prepared.visualState.appliedSnapshot.lighting.flatShadingMix,
+      })
+
+      prepared.planet.material.uniforms.uEmissionIntensity.value =
+        focusEmissionIntensityFromProfile(target.vote_average, config.curve)
+      expect(() => capturePlanetRenderDiagnostics(target, prepared.planet, camera, {
+        sizeRoot: 3,
+        padding: 0.08,
+        bloom: true,
+        visualConfig: config,
+        appliedVisualState: prepared.visualState,
+      })).toThrow(/changed after canonical visual application/)
+    } finally {
+      prepared.planet.dispose()
+    }
   })
 
   it('uses the in-app default focus view from world -Z', () => {

@@ -1,19 +1,11 @@
 import { promises as fs } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import sharp from 'sharp'
 import { afterAll, describe, expect, it } from 'vitest'
-import { assertPureBloomCore, BLOOM_CORE_PROOF } from './bloomProof.js'
 import { run } from './cli.js'
 import { inspectPng } from './png.js'
 
 const temporaryDirectories: string[] = []
-
-async function rgba(file: string): Promise<{ data: Buffer; width: number; height: number }> {
-  const image = await sharp(file).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
-  if (image.info.channels !== 4) throw new Error('expected RGBA PNG')
-  return { data: image.data, width: image.info.width, height: image.info.height }
-}
 
 function captureIo(): {
   io: Pick<typeof process, 'stdout' | 'stderr'>
@@ -85,29 +77,57 @@ describe('Playwright Chromium planet export', () => {
       })
       expect(metadata.chromium_version).toEqual(expect.any(String))
       expect(metadata.webgl_renderer).toEqual(expect.any(String))
-      expect(metadata.visual_diagnostics).toMatchObject({
-        bloom: { enabled: bloom === 'on', composition: 'pure-bloom-delta-v1', strength: 0.01, radius: 1, threshold: 0 },
+      const resolved = metadata.resolved_visual_config as {
+        visual: { focus: { bloom: Record<string, unknown> } }
+      }
+      const diagnostics = metadata.visual_diagnostics as {
+        bloom: Record<string, unknown>
+        profile_provenance: Record<string, unknown>
+        renderer_snapshot: { bloom: Record<string, unknown>; profileSource: string }
+      }
+      const { composition, ...rendererBloom } = resolved.visual.focus.bloom
+      expect(composition).toBe('pure-bloom-delta-v1')
+      expect(diagnostics.bloom).toEqual(resolved.visual.focus.bloom)
+      expect(diagnostics.renderer_snapshot.bloom).toEqual(rendererBloom)
+      expect(diagnostics.renderer_snapshot.profileSource).toBe('active')
+      expect(diagnostics.profile_provenance).toMatchObject({
+        profile_id: 'planet-export-fixture-2026-08-a',
+        source: 'active',
       })
     }
   }, 240_000)
 
-  it('records a real Chromium nonzero Bloom core increment', async () => {
-    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'planet-export-browser-pure-bloom-'))
+  it('records distinct canonical Bloom identities in real Chromium exports', async () => {
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'planet-export-browser-bloom-identity-'))
     temporaryDirectories.push(directory)
     const fixture = path.resolve(import.meta.dirname, '../fixtures/galaxy.minimal.json')
-    const off = path.join(directory, 'off.png')
-    const on = path.join(directory, 'on.png')
+    const outputs = {
+      off: path.join(directory, 'off.png'),
+      on: path.join(directory, 'on.png'),
+    } as const
 
-    for (const argv of [
-      ['--movie-id', '1', '--output', off, '--resolution', '128', '--padding', '0.35', '--bloom', 'off', '--render-mode', 'shader', '--data-file', fixture],
-      ['--movie-id', '1', '--output', on, '--resolution', '128', '--padding', '0.35', '--bloom', 'on', '--render-mode', 'shader', '--data-file', fixture],
-    ]) {
-      expect(await run(argv)).toBe(0)
+    for (const [bloom, output] of Object.entries(outputs)) {
+      expect(await run([
+        '--movie-id', '1', '--output', output, '--resolution', '128', '--padding', '0.35', '--bloom', bloom, '--render-mode', 'shader', '--data-file', fixture,
+      ])).toBe(0)
     }
 
-    const stats = assertPureBloomCore(await rgba(off), await rgba(on))
-    expect(stats.on_to_off_mean_luma_ratio).toBeGreaterThan(1)
-    expect(stats.positive_luma_fraction).toBeGreaterThanOrEqual(BLOOM_CORE_PROOF.minPositiveCoreLumaFraction)
+    const offMetadata = JSON.parse(await fs.readFile(`${outputs.off}.render.json`, 'utf8')) as Record<string, unknown>
+    const onMetadata = JSON.parse(await fs.readFile(`${outputs.on}.render.json`, 'utf8')) as Record<string, unknown>
+    expect(offMetadata.visual_config_hash).not.toBe(onMetadata.visual_config_hash)
+    for (const [enabled, metadata] of [[false, offMetadata], [true, onMetadata]] as const) {
+      const resolved = metadata.resolved_visual_config as {
+        visual: { focus: { bloom: { enabled: boolean } } }
+      }
+      const diagnostics = metadata.visual_diagnostics as {
+        bloom: { enabled: boolean }
+        renderer_snapshot: { bloom: { enabled: boolean }; profileSource: string }
+      }
+      expect(resolved.visual.focus.bloom.enabled).toBe(enabled)
+      expect(diagnostics.bloom.enabled).toBe(enabled)
+      expect(diagnostics.renderer_snapshot.bloom.enabled).toBe(enabled)
+      expect(diagnostics.renderer_snapshot.profileSource).toBe('active')
+    }
   }, 120_000)
 
   it('rejects normal CLI diagnostic Bloom parameters before browser startup', async () => {

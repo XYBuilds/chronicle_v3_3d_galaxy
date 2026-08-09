@@ -5,7 +5,7 @@ import { createServer, type ViteDevServer } from 'vite'
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright'
 import { stableFocusEmissionJson } from '../../../frontend/src/three/focusEmission.js'
 import { CliError, EXIT_CODES, type ExportArgs } from './args.js'
-import { fileDataPlugin, isLegacyProfileCompatibilityFixture, pageDataUrl, pageProfileUrl, type DataSource } from './data-source.js'
+import { fileDataPlugin, pageDataUrl, pageProfileUrl, type DataSource } from './data-source.js'
 
 export type BrowserRender = {
   png: Buffer
@@ -185,15 +185,81 @@ function requiredCanonicalVisualConfig(root: Record<string, unknown>, label: str
   return root.visual_config_hash_input
 }
 
+function sameJson(left: unknown, right: unknown): boolean {
+  return stableFocusEmissionJson(left as Parameters<typeof stableFocusEmissionJson>[0])
+    === stableFocusEmissionJson(right as Parameters<typeof stableFocusEmissionJson>[0])
+}
+
+function assertProductionAppliedSnapshot(
+  root: Record<string, unknown>,
+  hashInput: string,
+  label: string,
+): void {
+  const snapshot = diagnosticsObject(root.renderer_snapshot, `${label} renderer_snapshot`)
+  if (snapshot.canonicalHashInput !== hashInput) {
+    throw new CliError(`visual diagnostics ${label} renderer snapshot hash disagrees with canonical payload`, EXIT_CODES.render)
+  }
+  if (
+    snapshot.movieId !== root.movie_id
+    || snapshot.worldRadius !== root.world_radius
+    || snapshot.outerRadius !== root.outer_radius
+    || snapshot.emission !== root.emission
+  ) {
+    throw new CliError(`visual diagnostics ${label} renderer snapshot disagrees with rendered movie state`, EXIT_CODES.render)
+  }
+
+  const focus = diagnosticsObject(snapshot.focus, `${label} renderer_snapshot.focus`)
+  const lighting = diagnosticsObject(snapshot.lighting, `${label} renderer_snapshot.lighting`)
+  const noise = diagnosticsObject(snapshot.noise, `${label} renderer_snapshot.noise`)
+  const bands = diagnosticsObject(snapshot.bands, `${label} renderer_snapshot.bands`)
+  const bloom = diagnosticsObject(snapshot.bloom, `${label} renderer_snapshot.bloom`)
+  const rootLighting = diagnosticsObject(root.key_light, `${label} key_light`)
+  const rootNoise = diagnosticsObject(root.noise, `${label} noise`)
+  const rootBloom = diagnosticsObject(root.bloom, `${label} bloom`)
+  if (
+    focus.lightness !== root.fixed_lightness
+    || focus.chroma !== root.fixed_chroma
+    || lighting.enabled !== rootLighting.enabled
+    || !sameJson(lighting.direction, rootLighting.direction)
+    || lighting.keyLightIntensity !== rootLighting.intensity
+    || lighting.flatShadingMix !== rootLighting.flat_shading_mix
+    || noise.scale !== rootNoise.scale
+    || noise.octaves !== rootNoise.octaves
+    || noise.persistence !== rootNoise.persistence
+    || bands.bandCount !== root.band_count
+    || bloom.enabled !== rootBloom.enabled
+    || bloom.strength !== rootBloom.strength
+    || bloom.radius !== rootBloom.radius
+    || bloom.threshold !== rootBloom.threshold
+  ) {
+    throw new CliError(`visual diagnostics ${label} renderer snapshot disagrees with applied visual state`, EXIT_CODES.render)
+  }
+
+  const payload = diagnosticsObject(root.visual_config_payload, `${label} visual_config_payload`)
+  const payloadProvenance = diagnosticsObject(payload.emission_profile, `${label} visual_config_payload.emission_profile`)
+  const provenance = diagnosticsObject(root.profile_provenance, `${label} profile_provenance`)
+  const snapshotProvenance = diagnosticsObject(snapshot.profileProvenance, `${label} renderer_snapshot.profileProvenance`)
+  if (
+    snapshot.profileSource !== 'active'
+    || payloadProvenance.source !== 'active'
+    || !sameJson(provenance, payloadProvenance)
+    || !sameJson(provenance, { ...snapshotProvenance, source: snapshot.profileSource })
+  ) {
+    throw new CliError(`visual diagnostics ${label} renderer snapshot disagrees with active profile provenance`, EXIT_CODES.render)
+  }
+}
+
 export function assertCanonicalVisualConfig(
   diagnostics: Record<string, unknown>,
   pageVisualHash: unknown,
   label: string,
+  requireAppliedSnapshot = false,
 ): string {
   const hashInput = requiredCanonicalVisualConfig(diagnostics, label)
   if (typeof pageVisualHash !== 'string' || pageVisualHash.length === 0 || pageVisualHash !== hashInput) {
     throw new CliError(`visual diagnostics ${label} dataset visual hash disagrees with canonical renderer payload`, EXIT_CODES.render)
   }
+  if (requireAppliedSnapshot) assertProductionAppliedSnapshot(diagnostics, hashInput, label)
   return hashInput
 }
 
@@ -357,7 +423,6 @@ export async function renderInBrowser(args: ExportArgs, source: DataSource, root
       sizeRoot: String(args.sizeRoot),
       renderMode: args.renderMode,
       ...(source.focusEmissionProfile === undefined ? {} : { profilePointer: JSON.stringify(source.focusEmissionProfile), profileUrl: requestedProfileUrl! }),
-      ...(isLegacyProfileCompatibilityFixture(source) ? { allowLegacyProfile: '1' } : {}),
     })
     await page.goto(new URL(`planet-export.html?${query.toString()}`, serverUrl).toString(), { waitUntil: 'networkidle', timeout: 120_000 })
     await page.waitForFunction(() => document.body.dataset.exportReady === '1' || document.body.dataset.exportError !== undefined, undefined, { timeout: 120_000 })
@@ -381,7 +446,7 @@ export async function renderInBrowser(args: ExportArgs, source: DataSource, root
     if (!encoded) throw new CliError('planet export page returned an invalid PNG data URL', EXIT_CODES.render)
     if (!result.visualDiagnostics) throw new CliError('planet export page returned no visual diagnostics', EXIT_CODES.render)
     const visualDiagnostics = parseVisualDiagnostics(result.visualDiagnostics)
-    assertCanonicalVisualConfig(visualDiagnostics, result.visualHash, 'planet export')
+    assertCanonicalVisualConfig(visualDiagnostics, result.visualHash, 'planet export', true)
     return {
       png: Buffer.from(encoded, 'base64'),
       dataVersion: result.dataVersion,

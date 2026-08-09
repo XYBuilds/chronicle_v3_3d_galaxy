@@ -3,7 +3,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import type { ExportArgs } from './args.js'
-import { chooseDataSource, isLegacyProfileCompatibilityFixture, outputMetadataPath, pageDataUrl, pageProfileUrl } from './data-source.js'
+import { chooseDataSource, outputMetadataPath, pageDataUrl, pageProfileUrl } from './data-source.js'
 
 const temporaryDirectories: string[] = []
 
@@ -41,6 +41,12 @@ describe('planet export data sources', () => {
 
     expect(source.kind).toBe('file')
     expect(source.bytes?.toString()).toBe('{"fixture":true}')
+    expect(source.focusEmissionProfile).toMatchObject({
+      status: 'active',
+      profile_id: 'planet-export-fixture-2026-08-a',
+      source_data_version: 'planet-export-fixture-v1',
+    })
+    expect(source.profileBytes?.toString()).toContain('"schema_version":"rating-emission-profile-v1"')
     expect(pageDataUrl('http://127.0.0.1:4173/', source)).toBe('http://127.0.0.1:4173/__planet_export_data.json.gz')
   })
 
@@ -57,16 +63,6 @@ describe('planet export data sources', () => {
     expect(pageProfileUrl('http://127.0.0.1:4173/', source)).toBe('http://127.0.0.1:4173/__planet_export_profile/focus-emission-profiles/rating-emission-2026-07-a.json')
   })
 
-  it('treats every explicit file source as a legacy compatibility fixture, never a URL source', async () => {
-    const directory = await temporaryDirectory()
-    const dataFile = path.join(directory, 'fixture.json')
-    await fs.writeFile(dataFile, '{"fixture":true}')
-
-    const chosenFile = await chooseDataSource({ ...baseArgs, dataFile }, path.join(directory, 'missing-manifest.json'))
-    expect(isLegacyProfileCompatibilityFixture(chosenFile)).toBe(true)
-    expect(isLegacyProfileCompatibilityFixture({ kind: 'file', label: 'historical fixture', bytes: Buffer.from('{}') })).toBe(true)
-    expect(isLegacyProfileCompatibilityFixture({ kind: 'url', label: 'https://example.test/data.json.gz', pageUrl: 'https://example.test/data.json.gz' })).toBe(false)
-  })
 
   it('uses data-url before reading the manifest', async () => {
     const source = await chooseDataSource({ ...baseArgs, dataUrl: 'https://example.test/explicit.json.gz' }, 'missing.json')

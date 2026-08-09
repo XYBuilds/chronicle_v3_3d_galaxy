@@ -1,6 +1,15 @@
 import { productionPlanetBloomParams } from '@/three/planetVisualDefaults'
-import { PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE } from '@/three/productionFocusEmissionProfile'
+import {
+  createPlanetVisualRendererHandle,
+  renderPlanetVisualState,
+  type PlanetVisualAppliedSnapshot,
+  type PlanetVisualBloomHandle,
+  type PlanetVisualRendererHandle,
+  type PlanetVisualRenderResult,
+} from '@/three/planetVisualState'
 import type { ResolvedPlanetVisualConfig } from './visualConfig'
+import { requireProductionPlanetVisualConfig } from './visualConfig'
+import { PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE } from '@/three/productionFocusEmissionProfile'
 import * as THREE from 'three'
 import {
   PERLIN_BLOOM_COMPOSITION,
@@ -102,6 +111,7 @@ export type PlanetRenderDiagnostics = {
   visual_config_payload?: ResolvedPlanetVisualConfig['payload']
   visual_config_hash_input?: string
   profile_provenance?: FocusEmissionProfileProvenance & { source: 'active' | 'legacy-fallback' | 'diagnostic-override' }
+  renderer_snapshot?: PlanetVisualAppliedSnapshot
   fixed_lightness: number
   fixed_chroma: number
   bloom: {
@@ -193,11 +203,77 @@ function positive(value: number, label: string): number {
   return result
 }
 
+type PlanetRenderDiagnosticOptions = Pick<
+  P3911LegacyPlanetRenderOptions,
+  'sizeRoot' | 'padding' | 'emissionProfileProvenance' | 'emissionProfileSource' | 'visualConfig'
+> & {
+  bloomParamsOverride?: PerlinBloomParams
+  bloom?: boolean
+  emissionCurveOverride?: Phase41EmissionCurve
+  appliedVisualState?: PlanetVisualRenderResult
+}
+
+function assertAppliedSnapshotMatchesFinalState(
+  snapshot: PlanetVisualAppliedSnapshot,
+  planet: SelectionPlanetHandle,
+  bloom: PerlinBloomParams,
+): void {
+  const uniforms = planet.material.uniforms
+  const lightDirection = uniforms.uLightDir.value as THREE.Vector3
+  const actual = {
+    worldRadius: planet.mesh.scale.x,
+    outerRadius: planet.lastRadius,
+    emission: uniforms.uEmissionIntensity.value as number,
+    focus: {
+      lightness: uniforms.uPerlinL.value as number,
+      chroma: uniforms.uPerlinChroma.value as number,
+    },
+    lighting: {
+      enabled: (uniforms.uLightingEnabled.value as number) === 1,
+      direction: lightDirection.toArray(),
+      keyLightIntensity: uniforms.uKeyLightIntensity.value as number,
+      flatShadingMix: uniforms.uFlatShadingMix.value as number,
+    },
+    noise: {
+      scale: uniforms.uScale.value as number,
+      octaves: uniforms.uOctaves.value as number,
+      persistence: uniforms.uPersistence.value as number,
+    },
+    bands: {
+      areaRatio: uniforms.uAreaRatio.value as number,
+      stepHeight: uniforms.uStepHeight.value as number,
+      stepSmoothness: uniforms.uStepSmoothness.value as number,
+      bandCount: uniforms.uBandCount.value as number,
+      cutCount: uniforms.uCutCount.value as number,
+    },
+    bloom,
+  }
+  const expected = {
+    worldRadius: snapshot.worldRadius,
+    outerRadius: snapshot.outerRadius,
+    emission: snapshot.emission,
+    focus: snapshot.focus,
+    lighting: snapshot.lighting,
+    noise: snapshot.noise,
+    bands: {
+      areaRatio: snapshot.bands.areaRatio,
+      stepHeight: snapshot.bands.stepHeight,
+      stepSmoothness: snapshot.bands.stepSmoothness,
+      bandCount: snapshot.bands.bandCount,
+      cutCount: snapshot.bands.cutCount,
+    },
+    bloom: snapshot.bloom,
+  }
+  if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+    throw new Error('[PlanetExport] renderer state changed after canonical visual application')
+  }
+}
+
 export function capturePlanetRenderDiagnostics(
   movie: Movie,
   planet: SelectionPlanetHandle,
   camera: THREE.OrthographicCamera,
-  options: Pick<P3911LegacyPlanetRenderOptions, 'sizeRoot' | 'padding' | 'emissionProfileProvenance' | 'emissionProfileSource' | 'visualConfig'> & { bloomParamsOverride?: PerlinBloomParams; bloom?: boolean; emissionCurveOverride?: Phase41EmissionCurve },
+  options: PlanetRenderDiagnosticOptions,
 ): PlanetRenderDiagnostics {
   if (!Number.isSafeInteger(movie.id) || movie.id <= 0) {
     throw new Error('[PlanetExport] movie id must be a positive integer')
@@ -214,7 +290,15 @@ export function capturePlanetRenderDiagnostics(
 
   const appearance = planet.lastAppearance
   if (!appearance) throw new Error('[PlanetExport] planet appearance must be resolved before diagnostics')
-  const bloomParams = validatePerlinBloomParams(options.bloomParamsOverride ?? productionPlanetBloomParams(options.bloom))
+  const appliedVisualState = options.appliedVisualState
+  const appliedSnapshot = appliedVisualState?.appliedSnapshot
+  const resolvedVisualConfig = appliedVisualState?.application.state ?? options.visualConfig
+  const bloomParams = validatePerlinBloomParams(
+    appliedSnapshot?.bloom ?? options.bloomParamsOverride ?? productionPlanetBloomParams(options.bloom),
+  )
+  if (appliedSnapshot !== undefined) {
+    assertAppliedSnapshotMatchesFinalState(appliedSnapshot, planet, bloomParams)
+  }
   const scale = planet.mesh.scale
   const worldRadius = positive(scale.x, 'world radius')
   if (scale.y !== scale.x || scale.z !== scale.x) {
@@ -267,23 +351,36 @@ export function capturePlanetRenderDiagnostics(
     size_root: options.sizeRoot,
     padding: serializableNumber(options.padding, 'padding'),
     emission: serializableNumber(uniforms.uEmissionIntensity.value as number, 'emission'),
-    emission_curve: diagnosticsEmissionCurve(options.emissionCurveOverride ?? options.visualConfig?.curve ?? appearance.emissionCurve),
-    ...(options.visualConfig === undefined ? {} : {
-      visual_config_payload: options.visualConfig.payload,
-      visual_config_hash_input: options.visualConfig.hashInput,
+    emission_curve: diagnosticsEmissionCurve(
+      options.emissionCurveOverride ?? resolvedVisualConfig?.curve ?? appearance.emissionCurve,
+    ),
+    ...(resolvedVisualConfig === undefined ? {} : {
+      visual_config_payload: resolvedVisualConfig.payload,
+      visual_config_hash_input: appliedSnapshot?.canonicalHashInput ?? resolvedVisualConfig.hashInput,
     }),
-    ...((options.visualConfig ?? (options.emissionProfileProvenance === undefined || options.emissionProfileSource === undefined
-      ? undefined
-      : { emissionProvenance: options.emissionProfileProvenance, emissionSource: options.emissionProfileSource })) === undefined
-      ? {}
-      : { profile_provenance: (() => {
-        const resolved = options.visualConfig ?? { emissionProvenance: options.emissionProfileProvenance!, emissionSource: options.emissionProfileSource! }
-        return { ...resolved.emissionProvenance, source: resolved.emissionSource }
-      })() }),
+    ...(appliedSnapshot === undefined
+      ? ((resolvedVisualConfig ?? (options.emissionProfileProvenance === undefined || options.emissionProfileSource === undefined
+          ? undefined
+          : { emissionProvenance: options.emissionProfileProvenance, emissionSource: options.emissionProfileSource })) === undefined
+        ? {}
+        : { profile_provenance: (() => {
+          const resolved = resolvedVisualConfig ?? {
+            emissionProvenance: options.emissionProfileProvenance!,
+            emissionSource: options.emissionProfileSource!,
+          }
+          return { ...resolved.emissionProvenance, source: resolved.emissionSource }
+        })() })
+      : {
+          profile_provenance: {
+            ...appliedSnapshot.profileProvenance,
+            source: appliedSnapshot.profileSource,
+          },
+          renderer_snapshot: appliedSnapshot,
+        }),
     fixed_lightness: serializableNumber(uniforms.uPerlinL.value as number, 'lightness'),
     fixed_chroma: serializableNumber(uniforms.uPerlinChroma.value as number, 'chroma'),
     bloom: {
-      enabled: options.bloom ?? false,
+      enabled: appliedSnapshot?.bloom.enabled ?? options.bloom ?? false,
       composition: PERLIN_BLOOM_COMPOSITION,
       strength: bloomParams.strength,
       radius: bloomParams.radius,
@@ -345,6 +442,56 @@ export function prepareExportPlanet(
   return planet
 }
 
+export type PreparedProductionExportPlanet = {
+  planet: SelectionPlanetHandle
+  visualState: PlanetVisualRenderResult
+  rendererHandle: PlanetVisualRendererHandle
+  bloomHandle: PlanetVisualBloomHandle
+}
+
+function createExportBloomHandle(): PlanetVisualBloomHandle {
+  let params = validatePerlinBloomParams(productionPlanetBloomParams(false))
+  return {
+    applyParams(next) {
+      params = validatePerlinBloomParams(next)
+    },
+    get params() {
+      return { ...params }
+    },
+  }
+}
+
+/** Applies the complete production state before selecting shader or basic validation output. */
+export function prepareProductionExportPlanet(
+  movie: Movie,
+  meta: Meta,
+  renderMode: PlanetExportRenderMode,
+  sizeRoot: 2 | 3 | 4,
+  visualConfig: ResolvedPlanetVisualConfig,
+): PreparedProductionExportPlanet {
+  const canonicalConfig = requireProductionPlanetVisualConfig(visualConfig)
+  const planet = createSelectionPlanet(canonicalConfig.curve)
+  const bloomHandle = createExportBloomHandle()
+  const rendererHandle = createPlanetVisualRendererHandle(planet, bloomHandle)
+  const worldRadius = computeExportWorldRadius(movie, sizeRoot)
+  const centeredMovie = { ...movie, x: 0, y: 0, z: 0 }
+  try {
+    const visualState = renderPlanetVisualState(
+      canonicalConfig,
+      { movie: centeredMovie, palette: meta.genre_palette, worldRadius },
+      rendererHandle,
+    )
+    if (renderMode === 'basic') {
+      planet.mesh.material = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 1 })
+    }
+    console.assert(planet.mesh.visible, '[PlanetExport] planet must be visible after canonical application')
+    return { planet, visualState, rendererHandle, bloomHandle }
+  } catch (error) {
+    planet.dispose()
+    throw error
+  }
+}
+
 function renderAlphaPreservingBloom(
   renderer: THREE.WebGLRenderer,
   scene: THREE.Scene,
@@ -384,9 +531,13 @@ function applyResolvedVisualConfig(planet: SelectionPlanetHandle, movie: Movie, 
   ;(planet.material.uniforms.uLightDir.value as THREE.Vector3).set(...config.direction).normalize()
 }
 
-function renderPlanetImageInternal(options: OfflineDiagnosticPlanetRenderOptions, diagnosticOverride?: Phase41RenderOverride): PlanetRenderResult {
+function renderPlanetImageInternal(
+  options: OfflineDiagnosticPlanetRenderOptions,
+  diagnosticOverride?: Phase41RenderOverride,
+  production = false,
+): PlanetRenderResult {
   const { canvas, movie, meta, globalRadius, resolution, padding, bloom, renderMode, sizeRoot, bloomParamsOverride, visualConfig } = options
-  const bloomParams = validatePerlinBloomParams(visualConfig?.bloom ?? bloomParamsOverride ?? productionPlanetBloomParams(bloom))
+  let bloomParams = validatePerlinBloomParams(visualConfig?.bloom ?? bloomParamsOverride ?? productionPlanetBloomParams(bloom))
   const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, preserveDrawingBuffer: true })
   renderer.setPixelRatio(1)
   renderer.setSize(resolution, resolution, false)
@@ -399,17 +550,33 @@ function renderPlanetImageInternal(options: OfflineDiagnosticPlanetRenderOptions
   const camera = new THREE.OrthographicCamera(-half, half, half, -half, 0.01, half * 4)
   positionExportCamera(camera, half)
 
-  const emissionCurve = visualConfig?.curve ?? options.emissionProfile
-  if (emissionCurve === undefined || emissionCurve.modelVersion !== 'rating-midrank-cdf-lut-v1') {
-    throw new Error('[PlanetExport] a rating-midrank active emission profile is required at the rendering boundary')
+  let planet: SelectionPlanetHandle
+  let appliedVisualState: PlanetVisualRenderResult | undefined
+  if (production) {
+    if (visualConfig === undefined) {
+      throw new Error('[PlanetExport] canonical resolved visual config is required at the rendering boundary')
+    }
+    const prepared = prepareProductionExportPlanet(movie, meta, renderMode, sizeRoot, visualConfig)
+    planet = prepared.planet
+    appliedVisualState = prepared.visualState
+    bloomParams = validatePerlinBloomParams(prepared.bloomHandle.params)
+  } else {
+    const emissionCurve = visualConfig?.curve ?? options.emissionProfile
+    if (emissionCurve === undefined || emissionCurve.modelVersion !== 'rating-midrank-cdf-lut-v1') {
+      throw new Error('[PlanetExport] a rating-midrank active emission profile is required at the rendering boundary')
+    }
+    planet = prepareExportPlanet(movie, meta, renderMode, sizeRoot, emissionCurve)
+    const appliedConfig = visualConfig ?? diagnosticOverride
+    if (appliedConfig !== undefined) applyResolvedVisualConfig(planet, movie, appliedConfig)
   }
-  const planet = prepareExportPlanet(movie, meta, renderMode, sizeRoot, emissionCurve)
-  const appliedConfig = visualConfig ?? diagnosticOverride
-  if (appliedConfig !== undefined) applyResolvedVisualConfig(planet, movie, appliedConfig)
   const diagnostics = capturePlanetRenderDiagnostics(movie, planet, camera, {
     ...options,
     bloomParamsOverride: bloomParams,
-    ...(appliedConfig === undefined ? {} : { emissionCurveOverride: appliedConfig.curve }),
+    ...(appliedVisualState === undefined ? {} : { appliedVisualState }),
+    ...(production || visualConfig === undefined ? {} : { emissionCurveOverride: visualConfig.curve }),
+    ...(!production && visualConfig === undefined && diagnosticOverride !== undefined
+      ? { emissionCurveOverride: diagnosticOverride.curve }
+      : {}),
   })
   scene.add(planet.mesh)
   if (bloom) {
@@ -421,12 +588,13 @@ function renderPlanetImageInternal(options: OfflineDiagnosticPlanetRenderOptions
   return { renderer, visible: planet.mesh.visible, renderMode, diagnostics }
 }
 
-/** Production renderer: no visual override can enter through its public options. */
+/** Production renderer: no visual override or legacy profile can enter through its public options. */
 export function renderPlanetImage(options: PlanetRenderOptions): PlanetRenderResult {
-  if (options.visualConfig === undefined) {
-    throw new Error('[PlanetExport] canonical resolved visual config is required at the rendering boundary')
+  const visualConfig = requireProductionPlanetVisualConfig(options.visualConfig)
+  if (visualConfig.bloom.enabled !== options.bloom) {
+    throw new Error('[PlanetExport] canonical Bloom state must match the production render request')
   }
-  return renderPlanetImageInternal(options)
+  return renderPlanetImageInternal({ ...options, visualConfig }, undefined, true)
 }
 
 export const P3911_LEGACY_FROZEN_PROFILE_FIXTURE = 'p39.11-frozen-profile-fixture' as const

@@ -13,10 +13,17 @@ export type PlanetExportRequest = {
   renderMode: PlanetExportRenderMode
   profilePointer?: ActiveFocusEmissionProfilePointer
   profileUrl?: string
-  allowLegacyProfile?: boolean
 }
 
-const REQUEST_PARAMS = new Set(['movieId', 'dataUrl', 'resolution', 'padding', 'bloom', 'sizeRoot', 'renderMode', 'profilePointer', 'profileUrl', 'allowLegacyProfile'])
+export type LegacyCompatiblePlanetExportRequest = PlanetExportRequest & {
+  allowLegacyProfile?: true
+}
+
+const PRODUCTION_REQUEST_PARAMS = new Set(['movieId', 'dataUrl', 'resolution', 'padding', 'bloom', 'sizeRoot', 'renderMode', 'profilePointer', 'profileUrl'])
+
+type LegacyCompatiblePlanetExportRequestParseOptions = {
+  allowLegacyProfile: true
+}
 
 function requiredUniqueParam(params: URLSearchParams, name: string): string {
   const values = params.getAll(name)
@@ -84,10 +91,21 @@ function parseProfileUrl(value: string, pointer: ActiveFocusEmissionProfilePoint
   return url.href
 }
 
-export function parsePlanetExportRequest(search: string): PlanetExportRequest {
+export function parsePlanetExportRequest(search: string): PlanetExportRequest
+export function parsePlanetExportRequest(
+  search: string,
+  options: LegacyCompatiblePlanetExportRequestParseOptions,
+): LegacyCompatiblePlanetExportRequest
+export function parsePlanetExportRequest(
+  search: string,
+  options?: LegacyCompatiblePlanetExportRequestParseOptions,
+): LegacyCompatiblePlanetExportRequest {
   const params = new URLSearchParams(search)
+  const allowedParams = options?.allowLegacyProfile === true
+    ? new Set([...PRODUCTION_REQUEST_PARAMS, 'allowLegacyProfile'])
+    : PRODUCTION_REQUEST_PARAMS
   for (const [name] of params) {
-    if (!REQUEST_PARAMS.has(name)) throw new Error(`[PlanetExport] unknown request parameter ${name}`)
+    if (!allowedParams.has(name)) throw new Error(`[PlanetExport] unknown request parameter ${name}`)
   }
 
   const movieId = parsePositiveInteger(requiredUniqueParam(params, 'movieId'), 'movieId', Number.MAX_SAFE_INTEGER)

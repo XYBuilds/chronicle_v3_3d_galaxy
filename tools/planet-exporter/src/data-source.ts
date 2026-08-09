@@ -2,6 +2,7 @@ import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import type { Plugin, ViteDevServer } from 'vite'
 import { CliError, EXIT_CODES, type ExportArgs } from './args.js'
+import { createLocalActiveProfileFixture } from './localActiveProfileFixture.js'
 
 export type DataSource = {
   kind: 'file' | 'url' | 'manifest'
@@ -13,7 +14,6 @@ export type DataSource = {
   version?: string
   focusEmissionProfile?: ActiveProfilePointer
   profileUrl?: string
-  allowLegacyProfile?: boolean
 }
 
 export type ActiveProfilePointer = {
@@ -73,7 +73,14 @@ function activeProfilePointer(raw: unknown): ActiveProfilePointer {
 export async function chooseDataSource(args: ExportArgs, manifestPath: string): Promise<DataSource> {
   if (args.dataFile) {
     try {
-      return { kind: 'file', label: `file:${args.dataFile}`, bytes: await fs.readFile(args.dataFile), allowLegacyProfile: true }
+      const profile = createLocalActiveProfileFixture()
+      return {
+        kind: 'file',
+        label: `file:${args.dataFile}`,
+        bytes: await fs.readFile(args.dataFile),
+        profileBytes: profile.bytes,
+        focusEmissionProfile: profile.pointer,
+      }
     } catch (error) {
       throw new CliError(`unable to read --data-file: ${error instanceof Error ? error.message : String(error)}`, EXIT_CODES.data)
     }
@@ -97,10 +104,6 @@ export async function chooseDataSource(args: ExportArgs, manifestPath: string): 
   } catch (error) {
     throw new CliError(`unable to load data manifest: ${error instanceof Error ? error.message : String(error)}`, EXIT_CODES.data)
   }
-}
-
-export function isLegacyProfileCompatibilityFixture(source: DataSource): boolean {
-  return source.kind === 'file'
 }
 
 export function fileDataPlugin(source: DataSource): Plugin | undefined {

@@ -28,4 +28,4 @@ Pull Requests are implementation and review surfaces, not substitutes for accept
 
 ## Current labels
 
-The repository keeps GitHub's existing labels such as `bug`, `enhancement`, `documentation`, `duplicate`, `good first issue`, `help wanted`, `invalid`, `question`, and `wontfix`. `ready-for-agent` is the first Matt workflow label added by the control-plane setup; additional triage labels will be introduced only when the corresponding workflow is enabled.
+The repository keeps GitHub's existing labels such as `bug`, `enhancement`, `documentation`, `duplicate`, `good first issue`, `help wanted`, `invalid`, and `question`. Matt workflows use the canonical `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, and `wontfix` labels defined in `docs/agents/triage-labels.md`.

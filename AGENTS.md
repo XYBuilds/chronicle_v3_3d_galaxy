@@ -8,6 +8,10 @@ Chronicle is the product-control repository for The Movie Cosmos. It owns the pr
 
 GitHub Issues are the public entry point for new work in this repository. Use `gh` for issue operations. Accepted specifications are published as Issues; implementation work stays in the repository that owns the code. See `docs/agents/issue-tracker.md`.
 
+### Triage labels
+
+Triage uses the five canonical Matt skills labels. See `docs/agents/triage-labels.md`.
+
 ### Domain docs
 
 Chronicle uses a single repository context plus a federated system map under `docs/system/`. Read the relevant product documents and system maps before designing work. Create or update `CONTEXT.md` and ADRs only when domain terms or durable design decisions are actually resolved through the domain-modeling workflow. See `docs/agents/domain.md`.

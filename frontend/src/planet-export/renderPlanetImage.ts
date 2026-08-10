@@ -517,17 +517,6 @@ export function prepareProductionExportPlanet(
   )
 }
 
-/** Applies any resolved canonical visual state, including diagnostic/legacy adapters. */
-export function prepareCanonicalExportPlanet(
-  movie: Movie,
-  meta: Meta,
-  renderMode: PlanetExportRenderMode,
-  sizeRoot: 2 | 3 | 4,
-  visualConfig: ResolvedPlanetVisualConfig,
-): PreparedProductionExportPlanet {
-  return prepareResolvedExportPlanet(movie, meta, renderMode, sizeRoot, visualConfig)
-}
-
 function renderAlphaPreservingBloom(
   renderer: THREE.WebGLRenderer,
   scene: THREE.Scene,

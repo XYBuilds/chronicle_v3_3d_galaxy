@@ -16,7 +16,6 @@ import { PHASE41_DIAGNOSTIC_MARKER } from './phase41DiagnosticProfile'
 import {
   capturePlanetRenderDiagnostics,
   positionExportCamera,
-  prepareCanonicalExportPlanet,
   prepareProductionExportPlanet,
 } from './renderPlanetImage'
 import { assertP3911CheckpointAKeyLightIntensity, parseP3911CheckpointARequest } from './p3911CheckpointADiagnostics'
@@ -244,7 +243,7 @@ describe('planet export request and sizing', () => {
     positionExportCamera(camera, 10)
     const snapshots = [0, 4, 5, 10].map((vote_average) => {
       const target = { ...movie(157336, 2, ['Drama']), vote_average }
-      const prepared = prepareCanonicalExportPlanet(
+      const prepared = prepareProductionExportPlanet(
         target,
         galaxy([target]).meta,
         'shader',
@@ -325,7 +324,7 @@ describe('planet export request and sizing', () => {
         threshold: 0,
       },
     })
-    const prepared = prepareCanonicalExportPlanet(target, galaxy([target]).meta, 'shader', 3, config)
+    const prepared = prepareProductionExportPlanet(target, galaxy([target]).meta, 'shader', 3, config)
     const camera = new THREE.OrthographicCamera(-10, 10, 10, -10, 0.01, 40)
     positionExportCamera(camera, 10)
     const diagnostics = capturePlanetRenderDiagnostics(target, prepared.planet, camera, {
@@ -348,7 +347,7 @@ describe('planet export request and sizing', () => {
   it('fails fast when renderer-owned diagnostics contain invalid state', () => {
     const target = movie(157336, 2, ['Drama'])
     const config = productionVisualConfig(false)
-    const prepared = prepareCanonicalExportPlanet(target, galaxy([target]).meta, 'shader', 3, config)
+    const prepared = prepareProductionExportPlanet(target, galaxy([target]).meta, 'shader', 3, config)
     const camera = new THREE.OrthographicCamera(-10, 10, 10, -10, 0.01, 40)
     positionExportCamera(camera, 10)
 

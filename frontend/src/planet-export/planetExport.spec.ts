@@ -16,7 +16,7 @@ import { PHASE41_DIAGNOSTIC_MARKER } from './phase41DiagnosticProfile'
 import {
   capturePlanetRenderDiagnostics,
   positionExportCamera,
-  prepareExportPlanet,
+  prepareCanonicalExportPlanet,
   prepareProductionExportPlanet,
 } from './renderPlanetImage'
 import { assertP3911CheckpointAKeyLightIntensity, parseP3911CheckpointARequest } from './p3911CheckpointADiagnostics'
@@ -244,9 +244,20 @@ describe('planet export request and sizing', () => {
     positionExportCamera(camera, 10)
     const snapshots = [0, 4, 5, 10].map((vote_average) => {
       const target = { ...movie(157336, 2, ['Drama']), vote_average }
-      const handle = prepareExportPlanet(target, galaxy([target]).meta, 'shader', 3, PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE)
-      const diagnostics = capturePlanetRenderDiagnostics(target, handle, camera, { sizeRoot: 3, padding: 0.08 })
-      handle.dispose()
+      const prepared = prepareCanonicalExportPlanet(
+        target,
+        galaxy([target]).meta,
+        'shader',
+        3,
+        productionVisualConfig(false),
+      )
+      const diagnostics = capturePlanetRenderDiagnostics(target, prepared.planet, camera, {
+        sizeRoot: 3,
+        padding: 0.08,
+        visualConfig: productionVisualConfig(false),
+        appliedVisualState: prepared.visualState,
+      })
+      prepared.planet.dispose()
       return diagnostics
     })
 
@@ -302,19 +313,27 @@ describe('planet export request and sizing', () => {
 
   it('records the actual offline Bloom override without changing production defaults', () => {
     const target = movie(157336, 2, ['Drama'])
-    const handle = prepareExportPlanet(target, galaxy([target]).meta, 'shader', 3, PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE)
-    const camera = new THREE.OrthographicCamera(-10, 10, 10, -10, 0.01, 40)
-    positionExportCamera(camera, 10)
-    const diagnostics = capturePlanetRenderDiagnostics(target, handle, camera, {
-      sizeRoot: 3,
-      padding: 0.08,
-      bloom: true,
-      bloomParamsOverride: {
+    const config = resolvePlanetVisualConfig({
+      curve: PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE,
+      emissionProvenance: activeProvenance,
+      emissionSource: 'active',
+      bloomEnabled: true,
+      bloom: {
         enabled: true,
         strength: 0,
         radius: 1,
         threshold: 0,
       },
+    })
+    const prepared = prepareCanonicalExportPlanet(target, galaxy([target]).meta, 'shader', 3, config)
+    const camera = new THREE.OrthographicCamera(-10, 10, 10, -10, 0.01, 40)
+    positionExportCamera(camera, 10)
+    const diagnostics = capturePlanetRenderDiagnostics(target, prepared.planet, camera, {
+      sizeRoot: 3,
+      padding: 0.08,
+      bloom: true,
+      visualConfig: config,
+      appliedVisualState: prepared.visualState,
     })
     expect(diagnostics.bloom).toEqual({
       enabled: true,
@@ -323,42 +342,43 @@ describe('planet export request and sizing', () => {
       radius: 1,
       threshold: 0,
     })
-    handle.dispose()
+    prepared.planet.dispose()
   })
 
   it('fails fast when renderer-owned diagnostics contain invalid state', () => {
     const target = movie(157336, 2, ['Drama'])
-    const handle = prepareExportPlanet(target, galaxy([target]).meta, 'shader', 3, PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE)
+    const config = productionVisualConfig(false)
+    const prepared = prepareCanonicalExportPlanet(target, galaxy([target]).meta, 'shader', 3, config)
     const camera = new THREE.OrthographicCamera(-10, 10, 10, -10, 0.01, 40)
     positionExportCamera(camera, 10)
 
-    handle.material.uniforms.uLightingEnabled.value = 2
+    prepared.planet.material.uniforms.uLightingEnabled.value = 2
     expect(() => capturePlanetRenderDiagnostics(
       target,
-      handle,
+      prepared.planet,
       camera,
-      { sizeRoot: 3, padding: 0.08 },
-    )).toThrow('lighting enabled must be 0 or 1')
+      { sizeRoot: 3, padding: 0.08, visualConfig: config, appliedVisualState: prepared.visualState },
+    )).toThrow(/changed after canonical visual application|lighting enabled must be 0 or 1/)
 
-    handle.material.uniforms.uLightingEnabled.value = 1
-    handle.material.uniforms.uOctaves.value = 0
+    prepared.planet.material.uniforms.uLightingEnabled.value = 1
+    prepared.planet.material.uniforms.uOctaves.value = 0
     expect(() => capturePlanetRenderDiagnostics(
       target,
-      handle,
+      prepared.planet,
       camera,
       { sizeRoot: 3, padding: 0.08 },
     )).toThrow('noise octaves must be a positive integer')
 
-    handle.material.uniforms.uOctaves.value = PLANET_VISUAL_DEFAULTS.noise.octaves
-    handle.lastRadius = handle.mesh.scale.x / 2
+    prepared.planet.material.uniforms.uOctaves.value = PLANET_VISUAL_DEFAULTS.noise.octaves
+    prepared.planet.lastRadius = prepared.planet.mesh.scale.x / 2
     expect(() => capturePlanetRenderDiagnostics(
       target,
-      handle,
+      prepared.planet,
       camera,
       { sizeRoot: 3, padding: 0.08 },
     )).toThrow('outer radius must cover world radius')
 
-    handle.dispose()
+    prepared.planet.dispose()
   })
 
   it.each([4, 6, 10])(

@@ -209,6 +209,8 @@ export type PlanetVisualBloomHandle = {
 
 export type PlanetVisualRendererHandle = {
   apply(application: PlanetVisualApplication): void
+  /** Applies movie-independent production uniforms before the first selection. */
+  applyStaticState(state: PlanetVisualState): void
   readAppliedState(): PlanetVisualAppliedSnapshot
 }
 

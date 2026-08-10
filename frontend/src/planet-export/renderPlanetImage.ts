@@ -451,27 +451,6 @@ export function capturePlanetRenderDiagnostics(
   }
 }
 
-export function prepareExportPlanet(
-  movie: Movie,
-  meta: Meta,
-  renderMode: PlanetExportRenderMode,
-  sizeRoot: 2 | 3 | 4,
-  emissionProfile: RatingMidrankCdfLutProfile,
-): SelectionPlanetHandle {
-  const planet = createSelectionPlanet(emissionProfile)
-  const worldRadius = computeExportWorldRadius(movie, sizeRoot)
-  planet.setFromMovie(movie, meta.genre_palette, worldRadius)
-  planet.mesh.position.set(0, 0, 0)
-  planet.material.uniforms.uMeshWorldPos.value.set(0, 0, 0)
-  planet.setOpacity(1)
-  planet.mesh.updateMatrixWorld(true)
-  if (renderMode === 'basic') {
-    planet.mesh.material = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 1 })
-  }
-  console.assert(planet.mesh.visible, '[PlanetExport] planet must be visible before rendering')
-  return planet
-}
-
 export type PreparedProductionExportPlanet = {
   planet: SelectionPlanetHandle
   visualState: PlanetVisualRenderResult
@@ -538,6 +517,17 @@ export function prepareProductionExportPlanet(
   )
 }
 
+/** Applies any resolved canonical visual state, including diagnostic/legacy adapters. */
+export function prepareCanonicalExportPlanet(
+  movie: Movie,
+  meta: Meta,
+  renderMode: PlanetExportRenderMode,
+  sizeRoot: 2 | 3 | 4,
+  visualConfig: ResolvedPlanetVisualConfig,
+): PreparedProductionExportPlanet {
+  return prepareResolvedExportPlanet(movie, meta, renderMode, sizeRoot, visualConfig)
+}
+
 function renderAlphaPreservingBloom(
   renderer: THREE.WebGLRenderer,
   scene: THREE.Scene,
@@ -573,7 +563,10 @@ function renderPlanetImageInternal(
   production = false,
 ): PlanetRenderResult {
   const { canvas, movie, meta, globalRadius, resolution, padding, bloom, renderMode, sizeRoot, bloomParamsOverride, visualConfig } = options
-  let bloomParams = validatePerlinBloomParams(visualConfig?.bloom ?? bloomParamsOverride ?? productionPlanetBloomParams(bloom))
+  if (visualConfig === undefined) {
+    throw new Error('[PlanetExport] resolved canonical visual state is required at the rendering boundary')
+  }
+  let bloomParams = validatePerlinBloomParams(visualConfig.bloom ?? bloomParamsOverride ?? productionPlanetBloomParams(bloom))
   const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, preserveDrawingBuffer: true })
   renderer.setPixelRatio(1)
   renderer.setSize(resolution, resolution, false)
@@ -586,26 +579,16 @@ function renderPlanetImageInternal(
   const camera = new THREE.OrthographicCamera(-half, half, half, -half, 0.01, half * 4)
   positionExportCamera(camera, half)
 
-  let planet: SelectionPlanetHandle
-  let appliedVisualState: PlanetVisualRenderResult | undefined
-  if (visualConfig !== undefined) {
-    const prepared = production
-      ? prepareProductionExportPlanet(movie, meta, renderMode, sizeRoot, visualConfig)
-      : prepareResolvedExportPlanet(movie, meta, renderMode, sizeRoot, visualConfig)
-    planet = prepared.planet
-    appliedVisualState = prepared.visualState
-    bloomParams = validatePerlinBloomParams(prepared.bloomHandle.params)
-  } else {
-    const emissionCurve = options.emissionProfile
-    if (emissionCurve === undefined || emissionCurve.modelVersion !== 'rating-midrank-cdf-lut-v1') {
-      throw new Error('[PlanetExport] a rating-midrank active emission profile is required at the rendering boundary')
-    }
-    planet = prepareExportPlanet(movie, meta, renderMode, sizeRoot, emissionCurve)
-  }
+  const prepared = production
+    ? prepareProductionExportPlanet(movie, meta, renderMode, sizeRoot, visualConfig)
+    : prepareResolvedExportPlanet(movie, meta, renderMode, sizeRoot, visualConfig)
+  const planet = prepared.planet
+  const appliedVisualState = prepared.visualState
+  bloomParams = validatePerlinBloomParams(prepared.bloomHandle.params)
   const diagnostics = capturePlanetRenderDiagnostics(movie, planet, camera, {
     ...options,
     bloomParamsOverride: bloomParams,
-    ...(appliedVisualState === undefined ? {} : { appliedVisualState }),
+    appliedVisualState,
   })
   scene.add(planet.mesh)
   if (bloom) {

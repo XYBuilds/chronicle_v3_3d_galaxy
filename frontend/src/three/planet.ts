@@ -11,11 +11,6 @@ import {
 } from './planetAppearance'
 import { type FocusEmissionProfile } from './focusEmission'
 import { computePlanetOuterRadius } from './planetSizing'
-import {
-  remapFocusEmissionIntensity,
-  type FocusEmissionRuntimeTuning,
-  validateFocusEmissionRuntimeTuning,
-} from './focusEmissionTuning'
 import { PLANET_MAX_BANDS, PLANET_VISUAL_DEFAULTS } from './planetVisualDefaults'
 import perlinFragmentShader from './shaders/perlin.frag.glsl'
 import perlinVertexShader from './shaders/perlin.vert.glsl'
@@ -124,6 +119,10 @@ export interface SelectionPlanetHandle {
   material: THREE.ShaderMaterial
   lastRadius: number
   lastAppearance: PlanetAppearance | null
+  /**
+   * Movie-dependent geometry/bands/noise only. Production L/C/emission/lighting/Bloom
+   * must enter through the canonical Planet visual-state render seam.
+   */
   setFromMovie: (
     movie: Movie,
     palette: Meta['genre_palette'],
@@ -131,37 +130,38 @@ export interface SelectionPlanetHandle {
   ) => void
   /** Reapplies deterministic CPU noise + quantile thresholds after noise uniform changes. */
   syncCpuNoiseFromUniforms: () => void
-  /** Runtime-only focus emission remap, reapplied to the current and later selected movies. */
-  setFocusEmissionTuning: (tuning: FocusEmissionRuntimeTuning) => void
-  /** Runtime focus L/key overrides, reapplied to the current and later selected movies. */
-  setFocusVisualTuning: (tuning: { lightness: number; keyLightIntensity: number }) => void
   setOpacity: (alpha: number) => void
   dispose: () => void
 }
 
-function assertFocusUniformValues(
-  lightness: number,
-  chroma: number,
-  emissionIntensity: number,
-  keyLightIntensity: number,
+function assertAppearanceInvariants(
+  appearance: PlanetAppearance,
   emissionProfile: FocusEmissionProfile,
 ): void {
   const { focus, lighting } = PLANET_VISUAL_DEFAULTS
-  const values = { lightness, chroma, emissionIntensity, keyLightIntensity }
+  const values = {
+    lightness: appearance.lightness,
+    chroma: appearance.chroma,
+    emissionIntensity: appearance.emissionIntensity,
+    keyLightIntensity: appearance.keyLightIntensity,
+  }
   for (const [name, value] of Object.entries(values)) {
     if (!Number.isFinite(value)) {
-      throw new Error(`[Planet] ${name} uniform must be finite; received ${value}`)
+      throw new Error(`[Planet] ${name} must be finite; received ${value}`)
     }
   }
-  if (lightness !== focus.lightness || chroma !== focus.chroma) {
+  if (appearance.lightness !== focus.lightness || appearance.chroma !== focus.chroma) {
     throw new Error('[Planet] Focus lightness and chroma must match shared visual defaults')
   }
-  if (emissionIntensity < emissionProfile.intensityMin || emissionIntensity > emissionProfile.intensityMax) {
+  if (
+    appearance.emissionIntensity < emissionProfile.intensityMin
+    || appearance.emissionIntensity > emissionProfile.intensityMax
+  ) {
     throw new Error(
-      `[Planet] emission intensity must be within configured endpoints; received ${emissionIntensity}`,
+      `[Planet] emission intensity must be within configured endpoints; received ${appearance.emissionIntensity}`,
     )
   }
-  if (keyLightIntensity !== lighting.keyLightIntensity) {
+  if (appearance.keyLightIntensity !== lighting.keyLightIntensity) {
     throw new Error('[Planet] key light intensity must match shared visual defaults')
   }
 }
@@ -236,11 +236,6 @@ export function createSelectionPlanet(
   mesh.renderOrder = 1
 
   let lastMovie: Movie | null = null
-  let emissionTuning: FocusEmissionRuntimeTuning = validateFocusEmissionRuntimeTuning(defaults.focus.emissionTuning)
-  let focusVisualTuning: { lightness: number; keyLightIntensity: number } = {
-    lightness: defaults.focus.lightness,
-    keyLightIntensity: defaults.lighting.keyLightIntensity,
-  }
 
   const scratchNoise = new Float32Array(vCount)
   const sortedScratch = new Float32Array(vCount)
@@ -329,8 +324,6 @@ export function createSelectionPlanet(
     lastAppearance: null,
     setFromMovie: () => { },
     syncCpuNoiseFromUniforms: () => { },
-    setFocusEmissionTuning: () => { },
-    setFocusVisualTuning: () => { },
     setOpacity: () => { },
     dispose: () => { },
   }
@@ -349,7 +342,7 @@ export function createSelectionPlanet(
       cutCount,
       baseQuaternion,
     } = appearance
-    assertFocusUniformValues(lightness, chroma, emissionIntensity, keyLightIntensity, emissionProfile)
+    assertAppearanceInvariants(appearance, emissionProfile)
     handle.lastAppearance = appearance
     handle.lastRadius = computePlanetOuterRadius(worldRadius, bandCount, stepH)
     const radiusMul = handle.lastRadius / worldRadius
@@ -365,14 +358,7 @@ export function createSelectionPlanet(
       hueArr[i] = i < hues.length ? hues[i]! : padHue
     }
 
-    u.uPerlinL.value = focusVisualTuning.lightness
-    u.uPerlinChroma.value = chroma
-    u.uEmissionIntensity.value = remapFocusEmissionIntensity(
-      emissionIntensity,
-      appearance.emissionProfile,
-      emissionTuning,
-    )
-    u.uKeyLightIntensity.value = focusVisualTuning.keyLightIntensity
+    // Production L/C/emission/key are owned by planetVisualState.apply — only geometry here.
     u.uBandCount.value = bandCount
     u.uCutCount.value = cutCount
 
@@ -395,27 +381,6 @@ export function createSelectionPlanet(
     recomputeNoiseAndThresholds(lastMovie.id)
   }
 
-  const setFocusEmissionTuning = (next: FocusEmissionRuntimeTuning): void => {
-    emissionTuning = validateFocusEmissionRuntimeTuning(next)
-    if (handle.lastAppearance === null) return
-    material.uniforms.uEmissionIntensity.value = remapFocusEmissionIntensity(
-      handle.lastAppearance.emissionIntensity,
-      handle.lastAppearance.emissionProfile,
-      emissionTuning,
-    )
-  }
-
-  const setFocusVisualTuning = (next: { lightness: number; keyLightIntensity: number }): void => {
-    const lightness = next.lightness
-    const keyLightIntensity = next.keyLightIntensity
-    if (!Number.isFinite(lightness) || !Number.isFinite(keyLightIntensity)) {
-      throw new Error('[Planet] runtime focus lightness and key light intensity must be finite')
-    }
-    focusVisualTuning = { lightness, keyLightIntensity }
-    material.uniforms.uPerlinL.value = lightness
-    material.uniforms.uKeyLightIntensity.value = keyLightIntensity
-  }
-
   const setOpacity = (alpha: number) => {
     const a = THREE.MathUtils.clamp(alpha, 0, 1)
     material.uniforms.uAlpha.value = a > 0.001 ? 1 : 0
@@ -429,8 +394,6 @@ export function createSelectionPlanet(
 
   handle.setFromMovie = setFromMovie
   handle.syncCpuNoiseFromUniforms = syncCpuNoiseFromUniforms
-  handle.setFocusEmissionTuning = setFocusEmissionTuning
-  handle.setFocusVisualTuning = setFocusVisualTuning
   handle.setOpacity = setOpacity
   handle.dispose = dispose
   return handle

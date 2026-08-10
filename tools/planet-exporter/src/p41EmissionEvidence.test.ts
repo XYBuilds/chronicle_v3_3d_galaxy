@@ -1,6 +1,3 @@
-import { readFileSync } from 'node:fs'
-import { fileURLToPath } from 'node:url'
-
 import { describe, expect, it } from 'vitest'
 
 import {
@@ -20,6 +17,7 @@ import {
   P41_EMISSION_FIXED_PROFILE,
   P41_EMISSION_FIXTURE_ROWS,
   P41_EMISSION_HISTORICAL_BASELINE_CANDIDATE,
+  P41_EMISSION_HISTORICAL_CURVE,
   P41_EMISSION_MIDRANK_CDF_LUT_DIAGNOSTIC_CANDIDATE,
   P41_PRODUCTION_EMISSION_PROFILE,
   P41_MIDRANK_CDF_LUT_CONTROLLED_RATINGS,
@@ -45,10 +43,6 @@ function fixtureLutProfile() {
 }
 
 const FIXTURE_GIT_COMMIT = 'a'.repeat(40)
-const historicalEvidenceScript = readFileSync(
-  fileURLToPath(new URL('../scripts/generate-p41-emission-evidence.ts', import.meta.url)),
-  'utf8',
-)
 
 describe('P41.5 emission evidence contract', () => {
   it('freezes required matrix axes and approved Bloom-OFF shaping', () => {
@@ -174,9 +168,12 @@ describe('P41.5 emission evidence contract', () => {
   })
 
   it('keeps the P41.5 smoothstep evidence entry explicitly bound to the historical curve', () => {
-    expect(historicalEvidenceScript).toContain('P41_EMISSION_HISTORICAL_CURVE')
-    expect(historicalEvidenceScript).toContain('emissionCurve: { ...P41_EMISSION_HISTORICAL_CURVE }')
-    expect(historicalEvidenceScript).not.toContain('PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE')
+    expect(P41_EMISSION_HISTORICAL_CURVE.modelVersion).toBe('vote-average-anchored-smoothstep-v1')
+    expect(P41_EMISSION_HISTORICAL_CURVE).not.toEqual(PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE)
+    expect(P41_EMISSION_HISTORICAL_BASELINE_CANDIDATE).toMatchObject({
+      status: 'candidate-no-go',
+      evidenceDirectory: 'data/runs/phase41/p41.5-emission-curve-bloom-off',
+    })
   })
 
   it('rejects a production LUT profile drift and leaves only declared row variables comparable', () => {

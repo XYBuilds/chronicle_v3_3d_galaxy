@@ -11,17 +11,31 @@ import {
 
 const emission = {
   curve: PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE,
-  emissionProvenance: LEGACY_FOCUS_EMISSION_FALLBACK_PROVENANCE,
-  emissionSource: 'legacy-fallback' as const,
-}
-
-const activeEmission = {
-  ...emission,
   emissionProvenance: {
     ...LEGACY_FOCUS_EMISSION_FALLBACK_PROVENANCE,
     profile_id: 'rating-emission-2026-08-exporter-test',
   },
   emissionSource: 'active' as const,
+}
+
+const activeEmission = emission
+
+const legacyEmission = {
+  curve: PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE,
+  emissionProvenance: LEGACY_FOCUS_EMISSION_FALLBACK_PROVENANCE,
+  emissionSource: 'legacy-fallback' as const,
+  legacyCompatibility: {
+    proof: 'p39.11-frozen-profile-fixture' as const,
+    evidenceIdentity: 'visual-config-boundary-test',
+    historicalVisualHash: '{"diagnostic":"visual-config-boundary-test"}',
+  },
+  emissionDerivation: {
+    kind: 'legacy-power' as const,
+    modelVersion: 'vote-average-power-clamped-v1' as const,
+    exponent: 3,
+    intensityMin: 0.06,
+    intensityMax: 0.6,
+  },
 }
 
 function sha256(input: string): string {
@@ -35,7 +49,7 @@ describe('canonical resolved planet visual configuration', () => {
 
     expect(first.hashInput).toBe(second.hashInput)
     expect(sha256(first.hashInput)).toBe(sha256(second.hashInput))
-    expect(first.payload.emission_profile).toEqual({ ...LEGACY_FOCUS_EMISSION_FALLBACK_PROVENANCE, source: 'legacy-fallback' })
+    expect(first.payload.emission_profile).toEqual({ ...emission.emissionProvenance, source: 'active' })
     expect(first.payload.visual).toMatchObject({
       focus: { emission: PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE, bloom: { enabled: true } },
       lighting: { keyLightIntensity: 10, flatShadingMix: 1 },
@@ -75,11 +89,12 @@ describe('canonical resolved planet visual configuration', () => {
   })
 
   it('rejects legacy and diagnostic states from the production boundary', () => {
-    const legacy = resolvePlanetVisualConfig({ ...emission, bloomEnabled: false })
+    const legacy = resolvePlanetVisualConfig({ ...legacyEmission, bloomEnabled: false })
     const diagnostic = resolvePlanetVisualConfig({
       ...activeEmission,
       emissionSource: 'diagnostic-override',
       overrideProvenance: 'phase41-diagnostic-override',
+      diagnosticMarker: 'phase41-visual-diagnostic-v1',
       bloomEnabled: false,
     })
 

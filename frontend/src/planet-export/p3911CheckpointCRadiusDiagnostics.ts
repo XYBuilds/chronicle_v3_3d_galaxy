@@ -1,7 +1,11 @@
 import { PERLIN_BLOOM_COMPOSITION, PERLIN_BLOOM_DEFAULTS, type PerlinBloomParams } from '@/three/perlinBloomContract'
-import { PLANET_VISUAL_DEFAULTS } from '@/three/planetVisualDefaults'
+import { PLANET_VISUAL_DEFAULTS, p3911LegacyFrozenProfileVisualConfigHashInput } from '@/three/planetVisualDefaults'
 import { parsePlanetExportRequest, type PlanetExportRequest } from './request'
 import { renderP3911DiagnosticPlanetImage, type P3911LegacyPlanetRenderOptions, type PlanetRenderResult } from './renderPlanetImage'
+import {
+  P3911_LEGACY_FROZEN_PROFILE_FIXTURE,
+  resolveP39LegacyPlanetVisualState,
+} from './p39LegacyVisualState'
 
 export const P3911_CHECKPOINT_C_RADIUS = {
   checkpoint: 'C2-radius',
@@ -74,9 +78,26 @@ export function p3911CheckpointCRadiusOffReferenceVisualConfigInput(productionVi
   return JSON.stringify({ diagnostic: 'p39.11-checkpoint-c2-bloom-off-reference-v1', productionVisualConfig, bloom: { enabled: false, composition: PERLIN_BLOOM_COMPOSITION } })
 }
 
-/** Uses the shared P39.10 pure-delta renderer; this wrapper only fixes the C2 radius input. */
+/** Resolves the C2 candidate as explicit legacy state before canonical application/readback. */
 export function renderP3911CheckpointCRadiusPlanetImage(options: P3911LegacyPlanetRenderOptions & { diagnosticsBloomRadius: number }): PlanetRenderResult {
   const params = p3911CheckpointCRadiusBloomParams(options.diagnosticsBloomRadius)
   if (!options.bloom || options.renderMode !== 'shader') throw new Error('[P39.11 diagnostics] Checkpoint C2 requires Bloom ON shader rendering')
-  return renderP3911DiagnosticPlanetImage({ ...options, bloom: true, bloomParamsOverride: params, legacyProfileCompatibility: 'p39.11-frozen-profile-fixture' })
+  const visualConfig = resolveP39LegacyPlanetVisualState({
+    evidenceIdentity: 'p39.11-checkpoint-c2-radius-pure-delta-v1',
+    historicalVisualHash: p3911CheckpointCRadiusVisualConfigInput(
+      p3911LegacyFrozenProfileVisualConfigHashInput(true),
+      options.diagnosticsBloomRadius,
+    ),
+    historicalMetadata: {
+      checkpoint: P3911_CHECKPOINT_C_RADIUS.checkpoint,
+      bloomRadius: options.diagnosticsBloomRadius,
+    },
+    bloom: params,
+  })
+  return renderP3911DiagnosticPlanetImage({
+    ...options,
+    visualConfig,
+    bloomParamsOverride: params,
+    legacyProfileCompatibility: P3911_LEGACY_FROZEN_PROFILE_FIXTURE,
+  })
 }

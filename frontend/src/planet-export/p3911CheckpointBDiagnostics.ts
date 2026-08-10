@@ -1,17 +1,15 @@
-import * as THREE from 'three'
-
-import { PLANET_VISUAL_DEFAULTS } from '@/three/planetVisualDefaults'
-import { PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE } from '@/three/productionFocusEmissionProfile'
+import { PLANET_VISUAL_DEFAULTS, p3911LegacyFrozenProfileVisualConfigHashInput } from '@/three/planetVisualDefaults'
 import {
-  capturePlanetRenderDiagnostics,
-  positionExportCamera,
-  prepareExportPlanet,
-  type PlanetRenderDiagnostics,
+  renderP3911DiagnosticPlanetImage,
   type P3911LegacyPlanetRenderOptions,
   type PlanetRenderResult,
 } from './renderPlanetImage'
+import {
+  P3911_LEGACY_FROZEN_PROFILE_FIXTURE,
+  p39LegacyBloomOff,
+  resolveP39LegacyPlanetVisualState,
+} from './p39LegacyVisualState'
 import { parsePlanetExportRequest, type PlanetExportRequest } from './request'
-import { computeOrthographicHalfExtent } from './sizing'
 
 export const P3911_CHECKPOINT_B = {
   checkpoint: 'B',
@@ -98,45 +96,36 @@ export function p3911CheckpointBVisualConfigInput(productionVisualConfig: string
 
 export type P3911CheckpointBPlanetRenderOptions = P3911LegacyPlanetRenderOptions & { diagnosticsEmissionExponent: number }
 
-function checkpointBDiagnostics(
-  captured: PlanetRenderDiagnostics,
-  emissionExponent: number,
-  emission: number,
-): PlanetRenderDiagnostics {
-  return {
-    ...captured,
-    emission,
-    emission_curve: {
-      model_version: P3911_CHECKPOINT_B.diagnosticModelVersion,
-      exponent: emissionExponent,
-      intensity_min: P3911_CHECKPOINT_B.emission.intensityMin,
-      intensity_max: P3911_CHECKPOINT_B.emission.intensityMax,
-    },
-  }
-}
-
-/** Dedicated evidence renderer; it changes only offline Key/emission uniforms after shared construction. */
+/** Dedicated evidence adapter; canonical resolution owns historical power emission and renderer readback. */
 export function renderP3911CheckpointBPlanetImage(options: P3911CheckpointBPlanetRenderOptions): PlanetRenderResult {
-  const { diagnosticsEmissionExponent, canvas, movie, meta, globalRadius, resolution, padding, bloom, renderMode, sizeRoot } = options
+  const { diagnosticsEmissionExponent, bloom, renderMode } = options
   if (bloom || renderMode !== 'shader') throw new Error('[P39.11 diagnostics] Checkpoint B requires Bloom OFF shader rendering')
-  const emission = p3911CheckpointBEmissionForRating(movie.vote_average, diagnosticsEmissionExponent)
-  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, preserveDrawingBuffer: true })
-  renderer.setPixelRatio(1)
-  renderer.setSize(resolution, resolution, false)
-  renderer.outputColorSpace = THREE.SRGBColorSpace
-  renderer.setClearColor(0x000000, 0)
-  renderer.autoClear = true
-  const scene = new THREE.Scene()
-  const half = computeOrthographicHalfExtent(globalRadius, padding)
-  const camera = new THREE.OrthographicCamera(-half, half, half, -half, 0.01, half * 4)
-  positionExportCamera(camera, half)
-  const planet = prepareExportPlanet(movie, meta, renderMode, sizeRoot, PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE)
-  planet.material.uniforms.uKeyLightIntensity.value = P3911_CHECKPOINT_B.keyLightIntensity
-  planet.material.uniforms.uEmissionIntensity.value = emission
-  const captured = capturePlanetRenderDiagnostics(movie, planet, camera, options)
-  const diagnostics = checkpointBDiagnostics(captured, diagnosticsEmissionExponent, emission)
-  scene.add(planet.mesh)
-  renderer.render(scene, camera)
-  console.assert(planet.mesh.visible, '[P39.11 diagnostics] planet must be visible before rendering')
-  return { renderer, visible: planet.mesh.visible, renderMode, diagnostics }
+  const historicalVisualHash = p3911CheckpointBVisualConfigInput(
+    p3911LegacyFrozenProfileVisualConfigHashInput(false),
+    diagnosticsEmissionExponent,
+  )
+  const visualConfig = resolveP39LegacyPlanetVisualState({
+    evidenceIdentity: 'p39.11-checkpoint-b-fixed-key-emission-exponent-v1',
+    historicalVisualHash,
+    historicalMetadata: {
+      checkpoint: P3911_CHECKPOINT_B.checkpoint,
+      keyLightIntensity: P3911_CHECKPOINT_B.keyLightIntensity,
+      emissionExponent: diagnosticsEmissionExponent,
+    },
+    bloom: p39LegacyBloomOff(),
+    keyLightIntensity: P3911_CHECKPOINT_B.keyLightIntensity,
+    emissionDerivation: {
+      kind: 'legacy-power',
+      modelVersion: P3911_CHECKPOINT_B.diagnosticModelVersion,
+      exponent: diagnosticsEmissionExponent,
+      intensityMin: P3911_CHECKPOINT_B.emission.intensityMin,
+      intensityMax: P3911_CHECKPOINT_B.emission.intensityMax,
+    },
+  })
+  return renderP3911DiagnosticPlanetImage({
+    ...options,
+    visualConfig,
+    bloomParamsOverride: visualConfig.bloom,
+    legacyProfileCompatibility: P3911_LEGACY_FROZEN_PROFILE_FIXTURE,
+  })
 }

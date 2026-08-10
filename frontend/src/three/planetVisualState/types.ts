@@ -5,6 +5,24 @@ import type { PerlinBloomParams } from '../perlinBloomContract.js'
 
 export type PlanetVisualProfileSource = 'active' | 'legacy-fallback' | 'diagnostic-override'
 export type PlanetVisualOverrideProvenance = 'none' | 'phase41-diagnostic-override'
+export const PHASE41_DIAGNOSTIC_MARKER = 'phase41-visual-diagnostic-v1' as const
+export const P39_LEGACY_COMPATIBILITY_PROOF = 'p39.11-frozen-profile-fixture' as const
+export type PlanetVisualDiagnosticMarker = typeof PHASE41_DIAGNOSTIC_MARKER
+
+export type PlanetVisualLegacyCompatibility = Readonly<{
+  proof: typeof P39_LEGACY_COMPATIBILITY_PROOF
+  evidenceIdentity: string
+  historicalVisualHash: string
+  historicalMetadata?: Readonly<Record<string, string | number | boolean>>
+}>
+
+export type PlanetVisualEmissionDerivation = Readonly<{
+  kind: 'legacy-power'
+  modelVersion: 'vote-average-power-clamped-v1' | 'p39.11-checkpoint-b-emission-exponent-v1'
+  exponent: number
+  intensityMin: number
+  intensityMax: number
+}>
 
 export type PlanetVisualStateInput = {
   curve: FocusEmissionProfile
@@ -41,6 +59,9 @@ export type PlanetVisualStateInput = {
     depthTest: boolean
   }
   overrideProvenance?: PlanetVisualOverrideProvenance
+  diagnosticMarker?: PlanetVisualDiagnosticMarker
+  legacyCompatibility?: PlanetVisualLegacyCompatibility
+  emissionDerivation?: PlanetVisualEmissionDerivation
 }
 
 export type PlanetVisualStatePayload = Readonly<{
@@ -83,6 +104,9 @@ export type PlanetVisualStatePayload = Readonly<{
   }>
   emission_profile: Readonly<FocusEmissionProfileProvenance & { source: PlanetVisualProfileSource }>
   override_provenance: PlanetVisualOverrideProvenance
+  diagnostic_marker?: PlanetVisualDiagnosticMarker
+  legacy_compatibility?: PlanetVisualLegacyCompatibility
+  emission_derivation?: PlanetVisualEmissionDerivation
 }>
 
 export type PlanetVisualState = Readonly<{
@@ -106,6 +130,9 @@ export type PlanetVisualState = Readonly<{
   flatShadingMix: number
   bloom: Readonly<PerlinBloomParams>
   overrideProvenance: PlanetVisualOverrideProvenance
+  diagnosticMarker?: PlanetVisualDiagnosticMarker
+  legacyCompatibility?: PlanetVisualLegacyCompatibility
+  emissionDerivation?: PlanetVisualEmissionDerivation
 }>
 
 export type PlanetVisualMovieState = Readonly<{
@@ -141,6 +168,10 @@ export type PlanetVisualAppliedSnapshot = Readonly<{
   canonicalHashInput: string
   profileProvenance: FocusEmissionProfileProvenance
   profileSource: PlanetVisualProfileSource
+  overrideProvenance: PlanetVisualOverrideProvenance
+  diagnosticMarker?: PlanetVisualDiagnosticMarker
+  legacyCompatibility?: PlanetVisualLegacyCompatibility
+  emissionDerivation?: PlanetVisualEmissionDerivation
   movieId: number
   worldRadius: number
   outerRadius: number

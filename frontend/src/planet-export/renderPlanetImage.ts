@@ -1,15 +1,19 @@
+import {
+  P3911_LEGACY_FROZEN_PROFILE_FIXTURE,
+  requireP39CanonicalVisualHash,
+} from './p39LegacyVisualState'
 import { productionPlanetBloomParams } from '@/three/planetVisualDefaults'
 import {
   createPlanetVisualRendererHandle,
   renderPlanetVisualState,
   type PlanetVisualAppliedSnapshot,
   type PlanetVisualBloomHandle,
+  type PlanetVisualEmissionDerivation,
   type PlanetVisualRendererHandle,
   type PlanetVisualRenderResult,
 } from '@/three/planetVisualState'
 import type { ResolvedPlanetVisualConfig } from './visualConfig'
 import { requireProductionPlanetVisualConfig } from './visualConfig'
-import { PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE } from '@/three/productionFocusEmissionProfile'
 import * as THREE from 'three'
 import {
   PERLIN_BLOOM_COMPOSITION,
@@ -19,14 +23,13 @@ import {
   validatePerlinBloomParams,
   withCameraLayer,
 } from '@/three/perlinBloomContract'
-import { focusEmissionIntensityFromProfile, type RatingMidrankCdfLutProfile } from '@/three/focusEmission'
+import type { RatingMidrankCdfLutProfile } from '@/three/focusEmission'
 import type { FocusEmissionProfileProvenance } from '@/types/galaxy'
 import { createSelectionPlanet, type SelectionPlanetHandle } from '@/three/planet'
 import { planetNoiseSeed } from '@/three/planetAppearance'
 import {
   PHASE41_DIAGNOSTIC_MARKER,
   type Phase41EmissionCurve,
-  type Phase41RenderOverride,
 } from './phase41DiagnosticProfile'
 import { selectionPlanetRotationAxisForMovie } from '@/three/selectionPlanetRotation'
 import type { Meta, Movie } from '@/types/galaxy'
@@ -61,7 +64,6 @@ export type P3911LegacyPlanetRenderOptions = PlanetRenderBaseOptions & {
 export type Phase41DiagnosticPlanetRenderOptions = PlanetRenderBaseOptions & {
   visualConfig: ResolvedPlanetVisualConfig
   diagnostic_only: typeof PHASE41_DIAGNOSTIC_MARKER
-  diagnosticOverride: Phase41RenderOverride
   bloomParamsOverride: PerlinBloomParams
 }
 
@@ -112,6 +114,10 @@ export type PlanetRenderDiagnostics = {
   visual_config_hash_input?: string
   profile_provenance?: FocusEmissionProfileProvenance & { source: 'active' | 'legacy-fallback' | 'diagnostic-override' }
   renderer_snapshot?: PlanetVisualAppliedSnapshot
+  override_provenance?: PlanetVisualAppliedSnapshot['overrideProvenance']
+  diagnostic_marker?: PlanetVisualAppliedSnapshot['diagnosticMarker']
+  legacy_compatibility?: PlanetVisualAppliedSnapshot['legacyCompatibility']
+  emission_derivation?: PlanetVisualAppliedSnapshot['emissionDerivation']
   fixed_lightness: number
   fixed_chroma: number
   bloom: {
@@ -176,7 +182,18 @@ function quaternionTuple(quaternion: THREE.Quaternion, label: string): [number, 
   return [serializableNumber(quaternion.x, `${label}[0]`), serializableNumber(quaternion.y, `${label}[1]`), serializableNumber(quaternion.z, `${label}[2]`), serializableNumber(quaternion.w, `${label}[3]`)]
 }
 
-function diagnosticsEmissionCurve(curve: Phase41EmissionCurve): PlanetRenderDiagnostics['emission_curve'] {
+function diagnosticsEmissionCurve(
+  curve: Phase41EmissionCurve,
+  derivation?: PlanetVisualEmissionDerivation,
+): PlanetRenderDiagnostics['emission_curve'] {
+  if (derivation !== undefined) {
+    return {
+      model_version: derivation.modelVersion,
+      exponent: serializableNumber(derivation.exponent, 'legacy emission exponent'),
+      intensity_min: serializableNumber(derivation.intensityMin, 'legacy emission minimum'),
+      intensity_max: serializableNumber(derivation.intensityMax, 'legacy emission maximum'),
+    }
+  }
   if (curve.modelVersion === 'rating-midrank-cdf-lut-v1') {
     return {
       model_version: curve.modelVersion,
@@ -353,6 +370,7 @@ export function capturePlanetRenderDiagnostics(
     emission: serializableNumber(uniforms.uEmissionIntensity.value as number, 'emission'),
     emission_curve: diagnosticsEmissionCurve(
       options.emissionCurveOverride ?? resolvedVisualConfig?.curve ?? appearance.emissionCurve,
+      resolvedVisualConfig?.emissionDerivation,
     ),
     ...(resolvedVisualConfig === undefined ? {} : {
       visual_config_payload: resolvedVisualConfig.payload,
@@ -377,6 +395,18 @@ export function capturePlanetRenderDiagnostics(
           },
           renderer_snapshot: appliedSnapshot,
         }),
+    ...(resolvedVisualConfig === undefined ? {} : {
+      override_provenance: resolvedVisualConfig.overrideProvenance,
+      ...(resolvedVisualConfig.diagnosticMarker === undefined
+        ? {}
+        : { diagnostic_marker: resolvedVisualConfig.diagnosticMarker }),
+      ...(resolvedVisualConfig.legacyCompatibility === undefined
+        ? {}
+        : { legacy_compatibility: resolvedVisualConfig.legacyCompatibility }),
+      ...(resolvedVisualConfig.emissionDerivation === undefined
+        ? {}
+        : { emission_derivation: resolvedVisualConfig.emissionDerivation }),
+    }),
     fixed_lightness: serializableNumber(uniforms.uPerlinL.value as number, 'lightness'),
     fixed_chroma: serializableNumber(uniforms.uPerlinChroma.value as number, 'chroma'),
     bloom: {
@@ -461,23 +491,22 @@ function createExportBloomHandle(): PlanetVisualBloomHandle {
   }
 }
 
-/** Applies the complete production state before selecting shader or basic validation output. */
-export function prepareProductionExportPlanet(
+/** Applies any resolved canonical visual state before selecting shader or basic validation output. */
+function prepareResolvedExportPlanet(
   movie: Movie,
   meta: Meta,
   renderMode: PlanetExportRenderMode,
   sizeRoot: 2 | 3 | 4,
   visualConfig: ResolvedPlanetVisualConfig,
 ): PreparedProductionExportPlanet {
-  const canonicalConfig = requireProductionPlanetVisualConfig(visualConfig)
-  const planet = createSelectionPlanet(canonicalConfig.curve)
+  const planet = createSelectionPlanet(visualConfig.curve)
   const bloomHandle = createExportBloomHandle()
   const rendererHandle = createPlanetVisualRendererHandle(planet, bloomHandle)
   const worldRadius = computeExportWorldRadius(movie, sizeRoot)
   const centeredMovie = { ...movie, x: 0, y: 0, z: 0 }
   try {
     const visualState = renderPlanetVisualState(
-      canonicalConfig,
+      visualConfig,
       { movie: centeredMovie, palette: meta.genre_palette, worldRadius },
       rendererHandle,
     )
@@ -490,6 +519,23 @@ export function prepareProductionExportPlanet(
     planet.dispose()
     throw error
   }
+}
+
+/** Applies the complete production state after enforcing the active-profile boundary. */
+export function prepareProductionExportPlanet(
+  movie: Movie,
+  meta: Meta,
+  renderMode: PlanetExportRenderMode,
+  sizeRoot: 2 | 3 | 4,
+  visualConfig: ResolvedPlanetVisualConfig,
+): PreparedProductionExportPlanet {
+  return prepareResolvedExportPlanet(
+    movie,
+    meta,
+    renderMode,
+    sizeRoot,
+    requireProductionPlanetVisualConfig(visualConfig),
+  )
 }
 
 function renderAlphaPreservingBloom(
@@ -522,18 +568,8 @@ export function positionExportCamera(camera: THREE.OrthographicCamera, halfExten
   camera.updateMatrixWorld(true)
 }
 
-function applyResolvedVisualConfig(planet: SelectionPlanetHandle, movie: Movie, config: Phase41RenderOverride): void {
-  planet.material.uniforms.uEmissionIntensity.value = focusEmissionIntensityFromProfile(movie.vote_average, config.curve)
-  planet.material.uniforms.uPerlinL.value = config.lightness
-  planet.material.uniforms.uPerlinChroma.value = config.chroma
-  planet.material.uniforms.uKeyLightIntensity.value = config.keyLightIntensity
-  planet.material.uniforms.uFlatShadingMix.value = config.flatShadingMix
-  ;(planet.material.uniforms.uLightDir.value as THREE.Vector3).set(...config.direction).normalize()
-}
-
 function renderPlanetImageInternal(
   options: OfflineDiagnosticPlanetRenderOptions,
-  diagnosticOverride?: Phase41RenderOverride,
   production = false,
 ): PlanetRenderResult {
   const { canvas, movie, meta, globalRadius, resolution, padding, bloom, renderMode, sizeRoot, bloomParamsOverride, visualConfig } = options
@@ -552,31 +588,24 @@ function renderPlanetImageInternal(
 
   let planet: SelectionPlanetHandle
   let appliedVisualState: PlanetVisualRenderResult | undefined
-  if (production) {
-    if (visualConfig === undefined) {
-      throw new Error('[PlanetExport] canonical resolved visual config is required at the rendering boundary')
-    }
-    const prepared = prepareProductionExportPlanet(movie, meta, renderMode, sizeRoot, visualConfig)
+  if (visualConfig !== undefined) {
+    const prepared = production
+      ? prepareProductionExportPlanet(movie, meta, renderMode, sizeRoot, visualConfig)
+      : prepareResolvedExportPlanet(movie, meta, renderMode, sizeRoot, visualConfig)
     planet = prepared.planet
     appliedVisualState = prepared.visualState
     bloomParams = validatePerlinBloomParams(prepared.bloomHandle.params)
   } else {
-    const emissionCurve = visualConfig?.curve ?? options.emissionProfile
+    const emissionCurve = options.emissionProfile
     if (emissionCurve === undefined || emissionCurve.modelVersion !== 'rating-midrank-cdf-lut-v1') {
       throw new Error('[PlanetExport] a rating-midrank active emission profile is required at the rendering boundary')
     }
     planet = prepareExportPlanet(movie, meta, renderMode, sizeRoot, emissionCurve)
-    const appliedConfig = visualConfig ?? diagnosticOverride
-    if (appliedConfig !== undefined) applyResolvedVisualConfig(planet, movie, appliedConfig)
   }
   const diagnostics = capturePlanetRenderDiagnostics(movie, planet, camera, {
     ...options,
     bloomParamsOverride: bloomParams,
     ...(appliedVisualState === undefined ? {} : { appliedVisualState }),
-    ...(production || visualConfig === undefined ? {} : { emissionCurveOverride: visualConfig.curve }),
-    ...(!production && visualConfig === undefined && diagnosticOverride !== undefined
-      ? { emissionCurveOverride: diagnosticOverride.curve }
-      : {}),
   })
   scene.add(planet.mesh)
   if (bloom) {
@@ -594,25 +623,22 @@ export function renderPlanetImage(options: PlanetRenderOptions): PlanetRenderRes
   if (visualConfig.bloom.enabled !== options.bloom) {
     throw new Error('[PlanetExport] canonical Bloom state must match the production render request')
   }
-  return renderPlanetImageInternal({ ...options, visualConfig }, undefined, true)
+  return renderPlanetImageInternal({ ...options, visualConfig }, true)
 }
 
-export const P3911_LEGACY_FROZEN_PROFILE_FIXTURE = 'p39.11-frozen-profile-fixture' as const
-
 type P3911LegacyFrozenProfileRenderOptions = OfflineDiagnosticPlanetRenderOptions & {
+  visualConfig: ResolvedPlanetVisualConfig
   /** Required proof that this call is historical/offline evidence, never a production export. */
   legacyProfileCompatibility: typeof P3911_LEGACY_FROZEN_PROFILE_FIXTURE
 }
 
-/** Explicit historical P39 fixture boundary: it may opt into the frozen Phase 41 LUT. */
+/** Explicit historical P39 boundary; the adapter must supply a proven canonical legacy state. */
 export function renderP3911DiagnosticPlanetImage(options: P3911LegacyFrozenProfileRenderOptions): PlanetRenderResult {
   if (options.legacyProfileCompatibility !== P3911_LEGACY_FROZEN_PROFILE_FIXTURE) {
     throw new Error('[P39.11 diagnostics] legacy frozen profile compatibility marker is required')
   }
-  return renderPlanetImageInternal({
-    ...options,
-    emissionProfile: options.emissionProfile ?? PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE,
-  })
+  requireP39CanonicalVisualHash(options.visualConfig)
+  return renderPlanetImageInternal(options)
 }
 
 /** Explicit offline boundary for the Phase 41 profile only. */
@@ -623,5 +649,5 @@ export function renderPhase41DiagnosticPlanetImage(options: Phase41DiagnosticPla
   if (options.visualConfig === undefined) {
     throw new Error('[Phase41 diagnostic] canonical resolved visual config is required')
   }
-  return renderPlanetImageInternal(options, options.diagnosticOverride)
+  return renderPlanetImageInternal(options)
 }

@@ -3,7 +3,7 @@ import { chromium, type Browser, type BrowserContext, type Page } from 'playwrig
 import { createServer, type ViteDevServer } from 'vite'
 
 import { CliError, EXIT_CODES, type ExportArgs } from './args.js'
-import { parseVisualDiagnostics, type BrowserRender } from './browser.js'
+import { assertP39LegacyVisualConfig, parseVisualDiagnostics, type BrowserRender } from './browser.js'
 import { fileDataPlugin, pageDataUrl, type DataSource } from './data-source.js'
 
 export const P3911_CHECKPOINT_B_EXPONENTS = [3, 2.5, 2] as const
@@ -76,9 +76,15 @@ export async function renderP3911CheckpointBInBrowser(
     if (!Number.isSafeInteger(result.maxTextureSize) || result.maxTextureSize < args.resolution) throw new CliError(`MAX_TEXTURE_SIZE ${result.maxTextureSize} < resolution ${args.resolution}`, EXIT_CODES.render)
     const encoded = result.png.split(',')[1]
     if (!encoded || !result.visualDiagnostics) throw new CliError('P39.11 diagnostics page returned incomplete output', EXIT_CODES.render)
+    const visualDiagnostics = parseVisualDiagnostics(result.visualDiagnostics)
+    assertP39LegacyVisualConfig(
+      visualDiagnostics,
+      result.visualHash,
+      'p39.11-checkpoint-b-fixed-key-emission-exponent-v1',
+    )
     return {
       png: Buffer.from(encoded, 'base64'), dataVersion: result.dataVersion, webglRenderer: result.webglRenderer,
-      visualHash: result.visualHash, visualDiagnostics: parseVisualDiagnostics(result.visualDiagnostics), chromiumVersion: browser.version(),
+      visualHash: result.visualHash, visualDiagnostics, chromiumVersion: browser.version(),
     }
   } catch (error) {
     if (error instanceof CliError) throw error

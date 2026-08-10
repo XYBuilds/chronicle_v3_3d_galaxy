@@ -78,24 +78,40 @@ function resolveAppearance(
   }
 }
 
-function createApplication(
+function deriveEmission(
   state: PlanetVisualState,
-  context: PlanetVisualRenderContext,
-): PlanetVisualApplication {
-  const appearance = resolveAppearance(state, context)
-  const profileIntensity = focusEmissionIntensityFromProfile(context.movie.vote_average, state.curve)
+  rating: number,
+): PlanetVisualApplication['emission'] {
+  if (state.emissionDerivation !== undefined) {
+    const value = finite(rating, 'render context movie vote_average')
+    const clampedRating = Math.min(10, Math.max(0, value))
+    const derivation = state.emissionDerivation
+    const intensity = derivation.intensityMin
+      + Math.pow(clampedRating / 10, derivation.exponent)
+        * (derivation.intensityMax - derivation.intensityMin)
+    return Object.freeze({ profileIntensity: intensity, finalIntensity: intensity })
+  }
+  const profileIntensity = focusEmissionIntensityFromProfile(rating, state.curve)
   const finalIntensity = remapFocusEmissionIntensity(
     profileIntensity,
     state.curve,
     state.focus.emissionTuning,
   )
+  return Object.freeze({ profileIntensity, finalIntensity })
+}
+
+function createApplication(
+  state: PlanetVisualState,
+  context: PlanetVisualRenderContext,
+): PlanetVisualApplication {
+  const appearance = resolveAppearance(state, context)
   return Object.freeze({
     state,
     movie: context.movie,
     palette: context.palette,
     worldRadius: context.worldRadius,
     appearance: Object.freeze(appearance),
-    emission: Object.freeze({ profileIntensity, finalIntensity }),
+    emission: deriveEmission(state, context.movie.vote_average),
   })
 }
 
@@ -130,6 +146,16 @@ function readSnapshot(
     canonicalHashInput: application.state.hashInput,
     profileProvenance: application.state.emissionProvenance,
     profileSource: application.state.emissionSource,
+    overrideProvenance: application.state.overrideProvenance,
+    ...(application.state.diagnosticMarker === undefined
+      ? {}
+      : { diagnosticMarker: application.state.diagnosticMarker }),
+    ...(application.state.legacyCompatibility === undefined
+      ? {}
+      : { legacyCompatibility: application.state.legacyCompatibility }),
+    ...(application.state.emissionDerivation === undefined
+      ? {}
+      : { emissionDerivation: application.state.emissionDerivation }),
     movieId: application.movie.id,
     worldRadius: scale[0],
     outerRadius: positive(planet.lastRadius, 'renderer outer radius'),

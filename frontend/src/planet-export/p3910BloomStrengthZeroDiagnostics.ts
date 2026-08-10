@@ -3,6 +3,10 @@ import { p3911LegacyFrozenProfileVisualConfigHashInput } from '@/three/planetVis
 import { parsePlanetExportRequest, type PlanetExportRequest } from './request'
 import { renderP3911DiagnosticPlanetImage, type P3911LegacyPlanetRenderOptions, type PlanetRenderResult } from './renderPlanetImage'
 import { planetExportVisualConfigInput } from './visualConfig'
+import {
+  P3911_LEGACY_FROZEN_PROFILE_FIXTURE,
+  resolveP39LegacyPlanetVisualState,
+} from './p39LegacyVisualState'
 
 export const P3910_BLOOM_STRENGTH_ZERO = 0 as const
 export const P3910_BLOOM_STRENGTH_ZERO_PARAM = 'p3910BloomStrengthZero' as const
@@ -48,10 +52,27 @@ export function p3910ProductionVisualConfigInput(sizeRoot: P3911LegacyPlanetRend
   return planetExportVisualConfigInput(p3911LegacyFrozenProfileVisualConfigHashInput(), sizeRoot)
 }
 
-/** Dedicated historical renderer that changes only the P39.10 strength-zero evidence parameter. */
+/** Dedicated historical adapter; canonical resolution owns power emission and renderer readback. */
 export function renderP3910BloomStrengthZeroPlanetImage(options: P3911LegacyPlanetRenderOptions): PlanetRenderResult {
   if (!options.bloom || options.renderMode !== 'shader') {
     throw new Error('[P39.10 diagnostics] strength-zero proof requires Bloom ON shader rendering')
   }
-  return renderP3911DiagnosticPlanetImage({ ...options, bloom: true, bloomParamsOverride: p3910BloomStrengthZeroParams(), legacyProfileCompatibility: 'p39.11-frozen-profile-fixture' })
+  const bloom = p3910BloomStrengthZeroParams()
+  const visualConfig = resolveP39LegacyPlanetVisualState({
+    evidenceIdentity: 'p39.10-bloom-on-strength-zero-pure-delta-v1',
+    historicalVisualHash: p3910BloomStrengthZeroVisualConfigInput(
+      p3910ProductionVisualConfigInput(options.sizeRoot),
+    ),
+    historicalMetadata: {
+      checkpoint: 'P39.10',
+      bloomStrength: P3910_BLOOM_STRENGTH_ZERO,
+    },
+    bloom,
+  })
+  return renderP3911DiagnosticPlanetImage({
+    ...options,
+    visualConfig,
+    bloomParamsOverride: bloom,
+    legacyProfileCompatibility: P3911_LEGACY_FROZEN_PROFILE_FIXTURE,
+  })
 }

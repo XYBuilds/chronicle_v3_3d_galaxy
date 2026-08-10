@@ -80,6 +80,16 @@ function createInMemoryRenderer(): PlanetVisualRendererHandle {
         canonicalHashInput: application.state.hashInput,
         profileProvenance: application.state.emissionProvenance,
         profileSource: application.state.emissionSource,
+        overrideProvenance: application.state.overrideProvenance,
+        ...(application.state.diagnosticMarker === undefined
+          ? {}
+          : { diagnosticMarker: application.state.diagnosticMarker }),
+        ...(application.state.legacyCompatibility === undefined
+          ? {}
+          : { legacyCompatibility: application.state.legacyCompatibility }),
+        ...(application.state.emissionDerivation === undefined
+          ? {}
+          : { emissionDerivation: application.state.emissionDerivation }),
         movieId: application.movie.id,
         worldRadius: application.worldRadius,
         outerRadius: application.appearance.outerRadius,
@@ -316,11 +326,65 @@ describe('canonical Planet visual state', () => {
     const diagnostic = resolvePlanetVisualState({
       ...baseInput,
       emissionSource: 'diagnostic-override',
+      diagnosticMarker: 'phase41-visual-diagnostic-v1',
       overrideProvenance: 'phase41-diagnostic-override',
     })
 
     expect(diagnostic.overrideProvenance).toBe('phase41-diagnostic-override')
+    expect(diagnostic.diagnosticMarker).toBe('phase41-visual-diagnostic-v1')
+    expect(diagnostic.payload.diagnostic_marker).toBe('phase41-visual-diagnostic-v1')
     expect(diagnostic.hashInput).not.toBe(production.hashInput)
+  })
+
+  it('requires explicit adapter identity for diagnostic and legacy states', () => {
+    expect(() => resolvePlanetVisualState({
+      ...baseInput,
+      emissionSource: 'diagnostic-override',
+      overrideProvenance: 'phase41-diagnostic-override',
+    })).toThrow(/diagnostic marker/)
+    expect(() => resolvePlanetVisualState({
+      ...baseInput,
+      emissionProvenance: LEGACY_FOCUS_EMISSION_FALLBACK_PROVENANCE,
+      emissionSource: 'legacy-fallback',
+    })).toThrow(/legacy compatibility proof/)
+  })
+
+  it('applies a proven P39 legacy power profile through the canonical renderer seam', () => {
+    const legacy = resolvePlanetVisualState({
+      ...baseInput,
+      emissionProvenance: LEGACY_FOCUS_EMISSION_FALLBACK_PROVENANCE,
+      emissionSource: 'legacy-fallback',
+      bloomEnabled: false,
+      keyLightIntensity: 0.45,
+      legacyCompatibility: {
+        proof: 'p39.11-frozen-profile-fixture',
+        evidenceIdentity: 'p39.11-checkpoint-b',
+        historicalVisualHash: '{"diagnostic":"p39.11-checkpoint-b-fixed-key-emission-exponent-v1"}',
+      },
+      emissionDerivation: {
+        kind: 'legacy-power',
+        modelVersion: 'p39.11-checkpoint-b-emission-exponent-v1',
+        exponent: 3,
+        intensityMin: 0.06,
+        intensityMax: 0.6,
+      },
+    })
+    const result = renderPlanetVisualState(
+      legacy,
+      { movie, palette, worldRadius: 2 },
+      createInMemoryRenderer(),
+    )
+
+    expect(legacy.payload.legacy_compatibility).toEqual(legacy.legacyCompatibility)
+    expect(result.appliedSnapshot).toMatchObject({
+      profileSource: 'legacy-fallback',
+      overrideProvenance: 'none',
+      legacyCompatibility: legacy.legacyCompatibility,
+      emissionDerivation: legacy.emissionDerivation,
+      lighting: { keyLightIntensity: 0.45 },
+    })
+    expect(result.appliedSnapshot.profileEmission).toBeCloseTo(0.33648, 12)
+    expect(result.appliedSnapshot.emission).toBeCloseTo(0.33648, 12)
   })
 
   it('rejects inconsistent production provenance and non-explicit diagnostic state', () => {
@@ -331,6 +395,7 @@ describe('canonical Planet visual state', () => {
     expect(() => resolvePlanetVisualState({
       ...baseInput,
       emissionSource: 'diagnostic-override',
+      diagnosticMarker: 'phase41-visual-diagnostic-v1',
     })).toThrow(/explicit diagnostic override provenance/)
   })
 })

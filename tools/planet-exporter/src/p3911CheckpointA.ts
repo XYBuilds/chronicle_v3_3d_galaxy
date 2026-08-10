@@ -3,7 +3,7 @@ import { chromium, type Browser, type BrowserContext, type Page } from 'playwrig
 import { createServer, type ViteDevServer } from 'vite'
 
 import { CliError, EXIT_CODES, type ExportArgs } from './args.js'
-import { parseVisualDiagnostics, type BrowserRender } from './browser.js'
+import { assertP39LegacyVisualConfig, parseVisualDiagnostics, type BrowserRender } from './browser.js'
 import { fileDataPlugin, pageDataUrl, type DataSource } from './data-source.js'
 
 export function assertP3911CheckpointAKeyLightIntensity(value: number): void {
@@ -93,12 +93,18 @@ export async function renderP3911CheckpointAInBrowser(
     }
     const encoded = result.png.split(',')[1]
     if (!encoded || !result.visualDiagnostics) throw new CliError('P39.11 diagnostics page returned incomplete output', EXIT_CODES.render)
+    const visualDiagnostics = parseVisualDiagnostics(result.visualDiagnostics)
+    assertP39LegacyVisualConfig(
+      visualDiagnostics,
+      result.visualHash,
+      'p39.11-checkpoint-a-fixed-key-v1',
+    )
     return {
       png: Buffer.from(encoded, 'base64'),
       dataVersion: result.dataVersion,
       webglRenderer: result.webglRenderer,
       visualHash: result.visualHash,
-      visualDiagnostics: parseVisualDiagnostics(result.visualDiagnostics),
+      visualDiagnostics,
       chromiumVersion: browser.version(),
     }
   } catch (error) {

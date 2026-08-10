@@ -41,9 +41,31 @@ describe('P39.10 strength-zero Vite entry', () => {
     const source = await chooseDataSource(renderArgs, path.join(root, 'frontend/public/data/galaxy_assets_manifest.json'))
     const render = await renderP3910BloomStrengthZeroInBrowser(renderArgs, source, root)
     const bloom = render.visualDiagnostics.bloom as Record<string, unknown>
+    const payload = render.visualDiagnostics.visual_config_payload as Record<string, unknown>
+    const compatibility = render.visualDiagnostics.legacy_compatibility as Record<string, unknown>
+    const derivation = render.visualDiagnostics.emission_derivation as Record<string, unknown>
+    const snapshot = render.visualDiagnostics.renderer_snapshot as Record<string, unknown>
 
     expect(render.png.byteLength).toBeGreaterThan(0)
     expect(bloom).toMatchObject({ enabled: true, strength: 0, radius: 1, threshold: 0 })
-    expect(render.visualHash).toContain('p39.10-bloom-on-strength-zero-pure-delta-v1')
+    expect(compatibility).toMatchObject({
+      proof: 'p39.11-frozen-profile-fixture',
+      evidenceIdentity: 'p39.10-bloom-on-strength-zero-pure-delta-v1',
+    })
+    expect(compatibility.historicalVisualHash).toContain('p39.10-bloom-on-strength-zero-pure-delta-v1')
+    expect(payload.legacy_compatibility).toEqual(compatibility)
+    expect(derivation).toMatchObject({
+      kind: 'legacy-power',
+      modelVersion: 'vote-average-power-clamped-v1',
+      exponent: 2,
+    })
+    expect(snapshot).toMatchObject({
+      canonicalHashInput: render.visualHash,
+      profileSource: 'legacy-fallback',
+      legacyCompatibility: compatibility,
+      emissionDerivation: derivation,
+      emission: render.visualDiagnostics.emission,
+      bloom: { enabled: true, strength: 0, radius: 1, threshold: 0 },
+    })
   }, 120_000)
 })

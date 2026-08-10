@@ -4,6 +4,7 @@ import path from 'node:path'
 import { createServer, type ViteDevServer } from 'vite'
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright'
 import { stableFocusEmissionJson } from '../../../frontend/src/three/focusEmission.js'
+import { P39_LEGACY_COMPATIBILITY_PROOF } from '../../../frontend/src/three/planetVisualState/types.js'
 import { CliError, EXIT_CODES, type ExportArgs } from './args.js'
 import { fileDataPlugin, pageDataUrl, pageProfileUrl, type DataSource } from './data-source.js'
 
@@ -91,7 +92,10 @@ export function parseVisualDiagnostics(value: string): Record<string, unknown> {
     throw new CliError('visual diagnostics bloom parameters are invalid', EXIT_CODES.render)
   }
   const emissionCurve = diagnosticsObject(root.emission_curve, 'emission_curve')
-  if (emissionCurve.model_version === 'vote-average-power-clamped-v1') {
+  if (
+    emissionCurve.model_version === 'vote-average-power-clamped-v1'
+    || emissionCurve.model_version === 'p39.11-checkpoint-b-emission-exponent-v1'
+  ) {
     const exponent = diagnosticsNumber(emissionCurve.exponent, 'emission_curve.exponent')
     if (exponent <= 0) throw new CliError('visual diagnostics emission_curve.exponent must be > 0', EXIT_CODES.render)
   } else if (emissionCurve.model_version === 'vote-average-anchored-smoothstep-v1') {
@@ -190,11 +194,11 @@ function sameJson(left: unknown, right: unknown): boolean {
     === stableFocusEmissionJson(right as Parameters<typeof stableFocusEmissionJson>[0])
 }
 
-function assertProductionAppliedSnapshot(
+function assertAppliedSnapshot(
   root: Record<string, unknown>,
   hashInput: string,
   label: string,
-): void {
+): Record<string, unknown> {
   const snapshot = diagnosticsObject(root.renderer_snapshot, `${label} renderer_snapshot`)
   if (snapshot.canonicalHashInput !== hashInput) {
     throw new CliError(`visual diagnostics ${label} renderer snapshot hash disagrees with canonical payload`, EXIT_CODES.render)
@@ -234,7 +238,15 @@ function assertProductionAppliedSnapshot(
   ) {
     throw new CliError(`visual diagnostics ${label} renderer snapshot disagrees with applied visual state`, EXIT_CODES.render)
   }
+  return snapshot
+}
 
+function assertProductionAppliedSnapshot(
+  root: Record<string, unknown>,
+  hashInput: string,
+  label: string,
+): void {
+  const snapshot = assertAppliedSnapshot(root, hashInput, label)
   const payload = diagnosticsObject(root.visual_config_payload, `${label} visual_config_payload`)
   const payloadProvenance = diagnosticsObject(payload.emission_profile, `${label} visual_config_payload.emission_profile`)
   const provenance = diagnosticsObject(root.profile_provenance, `${label} profile_provenance`)
@@ -263,10 +275,93 @@ export function assertCanonicalVisualConfig(
   return hashInput
 }
 
+/** Validates one historical P39 adapter from canonical payload through renderer readback. */
+export function assertP39LegacyVisualConfig(
+  diagnostics: Record<string, unknown>,
+  pageVisualHash: unknown,
+  expectedEvidenceIdentity: string,
+): string {
+  const label = `P39 legacy ${expectedEvidenceIdentity}`
+  const hashInput = assertCanonicalVisualConfig(diagnostics, pageVisualHash, label)
+  const snapshot = assertAppliedSnapshot(diagnostics, hashInput, label)
+  const payload = diagnosticsObject(diagnostics.visual_config_payload, `${label} visual_config_payload`)
+  const payloadCompatibility = diagnosticsObject(payload.legacy_compatibility, `${label} visual_config_payload.legacy_compatibility`)
+  const compatibility = diagnosticsObject(diagnostics.legacy_compatibility, `${label} legacy_compatibility`)
+  const snapshotCompatibility = diagnosticsObject(snapshot.legacyCompatibility, `${label} renderer_snapshot.legacyCompatibility`)
+  let historicalVisualConfig: Record<string, unknown>
+  try {
+    historicalVisualConfig = diagnosticsObject(
+      JSON.parse(String(compatibility.historicalVisualHash)),
+      `${label} historicalVisualHash`,
+    )
+  } catch {
+    throw new CliError(`visual diagnostics ${label} historical visual hash is invalid`, EXIT_CODES.render)
+  }
+  if (
+    compatibility.proof !== P39_LEGACY_COMPATIBILITY_PROOF
+    || compatibility.evidenceIdentity !== expectedEvidenceIdentity
+    || typeof compatibility.historicalVisualHash !== 'string'
+    || compatibility.historicalVisualHash.length === 0
+    || historicalVisualConfig.diagnostic !== expectedEvidenceIdentity
+    || !sameJson(payloadCompatibility, compatibility)
+    || !sameJson(snapshotCompatibility, compatibility)
+  ) {
+    throw new CliError(`visual diagnostics ${label} legacy compatibility identity is invalid`, EXIT_CODES.render)
+  }
+  if (
+    payload.override_provenance !== 'none'
+    || diagnostics.override_provenance !== 'none'
+    || snapshot.overrideProvenance !== 'none'
+    || payload.diagnostic_marker !== undefined
+    || diagnostics.diagnostic_marker !== undefined
+    || snapshot.diagnosticMarker !== undefined
+  ) {
+    throw new CliError(`visual diagnostics ${label} must not use Phase 41 override semantics`, EXIT_CODES.render)
+  }
+
+  const payloadProvenance = diagnosticsObject(payload.emission_profile, `${label} visual_config_payload.emission_profile`)
+  const provenance = diagnosticsObject(diagnostics.profile_provenance, `${label} profile_provenance`)
+  const snapshotProvenance = diagnosticsObject(snapshot.profileProvenance, `${label} renderer_snapshot.profileProvenance`)
+  if (
+    payloadProvenance.source !== 'legacy-fallback'
+    || provenance.source !== 'legacy-fallback'
+    || snapshot.profileSource !== 'legacy-fallback'
+    || !sameJson(provenance, payloadProvenance)
+    || !sameJson(provenance, { ...snapshotProvenance, source: snapshot.profileSource })
+  ) {
+    throw new CliError(`visual diagnostics ${label} renderer snapshot disagrees with legacy provenance`, EXIT_CODES.render)
+  }
+
+  const payloadDerivation = diagnosticsObject(payload.emission_derivation, `${label} visual_config_payload.emission_derivation`)
+  const derivation = diagnosticsObject(diagnostics.emission_derivation, `${label} emission_derivation`)
+  const snapshotDerivation = diagnosticsObject(snapshot.emissionDerivation, `${label} renderer_snapshot.emissionDerivation`)
+  if (
+    derivation.kind !== 'legacy-power'
+    || typeof derivation.exponent !== 'number'
+    || !Number.isFinite(derivation.exponent)
+    || (derivation.exponent as number) <= 0
+    || !sameJson(payloadDerivation, derivation)
+    || !sameJson(snapshotDerivation, derivation)
+  ) {
+    throw new CliError(`visual diagnostics ${label} historical power emission identity is invalid`, EXIT_CODES.render)
+  }
+  return hashInput
+}
+
 /** Validates the Phase 41 sidecar's resolved profile against the actual renderer state. */
 export function parsePhase41VisualDiagnostics(value: string, pageVisualHash: unknown): Record<string, unknown> {
   const root = parseVisualDiagnostics(value)
   const canonicalHashInput = assertCanonicalVisualConfig(root, pageVisualHash, 'Phase 41')
+  const payload = diagnosticsObject(root.visual_config_payload, 'visual_config_payload')
+  const snapshot = assertAppliedSnapshot(root, canonicalHashInput, 'Phase 41')
+  if (
+    payload.diagnostic_marker !== 'phase41-visual-diagnostic-v1'
+    || root.diagnostic_marker !== payload.diagnostic_marker
+    || snapshot.diagnosticMarker !== payload.diagnostic_marker
+    || snapshot.canonicalHashInput !== canonicalHashInput
+  ) {
+    throw new CliError('visual diagnostics Phase 41 marker or renderer snapshot identity is invalid', EXIT_CODES.render)
+  }
   const profile = diagnosticsObject(root.phase41_resolved_profile, 'phase41_resolved_profile')
   if (typeof profile.resolvedVisualConfigInput !== 'string' || profile.resolvedVisualConfigInput.length === 0) {
     throw new CliError('visual diagnostics phase41 resolved visual-config input is invalid', EXIT_CODES.render)
@@ -278,6 +373,14 @@ export function parsePhase41VisualDiagnostics(value: string, pageVisualHash: unk
     throw new CliError('visual diagnostics phase41 override provenance is invalid', EXIT_CODES.render)
   }
   if (
+    profile.diagnosticMarker !== 'phase41-visual-diagnostic-v1'
+    || root.override_provenance !== profile.overrideProvenance
+    || payload.override_provenance !== profile.overrideProvenance
+    || snapshot.overrideProvenance !== profile.overrideProvenance
+  ) {
+    throw new CliError('visual diagnostics phase41 marker or renderer override provenance disagrees', EXIT_CODES.render)
+  }
+  if (
     profile.resolvedVisualConfigInput !== canonicalHashInput
     || profile.productionVisualConfigInput !== canonicalHashInput
   ) {
@@ -287,10 +390,17 @@ export function parsePhase41VisualDiagnostics(value: string, pageVisualHash: unk
     throw new CliError('visual diagnostics Phase 41 resolved emission source is invalid', EXIT_CODES.render)
   }
   const provenance = diagnosticsObject(root.profile_provenance, 'profile_provenance')
+  const payloadProvenance = diagnosticsObject(payload.emission_profile, 'visual_config_payload.emission_profile')
+  const snapshotProvenance = diagnosticsObject(snapshot.profileProvenance, 'renderer_snapshot.profileProvenance')
   if (!['active', 'legacy-fallback', 'diagnostic-override'].includes(provenance.source as string) || typeof provenance.profile_id !== 'string' || !provenance.profile_id) {
     throw new CliError('visual diagnostics Phase 41 emission provenance is invalid', EXIT_CODES.render)
   }
-  if (profile.emissionSource !== provenance.source) {
+  if (
+    profile.emissionSource !== provenance.source
+    || snapshot.profileSource !== profile.emissionSource
+    || !sameJson(provenance, payloadProvenance)
+    || !sameJson(provenance, { ...snapshotProvenance, source: snapshot.profileSource })
+  ) {
     throw new CliError('visual diagnostics Phase 41 resolved emission source disagrees with renderer provenance', EXIT_CODES.render)
   }
   if (

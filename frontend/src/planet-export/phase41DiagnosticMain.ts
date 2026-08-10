@@ -5,7 +5,6 @@ import { findExportMovie, indexGalaxyMovies } from './request'
 import { computeGlobalPlanetRadius } from './sizing'
 import { renderPhase41DiagnosticPlanetImage } from './renderPlanetImage'
 import { parsePhase41DiagnosticRequest, resolvePhase41DiagnosticRequest } from './phase41DiagnosticRequest'
-import { toPhase41RenderOverride } from './phase41DiagnosticProfile'
 
 async function main(): Promise<void> {
   let failureKind: 'data' | 'render' = 'render'
@@ -48,7 +47,6 @@ async function main(): Promise<void> {
       globalRadius,
       ...request,
       visualConfig: profile.visualConfig,
-      diagnosticOverride: toPhase41RenderOverride(profile),
       bloomParamsOverride: profile.bloom,
     })
     const renderer = canvas.getContext('webgl2') ?? canvas.getContext('webgl')
@@ -57,7 +55,14 @@ async function main(): Promise<void> {
     document.body.dataset.maxTextureSize = String(gl.getParameter(gl.MAX_TEXTURE_SIZE))
     document.body.dataset.webglRenderer = String(gl.getParameter(gl.RENDERER) ?? 'unknown')
     document.body.dataset.dataVersion = data.meta.version
-    document.body.dataset.visualHash = profile.resolvedVisualConfigInput
+    const appliedVisualHash = result.diagnostics.renderer_snapshot?.canonicalHashInput
+    if (
+      appliedVisualHash === undefined
+      || appliedVisualHash !== result.diagnostics.visual_config_hash_input
+    ) {
+      throw new Error('[Phase41 diagnostic] canonical renderer snapshot did not expose the applied visual hash')
+    }
+    document.body.dataset.visualHash = appliedVisualHash
     document.body.dataset.visualDiagnostics = JSON.stringify({
       ...result.diagnostics,
       phase41_resolved_profile: {

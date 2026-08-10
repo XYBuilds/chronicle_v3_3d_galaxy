@@ -1,4 +1,8 @@
 import {
+  PHASE41_DIAGNOSTIC_MARKER as CANONICAL_PHASE41_DIAGNOSTIC_MARKER,
+  type PlanetVisualDiagnosticMarker,
+} from '@/three/planetVisualState'
+import {
   focusEmissionIntensityFromProfile,
   validateFocusEmissionCurve,
   validateRatingMidrankCdfLutProfile,
@@ -8,7 +12,7 @@ import { validatePerlinBloomParams, type PerlinBloomParams } from '@/three/perli
 import { resolvePlanetVisualConfig, type ResolvedPlanetVisualConfig } from './visualConfig'
 import type { FocusEmissionProfileProvenance } from '@/types/galaxy'
 
-export const PHASE41_DIAGNOSTIC_MARKER = 'phase41-visual-diagnostic-v1' as const
+export const PHASE41_DIAGNOSTIC_MARKER = CANONICAL_PHASE41_DIAGNOSTIC_MARKER
 
 export type Phase41EmissionCurve = FocusEmissionProfile
 
@@ -33,6 +37,7 @@ export type ResolvedPhase41VisualProfile = {
   visualConfig: ResolvedPlanetVisualConfig
   emissionProvenance: FocusEmissionProfileProvenance
   emissionSource: 'active' | 'legacy-fallback' | 'diagnostic-override'
+  diagnosticMarker: PlanetVisualDiagnosticMarker
   productionSource: 'resolved-emission-profile'
   productionVisualConfigInput: string
   resolvedVisualConfigInput: string
@@ -176,6 +181,7 @@ export function resolvePhase41VisualProfile(
     flatShadingMix: parsed?.flatShadingMix,
     bloom: parsed?.bloom,
     overrideProvenance,
+    diagnosticMarker: PHASE41_DIAGNOSTIC_MARKER,
   })
   return {
     curve: visualConfig.curve,
@@ -188,6 +194,7 @@ export function resolvePhase41VisualProfile(
     visualConfig,
     emissionProvenance: visualConfig.emissionProvenance,
     emissionSource: visualConfig.emissionSource,
+    diagnosticMarker: PHASE41_DIAGNOSTIC_MARKER,
     productionSource: 'resolved-emission-profile',
     productionVisualConfigInput: visualConfig.hashInput,
     resolvedVisualConfigInput: visualConfig.hashInput,

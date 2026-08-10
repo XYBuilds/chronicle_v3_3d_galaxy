@@ -29,3 +29,18 @@ Pull Requests are implementation and review surfaces, not substitutes for accept
 ## Current labels
 
 The repository keeps GitHub's existing labels such as `bug`, `enhancement`, `documentation`, `duplicate`, `good first issue`, `help wanted`, `invalid`, and `question`. Matt workflows use the canonical `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, and `wontfix` labels defined in `docs/agents/triage-labels.md`.
+
+Wayfinder maps use `wayfinder:map`. Their child tickets use exactly one of `wayfinder:research`, `wayfinder:prototype`, `wayfinder:grilling`, or `wayfinder:task`.
+
+## Wayfinding operations
+
+Wayfinder uses GitHub's native, UI-visible sub-issue and issue-dependency relationships.
+
+- **Map:** create one Issue labelled `wayfinder:map`. Its body contains Destination, Notes, Decisions so far, Not yet specified, and Out of scope. Open tickets are discovered through its child Issues rather than copied into the map body.
+- **Child ticket:** create an Issue with exactly one `wayfinder:<type>` label, then link it to the map through the sub-issues API. Resolve the parent Issue's database ID with `gh api repos/XYBuilds/chronicle_v3_3d_galaxy/issues/<map> --jq .id`, then run `gh api --method POST repos/XYBuilds/chronicle_v3_3d_galaxy/issues/<map>/sub_issues -F sub_issue_id=<child-database-id>`.
+- **Blocking:** resolve the blocker's numeric database ID with `gh api repos/XYBuilds/chronicle_v3_3d_galaxy/issues/<number> --jq .id`, then run `gh api --method POST repos/XYBuilds/chronicle_v3_3d_galaxy/issues/<blocked>/dependencies/blocked_by -F issue_id=<blocker-database-id>`. Do not substitute the Issue number or GraphQL node ID.
+- **Frontier:** list the map's open sub-issues in map order, then exclude any Issue with an assignee or with `issue_dependencies_summary.blocked_by > 0`. The first remaining Issue is the default next ticket.
+- **Claim:** assign the ticket before any work with `gh issue edit <number> --add-assignee @me`.
+- **Resolve:** post the answer as a resolution comment, close the ticket, and append one linked gist of the answer to the map's Decisions so far section.
+
+If GitHub removes either native capability, use a map task list for children and a `Blocked by: #<number>` line in ticket bodies until the native relationship is restored; do not maintain both representations concurrently.

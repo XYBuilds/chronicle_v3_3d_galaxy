@@ -184,43 +184,32 @@ describe('planet appearance', () => {
     expect(a.baseQuaternion.equals(b.baseQuaternion)).toBe(true)
   })
 
-  it('writes fixed Focus L/C/key uniforms and rating-derived emission', () => {
+  it('writes movie geometry/bands through setFromMovie without owning production visual uniforms', () => {
     const handle = createSelectionPlanet(PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE)
+    const initialEmission = handle.material.uniforms.uEmissionIntensity.value
+    const initialLightness = handle.material.uniforms.uPerlinL.value
     try {
       handle.setFromMovie(movie, palette, 2)
 
       expect(handle.setFromMovie).toHaveLength(3)
       expect(handle.material.uniforms.uBandCount.value).toBe(3)
       expect(handle.material.uniforms.uCutCount.value).toBe(2)
-      expect(handle.material.uniforms.uPerlinL.value).toBe(PLANET_VISUAL_DEFAULTS.focus.lightness)
-      expect(handle.material.uniforms.uPerlinChroma.value).toBe(PLANET_VISUAL_DEFAULTS.focus.chroma)
-      expect(handle.material.uniforms.uEmissionIntensity.value).toBe(
-        remapFocusEmissionIntensity(
-          focusEmissionIntensityFromProfile(movie.vote_average, PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE),
-          PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE,
-          PLANET_VISUAL_DEFAULTS.focus.emissionTuning,
-        ),
-      )
-      expect(handle.material.uniforms.uKeyLightIntensity.value).toBe(PLANET_VISUAL_DEFAULTS.lighting.keyLightIntensity)
+      expect(handle.material.uniforms.uEmissionIntensity.value).toBe(initialEmission)
+      expect(handle.material.uniforms.uPerlinL.value).toBe(initialLightness)
       expect(handle.material.uniforms).not.toHaveProperty('uAmbient')
       expect(handle.material.uniforms).not.toHaveProperty('uDiffuse')
-      expect(handle.material.uniforms.uLightingEnabled.value).toBe(1)
-      expect((handle.material.uniforms.uLightDir.value as { toArray: () => number[] }).toArray()).toEqual([
-        0.700665949127905,
-        0.4003805423588029,
-        0.5905612999792342,
-      ])
       expect(handle.mesh.scale.x).toBe(2)
       expect(handle.mesh.scale.y).toBe(2)
       expect(handle.mesh.scale.z).toBe(2)
       expect(handle.mesh.quaternion.equals(selectionPlanetBaseQuaternion(movie.id))).toBe(true)
       expect(handle.lastRadius).toBeCloseTo(computePlanetOuterRadius(2, 3))
+      expect(handle.lastAppearance?.emissionProfile).toBe(PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE)
     } finally {
       handle.dispose()
     }
   })
 
-  it('uses the supplied active profile for the shader scalar without introducing LUT state into the material', () => {
+  it('keeps the supplied active profile on appearance without introducing LUT state into the material', () => {
     const activeProfile: RatingMidrankCdfLutProfile = {
       ...PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE,
       samples: Array.from(
@@ -233,13 +222,6 @@ describe('planet appearance', () => {
       handle.setFromMovie(movie, palette, 2)
 
       expect(handle.lastAppearance?.emissionProfile).toBe(activeProfile)
-      expect(handle.material.uniforms.uEmissionIntensity.value).toBe(
-        remapFocusEmissionIntensity(
-          focusEmissionIntensityFromProfile(movie.vote_average, activeProfile),
-          activeProfile,
-          PLANET_VISUAL_DEFAULTS.focus.emissionTuning,
-        ),
-      )
       expect(handle.material.uniforms).not.toHaveProperty('uEmissionLut')
     } finally {
       handle.dispose()
@@ -247,17 +229,32 @@ describe('planet appearance', () => {
   })
 
   it('keeps fixed Lightness, chroma, Key, direction, flatness, and Bloom stable while emission follows rating', () => {
-    const handle = createSelectionPlanet(PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE)
+    const canonicalState = resolveRuntimePlanetVisualState({
+      lut: PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE,
+      provenance: {
+        ...LEGACY_FOCUS_EMISSION_FALLBACK_PROVENANCE,
+        profile_id: 'rating-emission-2026-08-a',
+      },
+      source: 'active',
+    }, { bloomEnabled: false })
+    const planet = createSelectionPlanet(canonicalState.curve)
+    const bloom = {
+      applyParams() {},
+      get params() {
+        return { ...canonicalState.bloom }
+      },
+    }
     try {
+      const adapter = createFocusPlanetRuntimeVisualAdapter({ canonicalState, planet, bloom })
       const uniforms = [4, 4.5, 5.5, 6.5, 7.5, 8.2, 9.5].map((voteAverage) => {
-        handle.setFromMovie({ ...movie, vote_average: voteAverage }, palette, 2)
+        const result = adapter.applyMovie({ ...movie, vote_average: voteAverage }, palette, 2)
         return {
-          lightness: handle.material.uniforms.uPerlinL.value,
-          chroma: handle.material.uniforms.uPerlinChroma.value,
-          emission: handle.material.uniforms.uEmissionIntensity.value,
-          key: handle.material.uniforms.uKeyLightIntensity.value,
-          direction: (handle.material.uniforms.uLightDir.value as { toArray: () => number[] }).toArray(),
-          flat: handle.material.uniforms.uFlatShadingMix.value,
+          lightness: result.appliedSnapshot.focus.lightness,
+          chroma: result.appliedSnapshot.focus.chroma,
+          emission: result.appliedSnapshot.emission,
+          key: result.appliedSnapshot.lighting.keyLightIntensity,
+          direction: [...result.appliedSnapshot.lighting.direction],
+          flat: result.appliedSnapshot.lighting.flatShadingMix,
         }
       })
 
@@ -277,7 +274,7 @@ describe('planet appearance', () => {
       ))
       emissions.slice(1).forEach((value, index) => expect(value).toBeGreaterThan(emissions[index]!))
     } finally {
-      handle.dispose()
+      planet.dispose()
     }
   })
 

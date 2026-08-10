@@ -119,6 +119,9 @@ function createInMemoryRenderer(): PlanetVisualRendererHandle {
         bloom: { ...application.state.bloom },
       }
     },
+    applyStaticState() {
+      // Static-only production uniforms are a no-op for the in-memory seam double.
+    },
     readAppliedState() {
       if (applied === null) throw new Error('renderer has not been applied')
       return applied

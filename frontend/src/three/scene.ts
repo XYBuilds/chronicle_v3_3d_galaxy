@@ -184,18 +184,18 @@ interface SdrRuntimeTuningDebug {
   resetAll(): void
 }
 
-/** Dev console: `window.__planetTerrace` — Perlin focus sphere terrace + P11.4 lighting uniforms. */
+/** Dev console: `window.__planetTerrace` — terrace geometry debug; production lighting lives on `__planetVisual`. */
 interface SelectionPlanetTerraceDebug {
   /** Unit-sphere extrusion per band step; world radius uses `× (1 + cuts × stepHeight)`. Clamped to [0, 0.25] on set. */
   stepHeight: number
   /** Noise-domain smoothstep half-width at thresholds; 0 ≈ hard cuts. Clamped to [0, 0.25] on set. */
   stepSmoothness: number
-  /** P11.4 — derivative vs geometric normal (1 = screen-space normal from world-position derivatives). */
+  /** Delegates to `window.__planetVisual.lighting.flatShadingMix`. */
   flatShadingMix: number
-  /** P11.4 — world-space light direction (normalized on set). */
+  /** Delegates to `window.__planetVisual.lighting.direction`. */
   perlinLightDir: THREE.Vector3
-  /** P11.4 — Lambert shading on/off; off uses flat band colors only. */
-  perlinLightingEnabled: boolean
+  /** Read-only Lambert enable flag from the current renderer uniforms. */
+  readonly perlinLightingEnabled: boolean
   log: () => void
 }
 
@@ -1182,31 +1182,27 @@ export function mountGalaxyScene(
       planet.material.uniforms.uStepSmoothness.value = THREE.MathUtils.clamp(value, 0, 0.25)
     },
     get flatShadingMix() {
-      return planet.material.uniforms.uFlatShadingMix.value as number
+      return planetVisualDebug.lighting.flatShadingMix
     },
     set flatShadingMix(value: number) {
-      planet.material.uniforms.uFlatShadingMix.value = THREE.MathUtils.clamp(value, 0, 1)
+      planetVisualDebug.lighting.flatShadingMix = THREE.MathUtils.clamp(value, 0, 1)
     },
     get perlinLightDir() {
-      return planet.material.uniforms.uLightDir.value as THREE.Vector3
+      const [x, y, z] = planetVisualDebug.lighting.direction
+      return new THREE.Vector3(x, y, z)
     },
     set perlinLightDir(value: THREE.Vector3) {
-      const v = planet.material.uniforms.uLightDir.value as THREE.Vector3
-      v.copy(value)
-      if (v.lengthSq() > 1e-12) v.normalize()
+      planetVisualDebug.lighting.direction = [value.x, value.y, value.z]
     },
     get perlinLightingEnabled() {
       return (planet.material.uniforms.uLightingEnabled.value as number) > 0.5
     },
-    set perlinLightingEnabled(value: boolean) {
-      planet.material.uniforms.uLightingEnabled.value = value ? 1 : 0
-    },
     log() {
       const u = planet.material.uniforms
-      const ld = u.uLightDir.value as THREE.Vector3
+      const [x, y, z] = planetVisualDebug.lighting.direction
       const lightingOn = (u.uLightingEnabled.value as number) > 0.5
       console.log(
-        `[Planet] uStepHeight=${(u.uStepHeight.value as number).toFixed(4)} uStepSmoothness=${(u.uStepSmoothness.value as number).toFixed(4)} uBandCount=${u.uBandCount.value} uCutCount=${u.uCutCount.value} | P11.4 lightingEnabled=${lightingOn ? 1 : 0} uFlatShadingMix=${(u.uFlatShadingMix.value as number).toFixed(2)} uEmissionIntensity=${(u.uEmissionIntensity.value as number).toFixed(4)} uKeyLightIntensity=${(u.uKeyLightIntensity.value as number).toFixed(2)} uLightDir=(${ld.x.toFixed(2)},${ld.y.toFixed(2)},${ld.z.toFixed(2)}) uPerlinL=${(u.uPerlinL.value as number).toFixed(4)} uPerlinChroma=${(u.uPerlinChroma.value as number).toFixed(4)}`,
+        `[Planet] uStepHeight=${(u.uStepHeight.value as number).toFixed(4)} uStepSmoothness=${(u.uStepSmoothness.value as number).toFixed(4)} uBandCount=${u.uBandCount.value} uCutCount=${u.uCutCount.value} | P11.4 lightingEnabled=${lightingOn ? 1 : 0} uFlatShadingMix=${planetVisualDebug.lighting.flatShadingMix.toFixed(2)} uEmissionIntensity=${(u.uEmissionIntensity.value as number).toFixed(4)} uKeyLightIntensity=${(u.uKeyLightIntensity.value as number).toFixed(2)} uLightDir=(${x.toFixed(2)},${y.toFixed(2)},${z.toFixed(2)}) uPerlinL=${(u.uPerlinL.value as number).toFixed(4)} uPerlinChroma=${(u.uPerlinChroma.value as number).toFixed(4)}`,
       )
     },
   }

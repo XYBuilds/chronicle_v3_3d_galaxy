@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { promises as fs } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
@@ -6,6 +7,25 @@ import { run } from './cli.js'
 import { inspectPng } from './png.js'
 
 const temporaryDirectories: string[] = []
+const crossEntryBaseline = JSON.parse(
+  await fs.readFile(path.resolve(import.meta.dirname, '../fixtures/cross-entry-chromium-baseline.json'), 'utf8'),
+) as {
+  schema_version: string
+  movie_id: number
+  resolution: number
+  padding: number
+  render_mode: string
+  blooms: Record<string, {
+    png_sha256: string
+    visual_config_hash: string
+    renderer_snapshot: {
+      emission: number
+      profileEmission: number
+      bloom: { enabled: boolean; strength: number; radius: number; threshold: number }
+      profileSource: string
+    }
+  }>
+}
 
 function captureIo(): {
   io: Pick<typeof process, 'stdout' | 'stderr'>
@@ -128,6 +148,60 @@ describe('Playwright Chromium planet export', () => {
       expect(diagnostics.renderer_snapshot.bloom.enabled).toBe(enabled)
       expect(diagnostics.renderer_snapshot.profileSource).toBe('active')
     }
+  }, 120_000)
+
+  it('locks canonical PNG/metadata baselines to the applied renderer snapshot', async () => {
+    expect(crossEntryBaseline.schema_version).toBe('planet-export-cross-entry-baseline-v1')
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'planet-export-cross-entry-baseline-'))
+    temporaryDirectories.push(directory)
+    const fixture = path.resolve(import.meta.dirname, '../fixtures/galaxy.minimal.json')
+
+    for (const bloom of ['off', 'on'] as const) {
+      const expected = crossEntryBaseline.blooms[bloom]!
+      const output = path.join(directory, `baseline-${bloom}.png`)
+      expect(await run([
+        '--movie-id', String(crossEntryBaseline.movie_id),
+        '--output', output,
+        '--resolution', String(crossEntryBaseline.resolution),
+        '--padding', String(crossEntryBaseline.padding),
+        '--bloom', bloom,
+        '--render-mode', crossEntryBaseline.render_mode,
+        '--data-file', fixture,
+      ])).toBe(0)
+
+      const png = await fs.readFile(output)
+      const metadata = JSON.parse(await fs.readFile(`${output}.render.json`, 'utf8')) as {
+        visual_config_hash: string
+        png_sha256: string
+        visual_diagnostics: {
+          visual_config_hash_input: string
+          renderer_snapshot: {
+            emission: number
+            profileEmission: number
+            bloom: { enabled: boolean; strength: number; radius: number; threshold: number }
+            profileSource: string
+            canonicalHashInput: string
+          }
+        }
+      }
+
+      expect(createHash('sha256').update(png).digest('hex')).toBe(expected.png_sha256)
+      expect(metadata.png_sha256).toBe(expected.png_sha256)
+      expect(metadata.visual_config_hash).toBe(expected.visual_config_hash)
+      expect(metadata.visual_diagnostics.renderer_snapshot).toMatchObject(expected.renderer_snapshot)
+      expect(metadata.visual_diagnostics.renderer_snapshot.canonicalHashInput).toBe(
+        metadata.visual_diagnostics.visual_config_hash_input,
+      )
+      expect(createHash('sha256').update(metadata.visual_diagnostics.visual_config_hash_input).digest('hex'))
+        .toBe(metadata.visual_config_hash)
+      expect(metadata.visual_diagnostics.renderer_snapshot.emission).not.toBe(
+        metadata.visual_diagnostics.renderer_snapshot.profileEmission,
+      )
+    }
+
+    expect(crossEntryBaseline.blooms.off!.visual_config_hash).not.toBe(
+      crossEntryBaseline.blooms.on!.visual_config_hash,
+    )
   }, 120_000)
 
   it('rejects normal CLI diagnostic Bloom parameters before browser startup', async () => {

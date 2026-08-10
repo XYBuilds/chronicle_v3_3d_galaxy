@@ -223,52 +223,32 @@ export function createPlanetVisualRendererHandle(
       if (geometryDetail(planet.mesh.geometry) !== state.geometry.detail) {
         fail('renderer geometry detail does not match canonical state')
       }
-      const uniforms = planet.material.uniforms
-      uniforms.uScale.value = state.noise.scale
-      uniforms.uOctaves.value = state.noise.octaves
-      uniforms.uPersistence.value = state.noise.persistence
-      uniforms.uAreaRatio.value = state.bands.areaRatio
-      uniforms.uStepHeight.value = state.bands.stepHeight
-      uniforms.uStepSmoothness.value = state.bands.stepSmoothness
+      applyStaticUniforms(state)
       planet.setFromMovie(application.movie, application.palette, application.worldRadius)
       const appearance = application.appearance
+      const uniforms = planet.material.uniforms
       const hueArray = uniforms.uHue.value as Float32Array
       const paddedHue = appearance.hues[appearance.hues.length - 1]!
       for (let index = 0; index < hueArray.length; index += 1) {
         hueArray[index] = appearance.hues[index] ?? paddedHue
       }
-      const lightDirection = uniforms.uLightDir.value as THREE.Vector3
-      lightDirection.set(...state.lighting.direction).normalize()
-      uniforms.uPerlinL.value = state.focus.lightness
-      uniforms.uPerlinChroma.value = state.focus.chroma
-      uniforms.uLMax.value = state.color.lMax
-      uniforms.uHuntGamma.value = state.color.huntGamma
-      uniforms.uHuntApplyMask.value = state.color.huntApplyMask
-      uniforms.uLightingEnabled.value = state.lighting.enabled ? 1 : 0
-      uniforms.uKeyLightIntensity.value = state.lighting.keyLightIntensity
-      uniforms.uFlatShadingMix.value = state.lighting.flatShadingMix
       uniforms.uEmissionIntensity.value = application.emission.finalIntensity
       uniforms.uBandCount.value = appearance.bandCount
       uniforms.uCutCount.value = appearance.cutCount
       uniforms.uAlpha.value = 1
-      const materialRequiresUpdate =
-        planet.material.transparent !== state.material.transparent
-        || planet.material.alphaTest !== state.material.alphaTest
-        || planet.material.depthWrite !== state.material.depthWrite
-        || planet.material.depthTest !== state.material.depthTest
-      planet.material.transparent = state.material.transparent
-      planet.material.alphaTest = state.material.alphaTest
-      planet.material.depthWrite = state.material.depthWrite
-      planet.material.depthTest = state.material.depthTest
-      if (materialRequiresUpdate) planet.material.needsUpdate = true
       planet.mesh.position.set(application.movie.x, application.movie.y, application.movie.z)
       planet.mesh.scale.setScalar(application.worldRadius)
       planet.mesh.quaternion.set(...appearance.baseQuaternion)
       planet.mesh.updateMatrixWorld(true)
       ;(uniforms.uMeshWorldPos.value as THREE.Vector3).copy(planet.mesh.position)
       planet.mesh.visible = true
-      bloom.applyParams(state.bloom)
       lastApplication = application
+    },
+    applyStaticState(state) {
+      if (geometryDetail(planet.mesh.geometry) !== state.geometry.detail) {
+        fail('renderer geometry detail does not match canonical state')
+      }
+      applyStaticUniforms(state)
     },
     readAppliedState() {
       if (lastApplication === null) {
@@ -276,6 +256,37 @@ export function createPlanetVisualRendererHandle(
       }
       return readSnapshot(planet, bloom, lastApplication)
     },
+  }
+
+  function applyStaticUniforms(state: PlanetVisualState): void {
+    const uniforms = planet.material.uniforms
+    uniforms.uScale.value = state.noise.scale
+    uniforms.uOctaves.value = state.noise.octaves
+    uniforms.uPersistence.value = state.noise.persistence
+    uniforms.uAreaRatio.value = state.bands.areaRatio
+    uniforms.uStepHeight.value = state.bands.stepHeight
+    uniforms.uStepSmoothness.value = state.bands.stepSmoothness
+    const lightDirection = uniforms.uLightDir.value as THREE.Vector3
+    lightDirection.set(...state.lighting.direction).normalize()
+    uniforms.uPerlinL.value = state.focus.lightness
+    uniforms.uPerlinChroma.value = state.focus.chroma
+    uniforms.uLMax.value = state.color.lMax
+    uniforms.uHuntGamma.value = state.color.huntGamma
+    uniforms.uHuntApplyMask.value = state.color.huntApplyMask
+    uniforms.uLightingEnabled.value = state.lighting.enabled ? 1 : 0
+    uniforms.uKeyLightIntensity.value = state.lighting.keyLightIntensity
+    uniforms.uFlatShadingMix.value = state.lighting.flatShadingMix
+    const materialRequiresUpdate =
+      planet.material.transparent !== state.material.transparent
+      || planet.material.alphaTest !== state.material.alphaTest
+      || planet.material.depthWrite !== state.material.depthWrite
+      || planet.material.depthTest !== state.material.depthTest
+    planet.material.transparent = state.material.transparent
+    planet.material.alphaTest = state.material.alphaTest
+    planet.material.depthWrite = state.material.depthWrite
+    planet.material.depthTest = state.material.depthTest
+    if (materialRequiresUpdate) planet.material.needsUpdate = true
+    bloom.applyParams(state.bloom)
   }
 }
 

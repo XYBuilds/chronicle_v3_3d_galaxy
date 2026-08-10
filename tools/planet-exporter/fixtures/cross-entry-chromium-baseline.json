@@ -1,0 +1,40 @@
+{
+  "schema_version": "planet-export-cross-entry-baseline-v1",
+  "movie_id": 1,
+  "resolution": 128,
+  "padding": 0.35,
+  "render_mode": "shader",
+  "fixture": "fixtures/galaxy.minimal.json",
+  "blooms": {
+    "off": {
+      "png_sha256": "ad6e9696bdb68e9889a012f5c9af7c1dc86c4c22f6e4fbb4b61408ea9b08cb3e",
+      "visual_config_hash": "c7cddcec0bb0b76c17d4ec2c3df6dfba4d4abec79b68d981781021fa6aa4327a",
+      "renderer_snapshot": {
+        "emission": 0.08687500000000001,
+        "profileEmission": 0.3275,
+        "bloom": {
+          "enabled": false,
+          "strength": 1,
+          "radius": 1,
+          "threshold": 10
+        },
+        "profileSource": "active"
+      }
+    },
+    "on": {
+      "png_sha256": "ad6e9696bdb68e9889a012f5c9af7c1dc86c4c22f6e4fbb4b61408ea9b08cb3e",
+      "visual_config_hash": "2763a5ec062ccf3e8127267f264737d50cf7a3e69d3b5aaadfdffb794cb94f8d",
+      "renderer_snapshot": {
+        "emission": 0.08687500000000001,
+        "profileEmission": 0.3275,
+        "bloom": {
+          "enabled": true,
+          "strength": 1,
+          "radius": 1,
+          "threshold": 10
+        },
+        "profileSource": "active"
+      }
+    }
+  }
+}

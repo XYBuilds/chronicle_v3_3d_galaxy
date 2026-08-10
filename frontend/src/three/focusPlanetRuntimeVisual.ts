@@ -178,27 +178,7 @@ export function createFocusPlanetRuntimeVisualAdapter(input: {
   let overlayActive = false
   let overlay = overlayFromCanonical(canonicalState)
 
-  const applyCanonicalStaticVisuals = (): void => {
-    const uniforms = planet.material.uniforms
-    uniforms.uScale.value = canonicalState.noise.scale
-    uniforms.uOctaves.value = canonicalState.noise.octaves
-    uniforms.uPersistence.value = canonicalState.noise.persistence
-    uniforms.uAreaRatio.value = canonicalState.bands.areaRatio
-    uniforms.uStepHeight.value = canonicalState.bands.stepHeight
-    uniforms.uStepSmoothness.value = canonicalState.bands.stepSmoothness
-    uniforms.uPerlinL.value = canonicalState.focus.lightness
-    uniforms.uPerlinChroma.value = canonicalState.focus.chroma
-    uniforms.uLMax.value = canonicalState.color.lMax
-    uniforms.uHuntGamma.value = canonicalState.color.huntGamma
-    uniforms.uHuntApplyMask.value = canonicalState.color.huntApplyMask
-    uniforms.uLightingEnabled.value = canonicalState.lighting.enabled ? 1 : 0
-    uniforms.uKeyLightIntensity.value = canonicalState.lighting.keyLightIntensity
-    uniforms.uFlatShadingMix.value = canonicalState.lighting.flatShadingMix
-    const lightDirection = uniforms.uLightDir.value as THREE.Vector3
-    lightDirection.set(...canonicalState.lighting.direction).normalize()
-    bloom.applyParams(canonicalState.bloom)
-  }
-  applyCanonicalStaticVisuals()
+  renderer.applyStaticState(canonicalState)
 
   const applyOverlayToRenderer = (result: PlanetVisualRenderResult): void => {
     if (!overlayActive || overlayEqualsCanonical(overlay, canonicalState)) return
@@ -251,7 +231,7 @@ export function createFocusPlanetRuntimeVisualAdapter(input: {
       applyCanonicalMovie(movie, palette, worldRadius)
       return
     }
-    applyCanonicalStaticVisuals()
+    renderer.applyStaticState(canonicalState)
   }
 
   const createDebugControls = (): FocusPlanetRuntimeVisualDebug => {

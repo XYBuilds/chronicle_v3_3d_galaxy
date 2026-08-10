@@ -20,11 +20,17 @@ import {
 import type { FocusEmissionProfileProvenance } from '../../types/galaxy.js'
 
 import type {
+  PlanetVisualEmissionDerivation,
+  PlanetVisualLegacyCompatibility,
   PlanetVisualOverrideProvenance,
   PlanetVisualProfileSource,
   PlanetVisualState,
   PlanetVisualStateInput,
   PlanetVisualStatePayload,
+} from './types.js'
+import {
+  P39_LEGACY_COMPATIBILITY_PROOF,
+  PHASE41_DIAGNOSTIC_MARKER,
 } from './types.js'
 
 function fail(message: string): never {
@@ -142,6 +148,94 @@ function resolveProvenance(
   return resolved
 }
 
+function resolveDiagnosticMarker(
+  source: PlanetVisualProfileSource,
+  overrideProvenance: PlanetVisualOverrideProvenance,
+  marker: PlanetVisualStateInput['diagnosticMarker'],
+): typeof PHASE41_DIAGNOSTIC_MARKER | undefined {
+  const requiresMarker = source === 'diagnostic-override'
+    || overrideProvenance === 'phase41-diagnostic-override'
+  if (marker === undefined) {
+    if (requiresMarker) fail('diagnostic marker is required for Phase 41 diagnostic state')
+    return undefined
+  }
+  if (marker !== PHASE41_DIAGNOSTIC_MARKER) {
+    fail(`diagnostic marker must equal ${PHASE41_DIAGNOSTIC_MARKER}`)
+  }
+  return marker
+}
+
+function resolveLegacyCompatibility(
+  source: PlanetVisualProfileSource,
+  marker: typeof PHASE41_DIAGNOSTIC_MARKER | undefined,
+  compatibility: PlanetVisualStateInput['legacyCompatibility'],
+  derivation: PlanetVisualStateInput['emissionDerivation'],
+): Readonly<{
+  compatibility?: PlanetVisualLegacyCompatibility
+  derivation?: PlanetVisualEmissionDerivation
+}> {
+  if (compatibility === undefined) {
+    if (derivation !== undefined) fail('legacy emission derivation requires legacy compatibility proof')
+    if (source === 'legacy-fallback' && marker === undefined) {
+      fail('legacy compatibility proof is required for historical P39 state')
+    }
+    return {}
+  }
+  if (source !== 'legacy-fallback') fail('legacy compatibility proof requires the legacy fallback source')
+  if (marker !== undefined) fail('P39 legacy compatibility must not be disguised as a Phase 41 diagnostic')
+  if (compatibility.proof !== P39_LEGACY_COMPATIBILITY_PROOF) {
+    fail(`legacy compatibility proof must equal ${P39_LEGACY_COMPATIBILITY_PROOF}`)
+  }
+  const resolvedCompatibility: PlanetVisualLegacyCompatibility = {
+    proof: compatibility.proof,
+    evidenceIdentity: nonEmptyString(
+      compatibility.evidenceIdentity,
+      'legacy compatibility evidence identity',
+    ),
+    historicalVisualHash: nonEmptyString(
+      compatibility.historicalVisualHash,
+      'legacy compatibility historical visual hash',
+    ),
+    ...(compatibility.historicalMetadata === undefined
+      ? {}
+      : {
+          historicalMetadata: Object.fromEntries(
+            Object.entries(compatibility.historicalMetadata).map(([key, value]) => {
+              nonEmptyString(key, 'legacy compatibility metadata key')
+              if (
+                typeof value !== 'string'
+                && typeof value !== 'boolean'
+                && (typeof value !== 'number' || !Number.isFinite(value))
+              ) {
+                fail(`legacy compatibility metadata ${key} must be finite JSON scalar`)
+              }
+              return [key, Object.is(value, -0) ? 0 : value]
+            }),
+          ),
+        }),
+  }
+  if (derivation === undefined) fail('legacy compatibility proof requires a legacy emission derivation')
+  if (derivation.kind !== 'legacy-power') fail('legacy emission derivation kind is unsupported')
+  const intensityMin = nonNegative(derivation.intensityMin, 'legacy emission intensityMin')
+  const intensityMax = nonNegative(derivation.intensityMax, 'legacy emission intensityMax')
+  if (intensityMin > intensityMax) fail('legacy emission intensity endpoints are inverted')
+  const modelVersion = nonEmptyString(derivation.modelVersion, 'legacy emission modelVersion')
+  if (
+    modelVersion !== 'vote-average-power-clamped-v1'
+    && modelVersion !== 'p39.11-checkpoint-b-emission-exponent-v1'
+  ) {
+    fail('legacy emission modelVersion is unsupported')
+  }
+  const resolvedDerivation: PlanetVisualEmissionDerivation = {
+    kind: 'legacy-power',
+    modelVersion,
+    exponent: positive(derivation.exponent, 'legacy emission exponent'),
+    intensityMin,
+    intensityMax,
+  }
+  return { compatibility: resolvedCompatibility, derivation: resolvedDerivation }
+}
+
 function deepFreeze<T>(value: T): T {
   if (value !== null && typeof value === 'object' && !Object.isFrozen(value)) {
     Object.freeze(value)
@@ -158,6 +252,17 @@ export function resolvePlanetVisualState(input: PlanetVisualStateInput): PlanetV
     fail('override provenance is unsupported')
   }
 
+  const diagnosticMarker = resolveDiagnosticMarker(
+    input.emissionSource,
+    overrideProvenance,
+    input.diagnosticMarker,
+  )
+  const legacy = resolveLegacyCompatibility(
+    input.emissionSource,
+    diagnosticMarker,
+    input.legacyCompatibility,
+    input.emissionDerivation,
+  )
   const profile = resolveProfile(input.curve)
   const provenance = resolveProvenance(
     input.emissionProvenance,
@@ -241,6 +346,11 @@ export function resolvePlanetVisualState(input: PlanetVisualStateInput): PlanetV
     visual,
     emission_profile: { ...provenance, source: input.emissionSource },
     override_provenance: overrideProvenance,
+    ...(diagnosticMarker === undefined ? {} : { diagnostic_marker: diagnosticMarker }),
+    ...(legacy.compatibility === undefined
+      ? {}
+      : { legacy_compatibility: legacy.compatibility }),
+    ...(legacy.derivation === undefined ? {} : { emission_derivation: legacy.derivation }),
   }
   const frozenPayload = deepFreeze(payload)
   const hashInput = stableFocusEmissionJson(frozenPayload)
@@ -265,6 +375,13 @@ export function resolvePlanetVisualState(input: PlanetVisualStateInput): PlanetV
     flatShadingMix: frozenPayload.visual.lighting.flatShadingMix,
     bloom: deepFreeze({ ...bloom }),
     overrideProvenance,
+    ...(diagnosticMarker === undefined ? {} : { diagnosticMarker }),
+    ...(legacy.compatibility === undefined
+      ? {}
+      : { legacyCompatibility: frozenPayload.legacy_compatibility! }),
+    ...(legacy.derivation === undefined
+      ? {}
+      : { emissionDerivation: frozenPayload.emission_derivation! }),
   }
   return deepFreeze(state)
 }

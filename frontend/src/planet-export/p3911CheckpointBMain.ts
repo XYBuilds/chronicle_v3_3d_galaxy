@@ -1,14 +1,12 @@
 import { loadGalaxyData } from '@/utils/loadGalaxyData'
 import { findExportMovie, indexGalaxyMovies } from './request'
 import { computeGlobalPlanetRadius } from './sizing'
-import { p3911LegacyFrozenProfileVisualConfigHashInput } from '@/three/planetVisualDefaults'
-import { planetExportVisualConfigInput } from './visualConfig'
 import {
   assertP3911CheckpointBProductionContract,
-  p3911CheckpointBVisualConfigInput,
   parseP3911CheckpointBRequest,
   renderP3911CheckpointBPlanetImage,
 } from './p3911CheckpointBDiagnostics'
+import { requireP39RendererEvidence } from './p39LegacyVisualState'
 
 async function main(): Promise<void> {
   let failureKind: 'data' | 'render' = 'render'
@@ -43,11 +41,10 @@ async function main(): Promise<void> {
     document.body.dataset.maxTextureSize = String(gl.getParameter(gl.MAX_TEXTURE_SIZE))
     document.body.dataset.webglRenderer = String(gl.getParameter(gl.RENDERER) ?? 'unknown')
     document.body.dataset.dataVersion = data.meta.version
-    const productionVisualConfig = planetExportVisualConfigInput(
-      p3911LegacyFrozenProfileVisualConfigHashInput(),
-      request.sizeRoot,
+    document.body.dataset.visualHash = requireP39RendererEvidence(
+      result.diagnostics,
+      'p39.11-checkpoint-b-fixed-key-emission-exponent-v1',
     )
-    document.body.dataset.visualHash = p3911CheckpointBVisualConfigInput(productionVisualConfig, request.emissionExponent)
     document.body.dataset.visualDiagnostics = JSON.stringify(result.diagnostics)
     document.body.dataset.exportReady = '1'
     console.log(`[P39.11 Checkpoint B] ready movieId=${movie.id} resolution=${request.resolution} exponent=${request.emissionExponent} key=0.35 bloom=off mode=${request.renderMode}`)

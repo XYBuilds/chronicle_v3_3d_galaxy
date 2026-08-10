@@ -69,7 +69,11 @@ describe('Phase 41 diagnostic profile', () => {
   it('uses the approved CDF/LUT production model and matches the resolved Bloom state across all three surfaces', () => {
     const production = resolvePhase41VisualProfile(undefined, true, legacyEmission)
     const diagnostic = resolvePhase41DiagnosticRequest(parsePhase41DiagnosticRequest(`${request}&diagnostic_only=${PHASE41_DIAGNOSTIC_MARKER}`), legacyEmission)
-    const normalExporter = resolvePlanetVisualConfig({ ...canonicalEmission, bloomEnabled: false })
+    const canonicalDiagnostic = (bloomEnabled: boolean) => resolvePlanetVisualConfig({
+      ...canonicalEmission,
+      bloomEnabled,
+      diagnosticMarker: PHASE41_DIAGNOSTIC_MARKER,
+    })
     expect(legacyEmission.curve).toMatchObject({
       modelVersion: 'rating-midrank-cdf-lut-v1', ratingMin: 0, ratingMax: 10, sampleStep: 0.05, intensityMin: 0.005, intensityMax: 0.65,
     })
@@ -85,11 +89,13 @@ describe('Phase 41 diagnostic profile', () => {
     expect(legacyEmission.curve.samples).toHaveLength(201)
     expect(production.curve).toEqual(legacyEmission.curve)
     expect(production.overrideProvenance).toBe('none')
-    expect(production.resolvedVisualConfigInput).toBe(resolvePlanetVisualConfig({ ...canonicalEmission, bloomEnabled: true }).hashInput)
-    expect(diagnostic.resolvedVisualConfigInput).toBe(resolvePlanetVisualConfig({ ...canonicalEmission, bloomEnabled: false }).hashInput)
-    expect(diagnostic.resolvedVisualConfigInput).toBe(normalExporter.hashInput)
+    expect(production.diagnosticMarker).toBe(PHASE41_DIAGNOSTIC_MARKER)
+    expect(production.visualConfig.payload.diagnostic_marker).toBe(PHASE41_DIAGNOSTIC_MARKER)
+    expect(production.resolvedVisualConfigInput).toBe(canonicalDiagnostic(true).hashInput)
+    expect(diagnostic.resolvedVisualConfigInput).toBe(canonicalDiagnostic(false).hashInput)
+    expect(diagnostic.diagnosticMarker).toBe(PHASE41_DIAGNOSTIC_MARKER)
     expect(diagnostic.bloom.enabled).toBe(false)
-    expect(resolvePlanetVisualConfig({ ...canonicalEmission, bloomEnabled: true }).hashInput).not.toBe(resolvePlanetVisualConfig({ ...canonicalEmission, bloomEnabled: false }).hashInput)
+    expect(canonicalDiagnostic(true).hashInput).not.toBe(canonicalDiagnostic(false).hashInput)
   })
 
   it.each([

@@ -1,14 +1,12 @@
 import { loadGalaxyData } from '@/utils/loadGalaxyData'
 import { findExportMovie, indexGalaxyMovies } from './request'
 import { computeGlobalPlanetRadius } from './sizing'
-import { p3911LegacyFrozenProfileVisualConfigHashInput } from '@/three/planetVisualDefaults'
-import { planetExportVisualConfigInput } from './visualConfig'
 import {
   assertP3911CheckpointCRadiusProductionContract,
-  p3911CheckpointCRadiusVisualConfigInput,
   parseP3911CheckpointCRadiusRequest,
   renderP3911CheckpointCRadiusPlanetImage,
 } from './p3911CheckpointCRadiusDiagnostics'
+import { requireP39RendererEvidence } from './p39LegacyVisualState'
 
 async function main(): Promise<void> {
   let failureKind: 'data' | 'render' = 'render'
@@ -36,8 +34,10 @@ async function main(): Promise<void> {
     document.body.dataset.maxTextureSize = String(gl.getParameter(gl.MAX_TEXTURE_SIZE))
     document.body.dataset.webglRenderer = String(gl.getParameter(gl.RENDERER) ?? 'unknown')
     document.body.dataset.dataVersion = data.meta.version
-    const productionVisualConfig = planetExportVisualConfigInput(p3911LegacyFrozenProfileVisualConfigHashInput(), request.sizeRoot)
-    document.body.dataset.visualHash = p3911CheckpointCRadiusVisualConfigInput(productionVisualConfig, request.bloomRadius)
+    document.body.dataset.visualHash = requireP39RendererEvidence(
+      result.diagnostics,
+      'p39.11-checkpoint-c2-radius-pure-delta-v1',
+    )
     document.body.dataset.visualDiagnostics = JSON.stringify(result.diagnostics)
     document.body.dataset.exportReady = '1'
     console.log(`[P39.11 Checkpoint C2] ready movieId=${movie.id} resolution=${request.resolution} radius=${request.bloomRadius} threshold=0 strength=.005 bloom=on`)

@@ -3,7 +3,7 @@ import { chromium, type Browser, type BrowserContext, type Page } from 'playwrig
 import { createServer, type ViteDevServer } from 'vite'
 
 import { CliError, EXIT_CODES, type ExportArgs } from './args.js'
-import { parseVisualDiagnostics, type BrowserRender } from './browser.js'
+import { assertP39LegacyVisualConfig, parseVisualDiagnostics, type BrowserRender } from './browser.js'
 import { fileDataPlugin, pageDataUrl, type DataSource } from './data-source.js'
 
 export const P3910_BLOOM_STRENGTH_ZERO = 0 as const
@@ -87,12 +87,18 @@ export async function renderP3910BloomStrengthZeroInBrowser(args: ExportArgs, so
     if (!encoded || !result.visualDiagnostics || !result.visualHash) {
       throw new CliError('P39.10 diagnostics page returned incomplete output', EXIT_CODES.render)
     }
+    const visualDiagnostics = parseVisualDiagnostics(result.visualDiagnostics)
+    assertP39LegacyVisualConfig(
+      visualDiagnostics,
+      result.visualHash,
+      'p39.10-bloom-on-strength-zero-pure-delta-v1',
+    )
     return {
       png: Buffer.from(encoded, 'base64'),
       dataVersion: result.dataVersion,
       webglRenderer: result.webglRenderer,
       visualHash: result.visualHash,
-      visualDiagnostics: parseVisualDiagnostics(result.visualDiagnostics),
+      visualDiagnostics,
       chromiumVersion: browser.version(),
     }
   } catch (error) {

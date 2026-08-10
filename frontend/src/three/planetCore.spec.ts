@@ -25,6 +25,11 @@ import {
 import { createSelectionPlanet } from './planet'
 import { selectionPlanetBaseQuaternion } from './selectionPlanetRotation'
 import { PLANET_VISUAL_DEFAULTS, p3911LegacyFrozenProfileVisualConfigHashInput } from './planetVisualDefaults'
+import {
+  createFocusPlanetRuntimeVisualAdapter,
+  resolveRuntimePlanetVisualState,
+} from './focusPlanetRuntimeVisual'
+import { LEGACY_FOCUS_EMISSION_FALLBACK_PROVENANCE } from './focusEmission'
 
 const movie: Movie = {
   id: 157336,
@@ -273,6 +278,48 @@ describe('planet appearance', () => {
       emissions.slice(1).forEach((value, index) => expect(value).toBeGreaterThan(emissions[index]!))
     } finally {
       handle.dispose()
+    }
+  })
+
+  it('matches runtime adapter applied emission to appearance profile intensity plus production remap', () => {
+    const canonicalState = resolveRuntimePlanetVisualState({
+      lut: PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE,
+      provenance: {
+        ...LEGACY_FOCUS_EMISSION_FALLBACK_PROVENANCE,
+        profile_id: 'rating-emission-2026-08-a',
+      },
+      source: 'active',
+    }, { bloomEnabled: false })
+    const planet = createSelectionPlanet(canonicalState.curve)
+    const bloom = {
+      applyParams() {},
+      get params() {
+        return { ...canonicalState.bloom }
+      },
+    }
+    try {
+      const adapter = createFocusPlanetRuntimeVisualAdapter({ canonicalState, planet, bloom })
+      for (const voteAverage of [4.5, 6.5, 8.2] as const) {
+        const target = { ...movie, vote_average: voteAverage }
+        const appearance = resolvePlanetAppearance(target, palette, canonicalState.curve)
+        const result = adapter.applyMovie(target, palette, 2)
+        expect(result.appliedSnapshot.profileEmission).toBe(appearance.emissionIntensity)
+        expect(result.appliedSnapshot.emission).toBeCloseTo(
+          remapFocusEmissionIntensity(
+            appearance.emissionIntensity,
+            appearance.emissionProfile,
+            canonicalState.focus.emissionTuning,
+          ),
+          12,
+        )
+        expect(result.appliedSnapshot.focus).toEqual({
+          lightness: appearance.lightness,
+          chroma: appearance.chroma,
+        })
+        expect(adapter.productionIdentity().hashInput).toBe(canonicalState.hashInput)
+      }
+    } finally {
+      planet.dispose()
     }
   })
 

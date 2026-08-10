@@ -6,8 +6,16 @@ import {
 } from '@/lib/exploration'
 import { useGalaxyInteractionStore } from '@/store/galaxyInteractionStore'
 import { mountGalaxyScene } from '@/three/scene'
+import { LEGACY_FOCUS_EMISSION_FALLBACK_PROVENANCE } from '@/three/focusEmission'
+import { resolveRuntimePlanetVisualState } from '@/three/focusPlanetRuntimeVisual'
 import { PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE } from '@/three/productionFocusEmissionProfile'
 import type { Meta, Movie } from '@/types/galaxy'
+
+const STORYBOOK_PLANET_VISUAL_STATE = resolveRuntimePlanetVisualState({
+  lut: PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE,
+  provenance: LEGACY_FOCUS_EMISSION_FALLBACK_PROVENANCE,
+  source: 'legacy-fallback',
+}, { bloomEnabled: true })
 
 function synchronizeLabFocus(focusMovieId: number | null): void {
   if (focusMovieId !== null) {
@@ -130,7 +138,7 @@ export function GalaxyThreeLayerLabCore(props: GalaxyThreeLayerLabProps) {
   useEffect(() => {
     const el = rootRef.current
     if (!el) return
-    const m = mountGalaxyScene(el, meta, movies, PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE)
+    const m = mountGalaxyScene(el, meta, movies, STORYBOOK_PLANET_VISUAL_STATE)
     mountHandle.current = m
     return () => {
       mountHandle.current = null

@@ -30,6 +30,8 @@ import { useStrings } from '@/lib/strings'
 import { clearSearchDraft } from '@/store/galaxyInteractionStore'
 import { useGalaxyDataStore } from '@/store/galaxyDataStore'
 import { useSearchIndexStore } from '@/store/searchIndexStore'
+import { resolveRuntimePlanetVisualState } from '@/three/focusPlanetRuntimeVisual'
+import type { PlanetVisualState } from '@/three/planetVisualState'
 import { mountGalaxyScene } from '@/three/scene'
 
 import './App.css'
@@ -52,6 +54,7 @@ function App() {
   const fetchGalaxyData = useGalaxyDataStore((s) => s.fetchGalaxyData)
   const indexStatus = useSearchIndexStore((s) => s.status)
   const [focusEmissionProfile, setFocusEmissionProfile] = useState<ResolvedFocusEmissionProfile | null>(null)
+  const [planetVisualState, setPlanetVisualState] = useState<PlanetVisualState | null>(null)
   const [focusEmissionProfileVersion, setFocusEmissionProfileVersion] = useState<string | null>(null)
   const [focusEmissionError, setFocusEmissionError] = useState<string | null>(null)
   const canvasHostRef = useRef<HTMLDivElement>(null)
@@ -62,7 +65,7 @@ function App() {
 
   const indexHydrationTerminal =
     indexStatus === 'ready' || indexStatus === 'skipped' || indexStatus === 'error'
-  const routeReady = status === 'ready' && data !== null && indexHydrationTerminal && focusEmissionProfile !== null && focusEmissionProfileVersion === data.meta.version
+  const routeReady = status === 'ready' && data !== null && indexHydrationTerminal && focusEmissionProfile !== null && planetVisualState !== null && focusEmissionProfileVersion === data.meta.version
 
   useEffect(() => {
     void fetchGalaxyData()
@@ -80,13 +83,24 @@ function App() {
           // A bundled dev run is an intentional compatibility fixture. Production must have a pointer.
           allowLegacyFallback: import.meta.env.DEV,
         })
+        const visualState = resolveRuntimePlanetVisualState(resolved, { bloomEnabled: true })
         if (!cancelled) {
           setFocusEmissionProfile(resolved)
+          setPlanetVisualState(visualState)
           setFocusEmissionProfileVersion(data.meta.version)
           setFocusEmissionError(null)
+          console.log('[App] canonical planet visual state resolved', {
+            profile_id: resolved.provenance.profile_id,
+            source: resolved.source,
+            hashInputLength: visualState.hashInput.length,
+          })
         }
       } catch (error) {
-        if (!cancelled) setFocusEmissionError(error instanceof Error ? error.message : String(error))
+        if (!cancelled) {
+          setFocusEmissionProfile(null)
+          setPlanetVisualState(null)
+          setFocusEmissionError(error instanceof Error ? error.message : String(error))
+        }
       }
     })()
     return () => { cancelled = true }
@@ -111,7 +125,7 @@ function App() {
     phase = 'profile-error'
   } else if (status === 'ready' && data !== null && !indexHydrationTerminal) {
     phase = 'index-loading'
-  } else if (focusEmissionProfile === null || focusEmissionProfileVersion !== data?.meta.version) {
+  } else if (focusEmissionProfile === null || planetVisualState === null || focusEmissionProfileVersion !== data?.meta.version) {
     phase = 'profile-loading'
   } else {
     phase = 'started'
@@ -126,16 +140,16 @@ function App() {
   }, [phase, data, indexStatus])
 
   useEffect(() => {
-    if (!routeReady || !data) return
+    if (!routeReady || !data || planetVisualState === null) return
     const el = canvasHostRef.current
     if (!el) return
-    const mount = mountGalaxyScene(el, data.meta, data.movies, focusEmissionProfile.lut)
+    const mount = mountGalaxyScene(el, data.meta, data.movies, planetVisualState)
     animateZCurrentRef.current = mount.controller.animateZCurrentTo
     return () => {
       animateZCurrentRef.current = null
       mount.dispose()
     }
-  }, [routeReady, data, focusEmissionProfile])
+  }, [routeReady, data, planetVisualState])
 
   useEffect(() => {
     if (status !== 'ready' || !data) return

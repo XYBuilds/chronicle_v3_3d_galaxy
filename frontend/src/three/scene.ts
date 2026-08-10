@@ -38,9 +38,11 @@ import {
 } from './sdrRuntimeTuning'
 import { attachGalaxyActiveMeshInteraction } from './interaction'
 import { createSelectionPlanet, type SelectionPlanetHandle } from './planet'
-import { type FocusEmissionProfile } from './focusEmission'
-import { validateFocusEmissionRuntimeTuning, type FocusEmissionRuntimeTuning } from './focusEmissionTuning'
-import { PLANET_VISUAL_DEFAULTS } from './planetVisualDefaults'
+import {
+  createFocusPlanetRuntimeVisualAdapter,
+  type FocusPlanetRuntimeVisualAdapter,
+} from './focusPlanetRuntimeVisual'
+import type { PlanetVisualBloomHandle, PlanetVisualState } from './planetVisualState'
 import {
   selectionPlanetOrientedQuaternion,
   selectionPlanetRotationAxisForMovie,
@@ -197,27 +199,8 @@ interface SelectionPlanetTerraceDebug {
   log: () => void
 }
 
-/** Dev console: `window.__planetVisual` — grouped Focus look-development controls. */
-interface PlanetVisualDebug {
-  exponent: number
-  intensityMin: number
-  intensityMax: number
-  readonly focus: {
-    lightness: number
-  }
-  readonly lighting: {
-    keyLightIntensity: number
-    flatShadingMix: number
-    direction: [number, number, number]
-  }
-  readonly bloom: {
-    strength: number
-    radius: number
-    threshold: number
-  }
-  reset(): void
-  log(): void
-}
+/** Dev console: `window.__planetVisual` — session debug overlay over canonical Focus visuals. */
+type PlanetVisualDebug = ReturnType<FocusPlanetRuntimeVisualAdapter['createDebugControls']>
 
 /** Dev console: `window.__hdrCapabilities` — Phase 29.2 HDR capability probe (§29 spec). */
 type HdrCapabilitiesWindowDebug = HdrCapabilitiesDebug
@@ -285,8 +268,17 @@ export function mountGalaxyScene(
   container: HTMLElement,
   meta: Pick<Meta, 'z_range' | 'xy_range' | 'count' | 'genre_palette'>,
   movies: Movie[],
-  focusEmissionProfile: FocusEmissionProfile,
+  planetVisualState: PlanetVisualState,
 ): GalaxySceneMount {
+  if (planetVisualState === null || typeof planetVisualState !== 'object') {
+    throw new Error('[Scene] canonical planet visual state is required')
+  }
+  console.log('[Scene] mounting with canonical planet visual state', {
+    movies: movies.length,
+    emissionSource: planetVisualState.emissionSource,
+    profileId: planetVisualState.emissionProvenance.profile_id,
+    hashInputLength: planetVisualState.hashInput.length,
+  })
   const zRange = meta.z_range
   if (zRange.length !== 2) {
     throw new Error('[Scene] meta.z_range must be [z_min, z_max]')
@@ -511,9 +503,33 @@ export function mountGalaxyScene(
     }
   })
 
-  const planet = createSelectionPlanet(focusEmissionProfile)
+  const planet = createSelectionPlanet(planetVisualState.curve)
   planet.mesh.renderOrder = 2
   scene.add(planet.mesh)
+
+  const perlinBloom = createPerlinSelectiveBloom(renderer, scene, camera)
+  perlinBloom.assignBloomLayer(planet.mesh)
+  const planetVisualBloomHandle: PlanetVisualBloomHandle = {
+    applyParams(params) {
+      perlinBloom.applyParams(params)
+    },
+    get params() {
+      return {
+        enabled: perlinBloom.debug.enabled,
+        strength: perlinBloom.debug.strength,
+        radius: perlinBloom.debug.radius,
+        threshold: perlinBloom.debug.threshold,
+      }
+    },
+  }
+  const planetVisual = createFocusPlanetRuntimeVisualAdapter({
+    canonicalState: planetVisualState,
+    planet,
+    bloom: planetVisualBloomHandle,
+  })
+  const planetVisualDebug = planetVisual.createDebugControls()
+  window.__planetVisual = planetVisualDebug
+  planetVisualDebug.log()
 
   /** P32.6 — slow spin about the planet-local pole; reset baseline on movie change. */
   let planetSpinMovieId = -1
@@ -731,7 +747,7 @@ export function mountGalaxyScene(
       selectingQuatHelper.lookAt(movie.x, movie.y, movie.z)
       selectingEndQuat.copy(selectingQuatHelper.quaternion)
     }
-    planet.setFromMovie(movie, meta.genre_palette, r)
+    planetVisual.applyMovie(movie, meta.genre_palette, r)
     bindSelectionPlanetSpin(movie.id, performance.now())
     uFocused.value = -1
     const zSnap = useGalaxyInteractionStore.getState().zCurrent
@@ -840,117 +856,6 @@ export function mountGalaxyScene(
   }
   window.__bloom = bloomDebug
   bloomDebug.log()
-
-  const perlinBloom = createPerlinSelectiveBloom(renderer, scene, camera)
-  perlinBloom.assignBloomLayer(planet.mesh)
-
-  let focusEmissionTuning: FocusEmissionRuntimeTuning = {
-    ...PLANET_VISUAL_DEFAULTS.focus.emissionTuning,
-  }
-
-  const setFocusEmissionTuning = (): void => {
-    planet.setFocusEmissionTuning(focusEmissionTuning)
-  }
-
-  const focusVisualDebug: PlanetVisualDebug['focus'] = {
-    get lightness() {
-      return planet.material.uniforms.uPerlinL.value as number
-    },
-    set lightness(value: number) {
-      planet.setFocusVisualTuning({
-        lightness: Number(value),
-        keyLightIntensity: planet.material.uniforms.uKeyLightIntensity.value as number,
-      })
-    },
-  }
-
-  const lightingVisualDebug: PlanetVisualDebug['lighting'] = {
-    get keyLightIntensity() {
-      return planet.material.uniforms.uKeyLightIntensity.value as number
-    },
-    set keyLightIntensity(value: number) {
-      planet.setFocusVisualTuning({
-        lightness: planet.material.uniforms.uPerlinL.value as number,
-        keyLightIntensity: Number(value),
-      })
-    },
-    get flatShadingMix() {
-      return planet.material.uniforms.uFlatShadingMix.value as number
-    },
-    set flatShadingMix(value: number) {
-      const next = Number(value)
-      if (!Number.isFinite(next)) throw new Error('[PlanetVisual] lighting.flatShadingMix must be finite')
-      planet.material.uniforms.uFlatShadingMix.value = THREE.MathUtils.clamp(next, 0, 1)
-    },
-    get direction() {
-      const direction = planet.material.uniforms.uLightDir.value as THREE.Vector3
-      return [direction.x, direction.y, direction.z]
-    },
-    set direction(value: [number, number, number]) {
-      if (!Array.isArray(value) || value.length !== 3 || !value.every(Number.isFinite)) {
-        throw new Error('[PlanetVisual] lighting.direction must be a finite [x, y, z] tuple')
-      }
-      const direction = planet.material.uniforms.uLightDir.value as THREE.Vector3
-      direction.set(value[0], value[1], value[2])
-      if (direction.lengthSq() <= 1e-12) throw new Error('[PlanetVisual] lighting.direction must not be zero')
-      direction.normalize()
-    },
-  }
-
-  const bloomVisualDebug: PlanetVisualDebug['bloom'] = {
-    get strength() { return perlinBloom.debug.strength },
-    set strength(value: number) { perlinBloom.debug.strength = Number(value) },
-    get radius() { return perlinBloom.debug.radius },
-    set radius(value: number) { perlinBloom.debug.radius = Number(value) },
-    get threshold() { return perlinBloom.debug.threshold },
-    set threshold(value: number) { perlinBloom.debug.threshold = Number(value) },
-  }
-
-  const planetVisualDebug: PlanetVisualDebug = {
-    get exponent() { return focusEmissionTuning.exponent },
-    set exponent(value: number) {
-      focusEmissionTuning = validateFocusEmissionRuntimeTuning({ ...focusEmissionTuning, exponent: Number(value) })
-      setFocusEmissionTuning()
-    },
-    get intensityMin() { return focusEmissionTuning.intensityMin },
-    set intensityMin(value: number) {
-      focusEmissionTuning = validateFocusEmissionRuntimeTuning({ ...focusEmissionTuning, intensityMin: Number(value) })
-      setFocusEmissionTuning()
-    },
-    get intensityMax() { return focusEmissionTuning.intensityMax },
-    set intensityMax(value: number) {
-      focusEmissionTuning = validateFocusEmissionRuntimeTuning({ ...focusEmissionTuning, intensityMax: Number(value) })
-      setFocusEmissionTuning()
-    },
-    focus: focusVisualDebug,
-    lighting: lightingVisualDebug,
-    bloom: bloomVisualDebug,
-    reset() {
-      focusEmissionTuning = {
-        ...PLANET_VISUAL_DEFAULTS.focus.emissionTuning,
-      }
-      setFocusEmissionTuning()
-      focusVisualDebug.lightness = PLANET_VISUAL_DEFAULTS.focus.lightness
-      lightingVisualDebug.keyLightIntensity = PLANET_VISUAL_DEFAULTS.lighting.keyLightIntensity
-      lightingVisualDebug.flatShadingMix = PLANET_VISUAL_DEFAULTS.lighting.flatShadingMix
-      const [x, y, z] = PLANET_VISUAL_DEFAULTS.lighting.direction
-      lightingVisualDebug.direction = [x, y, z]
-      bloomVisualDebug.strength = PLANET_VISUAL_DEFAULTS.focus.bloom.strength
-      bloomVisualDebug.radius = PLANET_VISUAL_DEFAULTS.focus.bloom.radius
-      bloomVisualDebug.threshold = PLANET_VISUAL_DEFAULTS.focus.bloom.threshold
-      this.log()
-    },
-    log() {
-      const [x, y, z] = lightingVisualDebug.direction
-      console.log(
-        `[PlanetVisual] exponent=${focusEmissionTuning.exponent.toFixed(3)} intensityMin=${focusEmissionTuning.intensityMin.toFixed(4)} intensityMax=${focusEmissionTuning.intensityMax.toFixed(4)} | ` +
-          `focus.lightness=${focusVisualDebug.lightness.toFixed(4)} | lighting.keyLightIntensity=${lightingVisualDebug.keyLightIntensity.toFixed(4)} flatShadingMix=${lightingVisualDebug.flatShadingMix.toFixed(4)} direction=(${x.toFixed(3)},${y.toFixed(3)},${z.toFixed(3)}) | ` +
-          `bloom strength=${bloomVisualDebug.strength.toFixed(4)} radius=${bloomVisualDebug.radius.toFixed(4)} threshold=${bloomVisualDebug.threshold.toFixed(4)}`,
-      )
-    },
-  }
-  window.__planetVisual = planetVisualDebug
-  planetVisualDebug.log()
 
   const uSizeScale = galUniforms.uSizeScale as THREE.Uniform<number>
   const uActiveSizeMul = galUniforms.uActiveSizeMul as THREE.Uniform<number>
@@ -1578,6 +1483,9 @@ export function mountGalaxyScene(
     }
     if (window.__planetTerrace === planetTerraceDebug) {
       delete window.__planetTerrace
+    }
+    if (window.__planetVisual === planetVisualDebug) {
+      delete window.__planetVisual
     }
     if (postFxBloomEnabled) {
       composer.removePass(bloomPass)

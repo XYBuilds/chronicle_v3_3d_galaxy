@@ -176,9 +176,8 @@ function resolveLegacyCompatibility(
 }> {
   if (compatibility === undefined) {
     if (derivation !== undefined) fail('legacy emission derivation requires legacy compatibility proof')
-    if (source === 'legacy-fallback' && marker === undefined) {
-      fail('legacy compatibility proof is required for historical P39 state')
-    }
+    // Soft runtime/dev legacy-fallback (no derivation, no historical claim) may resolve without
+    // P39 proof. Historical P39 evidence must still pass proof + derivation together below.
     return {}
   }
   if (source !== 'legacy-fallback') fail('legacy compatibility proof requires the legacy fallback source')

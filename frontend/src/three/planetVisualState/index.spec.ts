@@ -346,7 +346,21 @@ describe('canonical Planet visual state', () => {
       ...baseInput,
       emissionProvenance: LEGACY_FOCUS_EMISSION_FALLBACK_PROVENANCE,
       emissionSource: 'legacy-fallback',
+      emissionDerivation: {
+        kind: 'legacy-power',
+        modelVersion: 'p39.11-checkpoint-b-emission-exponent-v1',
+        exponent: 3,
+        intensityMin: 0.06,
+        intensityMax: 0.6,
+      },
     })).toThrow(/legacy compatibility proof/)
+    const softLegacy = resolvePlanetVisualState({
+      ...baseInput,
+      emissionProvenance: LEGACY_FOCUS_EMISSION_FALLBACK_PROVENANCE,
+      emissionSource: 'legacy-fallback',
+    })
+    expect(softLegacy.emissionSource).toBe('legacy-fallback')
+    expect(softLegacy.legacyCompatibility).toBeUndefined()
   })
 
   it('applies a proven P39 legacy power profile through the canonical renderer seam', () => {

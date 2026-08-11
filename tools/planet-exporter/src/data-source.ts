@@ -30,6 +30,7 @@ export type ActiveProfilePointer = {
 
 export type ChooseDataSourceOptions = {
   fetchText?: (url: string) => Promise<string>
+  fetchBytes?: (url: string) => Promise<Buffer>
 }
 
 type Manifest = {
@@ -77,7 +78,17 @@ async function defaultFetchText(url: string): Promise<string> {
   return await response.text()
 }
 
-function dataSourceFromProductionManifest(manifest: Manifest, manifestUrl: string): DataSource {
+async function defaultFetchBytes(url: string): Promise<Buffer> {
+  const response = await fetch(url, { redirect: 'follow' })
+  if (!response.ok) throw new Error(`HTTP ${response.status}`)
+  return Buffer.from(await response.arrayBuffer())
+}
+
+async function dataSourceFromProductionManifest(
+  manifest: Manifest,
+  manifestUrl: string,
+  fetchBytes: (url: string) => Promise<Buffer>,
+): Promise<DataSource> {
   if (typeof manifest.galaxy_data_gzip_url !== 'string') throw new Error('galaxy_data_gzip_url missing')
   const url = new URL(manifest.galaxy_data_gzip_url)
   if (!/^https?:$/.test(url.protocol) || url.username || url.password || url.hash || !/\.json(?:\.gz)?$/i.test(url.pathname)) {
@@ -86,10 +97,19 @@ function dataSourceFromProductionManifest(manifest: Manifest, manifestUrl: strin
   if (typeof manifest.data_version !== 'string' || !manifest.data_version.trim()) throw new Error('data_version missing')
   const pointer = activeProfilePointer(manifest.focus_emission_profile)
   const profileUrl = controlledProfileUrl(manifest.focus_emission_profile_url, pointer)
+  // Prefetch in Node and serve via Vite middleware so Playwright does not depend on R2 CORS.
+  const [bytes, profileBytes] = await Promise.all([
+    fetchBytes(manifest.galaxy_data_gzip_url),
+    fetchBytes(profileUrl),
+  ])
+  if (!bytes.length) throw new Error('galaxy_data_gzip_url returned empty body')
+  if (!profileBytes.length) throw new Error('focus_emission_profile_url returned empty body')
   return {
     kind: 'manifest',
     label: manifestUrl,
     pageUrl: manifest.galaxy_data_gzip_url,
+    bytes,
+    profileBytes,
     version: manifest.data_version.trim(),
     focusEmissionProfile: pointer,
     profileUrl,
@@ -120,9 +140,10 @@ export async function chooseDataSource(
   }
   try {
     const fetchText = options.fetchText ?? defaultFetchText
+    const fetchBytes = options.fetchBytes ?? defaultFetchBytes
     const raw = await fetchText(args.manifestUrl)
     const manifest = JSON.parse(raw) as Manifest
-    return dataSourceFromProductionManifest(manifest, args.manifestUrl)
+    return await dataSourceFromProductionManifest(manifest, args.manifestUrl, fetchBytes)
   } catch (error) {
     throw new CliError(`unable to load production manifest: ${error instanceof Error ? error.message : String(error)}`, EXIT_CODES.data)
   }

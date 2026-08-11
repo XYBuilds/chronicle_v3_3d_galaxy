@@ -87,8 +87,9 @@ describe('planet export data sources', () => {
   it('loads and validates an explicit production --manifest-url', async () => {
     const body = JSON.stringify(productionManifest())
     const fetchText = vi.fn(async () => body)
+    const fetchBytes = vi.fn(async (url: string) => Buffer.from(url.includes('focus-emission') ? '{"profile":true}' : 'gzip-bytes'))
 
-    await expect(chooseDataSource({ ...baseArgs, manifestUrl }, { fetchText })).resolves.toMatchObject({
+    await expect(chooseDataSource({ ...baseArgs, manifestUrl }, { fetchText, fetchBytes })).resolves.toMatchObject({
       kind: 'manifest',
       label: manifestUrl,
       pageUrl: 'https://assets.example.test/galaxy/releases/v1/galaxy_data.json.gz',
@@ -96,26 +97,32 @@ describe('planet export data sources', () => {
       focusEmissionProfile: pointer,
       profileUrl,
       manifestUrl,
+      bytes: Buffer.from('gzip-bytes'),
+      profileBytes: Buffer.from('{"profile":true}'),
     })
     expect(fetchText).toHaveBeenCalledWith(manifestUrl)
+    expect(fetchBytes).toHaveBeenCalledWith('https://assets.example.test/galaxy/releases/v1/galaxy_data.json.gz')
+    expect(fetchBytes).toHaveBeenCalledWith(profileUrl)
   })
 
   it('rejects production manifests that omit required release fields', async () => {
+    const fetchBytes = vi.fn(async () => Buffer.from('x'))
     await expect(chooseDataSource(
       { ...baseArgs, manifestUrl },
-      { fetchText: async () => JSON.stringify(productionManifest({ data_version: undefined })) },
+      { fetchText: async () => JSON.stringify(productionManifest({ data_version: undefined })), fetchBytes },
     )).rejects.toThrow(/data_version/)
 
     await expect(chooseDataSource(
       { ...baseArgs, manifestUrl },
-      { fetchText: async () => JSON.stringify(productionManifest({ focus_emission_profile_url: undefined })) },
+      { fetchText: async () => JSON.stringify(productionManifest({ focus_emission_profile_url: undefined })), fetchBytes },
     )).rejects.toThrow(/focus_emission_profile_url/)
   })
 
   it('uses the manifest immutable URL only when it exactly names the active pointer profile', async () => {
+    const fetchBytes = vi.fn(async () => Buffer.from('x'))
     await expect(chooseDataSource(
       { ...baseArgs, manifestUrl },
-      { fetchText: async () => JSON.stringify(productionManifest()) },
+      { fetchText: async () => JSON.stringify(productionManifest()), fetchBytes },
     )).resolves.toMatchObject({
       kind: 'manifest', focusEmissionProfile: pointer, profileUrl,
     })
@@ -126,6 +133,7 @@ describe('planet export data sources', () => {
         fetchText: async () => JSON.stringify(productionManifest({
           focus_emission_profile_url: 'https://assets.example.test/galaxy/focus-emission-profiles/rating-emission-2026-07-b.json',
         })),
+        fetchBytes,
       },
     )).rejects.toThrow(/focus_emission_profile_url/)
   })
@@ -137,7 +145,10 @@ describe('planet export data sources', () => {
   ])('fails closed for manifest %s', async (_label, focus_emission_profile) => {
     await expect(chooseDataSource(
       { ...baseArgs, manifestUrl },
-      { fetchText: async () => JSON.stringify(productionManifest({ focus_emission_profile })) },
+      {
+        fetchText: async () => JSON.stringify(productionManifest({ focus_emission_profile })),
+        fetchBytes: async () => Buffer.from('x'),
+      },
     )).rejects.toThrow(/focus_emission_profile/)
   })
 

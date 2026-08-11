@@ -113,7 +113,7 @@ flowchart TD
   - **weekly**：仅 `workflow_dispatch`，**不**作为默认 schedule。
 - **前端动画**：不做 remap 插值动画。坐标稳定性由数据层 Procrustes 负责。
 - **Genre palette**：Phase 18.0 冻结固定 `genre -> hue` 表（19 TMDB 官方 genre），`meta.genre_palette_version` 记录版本。
-- **静态托管**（详见 §12）：**Cloudflare Pages** 托管 `frontend/dist`；**Cloudflare R2** 托管 `galaxy_data.json.gz` 等大对象（绕 Pages 25MiB 单文件硬限）；**GitHub Pages** 灰度备线由 `deploy-pages.yml` 在 `main` push 时同步。
+- **静态托管**（详见 §12）：**Cloudflare Pages** 托管 `frontend/dist`；**Cloudflare R2** 托管 `galaxy_data.json.gz` 等大对象（绕 Pages 25MiB 单文件硬限）。GitHub Pages 灰度备线已退役，不再作为当前部署或 smoke 表面。
 
 实际数据流：
 
@@ -129,7 +129,6 @@ flowchart TD
     Export["scripts/cron/export_from_supabase.py"]
     R2["Cloudflare R2 (galaxy_*.json.gz)"]
     Pages["Cloudflare Pages (frontend/dist)"]
-    GHPages["GitHub Pages (gray release)"]
     Browser["Browser"]
 
     Nightly -->|"download"| Kaggle
@@ -152,7 +151,6 @@ flowchart TD
 
     Browser -->|"fetch app"| Pages
     Browser -->|"fetch galaxy_*.json.gz"| R2
-    Browser -.->|"gray release"| GHPages
 ```
 
 ### 3.3 Phase 40：OG Index KV v2 增量发布
@@ -595,7 +593,7 @@ Phase 18 目标 Supabase 表：
 5. **每月 1 日**额外批量 upsert `vote_snapshots`。
 6. 调子进程 `export_from_supabase.py` 重导 `galaxy_data.json` / `.gz` / `galaxy_search_index.json.gz`（meta.version 形如 `YYYY.MM.DD.daily.<seq>`）。
 7. **P18.6b + P20.4**：将 `galaxy_data.json.gz` / `galaxy_search_index.json.gz` 上传到 **Cloudflare R2**，写出 `galaxy_assets_manifest.json`，并在 `R2_GALAXY_PRUNE_AFTER_UPLOAD=1` 时从 `frontend/public/data/` 删除大 gzip（避免 Pages 25MiB 限制）。版本化 gzip 对象头写入 `Cache-Control: public, max-age=31536000, immutable`。
-8. **P18.6 + P20.1**：构建 `frontend/dist` 并通过 `cloudflare/wrangler-action@v3` 执行 `pages deploy` 发布到 **Cloudflare Pages**；GitHub Pages workflow（`[.github/workflows/deploy-pages.yml](../../.github/workflows/deploy-pages.yml)`）保留为灰度备线。
+8. **P18.6 + P20.1**：构建 `frontend/dist` 并通过 `cloudflare/wrangler-action@v3` 执行 `pages deploy` 发布到 **Cloudflare Pages**。GitHub Pages workflow 已退役，不再作为灰度备线。
 9. **Phase 40**：OG index KV 同步使用 v2 checkpoint；不生成每日选片、`today.json`、Today OG 或 manifest `today_url`。发布链仅处理 galaxy/search assets。
 
 每日任务不重算 UMAP 坐标，不更新 `threshold_versions`。
@@ -675,8 +673,6 @@ P18.5b 上线初期采用「软闸 + 强日志 + artifact」策略，原因是 G
                     ←  Cloudflare R2（公开读 + CORS；大 gzip 为主）
                        ↑
                        └─ GitHub Actions（nightly / monthly）写入
-
-[GitHub Pages]（灰度备线，仍由 push-to-main workflow 部署）
 ```
 
 - **Pages 职责**：托管 `frontend/dist`（前端 React+Three.js 应用壳）。**Direct Upload via** `cloudflare/wrangler-action@v3`（GitHub Actions nightly / monthly 或等价生产 workflow）作为**唯一**生产发布主链路；Cloudflare 控制台「连接 Git 仓库」触发的 Pages **自动构建不作为生产入口**（应 **Disconnect** 或禁用生产分支自动部署），避免未执行 monorepo 构建与 R2 前置步骤时，把仓库内路径下的超大 `*.json.gz` 误纳入 **Pages 输出目录校验**（触发 25MiB 硬限报错）。详见根目录 `README.md`「CI 与静态部署」与 [P24.1 实施报告](../reports/Phase%2024.1%20P24.1%20Cloudflare%20R2%20发布链路清理%20实施报告.md)。
@@ -684,11 +680,13 @@ P18.5b 上线初期采用「软闸 + 强日志 + artifact」策略，原因是 G
 - **前端 URL 解析**（`[frontend/src/lib/galaxyAssetUrls.ts](../../frontend/src/lib/galaxyAssetUrls.ts)` 优先级）：
   1. 构建期 `VITE_GALAXY_DATA_GZIP_URL` / `VITE_GALAXY_SEARCH_INDEX_GZIP_URL`
   2. 运行时 `?dataset=` 实验参数
-  3. `data/galaxy_assets_manifest.json`（由 `[scripts/cron/upload_galaxy_r2.py](../../scripts/cron/upload_galaxy_r2.py)` 在每次 cron 写入，包含 `galaxy_data_gzip_url` / `galaxy_search_index_gzip_url` / `data_version`）
+  3. `data/galaxy_assets_manifest.json`（由 `[scripts/cron/upload_galaxy_r2.py](../../scripts/cron/upload_galaxy_r2.py)` 在每次 cron 写入，包含 `galaxy_data_gzip_url` / `galaxy_search_index_gzip_url` / `data_version`，以及可选的 active emission profile 指针）
   4. 默认同源 `BASE_URL + data/*.json.gz`（仅当 R2 secrets 全部缺失时才会到达此回退路径）
-- **GitHub Pages**：`[.github/workflows/deploy-pages.yml](../../.github/workflows/deploy-pages.yml)` 仍在 push 到 `main` 时部署到 GitHub Pages，作为灰度备线 1–2 周内可用；不依赖 R2，浏览器在该路径上仍走同源 gzip。
+- **GitHub Pages**：已退役。不得再把 GitHub Pages 当作灰度生产、fallback 或支持的 manual-smoke 表面；历史 Plans/Reports 仍可保留。
 - **数据加载技术**（不变）：HTTP 层透明 gzip 或原始 gzip bytes + `DecompressionStream`，由 `frontend/src/data/loadGalaxyGzip.ts` 处理。
-- **Vite** `base`：仓库默认 `process.env.VITE_BASE_PATH ?? '/'`（适配 Pages 根路径与自定义域）；GitHub Pages 子路径部署时由 `[.github/workflows/deploy-pages.yml](../../.github/workflows/deploy-pages.yml)` 注入对应 `VITE_BASE_PATH` 即可。
+- **Vite** `base`：仓库默认 `process.env.VITE_BASE_PATH ?? '/'`（适配 Cloudflare Pages 根路径与自定义域）。
+- **Planet Export 生产输入**：外部调用须传 `--manifest-url`（见 [`docs/system/planet-export-contract.md`](../system/planet-export-contract.md)）；不得静默回退到仓库内跟踪的 stale manifest。`--data-file` 仅作本地/测试路径。
+- **发布一致性**：nightly/monthly 的 compute、OG sync、R2 上传、frontend build、Pages deploy 为独立可失败阶段。消费者使用各自最近一次成功发布的兼容产物；失败保持可见，不引入跨系统原子发布协议。
 
 
 

@@ -315,7 +315,7 @@ Conceptual tree (omits `node_modules/`, `.venv/`, `data/raw/`, `data/output/`, e
 ├── .cursor/
 │   └── rules/                 # project overview, data protection, branding
 ├── .github/
-│   └── workflows/             # deploy-pages, monthly_refit, nightly_vote_refresh
+│   └── workflows/             # monthly_refit, nightly_vote_refresh
 ├── assets/
 │   └── fonts/                 # Inter, Butler (see assets/fonts/README.md)
 ├── data/                      # subsample/; raw|output|runs — see data/README.md
@@ -431,7 +431,6 @@ Production path: GitHub Actions → Cloudflare R2 + Cloudflare Pages
 | ------------------------------------------------------------------------ | -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [`nightly_vote_refresh.yml`](.github/workflows/nightly_vote_refresh.yml) | Daily 20:00 UTC; `workflow_dispatch`         | `scripts/cron/nightly_vote_refresh.py` → `upload_galaxy_r2.py` → `npm run build -w frontend` → `wrangler pages deploy` (`workingDirectory: frontend`) |
 | [`monthly_refit.yml`](.github/workflows/monthly_refit.yml)               | 1st of month 20:00 UTC; manual `anchor_mode` | Restore/download embedding bundle → `monthly_refit.py` → same R2 + Pages chain; 210 min timeout                                                       |
-| [`deploy-pages.yml`](.github/workflows/deploy-pages.yml)                 | `main` push or manual                        | Gray release: GitHub Pages of `frontend/dist` (with `404.html` SPA fallback); not long-term prod, retire after CF validation                          |
 
 
 Shared rules:
@@ -439,10 +438,8 @@ Shared rules:
 - `galaxy_data.json.gz` and `galaxy_search_index.json.gz` are not in Git; CI uploads to R2; Pages ships a small `galaxy_assets_manifest.json`.
 - Do not rely on Cloudflare’s Git-connected Pages auto-build for production; use this repo’s workspace build + wrangler Direct Upload.
 - CI uses Node 24; Linux jobs often `rm package-lock.json && npm install --include=optional` so platform-specific optional deps resolve.
-
-Gray fallback: GitHub Pages
-
-[`deploy-pages.yml`](.github/workflows/deploy-pages.yml) notes a 1–2 week parallel compare after P18.6 Cloudflare cutover; disable after validation.
+- The GitHub Pages gray / manual-smoke workflow is retired; Cloudflare Pages is the only current site deploy surface.
+- Production Planet Export requires an explicit `--manifest-url` (see [`docs/system/planet-export-contract.md`](docs/system/planet-export-contract.md)); `--data-file` is offline/local only.
 
 ### Documentation index (implementation SSOT)
 

@@ -35,7 +35,7 @@ export async function run(
 ): Promise<number> {
   try {
     const args = parseArgs(argv, (value) => path.resolve(value))
-    const source = await dependencies.chooseDataSource(args, path.join(root, 'frontend/public/data/galaxy_assets_manifest.json'))
+    const source = await dependencies.chooseDataSource(args)
     io.stderr.write(`[planet:export] movieId=${args.movieId} source=${source.label} resolution=${args.resolution} mode=${args.renderMode} output=${args.output}\n`)
     const render = await dependencies.renderInBrowser(args, source, root)
     dependencies.assertPngSafe(render.png, args.resolution)

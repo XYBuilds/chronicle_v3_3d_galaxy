@@ -35,7 +35,7 @@ async function exportFixture(
     renderMode: 'shader' as const,
     dataFile: fixture,
   }
-  const source = await chooseDataSource(args, path.join(root, 'frontend/public/data/galaxy_assets_manifest.json'))
+  const source = await chooseDataSource(args)
   const render = await renderP3910BloomStrengthZeroInBrowser(args, source, root)
   assertPngSafe(render.png, args.resolution)
   const metadata = metadataFor(args, source, render, getGitCommit(root))

@@ -1,5 +1,7 @@
 # GitHub Pages 上线教程（Phase 7 I6）
 
+> **Tombstone — retired surface.** GitHub Pages is no longer an active gray deployment, fallback, or supported manual-smoke path. Current site deployment is Cloudflare Pages + R2 only. Keep this guide as historical evidence; do not follow it for production. See [`docs/system/capability-map.md`](../system/capability-map.md) and [`docs/system/repository-map.md`](../system/repository-map.md).
+
 本文是本项目的实操版上线手册，目标是把当前仓库部署到 GitHub Pages，并可稳定访问：
 
 - 目标地址：`https://xybuilds.github.io/chronicle_v3_3d_galaxy/`

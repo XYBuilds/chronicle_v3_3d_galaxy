@@ -15,9 +15,27 @@ const args: ExportArgs = {
   bloom: 'on',
   sizeRoot: 3,
   renderMode: 'shader',
+  manifestUrl: 'https://example.test/data/galaxy_assets_manifest.json',
 }
 
-const source: DataSource = { kind: 'url', label: 'https://example.test/galaxy_data.json.gz', version: 'fixture-v1' }
+const source: DataSource = {
+  kind: 'manifest',
+  label: 'https://example.test/data/galaxy_assets_manifest.json',
+  pageUrl: 'https://example.test/galaxy_data.json.gz',
+  version: 'fixture-v1',
+  manifestUrl: 'https://example.test/data/galaxy_assets_manifest.json',
+  profileUrl: 'https://example.test/galaxy/focus-emission-profiles/rating-emission-2026-07-a.json',
+  focusEmissionProfile: {
+    profile_id: 'rating-emission-2026-07-a',
+    period: '2026-07',
+    model_version: 'rating-midrank-cdf-lut-v1',
+    curve_sha256: 'a'.repeat(64),
+    source_data_version: 'fixture-v1',
+    source_movie_count: 1,
+    status: 'active',
+    activated_at: '2026-07-22T00:00:00.000Z',
+  },
+}
 
 const visualHash = JSON.stringify({
   planet: JSON.stringify({
@@ -482,6 +500,18 @@ describe('browser render metadata', () => {
       noise: { seed: 123 },
       rotation: { base_quaternion: [0, 0, 0, 1], seeded_spin_axis_world: [0, 1, 0], revs_per_sec: 0.01 },
       camera: { projection: 'orthographic', position: [0, 0, -20] },
+    })
+  })
+
+  it('records selected data and profile provenance for Daily verification', () => {
+    const metadata = metadataFor(args, source, render, 'fixture-commit')
+
+    expect(metadata).toMatchObject({
+      data_version: 'fixture-v1',
+      data_source: source.label,
+      manifest_url: args.manifestUrl,
+      profile_url: source.profileUrl,
+      requested_focus_emission_profile: source.focusEmissionProfile,
     })
   })
 

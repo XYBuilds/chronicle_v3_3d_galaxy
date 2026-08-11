@@ -44,7 +44,7 @@ function createDependencies(): RunDependencies {
   }
 }
 
-const argv = ['--movie-id', '1', '--output', 'planet.png', '--resolution', '64']
+const argv = ['--movie-id', '1', '--output', 'planet.png', '--resolution', '64', '--manifest-url', 'https://example.test/data/galaxy_assets_manifest.json']
 
 describe('planet export CLI orchestration', () => {
   it('prints exactly one success JSON line to stdout', async () => {
@@ -58,6 +58,9 @@ describe('planet export CLI orchestration', () => {
     expect(JSON.parse(lines[0]!)).toMatchObject({ tmdb_id: 1 })
     expect(capture.stderr()).toContain('[planet:export] movieId=1')
     expect(dependencies.writeArtifactsAtomically).toHaveBeenCalledOnce()
+    expect(dependencies.chooseDataSource).toHaveBeenCalledWith(
+      expect.objectContaining({ manifestUrl: 'https://example.test/data/galaxy_assets_manifest.json' }),
+    )
   })
 
   it('passes explicit basic mode through the reusable export path', async () => {
@@ -77,6 +80,16 @@ describe('planet export CLI orchestration', () => {
       expect.anything(),
       'fixture-commit',
     )
+  })
+
+  it('rejects silent tracked-manifest fallback when no release input is provided', async () => {
+    const capture = createIo()
+    const dependencies = createDependencies()
+
+    await expect(run(['--movie-id', '1', '--output', 'planet.png', '--resolution', '64'], capture.io, dependencies)).resolves.toBe(EXIT_CODES.arguments)
+    expect(capture.stdout()).toBe('')
+    expect(capture.stderr()).toMatch(/--manifest-url|--data-file/)
+    expect(dependencies.chooseDataSource).not.toHaveBeenCalled()
   })
 
   it.each([

@@ -1,5 +1,7 @@
 # Phase 29 — 发布门槛与技术判定（Spec SSOT）
 
+> **历史判定记录，不是当前生产部署 SSOT。** Today/Cover 路由与 GitHub Pages 灰度备线已退役；当前站点部署仅 Cloudflare Pages + R2，Today 路由保持 404。现行契约见 [`docs/system/`](../system/) 与 Tech/Design/Data Pipeline。
+>
 > **状态**：P29.0–P29.6 已锁定；**§10（29.7）** 已输出 Phase 29 gate：**Phase 33 HDR production No-go**（P0 无 `supported`）；**Phase 30 Go**；生产仍为 WebGL2 sRGB。实施报告见 [`docs/reports/Phase 29.7 P29.7 Phase 29 Gate report 实施报告.md`](../reports/Phase%2029.7%20P29.7%20Phase%2029%20Gate%20report%20实施报告.md)。  
 > **计划**：`.cursor/plans/phase_29_release_gates_technical_decision.plan.md`  
 > **下游**：Phase 30（路由产品化）、Phase 32（SDR 可读性）、Phase 33（HDR 生产，**条件阶段**）、Phase 34（社交预览）。

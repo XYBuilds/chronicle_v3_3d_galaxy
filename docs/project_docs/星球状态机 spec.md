@@ -200,18 +200,18 @@ Perlin focus 球在片元侧按 **`vNoise`** 与 **`uThresh[0..K−2]`**（**K**
 
 **参数上限**：`uStepHeight` 由 Leva 与产品上限约束（须与 `near`、`FOCUS_PERLIN_CAMERA_STANDOFF` 相容）；具体数值定稿见《视觉参数总表》与 Phase 11 实施说明。
 
-#### 3.5.1 Perlin 片元着色、Emission 与固定 Key（Phase 39 · **当前生产合同**）
+#### 3.5.1 Perlin 片元着色、Emission 与固定 Key（当前生产 · active profile）
 
-- **法线**：屏幕空间 **`cross(dFdx(vWorldPos), dFdy(vWorldPos))`** 与顶点输出的 **`vGeomNormalWorld`** 按 **`uFlatShadingMix=0.8`** 混合，再计算 Lambert **`dot(N, uLightDir)`**。
-- **局部底色**：每档 **`uHue[i]`** 使用固定 **`uPerlinL=0.55`** 与 **`uPerlinChroma=0.15`**。OKLab/OKLCH 转换后仅将负通道归零，保留正 HDR 值；Perlin/genre band 合成后的最终逐片元颜色为 **`baseLinear`**。Phase 17 Hunt 仍可按 Perlin bit 应用，但 Focus 的 L/C 不再跟随宏观 uniform 快照。
-- **评分 → Emission**：有限 **`vote_average`** 先 clamp 到 `0…10`，令 `t=rating/10`，再计算 **`E = 0.06 + t² × 0.54`**。评分只写 **`uEmissionIntensity`**；不写 `uPerlinL`、`uPerlinChroma`、`uKeyLightIntensity`、genre band、geometry、seed、pose 或 camera。
-- **线性合成**：逐片元计算 **`emissiveLinear = baseLinear × uEmissionIntensity`** 与 **`keyLitLinear = baseLinear × 0.35 × lambert`**，再相加为 `litLinear`。无独立 ambient 项；Key 对所有评分固定。
+- **法线**：屏幕空间 **`cross(dFdx(vWorldPos), dFdy(vWorldPos))`** 与顶点输出的 **`vGeomNormalWorld`** 按 **`uFlatShadingMix`**（当前 defaults：`1`）混合，再计算 Lambert **`dot(N, uLightDir)`**。
+- **局部底色**：每档 **`uHue[i]`** 使用 Focus 固定 **`uPerlinL` / `uPerlinChroma`**（当前 defaults：`0.66` / `0.15`）。OKLab/OKLCH 转换后仅将负通道归零，保留正 HDR 值；Perlin/genre band 合成后的最终逐片元颜色为 **`baseLinear`**。Phase 17 Hunt 仍可按 Perlin bit 应用，但 Focus 的 L/C 不再跟随宏观 uniform 快照。
+- **评分 → Emission（当前生产）**：有限 **`vote_average`** 经 manifest 指向的 **active** `rating-midrank-cdf-lut-v1` profile 解析为 emission intensity；只写 **`uEmissionIntensity`**。不得把 Phase 39 的 `vote-average-power-clamped-v1` 二次曲线当作当前生产合同。权威边界见 [`docs/system/planet-export-contract.md`](../system/planet-export-contract.md) 与 `frontend/src/three/focusEmission.ts`。
+- **线性合成**：逐片元计算 **`emissiveLinear = baseLinear × uEmissionIntensity`** 与 **`keyLitLinear = baseLinear × uKeyLightIntensity × lambert`**，再相加为 `litLinear`。无独立 ambient 项；Key 对所有评分固定。
 - **输出边界**：正 HDR 值在 selective Bloom 前不截断；片元末端只执行一次 linear → sRGB。`uLightingEnabled=0` 的诊断路径与生产光照路径共用同一输出边界。
 - **hue**：**主 genre**（`movie.genres` 首个非空）若 JSON 含 **`movie.genre_hue`** 则该档直接用；其余档用 **`genreHueForGenreName`**。palette / `genre_hue` 的生成顺序以 [`TMDB 电影宇宙 Data Pipeline.md`](./TMDB%20电影宇宙%20Data%20Pipeline.md) 的 frozen palette 为准，前端不得自行重排。
-- **固定 Key**：**`uLightDir = normalize(0.7, 0.7, -0.14)`**，**`uKeyLightIntensity = 0.35`**，**`uFlatShadingMix = 0.8`**。最终参数以 `planetVisualDefaults.ts` 为准。
-- **Perlin selective Bloom**：Focus、Cover 与静态导出共用 **`pure-bloom-delta-v1`**；当前 `threshold=0`、`radius=1`、`strength=0.01`。基础场景只出现一次，附加项为 `max(composite - isolatedBase, 0)`；planet-only layer 使用 HalfFloat target，不包含宏观 idle/active。
+- **固定 Key**：方向、`uKeyLightIntensity`、`uFlatShadingMix` 以 `planetVisualDefaults.ts` 为准（当前 defaults：`keyLightIntensity=10`、`flatShadingMix=1`）。
+- **Perlin selective Bloom**：网站 focus 与静态导出共用 **`pure-bloom-delta-v1`**；当前 defaults 见 `PLANET_VISUAL_DEFAULTS.focus.bloom`。基础场景只出现一次，附加项为 `max(composite - isolatedBase, 0)`；planet-only layer 使用 HalfFloat target，不包含宏观 idle/active。
 
-**Phase 39 人工 Gate**：最终结论为 Go，含一项保留——生产数据评分 `5.1` 与 `8.482` 的亮度差异目测不明确；其他项目无目测问题。Go 表示接受当前 Phase 结果并结束，不表示评分亮度层级已经解决；后续手调在 Phase 39 之外进行。
+**历史（Phase 39）**：`E = 0.06 + t² × 0.54`、`uPerlinL=0.55`、`uKeyLightIntensity=0.35` 等参数属于已结束的 Phase 39 合同与诊断入口，不是当前生产 fallback。
 
 **不透明化（P11.5 · 已实装）**：Perlin 材质现为 **`transparent: false`**、**`depthWrite: true`**、**`alphaTest: 0.01`**；`uAlpha` 在 `setOpacity()` 中按可见性走 **0/1 二态**，避免 focus 球在 bloom / 叠片场景出现透明边缘泄漏。
 

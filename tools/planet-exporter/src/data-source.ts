@@ -14,6 +14,7 @@ export type DataSource = {
   version?: string
   focusEmissionProfile?: ActiveProfilePointer
   profileUrl?: string
+  manifestUrl?: string
 }
 
 export type ActiveProfilePointer = {
@@ -27,22 +28,22 @@ export type ActiveProfilePointer = {
   activated_at: string
 }
 
+export type ChooseDataSourceOptions = {
+  fetchText?: (url: string) => Promise<string>
+}
+
 type Manifest = {
   galaxy_data_gzip_url?: unknown
-  version?: unknown
   data_version?: unknown
   focus_emission_profile?: unknown
   focus_emission_profile_url?: unknown
 }
 
-function controlledProfileUrl(raw: unknown, pointer: ActiveProfilePointer, galaxyDataUrl: string): string {
-  const value = raw === undefined
-    ? new URL(`data/focus-emission-profiles/${pointer.profile_id}.json`, new URL(galaxyDataUrl)).toString()
-    : raw
-  if (typeof value !== 'string') throw new Error('focus_emission_profile_url invalid')
+function controlledProfileUrl(raw: unknown, pointer: ActiveProfilePointer): string {
+  if (typeof raw !== 'string') throw new Error('focus_emission_profile_url missing')
   let url: URL
   try {
-    url = new URL(value)
+    url = new URL(raw)
   } catch {
     throw new Error('focus_emission_profile_url invalid')
   }
@@ -70,7 +71,36 @@ function activeProfilePointer(raw: unknown): ActiveProfilePointer {
   return pointer as ActiveProfilePointer
 }
 
-export async function chooseDataSource(args: ExportArgs, manifestPath: string): Promise<DataSource> {
+async function defaultFetchText(url: string): Promise<string> {
+  const response = await fetch(url, { redirect: 'follow' })
+  if (!response.ok) throw new Error(`HTTP ${response.status}`)
+  return await response.text()
+}
+
+function dataSourceFromProductionManifest(manifest: Manifest, manifestUrl: string): DataSource {
+  if (typeof manifest.galaxy_data_gzip_url !== 'string') throw new Error('galaxy_data_gzip_url missing')
+  const url = new URL(manifest.galaxy_data_gzip_url)
+  if (!/^https?:$/.test(url.protocol) || url.username || url.password || url.hash || !/\.json(?:\.gz)?$/i.test(url.pathname)) {
+    throw new Error('galaxy_data_gzip_url invalid')
+  }
+  if (typeof manifest.data_version !== 'string' || !manifest.data_version.trim()) throw new Error('data_version missing')
+  const pointer = activeProfilePointer(manifest.focus_emission_profile)
+  const profileUrl = controlledProfileUrl(manifest.focus_emission_profile_url, pointer)
+  return {
+    kind: 'manifest',
+    label: manifestUrl,
+    pageUrl: manifest.galaxy_data_gzip_url,
+    version: manifest.data_version.trim(),
+    focusEmissionProfile: pointer,
+    profileUrl,
+    manifestUrl,
+  }
+}
+
+export async function chooseDataSource(
+  args: ExportArgs,
+  options: ChooseDataSourceOptions = {},
+): Promise<DataSource> {
   if (args.dataFile) {
     try {
       const profile = createLocalActiveProfileFixture()
@@ -85,24 +115,16 @@ export async function chooseDataSource(args: ExportArgs, manifestPath: string): 
       throw new CliError(`unable to read --data-file: ${error instanceof Error ? error.message : String(error)}`, EXIT_CODES.data)
     }
   }
-  if (args.dataUrl) return { kind: 'url', label: args.dataUrl, pageUrl: args.dataUrl }
+  if (!args.manifestUrl) {
+    throw new CliError('choose exactly one release input: --manifest-url URL or --data-file FILE', EXIT_CODES.data)
+  }
   try {
-    const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8')) as Manifest
-    if (typeof manifest.galaxy_data_gzip_url !== 'string') throw new Error('galaxy_data_gzip_url missing')
-    const url = new URL(manifest.galaxy_data_gzip_url)
-    if (!/^https?:$/.test(url.protocol) || url.username || url.password || url.hash || !/\.json(?:\.gz)?$/i.test(url.pathname)) throw new Error('galaxy_data_gzip_url invalid')
-    const pointer = activeProfilePointer(manifest.focus_emission_profile)
-    const profileUrl = controlledProfileUrl(manifest.focus_emission_profile_url, pointer, manifest.galaxy_data_gzip_url)
-    return {
-      kind: 'manifest',
-      label: manifest.galaxy_data_gzip_url,
-      pageUrl: manifest.galaxy_data_gzip_url,
-      version: typeof manifest.data_version === 'string' ? manifest.data_version : typeof manifest.version === 'string' ? manifest.version : undefined,
-      focusEmissionProfile: pointer,
-      profileUrl,
-    }
+    const fetchText = options.fetchText ?? defaultFetchText
+    const raw = await fetchText(args.manifestUrl)
+    const manifest = JSON.parse(raw) as Manifest
+    return dataSourceFromProductionManifest(manifest, args.manifestUrl)
   } catch (error) {
-    throw new CliError(`unable to load data manifest: ${error instanceof Error ? error.message : String(error)}`, EXIT_CODES.data)
+    throw new CliError(`unable to load production manifest: ${error instanceof Error ? error.message : String(error)}`, EXIT_CODES.data)
   }
 }
 

@@ -25,7 +25,7 @@ const args: ExportArgs = {
 
 describe('Phase 41 Vite diagnostic entry', () => {
   it('serves the isolated page and returns a self-consistent no-override sidecar', async () => {
-    const source = await chooseDataSource(args, path.join(root, 'frontend/public/data/galaxy_assets_manifest.json'))
+    const source = await chooseDataSource(args)
     const render = await renderPhase41DiagnosticInBrowser(args, source, root)
     const profile = render.visualDiagnostics.phase41_resolved_profile as Record<string, unknown>
     const bloom = render.visualDiagnostics.bloom as Record<string, unknown>
@@ -51,7 +51,7 @@ describe('Phase 41 Vite diagnostic entry', () => {
   }, 120_000)
 
   it('routes marked overrides through canonical application and renderer readback', async () => {
-    const source = await chooseDataSource(args, path.join(root, 'frontend/public/data/galaxy_assets_manifest.json'))
+    const source = await chooseDataSource(args)
     const render = await renderPhase41DiagnosticInBrowser(args, source, root, {
       diagnostic_only: PHASE41_DIAGNOSTIC_MARKER,
       lightness: 0.5,

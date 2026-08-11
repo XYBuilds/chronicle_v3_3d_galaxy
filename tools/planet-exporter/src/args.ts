@@ -24,12 +24,24 @@ export type ExportArgs = {
   sizeRoot: 2 | 3 | 4
   renderMode: 'basic' | 'shader'
   dataFile?: string
-  dataUrl?: string
+  manifestUrl?: string
 }
 
-export const usage = 'usage: npm run planet:export -- --movie-id ID --output FILE.png [--resolution N] [--padding N] [--bloom on|off] [--size-root 2|3|4] [--render-mode basic|shader] [--data-file FILE] [--data-url URL]'
+export const usage = 'usage: npm run planet:export -- --movie-id ID --output FILE.png (--manifest-url URL | --data-file FILE) [--resolution N] [--padding N] [--bloom on|off] [--size-root 2|3|4] [--render-mode basic|shader]'
 
-const allowed = new Set(['movie-id', 'output', 'resolution', 'padding', 'bloom', 'size-root', 'render-mode', 'data-file', 'data-url'])
+const allowed = new Set(['movie-id', 'output', 'resolution', 'padding', 'bloom', 'size-root', 'render-mode', 'data-file', 'data-url', 'manifest-url'])
+
+function assertHttpUrl(raw: string, label: string, pathnameTest: (pathname: string) => boolean): string {
+  try {
+    const parsed = new URL(raw)
+    if (!/^https?:$/.test(parsed.protocol) || parsed.hash || parsed.username || parsed.password || !pathnameTest(parsed.pathname)) {
+      throw new Error('invalid')
+    }
+    return parsed.toString()
+  } catch {
+    throw new CliError(`${label} must be an absolute http(s) URL`, EXIT_CODES.arguments)
+  }
+}
 
 export function parseArgs(argv: string[], resolvePath: (value: string) => string): ExportArgs {
   const values = new Map<string, string>()
@@ -52,6 +64,8 @@ export function parseArgs(argv: string[], resolvePath: (value: string) => string
   const sizeRoot = Number(values.get('size-root') ?? 3)
   const renderMode = values.get('render-mode') ?? 'shader'
   const dataUrl = values.get('data-url')
+  const hasDataFile = values.has('data-file')
+  const hasManifestUrl = values.has('manifest-url')
   if (
     !Number.isSafeInteger(movieId)
     || movieId <= 0
@@ -69,14 +83,15 @@ export function parseArgs(argv: string[], resolvePath: (value: string) => string
   ) {
     throw new CliError(`invalid arguments; ${usage}`, EXIT_CODES.arguments)
   }
-  if (dataUrl !== undefined) {
-    try {
-      const parsed = new URL(dataUrl)
-      if (!/^https?:$/.test(parsed.protocol) || parsed.hash || parsed.username || parsed.password || !/\.json(?:\.gz)?$/i.test(parsed.pathname)) throw new Error('invalid')
-    } catch {
-      throw new CliError('--data-url must be an absolute http(s) .json or .json.gz URL', EXIT_CODES.arguments)
-    }
+  if (hasDataFile === hasManifestUrl) {
+    throw new CliError(`choose exactly one release input: --manifest-url URL or --data-file FILE; ${usage}`, EXIT_CODES.arguments)
   }
+  if (dataUrl !== undefined) {
+    throw new CliError('standalone --data-url is retired; use --manifest-url for production or --data-file for offline/local tests', EXIT_CODES.arguments)
+  }
+  const manifestUrl = hasManifestUrl
+    ? assertHttpUrl(values.get('manifest-url')!, '--manifest-url', (pathname) => /\.json$/i.test(pathname))
+    : undefined
   return {
     movieId,
     output: resolvePath(output),
@@ -85,7 +100,7 @@ export function parseArgs(argv: string[], resolvePath: (value: string) => string
     bloom: bloom as 'on' | 'off',
     sizeRoot: sizeRoot as 2 | 3 | 4,
     renderMode: renderMode as 'basic' | 'shader',
-    dataFile: values.has('data-file') ? resolvePath(values.get('data-file')!) : undefined,
-    dataUrl,
+    dataFile: hasDataFile ? resolvePath(values.get('data-file')!) : undefined,
+    manifestUrl,
   }
 }

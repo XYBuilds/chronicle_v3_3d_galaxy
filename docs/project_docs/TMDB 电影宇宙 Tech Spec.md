@@ -494,12 +494,12 @@ galaxy_search_index.json.gz ← §4.5，当 meta.has_search_index 时
     ↓ 放入
 前端项目 public/data/
     ↓ 部署
-Vercel / Netlify / GitHub Pages（静态托管）
+Cloudflare Pages（应用壳）+ Cloudflare R2（大 gzip）
 ```
 
-* Python 管线在**本地手动执行**（清洗 → embedding → UMAP → 导出 JSON + gzip），大体积 **`galaxy_data.json.gz`** 可提交到 `frontend/public/data/` 或由 CDN 提供。  
-* 前端默认 **`fetch(BASE_URL + 'data/galaxy_data.json.gz')`** 一次性加载；按 **gzip 魔数**与 **HTTP 透明 gzip** 分支处理后再 `JSON.parse`；Loading 完成后初始化 Three.js 场景（实现见 `frontend/src/data/loadGalaxyGzip.ts`、`frontend/src/utils/loadGalaxyData.ts`）。  
-* **静态托管**：**GitHub Pages**（本仓库已配 Actions 构建部署）或 **Vercel / Netlify** 等；注意子路径部署时 Vite `base` 与资源 URL 一致。
+* Python 管线在**本地手动执行**（清洗 → embedding → UMAP → 导出 JSON + gzip），大体积 **`galaxy_data.json.gz`** 由 CI 上传到 R2；仓库不跟踪大 gzip。  
+* 前端默认经 `galaxy_assets_manifest.json` 解析 R2 URL 后加载；按 **gzip 魔数**与 **HTTP 透明 gzip** 分支处理后再 `JSON.parse`；Loading 完成后初始化 Three.js 场景（实现见 `frontend/src/data/loadGalaxyGzip.ts`、`frontend/src/utils/loadGalaxyData.ts`）。  
+* **静态托管**：**Cloudflare Pages** 是唯一当前站点部署表面。GitHub Pages 灰度/备线已退役。
 
 ### **5.2 Phase 18 出口：自动化部署形态（实际落地）**
 
@@ -521,11 +521,9 @@ galaxy_data.json.gz  +  galaxy_search_index.json.gz
     │   (绕 Pages 单文件 25MiB 硬限；公开读 + CORS)
     └── frontend/dist 仅含 manifest 与小静态资源
         └── Cloudflare Pages   ← cloudflare/wrangler-action@v3 (Direct Upload)
-            └── (灰度备线) GitHub Pages by .github/workflows/deploy-pages.yml
     ↓
 Browser
     ├── fetch app                    →  Cloudflare Pages（生产主域 **themoviecosmos.com**；默认 **`*.pages.dev`** 可 **301** 到主域，见 `frontend/functions/_middleware.js`）
-    ├── fetch galaxy_*.json.gz     →  Cloudflare R2（manifest 解析；可被 VITE_* 与 ?dataset= 覆盖）
     └── fetch galaxy_*.json.gz     →  Cloudflare R2（manifest 解析；可被 VITE_* 与 ?dataset= 覆盖）
 ```
 
@@ -535,9 +533,10 @@ Browser
 * **月度任务（P18.5 + P18.5b）** 重算 dynamic threshold + 全量 `fit_transform` + Procrustes 对齐 `galaxy_v1_reference`；锚点采用 **软闸**（`MONTHLY_ANCHOR_MODE` 默认 `soft`），仅极端残差或结构性错误 fail；产出 `monthly_refit_meta.json` artifact 供 P95 收紧观测。
 * **维度漂移守卫（P20.2 / Phase 37）**：nightly 在 frozen-threshold cleaning 后、写库前统一调用 `assert_no_dim_drift`。monthly 先计算一份 `thresholds_json`，以其过滤出 final membership；pre-threshold drift 只记录，**仅** final membership 可在 UMAP/写库前阻断。两条路径均校验 `genre_palette_version` 与 active `lang_palette_version`；默认 fail-loud，`DIM_DRIFT_FORCE_SKIP` 仅用于明确的排障记录，不能作为生产恢复的通过条件。
 * **Cloudflare Pages** 仅托管前端 bundle；Pages 侧 Git 自动构建已 Disconnect，发布主链路为 GitHub Actions Direct Upload。
-* **Cloudflare R2** 托管 `galaxy_*.json.gz`；galaxy 包 URL 通过 `frontend/src/lib/galaxyAssetUrls.ts` 按「`VITE_*` → `?dataset=` → manifest → 同源默认」解析。manifest 只声明 galaxy/search assets。
-* **GitHub Pages** 通过 `.github/workflows/deploy-pages.yml` 在 push 到 `main` 时部署，作为 1–2 周灰度备线；该路径仍走同源 gzip，不依赖 R2。
-* **Vite `base`** 在仓库内默认为 `process.env.VITE_BASE_PATH ?? '/'`；GitHub Pages 子路径部署由 `deploy-pages.yml` 注入对应 `VITE_BASE_PATH`，CF Pages 根路径部署直接使用默认值。
+* **Cloudflare R2** 托管 `galaxy_*.json.gz`；galaxy 包 URL 通过 `frontend/src/lib/galaxyAssetUrls.ts` 按「`VITE_*` → `?dataset=` → manifest → 同源默认」解析。manifest 声明 galaxy/search assets，并可携带 active emission profile 指针与受控 profile URL。
+* **GitHub Pages** 已退役，不再作为灰度备线、fallback 或支持的 manual-smoke 表面。
+* **Vite `base`** 在仓库内默认为 `process.env.VITE_BASE_PATH ?? '/'`；Cloudflare Pages 根路径部署直接使用默认值。
+* **Planet Export**：生产调用必须显式传 `--manifest-url`；详见 [`docs/system/planet-export-contract.md`](../system/planet-export-contract.md)。
 * **国内访问优化** 不属于 Phase 18 出口；规划为 Phase 19+。
 
 ### **5.3 Phase 28 — 支持、反馈与 Discord（`import.meta.env` / Vite）**
@@ -557,7 +556,7 @@ Phase 29 **不**在本阶段交付完整路由或 HDR 生产；条文 SSOT 为 *
 
 * **HDR（D1–D4）**：当前生产为 **`THREE.SRGBColorSpace`** + **SDR WebGL**（§1.1）；**Bloom 默认关**（§1.2）。「真实 HDR」须可证扩展亮度，**不得**用 Bloom 或 SDR 提亮冒充。**支持矩阵（P29.1）**：P0 = Win11 HDR + Chrome/Edge + **WebGPU extended** + HDR 屏；P1 = macOS HDR + Safari + 同 API；WebGL2 主路径恒 **SDR**。详见 Phase 29 spec **§4**。capability probe、最小 proof 与 Phase 33 go/no-go 见 §7–§10。
 * **深链（Phase 40）**：使用轻量 path parser（不引入 React Router）。当前公开路径只有 **`/`** 与 **`/movie/:id`**；`selectedMovieId` 是 focus 状态 SSOT，`lang` / `theme` / `timeline` query 须保留。非法/未知 id → **`replace '/'`**；清 focus/关 Drawer → **`replace '/'`**。`/today`（含 query）与 `/og/today.png` 保持 404，且不得由 SPA fallback 接管。
-* **静态托管（§6）**：仓库**无**显式 `vercel.json` / `_redirects`；**Cloudflare Pages** 因无顶层 `404.html` 已启用**隐式 SPA**（`/movie/*` 刷新→`index.html`）。**GitHub Pages 备线**仍须 `404.html` 技巧。Phase 29.6 已锁定 D8 原则与 30.7 配置片段；实施归 **Phase 30.7**，须豁免 **`/data/*`**、**`/fonts/*`** 与构建 assets。
+* **静态托管（§6）**：仓库**无**显式 `vercel.json` / `_redirects`；**Cloudflare Pages** 因无顶层 `404.html` 已启用**隐式 SPA**（`/movie/*` 刷新→`index.html`）。GitHub Pages 备线已退役。Phase 29.6 已锁定 D8 原则与 30.7 配置片段；实施归 **Phase 30.7**，须豁免 **`/data/*`**、**`/fonts/*`** 与构建 assets。
 
 ## **6\. 项目目录结构**
 

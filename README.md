@@ -318,7 +318,7 @@ flowchart LR
 ├── .cursor/
 │   └── rules/                 # 项目概览、数据保护、品牌命名等
 ├── .github/
-│   └── workflows/             # deploy-pages、monthly_refit、nightly_vote_refresh
+│   └── workflows/             # monthly_refit、nightly_vote_refresh
 ├── assets/
 │   └── fonts/                 # Inter、Butler（见 assets/fonts/README.md）
 ├── data/                      # subsample/；raw|output|runs 见 data/README.md
@@ -434,7 +434,6 @@ python -m pip install -r requirements.cpu.txt
 | ------------------------------------------------------------------------ | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `[nightly_vote_refresh.yml](.github/workflows/nightly_vote_refresh.yml)` | 每日 20:00 UTC；可 `workflow_dispatch`      | `scripts/cron/nightly_vote_refresh.py` → `upload_galaxy_r2.py` → `npm run build -w frontend` → `wrangler pages deploy`（`workingDirectory: frontend`） |
 | `[monthly_refit.yml](.github/workflows/monthly_refit.yml)`               | 每月 1 日 20:00 UTC；可选手动 `anchor_mode` | 恢复/下载嵌入四件套 → `monthly_refit.py` → 同上 R2 + Pages 链路；超时 210 分钟                                                                         |
-| `[deploy-pages.yml](.github/workflows/deploy-pages.yml)`                 | `main` push 或手动                          | 灰度：GitHub Pages 部署 `frontend/dist`（含 `404.html` SPA fallback）；非长期生产，验证 Cloudflare 切流后计划下线                                      |
 
 
 共同约束：
@@ -442,10 +441,8 @@ python -m pip install -r requirements.cpu.txt
 - `galaxy_data.json.gz`、`galaxy_search_index.json.gz` 不提交 Git；大对象经 CI 上传 R2，Pages 包内保留小体积 `galaxy_assets_manifest.json`。
 - 不要依赖 Cloudflare 控制台「连接 Git 仓库」的 Pages 自动构建作为生产入口；须与本仓库 workspace 构建 + wrangler Direct Upload 一致。
 - CI 使用 Node 24；Linux runner 上常 `rm package-lock.json && npm install --include=optional` 以避免可选原生依赖缺失。
-
-灰度备用：GitHub Pages
-
-`[deploy-pages.yml](.github/workflows/deploy-pages.yml)` 文件头注明：P18.6 切到 Cloudflare 后并行对比 1–2 周；验证完成后停用，不作为长期入口。
+- GitHub Pages 灰度 / manual-smoke workflow 已退役；Cloudflare Pages 是唯一当前站点部署表面。
+- Planet Export 生产调用须显式传 `--manifest-url`（见 [`docs/system/planet-export-contract.md`](docs/system/planet-export-contract.md)）；`--data-file` 仅用于本地/测试。
 
 ### 文档索引（实现 SSOT）
 

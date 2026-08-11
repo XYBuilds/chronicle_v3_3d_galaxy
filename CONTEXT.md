@@ -32,6 +32,24 @@ _Avoid_: atomic generation barrier, KV transaction
 A deliberately short cross-repository release window for a breaking OG contract change. Chronicle and the OG Worker are deployed separately, and brief brand fallback or request failure is an accepted risk rather than hidden behind an atomic-release claim.
 _Avoid_: atomic deployment, zero-downtime guarantee
 
+## Data lifecycle and publication
+
+**Light Refresh**:
+An update to dynamic facts for the current galaxy membership that preserves the membership, spatial arrangement, and active visual-distribution profile. Newly eligible movies may wait for a later Galaxy Refit.
+_Avoid_: nightly, daily rebuild, refit
+
+**Galaxy Refit**:
+A recalculation of galaxy eligibility, membership, and spatial arrangement that can admit waiting movies and produce a candidate visual-distribution profile.
+_Avoid_: monthly job, light refresh, full refresh
+
+**Data Release**:
+A consumer-identifiable publication of validated galaxy content and its associated compatibility metadata. It is distinct from publishing the application that presents the content.
+_Avoid_: site deployment, frontend release
+
+**Site Release**:
+A publication of the application shell and interactive client that preserves the selected compatible Data Release.
+_Avoid_: data refresh, galaxy publication
+
 ## Current documentation model
 
 **Contract conformance defect**:

@@ -1,4 +1,10 @@
-"""Phase 1.2–1.3: deduplication and must-drop filters."""
+"""Deduplication, must-drop filters, and the per-year dynamic vote-count threshold.
+
+Authoritative threshold rule: for each calendar year, take the QUANTILE of
+``vote_count``, interpolate a contiguous year index, smooth with a
+ROLLING_WINDOW-year mean, then ``threshold = max(ABS_MIN, ALPHA * smoothed_baseline)``.
+Rows below that year's threshold, or with an unparseable release year, are dropped.
+"""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -8,7 +14,7 @@ import pandas as pd
 
 NULL_TOKENS = frozenset({"", "null", "none", "nan", "<na>"})
 
-# Defaults aligned with scripts/_archive/filter_dynamic_baseline_vote_count.py
+# Authoritative defaults for compute_year_to_vote_threshold / apply_dynamic_vote_threshold.
 QUANTILE = 0.95
 ALPHA = 0.15
 ABS_MIN = 1.0
@@ -178,6 +184,10 @@ def compute_year_to_vote_threshold(
     rolling_window: int = ROLLING_WINDOW,
 ) -> dict[int, float]:
     """Recompute the per-calendar-year vote_count floor (same rule as ``apply_dynamic_vote_threshold``).
+
+    For each calendar year take QUANTILE of ``vote_count``, interpolate missing years,
+    smooth with a ROLLING_WINDOW-year mean, then
+    ``threshold = max(ABS_MIN, ALPHA * smoothed_baseline)``.
 
     Used to seed ``threshold_versions.thresholds_json`` (P18.4/P18.5). ``df`` must be the frame
     *after* dedup + must-drop filters and *before* the dynamic vote threshold step.

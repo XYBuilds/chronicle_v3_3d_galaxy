@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Authority cutover contracts for current topics (#379) and entry-point cutover (#380)."""
+"""Authority cutover contracts for current topics (#379), entry-point cutover (#380), and legacy-script retirement (#385)."""
 from __future__ import annotations
 
 import re
@@ -338,6 +338,131 @@ class TestCurrentDocumentationAuthority(unittest.TestCase):
             or "tombstone" in lowered,
             "Cursor TODO guide must be non-executable",
         )
+
+
+_ARCHIVE_SCRIPTS = (
+    "scripts/_archive/merge_by_tconst.py",
+    "scripts/_archive/filter_vote_count_zero_or_null.py",
+    "scripts/_archive/filter_vote_average_zero_or_null.py",
+    "scripts/_archive/filter_release_date_null.py",
+    "scripts/_archive/filter_genres_null.py",
+    "scripts/_archive/filter_dynamic_baseline_vote_count.py",
+)
+
+_RETIRED_P18_BENCHMARK_FILES = (
+    ".github/workflows/phase18_refit_benchmark.yml",
+    "scripts/experiments/phase18_core_refit_benchmark.py",
+    "scripts/experiments/p18_pack_canonical_bundle_for_gha.py",
+)
+
+_RETIRED_ARCHIVE_BASENAMES = (
+    "merge_by_tconst",
+    "filter_vote_count_zero_or_null",
+    "filter_vote_average_zero_or_null",
+    "filter_release_date_null",
+    "filter_genres_null",
+    "filter_dynamic_baseline_vote_count",
+)
+
+_RETAINED_OPERATOR_SURFACES = (
+    ".github/workflows/supabase_preflight.yml",
+    "scripts/cron/check_supabase_health.py",
+    "scripts/verify_galaxy_3d.html",
+    "finish_todo.sh",
+)
+
+_RETAINED_EXPERIMENTS = (
+    "scripts/experiments/phase18_canonical_full_rebuild.py",
+    "scripts/experiments/phase18_pkl_anatomy.py",
+    "scripts/experiments/phase18_daily_delta_scan.py",
+    "scripts/experiments/min_dist_sweep.py",
+)
+
+_P18_1_REPORT = (
+    _ROOT / "docs/reports/Phase 18.1 P18.1 Canonical full rebuild 与 GHA core benchmark 实施报告.md"
+)
+_P18_5_GUIDE = _ROOT / "docs/guides/P18.5 月度星系 refit 操作指南.md"
+_CLEANING = _ROOT / "scripts/pipeline/cleaning.py"
+_REMAINING_WORKFLOWS = (
+    "monthly_refit.yml",
+    "nightly_vote_refresh.yml",
+    "supabase_preflight.yml",
+)
+
+
+class TestLegacyScriptAndP18BenchmarkRetirement(unittest.TestCase):
+    def test_live_threshold_authority_does_not_cite_archive_script(self) -> None:
+        live_paths = (*_TOPICS, _CLEANING, _README, _README_ZH)
+        for path in live_paths:
+            text = path.read_text(encoding="utf-8")
+            with self.subTest(path=path.relative_to(_ROOT).as_posix()):
+                for name in _RETIRED_ARCHIVE_BASENAMES:
+                    self.assertNotIn(
+                        name,
+                        text,
+                        f"live authority still cites retired archive name {name}",
+                    )
+
+    def test_galaxy_model_owns_dynamic_threshold_formula(self) -> None:
+        current = _GALAXY_MODEL.read_text(encoding="utf-8").split("## Boundaries and invariants")[0]
+        self.assertIn("0.95", current)
+        self.assertIn("0.15", current)
+        self.assertRegex(current, r"6[-\s]?year|rolling.{0,20}6|window.{0,10}6")
+        self.assertIn("scripts/pipeline/", current)
+        self.assertIn("cleaning.py", current)
+
+    def test_cleaning_module_states_authoritative_threshold_rule(self) -> None:
+        text = _CLEANING.read_text(encoding="utf-8")
+        self.assertIn("threshold = max(ABS_MIN, ALPHA * smoothed_baseline)", text)
+        self.assertIn("QUANTILE", text)
+        self.assertIn("ROLLING_WINDOW", text)
+        self.assertNotIn("scripts/_archive/", text)
+
+    def test_retired_archive_and_p18_benchmark_files_are_gone(self) -> None:
+        for rel in (*_ARCHIVE_SCRIPTS, *_RETIRED_P18_BENCHMARK_FILES):
+            with self.subTest(path=rel):
+                self.assertFalse((_ROOT / rel).exists(), f"expected deleted: {rel}")
+
+    def test_manual_operator_surfaces_are_retained(self) -> None:
+        for rel in (*_RETAINED_OPERATOR_SURFACES, *_RETAINED_EXPERIMENTS):
+            with self.subTest(path=rel):
+                self.assertTrue((_ROOT / rel).is_file(), f"expected retained: {rel}")
+        self.assertTrue((_ROOT / "scripts/env").is_dir())
+        self.assertTrue(any((_ROOT / "scripts/env").iterdir()))
+
+    def test_phase18_benchmark_conclusions_remain_reachable(self) -> None:
+        self.assertTrue(_P18_1_REPORT.is_file())
+        text = _P18_1_REPORT.read_text(encoding="utf-8")
+        self.assertIn("P18.1b", text)
+        self.assertIn("ubuntu-24.04", text)
+        self.assertIn("p18-canonical-artifacts-v1", text)
+
+    def test_p18_5_guide_does_not_offer_removed_benchmark_workflow(self) -> None:
+        text = _P18_5_GUIDE.read_text(encoding="utf-8")
+        self.assertNotIn("用于对照月度算力与内存", text)
+        self.assertIn("phase18_refit_benchmark.yml", text)
+        self.assertTrue("已移除" in text or "removed" in text.lower())
+
+    def test_remaining_workflows_omit_retired_five_file_cache(self) -> None:
+        workflow_dir = _ROOT / ".github/workflows"
+        names = sorted(path.name for path in workflow_dir.glob("*.yml"))
+        for required in _REMAINING_WORKFLOWS:
+            self.assertIn(required, names)
+        self.assertNotIn("phase18_refit_benchmark.yml", names)
+        for name in names:
+            text = (workflow_dir / name).read_text(encoding="utf-8")
+            with self.subTest(workflow=name):
+                self.assertRegex(text, r"(?m)^name:")
+                self.assertRegex(text, r"(?m)^on:")
+                self.assertNotIn("p18-canonical-artifacts-v1", text)
+                self.assertNotIn("phase18_core_refit_benchmark", text)
+                self.assertNotIn("p18_pack_canonical_bundle", text)
+
+    def test_readme_tree_does_not_list_archive_directory(self) -> None:
+        for path in (_README, _README_ZH):
+            text = path.read_text(encoding="utf-8")
+            with self.subTest(path=path.name):
+                self.assertNotIn("_archive/", text)
 
 
 if __name__ == "__main__":

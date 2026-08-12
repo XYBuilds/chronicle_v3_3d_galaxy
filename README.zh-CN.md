@@ -338,8 +338,7 @@ flowchart LR
 │   ├── feature_engineering/   # 嵌入、UMAP 等
 │   ├── export/                # galaxy_data 导出
 │   ├── cron/                  # 夜间刷新、月度 refit、R2 上传
-│   ├── tools/                 # 打包月度四件套 zip 等
-│   └── _archive/
+│   └── tools/                 # 打包月度四件套 zip 等
 ├── supabase/                  # 数据库迁移（Phase 18+）
 ├── LICENSE                    # Apache-2.0
 ├── NOTICE                     # TMDB / IMDb / 字体等第三方说明

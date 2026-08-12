@@ -45,6 +45,7 @@ def test_every_recovery_action_records_required_audit_fields() -> None:
     assert record["action"] == "hold_releases"
     assert record["dry_run"] is True
     assert record["mutations"] == []
+    assert record["plan"]["cadence"] == "daily-monthly"
 
 
 def test_missing_reason_or_actor_fails_closed() -> None:

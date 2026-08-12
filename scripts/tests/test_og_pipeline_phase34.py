@@ -80,6 +80,7 @@ class TestOgPipelinePhase34(unittest.TestCase):
                 self.assertNotIn("--allow-full-recovery", sync_block)
                 self.assertNotIn("--allow-over-quota", sync_block)
                 self.assertNotIn("--scope full", sync_block)
+
     def test_p42_4_release_workflows_share_non_cancelling_lock_and_artifacts(self) -> None:
         monthly = _MONTHLY_WORKFLOW.read_text(encoding="utf-8")
         nightly = _NIGHTLY_WORKFLOW.read_text(encoding="utf-8")
@@ -88,12 +89,11 @@ class TestOgPipelinePhase34(unittest.TestCase):
             self.assertIn("cancel-in-progress: false", text)
             self.assertIn("if: always()", text)
             self.assertIn("frontend/public/data/galaxy_assets_manifest.json", text)
-            self.assertIn("node frontend/scripts/prepare-pages-deploy.mjs", text)
-            prepare_start = text.index("name: Prepare Pages deploy assets")
-            build_start = text.index("name: Install and build frontend")
-            self.assertLess(prepare_start, build_start)
-        self.assertIn("allow_profile_bootstrap:", monthly)
-        self.assertIn("args+=(--allow-bootstrap)", monthly)
+            self.assertIn("python scripts/cron/pages_compose.py compose", text)
+            self.assertNotIn("npm run build", text)
+            self.assertNotIn("node frontend/scripts/prepare-pages-deploy.mjs", text)
+        self.assertNotIn("allow_profile_bootstrap:", monthly)
+        self.assertNotIn("--allow-bootstrap", monthly)
         self.assertNotIn("--allow-bootstrap", nightly)
 
 

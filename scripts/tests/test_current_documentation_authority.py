@@ -205,24 +205,19 @@ class TestCurrentDocumentationAuthority(unittest.TestCase):
         pipeline = _DATA_PIPELINE.read_text(encoding="utf-8")
         self.assertNotIn("### 12.1", pipeline)
 
-    def test_refresh_topic_does_not_claim_unshipped_release_model(self) -> None:
+    def test_refresh_topic_documents_separated_release_entry_points(self) -> None:
         text = _REFRESH.read_text(encoding="utf-8")
         current = text.split("## Boundaries and invariants")[0]
-        forbidden = (
+        for phrase in (
+            "Daily Data Release",
+            "Monthly Data Release",
             "Site Release",
-            "Data Release",
             "Production Recovery",
-            "ordinary invalid-path",
-            "ordinary-invalid-path",
-        )
-        for phrase in forbidden:
-            self.assertNotIn(
-                phrase,
-                current,
-                f"refresh topic claims not-yet-live behavior: {phrase}",
-            )
-        self.assertIn("nightly", current.lower())
-        self.assertIn("monthly", current.lower())
+            "18:00 UTC",
+        ):
+            self.assertIn(phrase, current)
+        self.assertNotIn("ordinary invalid-path", current)
+        self.assertNotIn("ordinary-invalid-path", current)
         self.assertIn("Cloudflare Pages", current)
 
     def test_contract_index_evidence_does_not_treat_legacy_omnibus_as_ssot(self) -> None:
@@ -391,6 +386,8 @@ _CLEANING = _ROOT / "scripts/pipeline/cleaning.py"
 _REMAINING_WORKFLOWS = (
     "monthly_refit.yml",
     "nightly_vote_refresh.yml",
+    "production_recovery.yml",
+    "site_release.yml",
     "supabase_preflight.yml",
 )
 

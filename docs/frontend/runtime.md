@@ -31,7 +31,7 @@ Development skips the remote manifest and uses bundled gzip fixtures so local wo
 
 ### Hosting and browser support
 
-- Site host is Cloudflare Pages via GitHub Actions Direct Upload of `frontend/dist`; large galaxy/search gzip objects live on R2.
+- Site host is Cloudflare Pages via GitHub Actions Direct Upload of a composed `dist` (verified site artifact plus the current production manifest); large galaxy/search gzip objects live on R2.
 - GitHub Pages and Vercel are not current production hosts.
 - WebGL2 is required. Desktop/mouse is the supported interaction class.
 
@@ -45,7 +45,7 @@ Development skips the remote manifest and uses bundled gzip fixtures so local wo
 ## Boundaries and invariants
 
 - Do not reintroduce same-origin-only gzip assumptions or GitHub Pages as an active deploy path.
-- Do not describe separated Site Release artifacts from Issue #374 as live; application build/deploy still participates in the current nightly/monthly publication workflows (see refresh topic).
+- Site Release owns the immutable application-shell artifact. Data Release injects the candidate manifest onto the active artifact and must fail closed on an active/deployed mismatch.
 - Runtime docs do not own product scope or data semantics.
 
 ## Verification evidence
@@ -53,7 +53,7 @@ Development skips the remote manifest and uses bundled gzip fixtures so local wo
 - `frontend/src/data/loadGalaxyGzip.ts`, `loadGalaxyData.ts`, `App.tsx`
 - `frontend/src/lib/galaxyAssetUrls.ts`
 - `frontend/functions/_middleware.js` for Pages routing/SPA refresh needs
-- Workflow build/deploy steps in `.github/workflows/nightly_vote_refresh.yml` and `monthly_refit.yml`
+- Workflow build/deploy steps in `.github/workflows/site_release.yml`, `.github/workflows/nightly_vote_refresh.yml`, and `.github/workflows/monthly_refit.yml`
 - Locale/schema Vitest suites
 
 ## Related topics

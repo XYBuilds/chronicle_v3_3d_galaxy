@@ -171,9 +171,9 @@ def execute_recovery(
     if action in {"dimension_override", "profile_override"}:
         _assert(confirm_dangerous, "dangerous override requires confirm")
     if action == "hold_releases":
-        plan: dict[str, Any] = {"hold": True, "cadence": "nightly-monthly"}
+        plan: dict[str, Any] = {"hold": True, "cadence": "daily-monthly"}
     elif action == "resume_releases":
-        plan = {"hold": False, "cadence": "nightly-monthly"}
+        plan = {"hold": False, "cadence": "daily-monthly"}
     elif action == "continue_candidate":
         plan = _continue_plan(target=record["target"], candidate_store=candidate_store)
     elif action == "data_rollback":

@@ -4,7 +4,7 @@ import path from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 
-import { preparePagesDeployAssets } from './prepare-pages-deploy.mjs'
+import { preparePagesDeployAssets, prepareSiteReleaseShellAssets } from './prepare-pages-deploy.mjs'
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url))
 const publicDirectory = path.resolve(scriptDirectory, '..', 'public')
@@ -31,7 +31,11 @@ function buildWithStagedPublicAssets() {
 
   try {
     fs.cpSync(publicDirectory, stagedPublicDirectory, { recursive: true })
-    preparePagesDeployAssets(path.join(stagedPublicDirectory, 'data'))
+    if (process.env.SITE_RELEASE_SHELL === '1') {
+      prepareSiteReleaseShellAssets(path.join(stagedPublicDirectory, 'data'))
+    } else {
+      preparePagesDeployAssets(path.join(stagedPublicDirectory, 'data'))
+    }
     runVite({ ...process.env, PAGES_PUBLIC_DIR: stagedPublicDirectory })
   } finally {
     fs.rmSync(stagingRoot, { recursive: true, force: true })

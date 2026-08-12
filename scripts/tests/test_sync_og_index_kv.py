@@ -86,6 +86,13 @@ class TestMutationPlans(unittest.TestCase):
         self.assertEqual(delta.meta_put, "next")
         self.assertNotIn("today", repr(delta).lower())
 
+    def test_version_only_change_does_not_advance_meta_or_count_as_delta(self) -> None:
+        old = v2([movie(1), movie(2)], "2026.08.12.1")
+        plan = build_incremental_plan(old, v2([movie(1), movie(2)], "2026.08.13.1"), [movie(1), movie(2)])
+        self.assertEqual(plan.movie_puts, ())
+        self.assertEqual(plan.movie_deletes, ())
+        self.assertIsNone(plan.meta_put)
+
     def test_migration_counts_today_delete_in_summary_and_quota(self) -> None:
         plan = build_migration_plan(v1([movie(1), movie(2)]), v2([movie(1)]), [movie(1)])
         summary = plan.summary(batch_size=1, dry_run=True)
@@ -406,6 +413,16 @@ class TestExecutionOrder(unittest.TestCase):
         ):
             execute_plan(plan, kv_env=ENV, r2_client=object(), r2_bucket="bucket", batch_size=10, dry_run=False)
         self.assertEqual(events, ["final-keyset", "commit"])
+
+    def test_noop_plan_does_not_mutate_kv_or_commit_checkpoint(self) -> None:
+        old = v2([movie(1)], "2026.08.12.1")
+        plan = build_incremental_plan(old, v2([movie(1)], "2026.08.13.1"), [movie(1)])
+        names = ("kv_bulk_put", "kv_bulk_delete", "verify_kv_values", "verify_kv_absent", "commit_snapshot")
+        with ExitStack() as stack:
+            boundaries = [stack.enter_context(mock.patch(f"cron.sync_og_index_kv.{name}")) for name in names]
+            execute_plan(plan, kv_env=ENV, r2_client=object(), r2_bucket="bucket", batch_size=10, dry_run=False)
+        for boundary in boundaries:
+            boundary.assert_not_called()
 
     def test_dry_run_and_bad_credentials_have_no_effects(self) -> None:
         plan = build_full_recovery_plan(v2([movie(1)]), [movie(1)], ())

@@ -71,6 +71,23 @@ export function preparePagesDeployAssets(dataDirectory = DEFAULT_DATA_DIRECTORY)
   return { manifest, removed }
 }
 
+export function prepareSiteReleaseShellAssets(dataDirectory = DEFAULT_DATA_DIRECTORY) {
+  if (!fs.existsSync(dataDirectory)) {
+    return { removed: [], manifestRemoved: false }
+  }
+  const removed = []
+  for (const filename of [...R2_BACKED_FILES, MANIFEST_FILE]) {
+    const filePath = path.join(dataDirectory, filename)
+    if (!fs.existsSync(filePath)) continue
+    const stat = fs.statSync(filePath)
+    assert(stat.isFile(), `shell asset must be a file: ${filePath}`)
+    fs.rmSync(filePath)
+    removed.push({ filename, bytes: stat.size })
+  }
+  console.log('[pages-deploy-assets] site-release-shell', { dataDirectory, removed })
+  return { removed, manifestRemoved: removed.some((item) => item.filename === MANIFEST_FILE) }
+}
+
 function parseDataDirectory(argv) {
   if (argv.length === 0) return DEFAULT_DATA_DIRECTORY
   assert(argv.length === 2 && argv[0] === '--data-dir' && argv[1], 'usage: node prepare-pages-deploy.mjs [--data-dir <path>]')

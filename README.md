@@ -428,15 +428,19 @@ Production path: GitHub Actions → Cloudflare R2 + Cloudflare Pages
 
 | Workflow                                                                 | Trigger                                      | Summary                                                                                                                                               |
 | ------------------------------------------------------------------------ | -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`nightly_vote_refresh.yml`](.github/workflows/nightly_vote_refresh.yml) | Daily 20:00 UTC; `workflow_dispatch`         | `scripts/cron/nightly_vote_refresh.py` → `upload_galaxy_r2.py` → `npm run build -w frontend` → `wrangler pages deploy` (`workingDirectory: frontend`) |
-| [`monthly_refit.yml`](.github/workflows/monthly_refit.yml)               | 1st of month 20:00 UTC; manual `anchor_mode` | Restore/download embedding bundle → `monthly_refit.py` → same R2 + Pages chain; 210 min timeout                                                       |
+| [`nightly_vote_refresh.yml`](.github/workflows/nightly_vote_refresh.yml) | Daily Data Release at 18:00 UTC; `workflow_dispatch` | Light Refresh → OG diff → R2 upload → compose active site artifact + candidate manifest → `wrangler pages deploy` → smoke |
+| [`monthly_refit.yml`](.github/workflows/monthly_refit.yml)               | Monthly Data Release at 20:00 UTC on day 1; manual `anchor_mode` | Galaxy Refit → profile activation → same R2 + compose/Pages chain; 210 min timeout |
+| [`site_release.yml`](.github/workflows/site_release.yml)                 | merge to `main`; `workflow_dispatch`         | Build/verify shell without a production manifest → compose current Data Release → Pages deploy → smoke → mark artifact active |
+| [`production_recovery.yml`](.github/workflows/production_recovery.yml)   | manual only                                  | Hold/resume Daily/Monthly; audited rollback plans; dangerous overrides |
+| [`supabase_preflight.yml`](.github/workflows/supabase_preflight.yml)     | manual; also automatic at Daily/Monthly start | Read-only Supabase readiness |
 
 
 Shared rules:
 
-- `galaxy_data.json.gz` and `galaxy_search_index.json.gz` are not in Git; CI uploads to R2; Pages ships a small `galaxy_assets_manifest.json`.
+- `galaxy_data.json.gz` and `galaxy_search_index.json.gz` are not in Git; CI uploads to R2; Pages ships a small `galaxy_assets_manifest.json` on the active site artifact.
+- Daily and Monthly do not install Node or build the frontend. Site Release owns `npm run build -w frontend`.
 - Do not rely on Cloudflare’s Git-connected Pages auto-build for production; use this repo’s workspace build + wrangler Direct Upload.
-- CI uses Node 24; Linux jobs often `rm package-lock.json && npm install --include=optional` so platform-specific optional deps resolve.
+- CI uses Node 24; Linux Site Release jobs often `rm package-lock.json && npm install --include=optional` so platform-specific optional deps resolve.
 - The GitHub Pages gray / manual-smoke workflow is retired; Cloudflare Pages is the only current site deploy surface.
 - Production Planet Export requires an explicit `--manifest-url` (see [`docs/system/planet-export-contract.md`](docs/system/planet-export-contract.md)); `--data-file` is offline/local only.
 

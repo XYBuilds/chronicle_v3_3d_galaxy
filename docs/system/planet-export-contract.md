@@ -18,7 +18,7 @@ Single current description of Chronicle's Planet Export producer boundary and th
 
 ## C-004 · Galaxy assets and active emission profile
 
-- **Producer:** Chronicle data/export pipeline (`scripts/cron/upload_galaxy_r2.py` and nightly/monthly workflows)
+- **Producer:** Chronicle data/export pipeline (`scripts/cron/upload_galaxy_r2.py` and Daily/Monthly Data Release workflows)
 - **Consumers:** Chronicle frontend via `frontend/src/lib/galaxyAssetUrls.ts`; Planet Export via `--manifest-url`
 - **Manifest fields required for production Planet Export:**
   - `galaxy_data_gzip_url`

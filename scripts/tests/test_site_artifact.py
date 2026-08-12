@@ -47,9 +47,18 @@ def test_site_artifact_identity_ignores_production_manifest() -> None:
             _write_bundle(root / "b", include_manifest=True),
             git_commit="e9a2608",
         )
+        sidecar_root = root / "c"
+        sidecar_dist = _write_bundle(sidecar_root)
+        (sidecar_dist / "data").mkdir(exist_ok=True)
+        (sidecar_dist / "data" / "site-artifact.json").write_text(
+            json.dumps({"artifact_id": "must-not-affect-identity"}),
+            encoding="utf-8",
+        )
+        with_sidecar = build_site_artifact_identity(sidecar_dist, git_commit="e9a2608")
     assert without_manifest["bundle_sha256"] == BUNDLE_SHA256
     assert with_manifest["bundle_sha256"] == BUNDLE_SHA256
-    assert without_manifest["artifact_id"] == with_manifest["artifact_id"]
+    assert with_sidecar["bundle_sha256"] == BUNDLE_SHA256
+    assert without_manifest["artifact_id"] == with_manifest["artifact_id"] == with_sidecar["artifact_id"]
     assert without_manifest["excludes_production_manifest"] is True
     assert without_manifest["git_commit"] == "e9a2608"
 

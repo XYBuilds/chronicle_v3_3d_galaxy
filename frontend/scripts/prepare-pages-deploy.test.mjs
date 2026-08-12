@@ -4,7 +4,7 @@ import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
 
-import { preparePagesDeployAssets } from './prepare-pages-deploy.mjs'
+import { preparePagesDeployAssets, prepareSiteReleaseShellAssets } from './prepare-pages-deploy.mjs'
 
 function makeDataDirectory() {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'pages-deploy-assets-'))
@@ -55,4 +55,17 @@ test('fails closed when the R2 manifest is incomplete', (t) => {
     /galaxy_search_index_gzip_url is required/,
   )
   assert.equal(fs.existsSync(path.join(directory, 'galaxy_data.json.gz')), true)
+})
+
+test('site-release shell strips the production manifest without requiring R2 URLs', (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'pages-shell-assets-'))
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }))
+  fs.writeFileSync(path.join(directory, 'galaxy_assets_manifest.json'), '{"data_version":"stale"}')
+  fs.writeFileSync(path.join(directory, 'galaxy_data.json.gz'), 'payload')
+
+  const result = prepareSiteReleaseShellAssets(directory)
+
+  assert.equal(result.manifestRemoved, true)
+  assert.equal(fs.existsSync(path.join(directory, 'galaxy_assets_manifest.json')), false)
+  assert.equal(fs.existsSync(path.join(directory, 'galaxy_data.json.gz')), false)
 })

@@ -9,7 +9,7 @@ const REDIRECTS_PATH = path.resolve(
   '../../public/_redirects',
 )
 
-describe('SPA _redirects (P30.7 / §6.3)', () => {
+describe('SPA _redirects (movie fallback; no Today binding)', () => {
   it('includes only movie fallback without rewriting /data', () => {
     const raw = fs.readFileSync(REDIRECTS_PATH, 'utf-8')
     expect(raw).toContain('/movie/*  /index.html  200')

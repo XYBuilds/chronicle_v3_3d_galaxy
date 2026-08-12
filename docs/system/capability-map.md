@@ -35,7 +35,7 @@ This is a current-state index, not a second implementation specification. Each r
 
 | Boundary | Status | Notes |
 | --- | --- | --- |
-| The Movie Today picker / routes / OG | retired | Keep reserved side-effect-free 404; historical guides remain non-executable |
+| The Movie Today picker / routes / OG | retired | No active capability; `/today` and `/share/today` follow ordinary invalid-path handling; `/og/today.png` is an unknown `/og/*` path; historical guides remain non-executable |
 | GitHub Pages gray / manual-smoke workflow | retired | `.github/workflows/deploy-pages.yml` deleted; Cloudflare Pages is the only site deploy surface |
 | Phase 39 production emission curve | historical | Superseded by active monthly `rating-midrank-cdf-lut-v1` profile |
 | Phase 39 / 41 / P42.6 diagnostic graphs | retired | Closed HTML entries, evidence generators, and the completed P42.6 harness are removed; current invariants live on frontend/Planet Export tests |
@@ -43,7 +43,7 @@ This is a current-state index, not a second implementation specification. Each r
 
 ## Reconciled boundaries
 
-- The active OG Worker reads only `movie:{id}` and `meta:G`; its current routes, fallback, version behavior, and retired Today 404 surface are captured in [`og-index-worker-contract.md`](./og-index-worker-contract.md).
+- The active OG Worker reads only `movie:{id}` and `meta:G`; current movie/brand routes, fallback, and version behavior are captured in [`og-index-worker-contract.md`](./og-index-worker-contract.md). Retired `/today` and `/share/today` follow Chronicle ordinary invalid-path handling; `/og/today.png` is an unknown `/og/*` path.
 - Remaining Today references in Phase plans, reports, and explicitly marked historical guides are archival evidence, not an active compatibility path.
 - Publication stages (compute, OG sync, R2 upload, site-artifact composition, Pages deploy) succeed or fail independently. Consumers use their last successfully published compatible artifact; there is no global generation barrier.
 - Daily/Monthly Data Releases compose the candidate manifest onto the active Site Release artifact. Production Recovery holds or resumes that cadence and records audited rollback plans.

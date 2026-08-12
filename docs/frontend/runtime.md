@@ -7,7 +7,7 @@
 
 ## Current answer
 
-Stack: Vite + TypeScript + React (HUD/DOM) + raw Three.js (canvas) + Zustand as the bridge. There is no React Router; a lightweight path parser owns public routes `/` and `/movie/:id`.
+Stack: Vite + TypeScript + React (HUD/DOM) + raw Three.js (canvas) + Zustand as the bridge. There is no React Router; a lightweight path parser owns public routes `/` and `/movie/:id`. Unknown paths, including retired `/today` and `/share/today`, follow ordinary invalid-path handling and canonicalize to galaxy idle. `/og/today.png` is not a frontend route.
 
 ### Startup and loading
 
@@ -51,7 +51,7 @@ Development skips the remote manifest and uses bundled gzip fixtures so local wo
 ## Verification evidence
 
 - `frontend/src/data/loadGalaxyGzip.ts`, `loadGalaxyData.ts`, `App.tsx`
-- `frontend/src/lib/galaxyAssetUrls.ts`
+- `frontend/src/lib/galaxyAssetUrls.ts`, `frontend/src/lib/routes.ts`
 - `frontend/functions/_middleware.js` for Pages routing/SPA refresh needs
 - Workflow build/deploy steps in `.github/workflows/site_release.yml`, `.github/workflows/nightly_vote_refresh.yml`, and `.github/workflows/monthly_refit.yml`
 - Locale/schema Vitest suites

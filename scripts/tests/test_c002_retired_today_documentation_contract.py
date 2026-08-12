@@ -1,17 +1,21 @@
 #!/usr/bin/env python3
-"""Phase 40 documentation contracts for retired Today surfaces."""
+"""C-002 documentation contracts for the retired Today surface."""
 from __future__ import annotations
 
 import unittest
 from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parents[2]
+_CONTEXT = _ROOT / "CONTEXT.md"
 _SUPPORTED = _ROOT / "docs/product/supported-experience.md"
 _RUNTIME = _ROOT / "docs/frontend/runtime.md"
 _SEARCH_HUD = _ROOT / "docs/product/search-and-hud.md"
 _REFRESH = _ROOT / "docs/data/refresh-and-publication.md"
 _OG_GUIDE = _ROOT / "docs/guides/P34.3 OG Index KV 上线操作指南.md"
 _CONTRACT = _ROOT / "docs/system/og-index-worker-contract.md"
+_CONTRACT_INDEX = _ROOT / "docs/system/contract-index.md"
+_CAPABILITY = _ROOT / "docs/system/capability-map.md"
+_REPOSITORY = _ROOT / "docs/system/repository-map.md"
 _R2_GUIDE = _ROOT / "docs/guides/P18.6b Cloudflare R2 上线操作手册.md"
 _HISTORICAL_OG_GUIDES = (
     _ROOT / "docs/guides/P23.1 The Movie Today 验收指南.md",
@@ -23,11 +27,15 @@ _HISTORICAL_OG_GUIDES = (
 )
 
 
-class TestPhase40DocumentationContracts(unittest.TestCase):
+class TestC002RetiredTodayDocumentationContracts(unittest.TestCase):
     def test_runtime_current_startup_and_og_contract(self) -> None:
         text = _RUNTIME.read_text(encoding="utf-8")
-        self.assertIn("galaxy idle", text)
-        self.assertIn("/movie/:id", text)
+        current = text.split("## Boundaries and invariants")[0]
+        self.assertIn("galaxy idle", current)
+        self.assertIn("/movie/:id", current)
+        self.assertIn("ordinary invalid-path", current.lower())
+        self.assertIn("/today", current)
+        self.assertIn("/share/today", current)
         self.assertNotIn("cover-loading-today", text)
         self.assertNotIn("uCoverMode", text)
 
@@ -39,21 +47,61 @@ class TestPhase40DocumentationContracts(unittest.TestCase):
         self.assertNotIn("coverModeStore", text)
         self.assertNotIn("today.json", text)
 
-    def test_supported_experience_keeps_retired_today_404(self) -> None:
+    def test_supported_experience_uses_ordinary_invalid_path_for_retired_today(self) -> None:
         text = _SUPPORTED.read_text(encoding="utf-8")
-        self.assertIn("/today", text)
+        current = text.split("## Boundaries and invariants")[0]
+        self.assertIn("/today", current)
+        self.assertIn("/share/today", current)
+        self.assertIn("/og/today.png", current)
+        self.assertIn("ordinary invalid-path", current.lower())
+        self.assertIn("unknown", current.lower())
+        self.assertNotIn("side-effect-free", current.lower())
+        self.assertNotIn("not live yet", current.lower())
+        self.assertNotIn("reserved-404", current.lower())
+
+    def test_context_retired_today_path_matches_ordinary_invalid_path(self) -> None:
+        text = _CONTEXT.read_text(encoding="utf-8")
+        self.assertIn("**Retired Today path**:", text)
+        self.assertIn("ordinary invalid-path", text.lower())
+        self.assertIn("/share/today", text)
         self.assertIn("/og/today.png", text)
-        self.assertIn("404", text)
-        self.assertNotIn("ordinary invalid-path", text.lower())
+        self.assertNotIn("side-effect-free 404", text)
+
+    def test_c002_retired_surfaces_are_unbound_or_unknown_og(self) -> None:
+        text = _CONTRACT.read_text(encoding="utf-8")
+        self.assertIn("ordinary invalid-path", text.lower())
+        self.assertIn("no Worker-specific binding", text)
+        self.assertIn("unknown route inside the active `/og/*`", text)
+        self.assertIn("`movie:{id}`", text)
+        self.assertIn("`meta:G`", text)
+        self.assertIn("/og/brand.png", text)
+        self.assertNotIn("side-effect-free `404 Not Found`", text)
+        self.assertNotIn("fall through to static hosting", text)
+        self.assertIn("0002-retired-today-follows-chronicle-invalid-path.md", text)
+        self.assertIn("test_c002_retired_today_documentation_contract.py", text)
+        self.assertNotIn("test_phase40_documentation_contract.py", text)
+
+    def test_indexes_agree_retired_today_is_unsupported_not_special_404(self) -> None:
+        contract_index = _CONTRACT_INDEX.read_text(encoding="utf-8")
+        capability = _CAPABILITY.read_text(encoding="utf-8")
+        repository = _REPOSITORY.read_text(encoding="utf-8")
+        self.assertIn("ordinary invalid-path", contract_index.lower())
+        self.assertIn("ordinary invalid-path", capability.lower())
+        self.assertIn("ordinary invalid-path", repository.lower())
+        self.assertNotIn("side-effect-free 404", capability)
+        self.assertNotIn("retired Today 404 surface", capability)
 
     def test_refresh_publication_lists_galaxy_assets_only(self) -> None:
         text = _REFRESH.read_text(encoding="utf-8")
         current = text.split("## Boundaries and invariants")[0]
+        boundaries = text.split("## Boundaries and invariants")[1]
         self.assertIn("galaxy_data.json.gz", current)
         self.assertIn("galaxy_search_index.json.gz", current)
         self.assertNotIn("today.json", current)
         self.assertNotIn("og-today.png", current)
         self.assertNotIn("today_url", current)
+        self.assertIn("ordinary invalid-path", boundaries.lower())
+        self.assertNotIn("reserved side-effect-free 404 remains the current contract", boundaries)
 
     def test_og_guide_is_v2_movie_and_meta_g_only(self) -> None:
         text = _OG_GUIDE.read_text(encoding="utf-8")
@@ -65,6 +113,9 @@ class TestPhase40DocumentationContracts(unittest.TestCase):
         self.assertIn("应用并 read-back movie delta → 删除 KV `today` 并 read-back 确认缺失 → 最后写入或核对 `meta:G`", text)
         self.assertIn("任一步失败都不得推进 checkpoint，也不得删除 v1", text)
         self.assertIn("scheduled v2-only 同步不触碰 `today`", text)
+        self.assertIn("ordinary invalid-path", text)
+        self.assertNotIn("均是不支持的 404", text)
+        self.assertNotIn("返回 404", text)
         self.assertNotIn("`schema: 2`", text)
         self.assertNotIn("`projection: \"og-index-v2\"`", text)
         self.assertNotIn("state-v1.json.gz 是", text)

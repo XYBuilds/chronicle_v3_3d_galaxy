@@ -104,17 +104,16 @@ Versioned PNG URLs use `v={G}-{M}`. `G` follows the opaque generation contract a
 
 Movie HTML computes `M` before downloading the poster, using the normal-poster state. The PNG request downloads the poster and then computes `M`. When the poster works, HTML and PNG versions agree. When the poster fails, the PNG endpoint may issue one additional `302` to a placeholder-version URL before returning the PNG. This is a known current runtime behavior, not a permanent redirect-shape guarantee; consumers may rely only on resolving to a usable PNG.
 
-## Stable fallback and retired routes
+## Stable fallback and retired surfaces
 
 The brand result is the stable fallback when `meta:G` or `movie:{id}` is missing or unreadable. This includes movies removed from the current OG Index. The fallback is part of the contract; the system does not promise uninterrupted movie-specific metadata during deployment or KV propagation.
 
-The following historical routes are reserved and retired:
+There is no active `today` KV key and no Today product capability. The historical names remain reserved from product reuse:
 
-- `/today`
-- `/og/today.png`
-- `/share/today`
+- `/today` and `/share/today` have no Worker-specific binding. GET and HEAD requests, with or without query strings, follow Chronicle ordinary invalid-path handling at the site edge — the same status, content type, cache behavior, and body as a representative unknown Chronicle path such as `/unknown`.
+- `/og/today.png` is an unknown route inside the active `/og/*` Worker namespace. It matches an ordinary unknown `/og/*` path such as `/og/unknown.png` and must not read KV, fetch the SPA shell, or render a brand or movie card.
 
-GET and HEAD requests, with or without query strings, return side-effect-free `404 Not Found`. These routes must not read KV, fetch the SPA shell, render a brand response, or fall through to static hosting. Reusing them requires a new product Initiative and an explicit contract migration.
+Active `/og/brand.png`, `/og/movie/:id.png`, `/movie/:id`, `movie:{id}`, `meta:G`, fallback, version, and ownership rules are unchanged. Worker runtime detail lives in the OG Worker README and [ADR-0002](https://github.com/XYBuilds/themoviecosmos-og-worker/blob/main/docs/adr/0002-retired-today-follows-chronicle-invalid-path.md). Reusing the retired names requires a new product Initiative and an explicit contract migration.
 
 ## Change classification and release
 
@@ -150,9 +149,9 @@ Only bump the version whose responsibility changed. No compatibility framework o
 
 Repository tests are the persistent regression evidence:
 
-- Chronicle: `scripts/tests/test_og_index_state.py`, `test_sync_og_index_kv.py`, `test_og_pipeline_phase34.py`, and `test_phase40_documentation_contract.py`.
+- Chronicle: `scripts/tests/test_og_index_state.py`, `test_sync_og_index_kv.py`, `test_og_pipeline_phase34.py`, and `test_c002_retired_today_documentation_contract.py`.
 - OG Worker: `test/index.spec.ts`, `test/html.spec.ts`, and `test/version.spec.ts`.
 
-Production smoke checks are dated observations, not perpetual proof. Re-run them manually after a contract or deployment change, and record a dated result only after the check has actually run.
+Production smoke checks are dated observations, not perpetual proof. Re-run them manually after a contract or deployment change, and record a dated result only after the check has actually run. Chronicle's dated Today-route comparison is `scripts/cron/retired_today_route_smoke.py`.
 
 Historical evidence remains in Phase 38 and Phase 40 plans/reports. It explains how the system evolved but does not override this current contract.

@@ -22,7 +22,7 @@ This index names the boundaries between Chronicle, the OG Worker, and Daily Star
 - **Consumer:** [themoviecosmos-og-worker](https://github.com/XYBuilds/themoviecosmos-og-worker)
 - **Current contract:** [`og-index-worker-contract.md`](./og-index-worker-contract.md)
 - **Active keys:** `movie:{id}` and `meta:G`.
-- **Retired key and routes:** KV `today`, `/today`, `/og/today.png`, and `/share/today` are reserved historical surfaces and remain unsupported.
+- **Retired key and routes:** KV `today` is not an active key. `/today` and `/share/today` have no Worker-specific binding and follow Chronicle ordinary invalid-path handling. `/og/today.png` is an unknown route inside the active `/og/*` Worker namespace. These names remain reserved from product reuse.
 - **Projection fields:** required `title`, `release_date`, `genres`, and `poster_url`; see the current contract for types, fallback, generation, checkpoint, HTTP, and release semantics.
 - **Evidence:** current producer and Worker source/tests; Phase 38 and Phase 40 records remain historical evidence.
 - **Change rule:** classify compatibility against the current contract. Breaking field, key, generation, version, or fallback changes require a coordinated best-effort cutover and producer-first rollback. `meta:G` is an ordered completion marker, not a transactional generation barrier.

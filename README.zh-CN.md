@@ -178,7 +178,7 @@ The Movie Cosmos 想打破传统图表式的「看电影数据」：把 TMDB 档
 
 聚焦某部影片后，可在档案抽屉页眉分享该片：复制专属链接发给朋友，或用 X、Reddit、Discord、邮件、Telegram、Facebook 等一键唤起分享。打开链接的人会看到同一部片的星野画面与档案信息。
 
-首页根路径 `/` 是 galaxy idle；分享具体电影使用 `/movie/:id`，保留对应的电影动态 OG。品牌首页 OG 也保留。`/today` 与 `/og/today.png` 已退役并返回 404。
+首页根路径 `/` 是 galaxy idle；分享具体电影使用 `/movie/:id`，保留对应的电影动态 OG。品牌首页 OG 也保留。`/today` 与 `/share/today` 已退役并遵循普通无效路径处理；`/og/today.png` 是未知的 `/og/*` 路径。
 
 ## 浏览器与环境
 

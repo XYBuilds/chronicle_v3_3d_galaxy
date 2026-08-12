@@ -16,6 +16,16 @@ test.describe('movie routes', () => {
     await expectHomeIdle(page)
   })
 
+  test('retired /today follows ordinary invalid-path handling', async ({ page }) => {
+    await page.goto('/today')
+    await expectHomeIdle(page)
+  })
+
+  test('retired /share/today follows ordinary invalid-path handling', async ({ page }) => {
+    await page.goto('/share/today')
+    await expectHomeIdle(page)
+  })
+
   test('invalid movie id returns to home idle', async ({ page }) => {
     await page.goto('/movie/999999999')
     await expectHomeIdle(page)

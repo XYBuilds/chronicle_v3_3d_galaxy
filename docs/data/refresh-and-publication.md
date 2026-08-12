@@ -51,8 +51,8 @@ Publication shape:
 - Describe the live Daily/Monthly/Site/Recovery entry points above. Do not document the retired combined nightly/monthly frontend-build path as current.
 - Dangerous dimension-drift bypass, profile bootstrap/force, OG bootstrap/full recovery, and candidate continuation stay off the normal Daily/Monthly/Site dispatch inputs.
 - Direct Cloudflare/Supabase operations and local CLI remain documented emergency fallbacks. The isolated read-only Supabase preflight workflow stays independent.
-- Do **not** claim ordinary invalid-path handling for `/today`, `/share/today`, or `/og/today.png`; reserved side-effect-free 404 remains the current contract.
-- Do not restore scheduled Today generation, `today_url`, or GitHub Pages deploy.
+- Do not restore a Worker-specific Today binding, scheduled Today generation, `today_url`, or GitHub Pages deploy. Retired `/today` and `/share/today` follow ordinary invalid-path handling; `/og/today.png` is an unknown `/og/*` path.
+- Do not recreate an active `today` KV key or Today product capability.
 - `meta:G` is an ordered completion marker, not a transactional multi-key snapshot.
 - Dimension drift on unknown genre/language fails closed unless an explicit emergency bypass is used.
 
@@ -60,7 +60,7 @@ Publication shape:
 
 - `.github/workflows/nightly_vote_refresh.yml`, `.github/workflows/monthly_refit.yml`, `.github/workflows/site_release.yml`, `.github/workflows/production_recovery.yml`, `.github/workflows/supabase_preflight.yml`
 - `scripts/cron/nightly_vote_refresh.py`, `monthly_refit.py`, `upload_galaxy_r2.py`, `sync_og_index_kv.py`
-- `scripts/cron/release_state.py`, `site_artifact.py`, `pages_compose.py`, `publication_hold.py`, `site_artifact_store.py`, `production_smoke.py`, `r2_retention.py`, `production_recovery.py` and their `scripts/tests/` suites
+- `scripts/cron/release_state.py`, `site_artifact.py`, `pages_compose.py`, `publication_hold.py`, `site_artifact_store.py`, `production_smoke.py`, `retired_today_route_smoke.py`, `r2_retention.py`, `production_recovery.py` and their `scripts/tests/` suites
 - [`docs/system/og-index-worker-contract.md`](../system/og-index-worker-contract.md) and producer/Worker contract tests
 - [`docs/system/planet-export-contract.md`](../system/planet-export-contract.md) and planet-exporter tests
 - Capability/publication rows in [`docs/system/capability-map.md`](../system/capability-map.md)

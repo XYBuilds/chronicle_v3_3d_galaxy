@@ -1,78 +1,15 @@
-# **TMDB 电影宇宙 \- 产品需求文档 (PRD)**
+# TMDB 电影宇宙 PRD — pointer
 
-## **1\. 产品愿景与定位**
+> **Non-authoritative one-hop pointer.** This stable historical path is retained because archive Plans/Reports still cite it. It is not a current product authority.
 
-本项目旨在打破传统的数据图表形式，利用近 60,000 条 TMDB 电影数据，打造一个沉浸式的“2.5D 时空立方体”电影历史档案库。产品将电影的“内容相似度”映射为空间平面，“上映时间”映射为物理纵深，让用户能够以第一人称视角在电影历史的星海中漫游与寻宝。
+Current product purpose, supported journeys, and support surfaces live in:
 
-* **核心数据源**：[TMDB Movies Daily Updates (Kaggle)](https://www.kaggle.com/datasets/alanvourch/tmdb-movies-daily-updates)
+- [`docs/product/supported-experience.md`](../product/supported-experience.md)
 
-## **2\. 核心用户旅程 (User Journeys)**
+Related current topics:
 
-用户在这个“电影宇宙”中，主要体验以下三种核心行为：
+- [`docs/product/galaxy-exploration.md`](../product/galaxy-exploration.md)
+- [`docs/product/search-and-hud.md`](../product/search-and-hud.md)
+- [`docs/data/refresh-and-publication.md`](../data/refresh-and-publication.md)
 
-* **宏观时空漫游 (Time Travel)**：  
-  用户通过鼠标滚轮沿着时间长河（Z 轴）自由穿梭，直观感受电影工业的历史变迁（从稀疏的早期电影到密集的现代大片星系）。  
-* **沉浸式星空寻宝 (Deep Space Discovery)**：  
-  用户在特定年代或流派星云中，通过直观的视觉特征（大小、亮度、颜色）寻找特定类型的影片（如：巨大耀眼的影史神作、极小但高亮的冷门佳片、巨大但黯淡的历史惨案）。  
-* **档案馆文物检视 (Artifact Inspection)**：  
-  用户通过交互（悬停与点击）获取天体背后的具体电影档案信息，完成从宏观宇宙到微观数据的阅读。
-
-## **3\. 功能需求说明 (Functional Requirements)**
-
-### **3.1 渐进式信息检索机制 (HUD)**
-
-为了平衡漫游的流畅感与数据阅读的深度，前端展示采用三层渐进式交互机制：
-
-* **层级零：自由漫游 (Default Roaming)**  
-  * **入场**：应用完成 **四阶段 gzip + 搜索索引 hydrate** 后，自动挂载 WebGL 并进入无选中电影的 **galaxy idle**；无「先点 Start 再进宇宙」门闩，也不请求 `today.json`。同一会话内不重复整包加载链。阶段划分、失败回退与 WebGL 挂载契约见《Tech Spec》**§1.4.7**。
-  * **触发**：默认状态，无特定星体被悬停或选中。  
-  * **行为**：用户随意控制摄像机（如滚轮穿梭、拖拽平移），在 3D 宇宙中自由航行。  
-  * **内容**：HUD 界面保持极简（或完全隐藏），仅提供全局时间轴或基本操作提示，将视觉中心彻底让位给 3D 宇宙景观。  
-* **层级一：快速雷达探测 (Hover & Tooltip)**  
-  * **触发**：鼠标指针悬停在任意星球节点上。  
-  * **行为**：显示跟随光标的轻量级浮窗，不打断摄像机漫游。  
-  * **内容**：仅显示极简信息：电影标题 (Title) 与主导流派 (Primary Genre)。  
-* **层级二：深度档案检视 (Click & Detail Panel)**  
-  * **触发**：鼠标左键点击特定星球。  
-  * **行为**：摄像机平滑推进并聚焦目标星球，屏幕侧边唤出“档案详情抽屉”。**Phase 13**：进入 focus 后，用户可**拖动旋转视角**（轨道相机）观察焦点星与**周围邻域**内其它 active 影片，并**点击邻域 active** 将焦点切换至该片（与状态机 spec §3.4.5 / §3.5.2 一致）；**Phase 13.5** 起辅以 **`vote_count` 档位圆环**与 **L 指针**参照，帮助读懂 Perlin 球尺度与评分→明度映射。  
-  * **内容**：展示完整档案，包含电影海报、原名、精确上映日期、核心宣传语 (Tagline)、对白语种 (Spoken Languages)。
-
-### **3.2 搜索与精确定位 (Search · Phase 12 起)**
-
-为补齐「纯漫游探索」之外的精确查找路径，顶部 HUD 提供**搜索框**，三档分段（**电影 / 人 / 流派**）。**功能契约**与**视觉/UX 细则**分别由《Tech Spec》§4 与《Design Spec》§4 定义；本节仅声明产品意图与三条核心用户路径：
-
-1. **搜电影名 → focus**：输入片名（含 `original_title`，多语言）→ 联想下拉 → 点击 → 相机飞入对应星球的 **focus** 态（与 §3.1 层级二一致）。
-2. **搜人名 → 多 active + 时间星座**：人名覆盖 **演员、导演、摄影、编剧、制片、配乐** 六类职员；点击联想中的人物 → 该人物**全部参与影片**亮为 **active**，其余 idle；按 **发行日期升序**用细线连接星座图，并按职位**拆为三条独立时间链 producers / 主创班底（director|dop|writers|music_composer 合并） / cast**，使「制片同盟、主创班底、演员同框」三种叙事并行可读。该会话期间**视觉 active 集合由搜索结果决定**，与时间轴 viswindow **解耦**。**Phase 27 起**：在 **focus** 且索引可用时，**详情抽屉**中可映射人名提供与上述一致的入口（见 Design Spec §2.2）。
-3. **搜流派 → 流派全景**：点击某 genre → 凡 `genres` 列表中**任意位置**包含该 genre 的影片均亮为 active，其余 idle；不画连线。
-
-**ESC 出栈**（详见 Design Spec §4.6）：搜索框失焦 → 关抽屉 → 取消 focus（保留 select 上下文）→ 退出搜索 select。
-
-**电影深链与社交预览**：电影档案抽屉分享对应的 **`/movie/:id`**；该深链继续打开该片 focus。OG Worker 保留品牌首页与电影动态 OG。首页 **`/`** 是 galaxy idle，不再代表每日影片；`/today` 与 `/og/today.png` 已退役并在服务边界返回 **404**。
-
-**从档案抽屉进入人名高亮（Phase 27）**：详情抽屉中 cast / crew 等展示名在搜索索引可解析时表现为可点击控件，语义与上条路径 2「搜人名 → person select」一致（同一 **`selectionIds` / `selectionPersonKey`** 驱动的星座高亮）；无法解析为索引 key 时保持纯文本，不阻断阅读。
-
-**首次引导（first-time onboarding）**：Phase 27 曾规划基于 `localStorage` 的多步轻引导，**当前仓库未交付**；若未来重启，须与 galaxy idle、搜索与 focus 协议一并走 PRD—Design Spec 联审。
-
-### **3.3 数据更新与同步**
-
-数据更新与同步的产品目标以 [`TMDB 电影宇宙 Data Pipeline.md`](./TMDB%20电影宇宙%20Data%20Pipeline.md) 为 SSOT。
-
-* **当前阶段**：前端消费静态 `galaxy_data.json.gz` / `galaxy_search_index.json.gz`，由 Python 管线生成后部署。  
-* **Phase 18+ 目标**：Supabase 作 source of truth；每日刷新已有电影投票/评分/热度并重导静态数据；每周或每月执行全量 refit，将新通过门槛的影片并入宇宙，并通过 Procrustes 对齐保持空间记忆稳定。前端仍不直接查询数据库。
-
-### **3.4 支持、用户反馈与社区（Phase 28）**
-
-在 **无自建账号体系、无后端工单** 的前提下，提供可持续的**自愿支持**、**结构化反馈**与**社区讨论**入口；三者均为**第三方平台**，不暗示 TMDB 或数据方背书。
-
-* **自愿支持（Ko-fi）**：主 HUD 提供打开 Ko-fi（或部署配置的同类 `https:` 支持页）的入口；未配置或显式关闭时可隐藏按钮。产品不使用 Buy Me a Coffee。  
-* **用户反馈（Tally）**：主 HUD 提供打开 Tally 表单的入口（嵌入弹层 / 外链由实现决定）；用于功能建议、问题报告与主观体验等。提交的数据由 **Tally** 处理；**Info** 模态内需有简短隐私提示（勿在表单中提交密码或高度敏感信息）。  
-* **社区（Discord）**：**主路径**为维护者在 **Tally 表单 thank you page** 配置的 Discord 邀请（用户提交反馈后可见）。社区用于讨论与跟进，**非** TMDB 官方渠道、**无** SLA。
-
-## **4\. 未来计划 (Future Roadmap)**
-
-以下功能**当前阶段不实现**，优先验证核心产品交互（宏观漫游 → 寻宝 → 文物检视 → §3.2 搜索）。待核心体验验证通过后，按优先级逐步迭代：
-
-* **筛选 (Filter)**：在搜索之上叠加按 **年代区间 / 评分范围 / 国家 / 公司** 等条件的多维筛选，与 §3.2 select 会话语义合流。  
-* **聚光灯交互 (Spotlight)**：选择某个维度（如国家、制片公司）时，高亮该维度下的所有星球，其余星球降低透明度。提供维度级的"宏观X光"视角。  
-* **自动化数据流（Phase 18+）**：通过 GitHub Actions Cron 定时拉取 Kaggle TMDB Daily Updates；每日刷新已存在影片的 vote/rating/popularity；新通过门槛的影片进入 pending 池。具体规则见 Data Pipeline SSOT。  
-* **周期性全量 refit（Phase 18+）**：每周或每月执行全量 `.fit_transform()`，合入 pending 新片，并用 v1 reference 做 Procrustes 对齐；不做前端 remap 动画，保持用户长期空间记忆稳定。
+Start from [`docs/system/decision-index.md`](../system/decision-index.md) for navigation.

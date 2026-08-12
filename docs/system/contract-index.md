@@ -12,7 +12,7 @@ This index names the boundaries between Chronicle, the OG Worker, and Daily Star
 - **Producer:** Chronicle
 - **Consumers:** Chronicle frontend, OG Worker movie routes, Daily Stargazing movie references
 - **Identity:** TMDB `id` is the primary movie identity; `/movie/{tmdbId}` is the canonical site route.
-- **Evidence:** Chronicle Tech Spec, current README, frontend routing tests.
+- **Evidence:** [`docs/product/supported-experience.md`](../product/supported-experience.md), [`docs/frontend/runtime.md`](../frontend/runtime.md), frontend routing tests.
 - **Change rule:** identity or route changes require a cross-repository Initiative and compatibility review.
 
 ### C-002 · OG Index KV projection
@@ -45,7 +45,7 @@ This index names the boundaries between Chronicle, the OG Worker, and Daily Star
 - **Consumers:** Chronicle frontend and Chronicle planet exporter; Daily consumes through the C-003 adapter's configured release input.
 - **Current contract:** [`planet-export-contract.md`](./planet-export-contract.md)
 - **Boundary:** versioned manifest and validated galaxy data schema; active emission profile pointer + controlled profile URL; large generated assets are not committed to Git.
-- **Evidence:** Tech Spec, Data Pipeline, `frontend/src/lib/galaxyAssetUrls.ts`, planet-exporter data-source tests.
+- **Evidence:** [`docs/data/galaxy-model.md`](../data/galaxy-model.md), [`docs/data/refresh-and-publication.md`](../data/refresh-and-publication.md), `frontend/src/lib/galaxyAssetUrls.ts`, planet-exporter data-source tests.
 - **Change rule:** schema or source URL changes require validation fixtures and consumer smoke tests. No global atomic release protocol; incompatible inputs fail closed.
 
 ## Lean release semantics

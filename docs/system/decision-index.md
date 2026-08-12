@@ -2,21 +2,36 @@
 
 ## Purpose
 
-This index answers where a decision is recorded. It does not copy the decision text and does not turn historical execution records into current specifications.
+This index is the only documentation status and navigation layer for current Chronicle concerns. It answers where a decision or current topic lives. It does not copy decision text and does not turn historical execution records into current specifications.
 
-## Current Chronicle SSOT
+## Current topics
 
 | Topic | Current source |
 | --- | --- |
-| Product goals and user journey | [`docs/project_docs/TMDB 电影宇宙 PRD.md`](../project_docs/TMDB%20电影宇宙%20PRD.md) |
-| System architecture and data schema | [`docs/project_docs/TMDB 电影宇宙 Tech Spec.md`](../project_docs/TMDB%20电影宇宙%20Tech%20Spec.md) |
-| Visual and interaction behavior | [`docs/project_docs/TMDB 电影宇宙 Design Spec.md`](../project_docs/TMDB%20电影宇宙%20Design%20Spec.md) |
-| Data cleaning, feature engineering, export, and automation | [`docs/project_docs/TMDB 电影宇宙 Data Pipeline.md`](../project_docs/TMDB%20电影宇宙%20Data%20Pipeline.md) |
-| Feature-to-rendering mapping | [`docs/project_docs/TMDB 数据特征工程与 3D 映射总表.md`](../project_docs/TMDB%20数据特征工程与%203D%20映射总表.md) |
-| Planet selection and focus state machine | [`docs/project_docs/星球状态机 spec.md`](../project_docs/%E6%98%9F%E7%90%83%E7%8A%B6%E6%80%81%E6%9C%BA%20spec.md) |
-| Visual parameter values | [`docs/project_docs/视觉参数总表.md`](../project_docs/%E8%A7%86%E8%A7%89%E5%8F%82%E6%95%B0%E6%80%BB%E8%A1%A8.md) (static defaults); active emission profile via [`planet-export-contract.md`](./planet-export-contract.md) |
+| Supported product experience | [`docs/product/supported-experience.md`](../product/supported-experience.md) |
+| Galaxy exploration | [`docs/product/galaxy-exploration.md`](../product/galaxy-exploration.md) |
+| Search and HUD | [`docs/product/search-and-hud.md`](../product/search-and-hud.md) |
+| Frontend runtime | [`docs/frontend/runtime.md`](../frontend/runtime.md) |
+| Galaxy data model | [`docs/data/galaxy-model.md`](../data/galaxy-model.md) |
+| Refresh and publication | [`docs/data/refresh-and-publication.md`](../data/refresh-and-publication.md) |
+
+## Contracts and durable decisions
+
+| Topic | Current source |
+| --- | --- |
 | Planet Export / galaxy manifest / active profile | [`planet-export-contract.md`](./planet-export-contract.md) |
 | OG Index KV projection | [`og-index-worker-contract.md`](./og-index-worker-contract.md) |
+| Focus / select lifecycle rationale | [`docs/adr/0001-focus-select-lifecycle.md`](../adr/0001-focus-select-lifecycle.md) |
+| Shared terminology | [`CONTEXT.md`](../../CONTEXT.md) |
+
+## Supporting references (not authority)
+
+| Topic | Reference |
+| --- | --- |
+| Feature-to-rendering quick lookup | [`docs/project_docs/TMDB 数据特征工程与 3D 映射总表.md`](../project_docs/TMDB%20数据特征工程与%203D%20映射总表.md) — semantics defer to data/exploration topics; exact mappings defer to schema/source |
+| Visual parameter quick lookup | [`docs/project_docs/视觉参数总表.md`](../project_docs/%E8%A7%86%E8%A7%89%E5%8F%82%E6%95%B0%E6%80%BB%E8%A1%A8.md) — behavior defers to exploration/search topics; exact defaults and active profile defer to source and C-004 |
+
+Stable historical paths under `docs/project_docs/` for the former PRD, Tech Spec, Design Spec, planet state-machine spec, and Data Pipeline remain as thin, non-authoritative one-hop pointers while archive references still cite them.
 
 ## High-value historical records
 
@@ -39,3 +54,4 @@ Daily Stargazing owns its editorial terminology and ADRs. Start from its [CONTEX
 - A Plan or Issue tracks active work; after completion it becomes historical evidence.
 - A Report records results that are useful beyond the PR; it is not the current design source by default.
 - When a capability changes, update this index and `capability-map.md` in the same documentation PR.
+- Current topics describe implemented state only. Accepted-but-not-live behavior waits for its implementing Issue and production acceptance.

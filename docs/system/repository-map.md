@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document is the product-level map for the three repositories. It records ownership and integration boundaries; it does not replace any repository's implementation documentation.
+This document is the product-level map for the three repositories. It records ownership and integration boundaries; it does not replace Chronicle's current topics under `docs/product/`, `docs/frontend/`, and `docs/data/`, or any repository's local implementation documentation.
 
 ## Repositories
 

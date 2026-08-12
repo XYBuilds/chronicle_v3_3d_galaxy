@@ -100,12 +100,3 @@ export function requireProductionPlanetVisualConfig(
   }
   return config
 }
-
-export function planetExportVisualConfigInput(config: ResolvedPlanetVisualConfig): string {
-  return config.hashInput
-}
-
-/** Backward-compatible name for consumers that only need the stable resolved hash input. */
-export function resolvedPlanetVisualHashInput(config: ResolvedPlanetVisualConfig): string {
-  return config.hashInput
-}

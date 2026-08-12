@@ -366,7 +366,12 @@ _RETIRED_ARCHIVE_BASENAMES = (
 
 _RETAINED_OPERATOR_SURFACES = (
     ".github/workflows/supabase_preflight.yml",
+    ".github/workflows/production_recovery.yml",
     "scripts/cron/check_supabase_health.py",
+    "scripts/cron/production_recovery.py",
+    "scripts/cron/release_state.py",
+    "scripts/cron/site_artifact.py",
+    "scripts/cron/r2_retention.py",
     "scripts/verify_galaxy_3d.html",
     "finish_todo.sh",
 )

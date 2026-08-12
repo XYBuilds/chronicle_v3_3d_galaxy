@@ -28,6 +28,7 @@ This is a current-state index, not a second implementation specification. Each r
 | OG Index KV projection | active / maintenance | Chronicle producer + OG Worker consumer | [`docs/system/og-index-worker-contract.md`](./og-index-worker-contract.md) | `scripts/cron/`, Worker `src/kv.ts`, `src/index.ts`, and contract tests |
 | Planet image export | active / maintenance | Chronicle producer + Daily consumer | [`planet-export-contract.md`](./planet-export-contract.md) | `tools/planet-exporter/`, Daily adapter |
 | Active focus emission profile | active | Chronicle | [`planet-export-contract.md`](./planet-export-contract.md) | `frontend/src/three/focusEmission.ts`; manifest pointer + profile resource tests |
+| Release-state, retention, and audited recovery primitives | implemented / not live cutover | Chronicle | [`docs/data/refresh-and-publication.md`](../data/refresh-and-publication.md) | `scripts/cron/release_state.py`, `site_artifact.py`, `r2_retention.py`, `production_recovery.py`; `scripts/tests/test_release_state.py`, `test_site_artifact.py`, `test_r2_retention.py`, `test_production_recovery.py`, `test_release_primitives_contract.py`; manual `.github/workflows/production_recovery.yml` |
 | Daily Stargazing editorial pipeline | active | Daily Stargazing | [Daily `CONTEXT.md`](https://github.com/XYBuilds/themoviecosmos-daily-stargazing/blob/main/CONTEXT.md), [Daily SSOT](https://github.com/XYBuilds/themoviecosmos-daily-stargazing/tree/main/docs/SSOT) | Daily repository |
 
 ## Retired / maintenance boundaries
@@ -45,7 +46,7 @@ This is a current-state index, not a second implementation specification. Each r
 - The active OG Worker reads only `movie:{id}` and `meta:G`; its current routes, fallback, version behavior, and retired Today 404 surface are captured in [`og-index-worker-contract.md`](./og-index-worker-contract.md).
 - Remaining Today references in Phase plans, reports, and explicitly marked historical guides are archival evidence, not an active compatibility path.
 - Publication stages (compute, OG sync, R2 upload, frontend build, Pages deploy) succeed or fail independently. Consumers use their last successfully published compatible artifact; there is no global generation barrier.
-- Separated Data/Site Release operator surfaces accepted in later Issues are not current capabilities until those Issues ship.
+- Release-state, site-artifact, retention, and recovery primitives are implemented in Chronicle scripts and a manual dry-run workflow. Separated Daily/Monthly/Site Release operator surfaces remain not-live until Issue #388.
 
 ## Update rule
 

@@ -1,15 +1,16 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 
 import { Loading } from './Loading'
+import { HudCanvas } from '@/storybook/hudStoryHarness'
 
 const meta: Meta<typeof Loading> = {
-  title: 'Loading',
+  title: 'Boot/Loading',
   component: Loading,
   decorators: [
     (Story) => (
-      <div className="relative isolate min-h-[480px] w-full min-w-[360px] overflow-hidden bg-background">
+      <HudCanvas>
         <Story />
-      </div>
+      </HudCanvas>
     ),
   ],
 }
@@ -22,14 +23,7 @@ export const Default: Story = {
   args: {},
 }
 
-export const CustomLabel: Story = {
-  args: {
-    label: 'Fetching subsample rows from data/subsample/TMDB_all_movies_random20.csv',
-  },
-}
-
-/** Galaxy gzip finished; fourth step = search index hydrate (matches App index-loading overlay). */
-export const PhaseSearchIndexLoading: Story = {
+export const SearchIndexLoading: Story = {
   args: {
     label: 'Loading search index…',
     progress: null,
@@ -38,16 +32,7 @@ export const PhaseSearchIndexLoading: Story = {
   },
 }
 
-export const PhaseSearchIndexSkipped: Story = {
-  args: {
-    label: 'Loading search index…',
-    progress: null,
-    gzipDone: true,
-    indexStatus: 'skipped',
-  },
-}
-
-export const PhaseSearchIndexFailed: Story = {
+export const SearchIndexFailed: Story = {
   args: {
     label: 'Loading search index…',
     progress: null,

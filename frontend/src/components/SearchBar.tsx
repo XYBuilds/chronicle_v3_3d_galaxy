@@ -633,7 +633,7 @@ export function SearchBar({ hasSearchIndex, movies, animateZCurrentTo }: SearchB
               <input
                 type="text"
                 data-galaxy-search-input
-                role="searchbox"
+                role="combobox"
                 enterKeyHint="search"
                 autoComplete="off"
                 spellCheck={false}

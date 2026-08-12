@@ -134,6 +134,9 @@ export function clampGalaxyCameraXY(
 /** Phase 17.3 — default standoff; must stay aligned with `galaxyInteractionStore` initial `zCamDistance`. */
 export const GALAXY_ZCAM_DISTANCE_DEFAULT = 30
 
+/** Visible Z slab width in world years at scene mount (`uZVisWindow` / store `zVisWindow`). */
+export const GALAXY_Z_VIS_WINDOW_DEFAULT = 0.5
+
 const ZCAM_DOLLY_MIN = 2
 const DOLLY_SPEED_MUL = 5 // P17.3 dolly; P17.4 production default (× zScroll wheel scaling, see Phase 17.3 report)
 

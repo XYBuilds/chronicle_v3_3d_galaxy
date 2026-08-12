@@ -23,13 +23,6 @@ export const ACCEPTANCE_VIEWPORTS = {
     deviceScaleFactor: 1,
     surface: 'visual-gate',
   },
-  'hud-mobile': {
-    id: 'hud-mobile',
-    width: 390,
-    height: 844,
-    deviceScaleFactor: 1,
-    surface: 'hud',
-  },
   'hud-desktop': {
     id: 'hud-desktop',
     width: 1280,

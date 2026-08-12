@@ -43,7 +43,7 @@ Visual mapping (stable semantics; exact defaults live in source/profile evidence
 - Macro luminance cue ← `vote_average`
 - Color ← primary genre (`genres[0]`) via the frozen palette
 - Focus emission intensity ← active `rating-midrank-cdf-lut-v1` profile from the production manifest (not the retired Phase 39 curve)
-- Bloom defaults off in production presentation
+- Full-scene post-process Bloom (`UnrealBloomPass` on the whole galaxy) is off in production. Focus planets use a separate planet-only bloom (`pure-bloom-delta-v1`) that is on, with a high threshold so the halo stays conservative.
 
 WebGL2 is required; hard-fail when unavailable. Unimplemented near-camera occlusion cull remains out of the current contract.
 

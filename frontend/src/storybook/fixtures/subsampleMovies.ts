@@ -229,16 +229,38 @@ function padRange1d(values: number[], pad: number): [number, number] {
   return [lo - pad, hi + pad]
 }
 
-/** Single point for `GalaxyThreeLayerLab` / `mountGalaxyScene` tuning. */
-export const SUBSAMPLE_LAB_MOVIES: Movie[] = [subsampleMovieMarthasVineyard]
+/** HUD catalog movies (title search, drawer, tooltip). */
+export const SUBSAMPLE_HUD_MOVIES: Movie[] = [
+  subsampleMovieMarthasVineyard,
+  subsampleMovieParadiseRoad,
+  subsampleMovieKika,
+  subsampleMovieHappiness,
+]
+
+/**
+ * Visual Gate clones — same films, spread in XY so four points and constellation
+ * segments are readable from the production camera (HUD fixtures stay clustered).
+ */
+const LAB_XY: ReadonlyArray<readonly [number, number]> = [
+  [-1.6, 1.1],
+  [1.6, 1.1],
+  [-1.6, -1.1],
+  [1.6, -1.1],
+]
+
+export const SUBSAMPLE_LAB_MOVIES: Movie[] = SUBSAMPLE_HUD_MOVIES.map((movie, index) => ({
+  ...movie,
+  x: LAB_XY[index]![0],
+  y: LAB_XY[index]![1],
+}))
 
 /**
  * Minimal `meta` slice for Three.js scene mount (fixtures only).
- * `z_range` matches Storybook `zCurrent` lab slider (2018–2021) so wheel clamp stays consistent.
- * XY envelope from the lab movie’s `x` / `y`.
+ * `z_range` covers the four subsample release years so Visual Gate Z controls stay consistent.
+ * XY envelope from the lab movies’ `x` / `y`.
  */
 export const SUBSAMPLE_GALAXY_META: Pick<Meta, 'z_range' | 'xy_range' | 'count' | 'genre_palette' | 'has_genre_hue'> = {
-  z_range: [2018, 2021],
+  z_range: [...SUBSAMPLE_DECIMAL_Z_RANGE],
   xy_range: {
     x: padRange1d(
       SUBSAMPLE_LAB_MOVIES.map((m) => m.x),

@@ -39,7 +39,7 @@ Development skips the remote manifest and uses bundled gzip fixtures so local wo
 
 - Python and Vitest cover contracts, locales, and pure helpers.
 - Manual/browser checks cover WebGL presentation.
-- Storybook is for HUD/DOM catalog work, not a full 3D acceptance substitute. Broader Storybook catalog reduction remains a later delivery Issue; this topic only records the current policy boundary.
+- Storybook is a HUD catalog plus one Visual Gate for Three.js scene states (Storybook args/controls grouped by object; Leva is not part of the catalog). It is not a full 3D acceptance substitute.
 
 ## Boundaries and invariants
 

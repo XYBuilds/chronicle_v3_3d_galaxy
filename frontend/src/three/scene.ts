@@ -21,9 +21,11 @@ import {
   attachGalaxyCameraControls,
   clampGalaxyCameraXY,
   GALAXY_CAMERA_EULER,
+  GALAXY_Z_VIS_WINDOW_DEFAULT,
+  GALAXY_ZCAM_DISTANCE_DEFAULT,
   setFocusOrbitCameraPosition,
 } from './camera'
-import { CONSTELLATION_SURFACE_GAP_WORLD, createConstellation } from './constellation'
+import { CONSTELLATION_SURFACE_GAP_WORLD, createConstellation, type ConstellationHandle } from './constellation'
 import { createGalaxyDualMeshes } from './galaxyMeshes'
 import { computeIdleMacroFadesBlendForPhase, IDLE_NEAR_FADE_DEFAULTS } from './idleNearFade'
 import { IDLE_Z_FADE_DEFAULTS } from './idleZFade'
@@ -245,6 +247,7 @@ export interface GalaxySceneMount {
   galaxyActiveMaterial: THREE.ShaderMaterial
   /** Selection icosphere handle (Perlin uniforms + `setFromMovie` / `setOpacity`). */
   selectionPlanet: SelectionPlanetHandle
+  constellation: ConstellationHandle
 }
 
 function xyCenter(meta: Pick<Meta, 'xy_range'>): { cx: number; cy: number } {
@@ -285,8 +288,8 @@ export function mountGalaxyScene(
   }
   const zLo = Math.min(zRange[0], zRange[1])
   /** Macro camera standoff along Z (absolute world units; not derived from `z_range` span). */
-  const zCamDistance = 30
-  const zVisWindow = 0.5
+  const zCamDistance = GALAXY_ZCAM_DISTANCE_DEFAULT
+  const zVisWindow = GALAXY_Z_VIS_WINDOW_DEFAULT
   /** Rev 4 plan: start at the earliest year in `z_range` so the first screen is the time origin. */
   const zCurrent = zLo
   useGalaxyInteractionStore.setState({ zCurrent, zVisWindow, zCamDistance })
@@ -1503,5 +1506,6 @@ export function mountGalaxyScene(
     galaxyMaterial: galaxy.idleMaterial,
     galaxyActiveMaterial: galaxy.activeMaterial,
     selectionPlanet: planet,
+    constellation,
   }
 }

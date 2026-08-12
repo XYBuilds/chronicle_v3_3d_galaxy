@@ -38,6 +38,8 @@ export function MovieTooltipHud({
       <TooltipTrigger
         type="button"
         tabIndex={-1}
+        aria-hidden="true"
+        role="presentation"
         className="pointer-events-none fixed z-[var(--z-hud-tooltip)] h-px w-px min-h-0 min-w-0 overflow-hidden border-0 bg-transparent p-0"
         style={{
           left: anchor?.x ?? -9999,

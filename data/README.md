@@ -58,9 +58,11 @@ Set-Location <REPO_ROOT>
 
 放置 Kaggle / 自备的 `TMDB_all_movies.csv`。
 
-## `data/runs/`（gitignored）
+## `data/runs/`（gitignored, with one tracked pointer）
 
 时间戳目录：某次 P18 全量重建、benchmark 等快照；可按磁盘空间自行删除旧目录。
+
+The only tracked file under this tree is the non-authoritative Phase 41 reproduction pointer `data/runs/phase41/README.md`. Raw Phase 41 PNG/JSON runs are not in HEAD; restore them from the commit recorded in that index.
 
 打包四件套请优先使用（含形状断言）：
 

@@ -20,7 +20,10 @@ venv/
 data/raw
 data/output/
 # P18.1+ local canonical rebuild outputs (large; not versioned)
-data/runs/
+data/runs/*
+!data/runs/phase41/
+data/runs/phase41/*
+!data/runs/phase41/README.md
 # P18.5b: written at repo root by scripts/cron/monthly_refit.py (CI artifact; do not commit)
 monthly_refit_meta.json
 scripts/output/

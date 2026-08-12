@@ -45,7 +45,11 @@ npm run contact-sheet -w acceptance-harness -- --input path/to/cells.json --outp
 npm run capture:app-baseline -w acceptance-harness
 npm run capture:storybook -w acceptance-harness
 npm run test:storybook-a11y -w acceptance-harness
+```
 
+`test:storybook-a11y` scans HUD stories only (not Visual Gate WebGL). It skips `color-contrast` and `scrollable-region-focusable` because canvas HUD tokens and the drawer body are reviewed perceptually. New critical/serious ARIA failures still block.
+
+```bash
 # Performance protocol trigger only (does not invent a new CI GPU gate)
 npm run performance:protocol -w acceptance-harness
 ```
@@ -56,7 +60,7 @@ Fixed Chromium Playwright suite under `tools/acceptance-harness/journeys/`. It i
 
 Covered today: home idle; shareable `/movie/:id` focus + FocusExit; Back/Forward across home/movie; invalid path/id; title/ID search focus replacement; person select + layered ESC; genre multi-select/clear; data Retry; search-index failure with scene retained; EN/AR RTL + light/dark + Timeline orientation.
 
-Canvas **hover → pick → focus** remains environment-sensitive under WebGL; until a stable picking harness exists, deep-link and search focus cover the focus/Drawer/FocusExit/history contract. Visual Gate bloom panels remain Storybook/#383 follow-on composition.
+Canvas **hover → pick → focus** remains environment-sensitive under WebGL; until a stable picking harness exists, deep-link and search focus cover the focus/Drawer/FocusExit/history contract. Visual Gate bloom panels are composed in Storybook (`lab-desktop` fullscreen); evidence screenshots use the `visual-gate` 1920×1080 viewport, not the app journey suite.
 
 Pinned browser tooling: Playwright **1.52.0** Chromium (same pin as Planet Export). App journeys remain a separate suite from `npm run test:integration -w planet-exporter`.
 
@@ -64,7 +68,8 @@ Pinned browser tooling: Playwright **1.52.0** Chromium (same pin as Planet Expor
 
 | Id | Size | DPR | Surface |
 | --- | --- | --- | --- |
-| `app-desktop` / `visual-gate` | 1920×1080 | 1 | Main app / Visual Gate |
+| `app-desktop` / `visual-gate` | 1920×1080 | 1 | Main app / Visual Gate evidence captures |
+| Storybook `lab-desktop` | fullscreen `100%` | 1 | Visual Gate catalog in Storybook UI (not a 1920×1080 alias) |
 | `hud-mobile` | 390×844 | 1 | HUD Storybook (layout, not mobile WebGL support) |
 | `hud-desktop` | 1280×800 | 1 | HUD Storybook |
 

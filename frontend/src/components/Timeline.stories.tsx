@@ -3,15 +3,16 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 
 import { TimelineHud } from './Timeline'
 import { SUBSAMPLE_DECIMAL_Z_RANGE } from '@/storybook/fixtures/subsampleMovies'
+import { HudCanvas } from '@/storybook/hudStoryHarness'
 
 const meta: Meta<typeof TimelineHud> = {
   title: 'Timeline',
   component: TimelineHud,
   decorators: [
     (Story) => (
-      <div className="relative min-h-[560px] w-full min-w-[480px] bg-neutral-950">
+      <HudCanvas>
         <Story />
-      </div>
+      </HudCanvas>
     ),
   ],
 }
@@ -22,7 +23,6 @@ type Story = StoryObj<typeof TimelineHud>
 
 const [zLo, zHi] = SUBSAMPLE_DECIMAL_Z_RANGE
 
-/** P22.4 — Default app orientation: left vertical rail (`?timeline=` omitted). */
 export const Default: Story = {
   args: {
     zRange: [zLo, zHi],
@@ -31,7 +31,6 @@ export const Default: Story = {
   },
 }
 
-/** Bottom-centered bar; `?timeline=horizontal` in the app. */
 export const Horizontal: Story = {
   args: {
     zRange: [zLo, zHi],
@@ -40,7 +39,6 @@ export const Horizontal: Story = {
   },
 }
 
-/** Indicator sits on the oldest edge of the subsample-derived range (vertical default). */
 export const CameraAtMinZ: Story = {
   args: {
     zRange: [zLo, zHi],
@@ -49,7 +47,6 @@ export const CameraAtMinZ: Story = {
   },
 }
 
-/** Indicator sits on the newest edge of the subsample-derived range (vertical default). */
 export const CameraAtMaxZ: Story = {
   args: {
     zRange: [zLo, zHi],
@@ -58,7 +55,6 @@ export const CameraAtMaxZ: Story = {
   },
 }
 
-/** Wider span than fixture movies alone — tick density stress (vertical default). */
 export const WideZSpan: Story = {
   args: {
     zRange: [1874, 2026],
@@ -80,7 +76,6 @@ function InteractiveHudHarness() {
   )
 }
 
-/** Drag the track or click ticks (bottom horizontal axis). */
 export const Interactive: Story = {
   render: () => <InteractiveHudHarness />,
 }
@@ -98,7 +93,6 @@ function InteractiveVerticalHarness() {
   )
 }
 
-/** Vertical rail drag/click (matches default app / `?timeline=vertical`). */
 export const InteractiveVertical: Story = {
   render: () => <InteractiveVerticalHarness />,
 }

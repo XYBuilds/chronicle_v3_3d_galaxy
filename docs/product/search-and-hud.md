@@ -13,7 +13,7 @@ Search and HUD are the DOM layer over the galaxy. Search requires a hydrated sea
 
 Tabs: **movie / person / genre**. Switching tabs clears the current query.
 
-- **Movie** — minimum length 3 characters (CJK/Hangul/Kana may use a lower threshold); debounced suggestions; ranking prefers prefix matches and weights `log10(vote_count+1) × vote_average`. Choosing a title requests **replacing focus**.
+- **Movie** — minimum length 3 characters (CJK/Hangul/Kana may use a lower threshold); debounced suggestions; ranking prefers prefix matches and weights `log10(vote_count+1) × vote_average`. Choosing a title requests **replacing focus**. The field is a **combobox** (suggestion list), not `searchbox`, so `aria-expanded` is valid.
 - **Person** — token-prefix suggestions (bounded list); covers cast plus creative roles (director, DOP, writers, producers, music). Choosing a person enters a **select session** with `selectionPersonKey` and three constellation chains. Archive-drawer person names can enter the same session when the index resolves them.
 - **Genre** — nineteen frozen official-genre badges; multi-select is AND; impossible badges disable; no constellation lines; does not move `zCurrent`.
 - **TMDB ID** — numeric id lookup enters replacing focus when the id exists in the loaded galaxy.
@@ -23,7 +23,7 @@ Esc stack (outermost first): blur search → close drawer → exit focus while k
 ### HUD chrome
 
 - Timeline control defaults to a vertical track; `?timeline=horizontal` opts into the horizontal layout.
-- Hover tooltip shows title + primary genre without interrupting roam.
+- Hover tooltip shows title + primary genre without interrupting roam. The 1px screen anchor is presentational; the tooltip content is the named surface.
 - Focus opens the archive drawer; exit uses the floating “View cosmos” control or the Esc stack—not blank-canvas click.
 - Top utility order: Feedback → Support → Info → Lang → Fullscreen.
 - Keyboard: `F` toggles fullscreen; Cmd/Ctrl+K focuses search; Esc follows the stack above.
@@ -32,7 +32,7 @@ Esc stack (outermost first): blur search → close drawer → exit focus while k
 
 HUD-visible English copy is authored in `frontend/src/lib/locales/en.json` and exported through `frontend/src/lib/strings.ts` / `useStrings()`. Locale resolution uses `?lang=` → localStorage → navigator → `en`; `ar` sets `dir=rtl`.
 
-Storybook remains a DOM/HUD catalog surface, not a substitute for WebGL end-to-end proof.
+- Storybook is the HUD journey catalog (Boot → Chrome → Hover → Drawer → Timeline) plus one curated Visual Gate. It is not a substitute for production WebGL proof. Narrow `hud-mobile` captures are HUD layout evidence, not mobile WebGL support.
 
 ## Boundaries and invariants
 

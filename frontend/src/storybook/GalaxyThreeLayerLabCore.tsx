@@ -97,7 +97,7 @@ export interface GalaxyThreeLayerLabProps {
 }
 
 /**
- * Storybook / lab host: mounts the real galaxy WebGL scene and mirrors tuning props into uniforms / store.
+ * Storybook Visual Gate host: mounts the real galaxy WebGL scene and mirrors tuning props into uniforms / store.
  */
 export function GalaxyThreeLayerLabCore(props: GalaxyThreeLayerLabProps) {
   const rootRef = useRef<HTMLDivElement | null>(null)

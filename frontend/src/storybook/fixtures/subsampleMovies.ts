@@ -229,7 +229,15 @@ function padRange1d(values: number[], pad: number): [number, number] {
   return [lo - pad, hi + pad]
 }
 
-/** Single point for `GalaxyThreeLayerLab` / `mountGalaxyScene` tuning. */
+/** HUD catalog movies (title search, drawer, tooltip). */
+export const SUBSAMPLE_HUD_MOVIES: Movie[] = [
+  subsampleMovieMarthasVineyard,
+  subsampleMovieParadiseRoad,
+  subsampleMovieKika,
+  subsampleMovieHappiness,
+]
+
+/** Single point for Visual Gate / `mountGalaxyScene` tuning. */
 export const SUBSAMPLE_LAB_MOVIES: Movie[] = [subsampleMovieMarthasVineyard]
 
 /**

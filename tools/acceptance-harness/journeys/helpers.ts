@@ -20,5 +20,5 @@ export async function expectHomeIdle(page: Page): Promise<void> {
 }
 
 export function searchBox(page: Page) {
-  return page.getByRole('search').getByRole('searchbox')
+  return page.getByRole('search').getByRole('combobox')
 }

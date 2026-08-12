@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
 
 import { LEGACY_FOCUS_EMISSION_FALLBACK_PROVENANCE } from '@/three/focusEmission'
+import { PHASE41_DIAGNOSTIC_MARKER } from '@/three/planetVisualState/types'
 import { PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE } from '@/three/productionFocusEmissionProfile'
 import {
   requireProductionPlanetVisualConfig,
@@ -94,7 +95,7 @@ describe('canonical resolved planet visual configuration', () => {
       ...activeEmission,
       emissionSource: 'diagnostic-override',
       overrideProvenance: 'phase41-diagnostic-override',
-      diagnosticMarker: 'phase41-visual-diagnostic-v1',
+      diagnosticMarker: PHASE41_DIAGNOSTIC_MARKER,
       bloomEnabled: false,
     })
 

@@ -37,6 +37,8 @@ This is a current-state index, not a second implementation specification. Each r
 | The Movie Today picker / routes / OG | retired | Keep reserved side-effect-free 404; historical guides remain non-executable |
 | GitHub Pages gray / manual-smoke workflow | retired | `.github/workflows/deploy-pages.yml` deleted; Cloudflare Pages is the only site deploy surface |
 | Phase 39 production emission curve | historical | Superseded by active monthly `rating-midrank-cdf-lut-v1` profile |
+| Phase 39 / 41 / P42.6 diagnostic graphs | retired | Closed HTML entries, evidence generators, and the completed P42.6 harness are removed; current invariants live on frontend/Planet Export tests |
+| Runtime HDR window probes | retired | `window.__hdrCapabilities` / `window.__hdrProbe` are not installed; production remains SDR |
 
 ## Reconciled boundaries
 

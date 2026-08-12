@@ -69,7 +69,7 @@ describe('sdrFallback buildSdrProductionPolicy', () => {
     expect(policy.galaxyRenderPath).toBe('webgl2-srgb-direct')
     expect(policy.bloomEnabled).toBe(false)
     expect(policy.outputColorSpace).toBe('srgb')
-    expect(policy.hdrProofOverlayIsolated).toBe(true)
+    expect(policy).not.toHaveProperty('hdrProofOverlayIsolated')
   })
 
   it('preserves matrix metadata for gate reports', () => {

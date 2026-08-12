@@ -11,20 +11,14 @@ import {
 } from '../focusPlanetRuntimeVisual'
 import { createSelectionPlanet } from '../planet'
 import { PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE } from '../productionFocusEmissionProfile'
-import { prepareProductionExportPlanet, renderP3911DiagnosticPlanetImage } from '@/planet-export/renderPlanetImage'
-import {
-  P3911_LEGACY_FROZEN_PROFILE_FIXTURE,
-  resolveP39LegacyPlanetVisualState,
-} from '@/planet-export/p39LegacyVisualState'
-import {
-  PHASE41_DIAGNOSTIC_MARKER,
-  resolvePhase41VisualProfile,
-} from '@/planet-export/phase41DiagnosticProfile'
+import { prepareProductionExportPlanet } from '@/planet-export/renderPlanetImage'
 import { resolvePlanetVisualConfig } from '@/planet-export/visualConfig'
 import {
   createPlanetVisualRendererHandle,
   P39_LEGACY_COMPATIBILITY_PROOF,
+  PHASE41_DIAGNOSTIC_MARKER,
   renderPlanetVisualState,
+  resolvePlanetVisualState,
   type PlanetVisualAppliedSnapshot,
   type PlanetVisualBloomHandle,
 } from './index'
@@ -223,41 +217,38 @@ describe('cross-entry visual-state parity', () => {
     expect(productionConfig(true).hashInput).not.toBe(productionConfig(false).hashInput)
   })
 
-  it('keeps Phase 41 diagnostic override identity separate from production hash/provenance', () => {
+  it('keeps diagnostic override identity separate from production hash/provenance', () => {
     const production = productionConfig(false)
-    const diagnostic = resolvePhase41VisualProfile(
-      {
-        diagnostic_only: PHASE41_DIAGNOSTIC_MARKER,
-        lightness: 0.4,
-        keyLightIntensity: 3,
-        flatShadingMix: 0.25,
-        direction: [0, 1, 0],
-        bloom: { enabled: false, strength: 1, radius: 1, threshold: 10 },
-      },
-      false,
-      {
-        curve: PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE,
-        provenance: activeProvenance,
-        source: 'active',
-      },
-    )
+    const diagnostic = resolvePlanetVisualState({
+      curve: PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE,
+      emissionProvenance: activeProvenance,
+      emissionSource: 'diagnostic-override',
+      bloomEnabled: false,
+      lightness: 0.4,
+      keyLightIntensity: 3,
+      flatShadingMix: 0.25,
+      direction: [0, 1, 0],
+      bloom: { enabled: false, strength: 1, radius: 1, threshold: 10 },
+      overrideProvenance: 'phase41-diagnostic-override',
+      diagnosticMarker: PHASE41_DIAGNOSTIC_MARKER,
+    })
 
-    expect(diagnostic.visualConfig.diagnosticMarker).toBe(PHASE41_DIAGNOSTIC_MARKER)
-    expect(diagnostic.visualConfig.overrideProvenance).toBe('phase41-diagnostic-override')
-    expect(diagnostic.visualConfig.hashInput).not.toBe(production.hashInput)
-    expect(diagnostic.visualConfig.emissionProvenance).toEqual(production.emissionProvenance)
+    expect(diagnostic.diagnosticMarker).toBe(PHASE41_DIAGNOSTIC_MARKER)
+    expect(diagnostic.overrideProvenance).toBe('phase41-diagnostic-override')
+    expect(diagnostic.hashInput).not.toBe(production.hashInput)
+    expect(diagnostic.emissionProvenance).toEqual(production.emissionProvenance)
 
     const target = movie(6.5)
-    const planet = createSelectionPlanet(diagnostic.visualConfig.curve)
+    const planet = createSelectionPlanet(diagnostic.curve)
     try {
       const result = renderPlanetVisualState(
-        diagnostic.visualConfig,
+        diagnostic,
         { movie: target, palette, worldRadius: 2 },
         createPlanetVisualRendererHandle(planet, createBloomHandle(false)),
       )
       expect(result.appliedSnapshot.diagnosticMarker).toBe(PHASE41_DIAGNOSTIC_MARKER)
       expect(result.appliedSnapshot.overrideProvenance).toBe('phase41-diagnostic-override')
-      expect(result.appliedSnapshot.canonicalHashInput).toBe(diagnostic.visualConfig.hashInput)
+      expect(result.appliedSnapshot.canonicalHashInput).toBe(diagnostic.hashInput)
       expect(result.appliedSnapshot.canonicalHashInput).not.toBe(production.hashInput)
       expect(result.appliedSnapshot.focus.lightness).toBe(0.4)
       expect(result.appliedSnapshot.lighting.keyLightIntensity).toBe(3)
@@ -266,7 +257,7 @@ describe('cross-entry visual-state parity', () => {
     }
   })
 
-  it('fails P39 without the compatibility marker and still applies proven legacy identity', () => {
+  it('fails proven legacy identity without the compatibility marker and still applies it through the canonical seam', () => {
     expect(() => resolvePlanetVisualConfig({
       curve: PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE,
       emissionProvenance: LEGACY_FOCUS_EMISSION_FALLBACK_PROVENANCE,
@@ -281,30 +272,29 @@ describe('cross-entry visual-state parity', () => {
       },
     })).toThrow(/legacy compatibility proof/)
 
-    const legacy = resolveP39LegacyPlanetVisualState({
-      evidenceIdentity: 'p39.11-cross-entry-fixture',
-      historicalVisualHash: '{"diagnostic":"p39-cross-entry-v1"}',
+    const legacy = resolvePlanetVisualState({
+      curve: PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE,
+      emissionProvenance: LEGACY_FOCUS_EMISSION_FALLBACK_PROVENANCE,
+      emissionSource: 'legacy-fallback',
+      bloomEnabled: false,
       bloom: { enabled: false, strength: 1, radius: 1, threshold: 10 },
       keyLightIntensity: 0.35,
+      emissionDerivation: {
+        kind: 'legacy-power',
+        modelVersion: 'vote-average-power-clamped-v1',
+        exponent: 2,
+        intensityMin: 0.06,
+        intensityMax: 0.6,
+      },
+      legacyCompatibility: {
+        proof: P39_LEGACY_COMPATIBILITY_PROOF,
+        evidenceIdentity: 'p39.11-cross-entry-fixture',
+        historicalVisualHash: '{"diagnostic":"p39-cross-entry-v1"}',
+      },
     })
     expect(legacy.legacyCompatibility?.proof).toBe(P39_LEGACY_COMPATIBILITY_PROOF)
-    expect(legacy.legacyCompatibility?.proof).toBe(P3911_LEGACY_FROZEN_PROFILE_FIXTURE)
 
     const target = movie(5)
-    expect(() => renderP3911DiagnosticPlanetImage({
-      canvas: {} as HTMLCanvasElement,
-      movie: target,
-      meta: galaxy(target).meta,
-      globalRadius: 2,
-      resolution: 64,
-      padding: 0.35,
-      bloom: false,
-      renderMode: 'shader',
-      sizeRoot: 2,
-      visualConfig: legacy,
-      legacyProfileCompatibility: 'not-a-compatibility-marker' as typeof P3911_LEGACY_FROZEN_PROFILE_FIXTURE,
-    })).toThrow(/legacy frozen profile compatibility marker is required/)
-
     const planet = createSelectionPlanet(legacy.curve)
     try {
       const result = renderPlanetVisualState(

@@ -8,8 +8,7 @@ import {
   selectExploration,
   subscribeExplorationContext,
 } from '@/lib/exploration'
-import { createHdrCapabilitiesDebug, type HdrCapabilitiesDebug } from '@/lib/hdrCapabilities'
-import { createHdrProofDebug, type HdrProofDebug } from '@/lib/hdrProof'
+import { buildHdrCapabilitiesReport, scheduleWebGpuHdrProbe, type HdrCapabilitiesReport } from '@/lib/hdrCapabilities'
 import { createSdrFallbackDebug, SDR_FALLBACK_OUTPUT_COLOR_SPACE, type SdrFallbackDebug } from '@/lib/sdrFallback'
 import { setGalaxyCameraZ } from '@/lib/galaxyCameraZBridge'
 import { getStrings } from '@/lib/strings'
@@ -204,17 +203,11 @@ interface SelectionPlanetTerraceDebug {
 /** Dev console: `window.__planetVisual` — session debug overlay over canonical Focus visuals. */
 type PlanetVisualDebug = ReturnType<FocusPlanetRuntimeVisualAdapter['createDebugControls']>
 
-/** Dev console: `window.__hdrCapabilities` — Phase 29.2 HDR capability probe (§29 spec). */
-type HdrCapabilitiesWindowDebug = HdrCapabilitiesDebug
-/** Dev console: `window.__hdrProbe` — Phase 29.3 minimal HDR proof overlay (§29 spec). */
-type HdrProofWindowDebug = HdrProofDebug
-/** Dev console: `window.__sdrFallback` — Phase 29.4 production SDR policy (§29 spec). */
+/** Dev console: `window.__sdrFallback` — production SDR policy. */
 type SdrFallbackWindowDebug = SdrFallbackDebug
 
 declare global {
   interface Window {
-    __hdrCapabilities?: HdrCapabilitiesWindowDebug
-    __hdrProbe?: HdrProofWindowDebug
     __sdrFallback?: SdrFallbackWindowDebug
     __bloom?: BloomDebugControls
     __galaxyPointScale?: GalaxyPointScaleDebug
@@ -321,19 +314,13 @@ export function mountGalaxyScene(
   const gl = renderer.getContext()
   const webglLabel = gl instanceof WebGL2RenderingContext ? 'WebGL2' : 'WebGL1'
 
-  // eslint-disable-next-line prefer-const -- hdr callback must close over sdr after both are constructed
-  let sdrFallbackDebug: SdrFallbackDebug
-  const hdrCapabilitiesDebug = createHdrCapabilitiesDebug(renderer, {
-    onReportUpdated: () => {
-      sdrFallbackDebug.refresh()
-    },
-  })
-  sdrFallbackDebug = createSdrFallbackDebug(renderer, () => hdrCapabilitiesDebug.report)
+  let hdrCapabilitiesReport: HdrCapabilitiesReport = buildHdrCapabilitiesReport(renderer)
+  const sdrFallbackDebug = createSdrFallbackDebug(renderer, () => hdrCapabilitiesReport)
   window.__sdrFallback = sdrFallbackDebug
-  window.__hdrCapabilities = hdrCapabilitiesDebug
-
-  const hdrProofDebug = createHdrProofDebug()
-  window.__hdrProbe = hdrProofDebug
+  scheduleWebGpuHdrProbe(renderer, (updated) => {
+    hdrCapabilitiesReport = updated
+    sdrFallbackDebug.refresh()
+  })
 
   applyUniverseBackgroundColor(readUniverseBgHex(), { scene, renderer }, { source: 'default', log: false })
 
@@ -1442,15 +1429,8 @@ export function mountGalaxyScene(
     galaxy.idle.removeFromParent()
     galaxy.active.removeFromParent()
     galaxy.dispose()
-    if (window.__hdrCapabilities === hdrCapabilitiesDebug) {
-      delete window.__hdrCapabilities
-    }
     if (window.__sdrFallback === sdrFallbackDebug) {
       delete window.__sdrFallback
-    }
-    hdrProofDebug.dispose()
-    if (window.__hdrProbe === hdrProofDebug) {
-      delete window.__hdrProbe
     }
     if (window.__bloom === bloomDebug) {
       delete window.__bloom

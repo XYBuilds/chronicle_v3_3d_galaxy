@@ -1,9 +1,8 @@
 import type * as THREE from 'three'
 
 /**
- * Phase 29.2 — HDR capability probe (runtime diagnostics only).
- * Maps to Phase 29 spec §4.3 matrix rows and §7 fields.
- * Probe reports **capability**, not pixel-level HDR proof (§29.3).
+ * HDR capability matrix used by the production SDR fallback policy.
+ * Reports capability only; it is not a pixel-level HDR proof and is not installed on `window`.
  */
 
 export type HdrBrowserFamily = 'chrome' | 'edge' | 'safari' | 'firefox' | 'other'
@@ -51,8 +50,6 @@ export interface HdrMatrixInput {
   webgpuExtendedToneMapping: WebGpuExtendedProbeState
   postFxBloomEnabled?: boolean
 }
-
-const LOG_PREFIX = '[hdrCapabilities]'
 
 /** Parse stable browser family from UA (Chromium Edge before Chrome). */
 export function detectBrowserFamily(userAgent: string): HdrBrowserFamily {
@@ -251,10 +248,6 @@ export function buildHdrCapabilitiesReport(
   }
 }
 
-export function logHdrCapabilitiesProbe(report: HdrCapabilitiesReport): void {
-  console.log(LOG_PREFIX, report)
-}
-
 /**
  * Attempt WebGPU canvas `toneMapping.mode: "extended"` (off-DOM). Updates report in-place via callback.
  */
@@ -301,47 +294,4 @@ export function scheduleWebGpuHdrProbe(
     onUpdate(report)
     options?.onReportUpdated?.(report)
   })()
-}
-
-export interface HdrCapabilitiesDebug {
-  readonly report: HdrCapabilitiesReport
-  log: () => void
-  refreshWebGpu: () => Promise<HdrCapabilitiesReport>
-}
-
-export function createHdrCapabilitiesDebug(
-  renderer: THREE.WebGLRenderer,
-  options?: { postFxBloomEnabled?: boolean; onReportUpdated?: (report: HdrCapabilitiesReport) => void },
-): HdrCapabilitiesDebug {
-  let report = buildHdrCapabilitiesReport(renderer, {
-    postFxBloomEnabled: options?.postFxBloomEnabled,
-  })
-
-  logHdrCapabilitiesProbe(report)
-
-  scheduleWebGpuHdrProbe(
-    renderer,
-    (updated) => {
-      report = updated
-      logHdrCapabilitiesProbe(updated)
-    },
-    options,
-  )
-
-  return {
-    get report() {
-      return report
-    },
-    log: () => logHdrCapabilitiesProbe(report),
-    refreshWebGpu: async () => {
-      const extended = await probeWebGpuExtendedToneMapping()
-      report = buildHdrCapabilitiesReport(renderer, {
-        webgpuExtendedToneMapping: extended ? true : false,
-        postFxBloomEnabled: options?.postFxBloomEnabled,
-      })
-      logHdrCapabilitiesProbe(report)
-      options?.onReportUpdated?.(report)
-      return report
-    },
-  }
 }

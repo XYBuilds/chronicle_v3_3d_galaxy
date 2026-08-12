@@ -14,6 +14,7 @@ import type {
 } from './index'
 import {
   createPlanetVisualRendererHandle,
+  PHASE41_DIAGNOSTIC_MARKER,
   renderPlanetVisualState,
   resolvePlanetVisualState,
 } from './index'
@@ -329,13 +330,13 @@ describe('canonical Planet visual state', () => {
     const diagnostic = resolvePlanetVisualState({
       ...baseInput,
       emissionSource: 'diagnostic-override',
-      diagnosticMarker: 'phase41-visual-diagnostic-v1',
+      diagnosticMarker: PHASE41_DIAGNOSTIC_MARKER,
       overrideProvenance: 'phase41-diagnostic-override',
     })
 
     expect(diagnostic.overrideProvenance).toBe('phase41-diagnostic-override')
-    expect(diagnostic.diagnosticMarker).toBe('phase41-visual-diagnostic-v1')
-    expect(diagnostic.payload.diagnostic_marker).toBe('phase41-visual-diagnostic-v1')
+    expect(diagnostic.diagnosticMarker).toBe(PHASE41_DIAGNOSTIC_MARKER)
+    expect(diagnostic.payload.diagnostic_marker).toBe(PHASE41_DIAGNOSTIC_MARKER)
     expect(diagnostic.hashInput).not.toBe(production.hashInput)
   })
 
@@ -412,7 +413,7 @@ describe('canonical Planet visual state', () => {
     expect(() => resolvePlanetVisualState({
       ...baseInput,
       emissionSource: 'diagnostic-override',
-      diagnosticMarker: 'phase41-visual-diagnostic-v1',
+      diagnosticMarker: PHASE41_DIAGNOSTIC_MARKER,
     })).toThrow(/explicit diagnostic override provenance/)
   })
 })

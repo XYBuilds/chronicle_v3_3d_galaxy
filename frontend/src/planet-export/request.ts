@@ -15,15 +15,7 @@ export type PlanetExportRequest = {
   profileUrl?: string
 }
 
-export type LegacyCompatiblePlanetExportRequest = PlanetExportRequest & {
-  allowLegacyProfile?: true
-}
-
 const PRODUCTION_REQUEST_PARAMS = new Set(['movieId', 'dataUrl', 'resolution', 'padding', 'bloom', 'sizeRoot', 'renderMode', 'profilePointer', 'profileUrl'])
-
-type LegacyCompatiblePlanetExportRequestParseOptions = {
-  allowLegacyProfile: true
-}
 
 function requiredUniqueParam(params: URLSearchParams, name: string): string {
   const values = params.getAll(name)
@@ -91,21 +83,10 @@ function parseProfileUrl(value: string, pointer: ActiveFocusEmissionProfilePoint
   return url.href
 }
 
-export function parsePlanetExportRequest(search: string): PlanetExportRequest
-export function parsePlanetExportRequest(
-  search: string,
-  options: LegacyCompatiblePlanetExportRequestParseOptions,
-): LegacyCompatiblePlanetExportRequest
-export function parsePlanetExportRequest(
-  search: string,
-  options?: LegacyCompatiblePlanetExportRequestParseOptions,
-): LegacyCompatiblePlanetExportRequest {
+export function parsePlanetExportRequest(search: string): PlanetExportRequest {
   const params = new URLSearchParams(search)
-  const allowedParams = options?.allowLegacyProfile === true
-    ? new Set([...PRODUCTION_REQUEST_PARAMS, 'allowLegacyProfile'])
-    : PRODUCTION_REQUEST_PARAMS
   for (const [name] of params) {
-    if (!allowedParams.has(name)) throw new Error(`[PlanetExport] unknown request parameter ${name}`)
+    if (!PRODUCTION_REQUEST_PARAMS.has(name)) throw new Error(`[PlanetExport] unknown request parameter ${name}`)
   }
 
   const movieId = parsePositiveInteger(requiredUniqueParam(params, 'movieId'), 'movieId', Number.MAX_SAFE_INTEGER)
@@ -139,15 +120,11 @@ export function parsePlanetExportRequest(
 
   const pointerValues = params.getAll('profilePointer')
   const urlValues = params.getAll('profileUrl')
-  const legacyValues = params.getAll('allowLegacyProfile')
   if (pointerValues.length > 1) throw new Error('[PlanetExport] profilePointer must appear at most once')
   if (urlValues.length > 1) throw new Error('[PlanetExport] profileUrl must appear at most once')
-  if (legacyValues.length > 1) throw new Error('[PlanetExport] allowLegacyProfile must appear at most once')
   if (pointerValues.length !== urlValues.length) throw new Error('[PlanetExport] profilePointer and profileUrl must appear together')
   if (pointerValues.length === 1 && !pointerValues[0]!.trim()) throw new Error('[PlanetExport] profilePointer must be non-empty')
   if (urlValues.length === 1 && !urlValues[0]!.trim()) throw new Error('[PlanetExport] profileUrl must be non-empty')
-  if (legacyValues.length === 1 && legacyValues[0] !== '1') throw new Error('[PlanetExport] allowLegacyProfile must equal 1')
-  if (pointerValues.length === 1 && legacyValues.length === 1) throw new Error('[PlanetExport] active profile and legacy profile are mutually exclusive')
   const profilePointer = pointerValues.length === 1 ? parseProfilePointer(pointerValues[0]!.trim()) : undefined
   const profileUrl = profilePointer === undefined ? undefined : parseProfileUrl(urlValues[0]!.trim(), profilePointer)
 
@@ -160,9 +137,9 @@ export function parsePlanetExportRequest(
     sizeRoot: sizeRoot as 2 | 3 | 4,
     renderMode,
     ...(profilePointer === undefined ? {} : { profilePointer, profileUrl: profileUrl! }),
-    ...(legacyValues.length === 0 ? {} : { allowLegacyProfile: true }),
   }
 }
+
 export function indexGalaxyMovies(data: GalaxyData): Map<number, GalaxyData['movies'][number]> {
   const index = new Map<number, GalaxyData['movies'][number]>()
   for (const movie of data.movies) {

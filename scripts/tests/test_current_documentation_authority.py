@@ -104,6 +104,37 @@ class TestCurrentDocumentationAuthority(unittest.TestCase):
         self.assertIn("docs/data/refresh-and-publication.md", text)
         self.assertNotIn("docs/project_docs/TMDB 电影宇宙 PRD.md", text)
         self.assertNotIn("docs/project_docs/TMDB 电影宇宙 Data Pipeline.md", text)
+        # Product/data rows name exactly one docs/{product|frontend|data}/ topic in the SoT column.
+        topic_link = re.compile(r"docs/(?:product|frontend|data)/[a-z0-9\-]+\.md")
+        in_tables = False
+        for line in text.splitlines():
+            if line.startswith("## Product capabilities") or line.startswith(
+                "## Data and production capabilities"
+            ):
+                in_tables = True
+                continue
+            if line.startswith("## ") and in_tables:
+                in_tables = False
+            if not in_tables or not line.startswith("|"):
+                continue
+            cells = [c.strip() for c in line.strip("|").split("|")]
+            if len(cells) < 4:
+                continue
+            if cells[0] in {"Capability", "---"} or cells[0].startswith("---"):
+                continue
+            sot = cells[3]
+            # Skip non-Chronicle topic rows / contract-owned rows.
+            if "Daily `" in sot or "og-index-worker-contract" in sot or "planet-export-contract" in sot:
+                continue
+            if "Daily Stargazing" in cells[2]:
+                continue
+            owners = topic_link.findall(sot)
+            with self.subTest(capability=cells[0]):
+                self.assertEqual(
+                    len(owners),
+                    1,
+                    f"expected exactly one current topic owner in SoT, found {owners}: {sot}",
+                )
 
     def test_legacy_paths_are_thin_non_authoritative_pointers(self) -> None:
         for path in _LEGACY_POINTERS:

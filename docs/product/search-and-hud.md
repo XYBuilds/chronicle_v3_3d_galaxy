@@ -3,7 +3,7 @@
 > Answers: how search, HUD chrome, keyboard behavior, and DOM interaction work for visitors
 > Excludes: 3D camera/focus lifecycle math, gzip load/routing architecture, data export schema, publication workflows
 > Update when: search UX or index-consumption rules, Esc/keyboard seams, HUD chrome, or locale key surfaces change
-> Required authorities: [`docs/adr/0001-focus-select-lifecycle.md`](../adr/0001-focus-select-lifecycle.md) when a change crosses into nested vs replacing focus; otherwise none
+> Required authorities: [`docs/adr/0001-focus-select-lifecycle.md`](../adr/0001-focus-select-lifecycle.md)
 
 ## Current answer
 

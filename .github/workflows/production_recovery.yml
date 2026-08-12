@@ -1,0 +1,188 @@
+name: Production Recovery
+
+# Manual control plane for audited recovery primitives (#387).
+# Does not replace nightly/monthly publication. Live mutation stays refused
+# until an authorized follow-up wires apply adapters.
+# Direct Cloudflare/Supabase operations and local CLI remain emergency fallbacks.
+# The isolated read-only Supabase preflight workflow stays independent.
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "Recovery action"
+        type: choice
+        required: true
+        options:
+          - hold_releases
+          - resume_releases
+          - continue_candidate
+          - data_rollback
+          - site_rollback
+          - profile_rollback
+          - og_bootstrap
+          - og_full_recovery
+          - dimension_override
+          - profile_override
+      target:
+        description: "Target identity (release, candidate, site artifact, or profile)"
+        type: string
+        required: true
+      from_identity:
+        description: "From identity"
+        type: string
+        required: true
+      to_identity:
+        description: "To identity"
+        type: string
+        required: true
+      reason:
+        description: "Audit reason"
+        type: string
+        required: true
+      actor:
+        description: "Audit actor"
+        type: string
+        required: true
+      smoke_result:
+        description: "Smoke result or pending"
+        type: string
+        required: false
+        default: pending
+      retained_releases:
+        description: "Comma-separated retained Data Release ids (data_rollback)"
+        type: string
+        required: false
+      active_site_artifact:
+        description: "Active site artifact id (data_rollback)"
+        type: string
+        required: false
+      current_data_release:
+        description: "Current Data Release id (site_rollback)"
+        type: string
+        required: false
+      previous_site_artifact:
+        description: "Previous verified site artifact id (site_rollback)"
+        type: string
+        required: false
+      confirm_dangerous:
+        description: "Required for dimension/profile overrides"
+        type: boolean
+        default: false
+      og_projection_differs:
+        description: "Rebuild OG projection during data rollback"
+        type: boolean
+        default: false
+      candidate_store:
+        description: "Path to persisted candidate JSON store (continue_candidate)"
+        type: string
+        required: false
+      run_id:
+        description: "Deployment or workflow run id for evidence"
+        type: string
+        required: false
+      git_commit:
+        description: "Candidate commit for evidence"
+        type: string
+        required: false
+      data_version:
+        description: "Data version for evidence"
+        type: string
+        required: false
+      profile_id:
+        description: "Profile id for evidence"
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-recovery-plan
+  cancel-in-progress: false
+
+jobs:
+  recover:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements.cpu.txt
+
+      - name: Install Python dependencies
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.cpu.txt
+
+      - name: Plan audited recovery (dry-run)
+        env:
+          RECOVERY_ACTION: ${{ inputs.action }}
+          RECOVERY_TARGET: ${{ inputs.target }}
+          RECOVERY_FROM: ${{ inputs.from_identity }}
+          RECOVERY_TO: ${{ inputs.to_identity }}
+          RECOVERY_REASON: ${{ inputs.reason }}
+          RECOVERY_ACTOR: ${{ inputs.actor }}
+          RECOVERY_SMOKE: ${{ inputs.smoke_result }}
+          RECOVERY_RETAINED: ${{ inputs.retained_releases }}
+          RECOVERY_ACTIVE_SITE: ${{ inputs.active_site_artifact }}
+          RECOVERY_CURRENT_DATA: ${{ inputs.current_data_release }}
+          RECOVERY_PREVIOUS_SITE: ${{ inputs.previous_site_artifact }}
+          RECOVERY_CONFIRM_DANGEROUS: ${{ inputs.confirm_dangerous }}
+          RECOVERY_OG_DIFFERS: ${{ inputs.og_projection_differs }}
+          RECOVERY_CANDIDATE_STORE: ${{ inputs.candidate_store }}
+          RECOVERY_RUN_ID: ${{ inputs.run_id }}
+          RECOVERY_GIT_COMMIT: ${{ inputs.git_commit }}
+          RECOVERY_DATA_VERSION: ${{ inputs.data_version }}
+          RECOVERY_PROFILE_ID: ${{ inputs.profile_id }}
+        run: |
+          set -euo pipefail
+          args=(
+            --action "${RECOVERY_ACTION}"
+            --target "${RECOVERY_TARGET}"
+            --from-identity "${RECOVERY_FROM}"
+            --to-identity "${RECOVERY_TO}"
+            --reason "${RECOVERY_REASON}"
+            --actor "${RECOVERY_ACTOR}"
+            --recorded-at "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)"
+            --smoke-result "${RECOVERY_SMOKE:-pending}"
+            --dry-run
+          )
+          if [[ -n "${RECOVERY_RETAINED}" ]]; then
+            args+=(--retained-releases "${RECOVERY_RETAINED}")
+          fi
+          if [[ -n "${RECOVERY_ACTIVE_SITE}" ]]; then
+            args+=(--active-site-artifact "${RECOVERY_ACTIVE_SITE}")
+          fi
+          if [[ -n "${RECOVERY_CURRENT_DATA}" ]]; then
+            args+=(--current-data-release "${RECOVERY_CURRENT_DATA}")
+          fi
+          if [[ -n "${RECOVERY_PREVIOUS_SITE}" ]]; then
+            args+=(--previous-site-artifact "${RECOVERY_PREVIOUS_SITE}")
+          fi
+          if [[ "${RECOVERY_CONFIRM_DANGEROUS}" == "true" ]]; then
+            args+=(--confirm-dangerous)
+          fi
+          if [[ "${RECOVERY_OG_DIFFERS}" == "true" ]]; then
+            args+=(--og-projection-differs)
+          fi
+          if [[ -n "${RECOVERY_CANDIDATE_STORE}" ]]; then
+            args+=(--candidate-store "${RECOVERY_CANDIDATE_STORE}")
+          fi
+          if [[ -n "${RECOVERY_RUN_ID}" ]]; then
+            args+=(--run-id "${RECOVERY_RUN_ID}")
+          fi
+          if [[ -n "${RECOVERY_GIT_COMMIT}" ]]; then
+            args+=(--git-commit "${RECOVERY_GIT_COMMIT}")
+          fi
+          if [[ -n "${RECOVERY_DATA_VERSION}" ]]; then
+            args+=(--data-version "${RECOVERY_DATA_VERSION}")
+          fi
+          if [[ -n "${RECOVERY_PROFILE_ID}" ]]; then
+            args+=(--profile-id "${RECOVERY_PROFILE_ID}")
+          fi
+          python scripts/cron/production_recovery.py "${args[@]}"

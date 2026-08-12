@@ -27,7 +27,9 @@ Publication shape today:
 ## Boundaries and invariants
 
 - Describe only the implemented combined nightly/monthly publication path above.
-- Do **not** document separated “Data Release”, “Site Release”, or “Production Recovery” operator surfaces as current—they are accepted for later Issues and are not live yet.
+- Reusable release-state, site-artifact, retention, and recovery modules live under `scripts/cron/` with a manual dry-run workflow. They are not the live Daily/Monthly/Site publication path; that cutover remains Issue #388.
+- Direct Cloudflare/Supabase operations and local CLI remain documented emergency fallbacks. The isolated read-only Supabase preflight workflow stays independent.
+- Do **not** document separated “Data Release”, “Site Release”, or “Production Recovery” operator surfaces as current—the live cadence is still the combined nightly/monthly workflows.
 - Do **not** claim ordinary invalid-path handling for `/today`, `/share/today`, or `/og/today.png`; reserved side-effect-free 404 remains the current contract.
 - Do not restore scheduled Today generation, `today_url`, or GitHub Pages deploy.
 - `meta:G` is an ordered completion marker, not a transactional multi-key snapshot.
@@ -37,6 +39,7 @@ Publication shape today:
 
 - `.github/workflows/nightly_vote_refresh.yml`, `.github/workflows/monthly_refit.yml`
 - `scripts/cron/nightly_vote_refresh.py`, `monthly_refit.py`, `upload_galaxy_r2.py`, `sync_og_index_kv.py`
+- `scripts/cron/release_state.py`, `site_artifact.py`, `r2_retention.py`, `production_recovery.py` and their `scripts/tests/` suites
 - [`docs/system/og-index-worker-contract.md`](../system/og-index-worker-contract.md) and producer/Worker contract tests
 - [`docs/system/planet-export-contract.md`](../system/planet-export-contract.md) and planet-exporter tests
 - Capability/publication rows in [`docs/system/capability-map.md`](../system/capability-map.md)

@@ -1,0 +1,26 @@
+{
+  "title": "Chronicle acceptance baseline",
+  "rows": [
+    { "key": "app", "label": "App" }
+  ],
+  "columns": [
+    { "key": "home", "label": "Home idle" },
+    { "key": "focus", "label": "Movie focus" }
+  ],
+  "cells": [
+    {
+      "rowKey": "app",
+      "columnKey": "home",
+      "input": "home-idle.png",
+      "caption": "Home hydration → galaxy idle\n1920×1080 DPR 1",
+      "parameters": { "viewport": "app-desktop" }
+    },
+    {
+      "rowKey": "app",
+      "columnKey": "focus",
+      "input": "movie-focus.png",
+      "caption": "Valid /movie/550 focus\n1920×1080 DPR 1",
+      "parameters": { "viewport": "app-desktop", "movieId": 550 }
+    }
+  ]
+}

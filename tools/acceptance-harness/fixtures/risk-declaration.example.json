@@ -1,0 +1,6 @@
+{
+  "schema": "chronicle-risk-declaration-v1",
+  "tier": "R1",
+  "surfaces": ["visual_output", "browser_journey"],
+  "notes": "Example declaration for the acceptance harness Issue. Humans declare tier and surfaces; do not infer from changed paths."
+}

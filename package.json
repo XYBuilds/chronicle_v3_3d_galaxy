@@ -4,7 +4,8 @@
   "license": "Apache-2.0",
   "workspaces": [
     "frontend",
-    "tools/planet-exporter"
+    "tools/planet-exporter",
+    "tools/acceptance-harness"
   ],
   "scripts": {
     "dev": "npm run dev -w frontend",
@@ -14,6 +15,9 @@
     "storybook": "npm run storybook -w frontend",
     "build-storybook": "npm run build-storybook -w frontend",
     "test": "npm run test -w frontend",
+    "test:journeys": "npm run test:journeys -w acceptance-harness",
+    "test:acceptance": "npm test -w acceptance-harness",
+    "acceptance:owner-checks": "npm run test:owner-checks -w acceptance-harness",
     "planet:export": "tsx tools/planet-exporter/src/cli.ts",
     "evidence:p39.11:a": "npm run evidence:p39.11:a -w planet-exporter",
     "evidence:p39.11:b": "npm run evidence:p39.11:b -w planet-exporter",

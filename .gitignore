@@ -35,6 +35,9 @@ frontend/dist/
 frontend/storybook-static/
 frontend/.vite/
 frontend/.cache/
+tools/acceptance-harness/artifacts/
+tools/acceptance-harness/test-results/
+tools/acceptance-harness/playwright-report/
 # P7.2 / P24.1: pipeline writes large JSON + gzip locally (ignored). Do not commit galaxy *.gz (Pages 25 MiB).
 # Small manifest is tracked so Pages/GH builds resolve R2 URLs without giant static assets.
 frontend/public/data/*.json

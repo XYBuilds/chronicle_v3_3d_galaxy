@@ -15,6 +15,12 @@ This index is the only documentation status and navigation layer for current Chr
 | Galaxy data model | [`docs/data/galaxy-model.md`](../data/galaxy-model.md) |
 | Refresh and publication | [`docs/data/refresh-and-publication.md`](../data/refresh-and-publication.md) |
 
+## Delivery verification
+
+| Topic | Current source |
+| --- | --- |
+| Acceptance harness and evidence recipe | [`docs/system/acceptance-harness.md`](./acceptance-harness.md) |
+
 ## Contracts and durable decisions
 
 | Topic | Current source |

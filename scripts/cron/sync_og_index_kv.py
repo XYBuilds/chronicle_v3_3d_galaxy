@@ -303,11 +303,15 @@ def _plan_from_delta(
     assert isinstance(control, Mapping)
     meta = control["meta_g_value"]
     assert isinstance(meta, str)
+    has_movie_delta = bool(puts) or bool(deletes)
+    meta_put = None
+    if migration or full_remote_keys is not None or (has_movie_delta and previous_meta != meta):
+        meta_put = meta
     return MutationPlan(
         current_snapshot=current,
         movie_puts=tuple((key, values[key]) for key in puts),
         movie_deletes=deletes,
-        meta_put=meta if migration or previous_meta != meta or full_remote_keys is not None else None,
+        meta_put=meta_put,
         unchanged_count=unchanged,
         previous_count=previous_count,
         expected_remote_movie_keys=expected,
@@ -372,6 +376,15 @@ def execute_plan(plan: MutationPlan, *, kv_env: Mapping[str, str], r2_client: An
     if not isinstance(dry_run, bool):
         raise ValueError("dry_run must be bool")
     if dry_run:
+        return
+    noop = (
+        not plan.movie_puts
+        and not plan.movie_deletes
+        and not plan.migration
+        and plan.meta_put is None
+        and plan.expected_remote_movie_keys is None
+    )
+    if noop:
         return
     if r2_client is None or not isinstance(r2_bucket, str) or not r2_bucket.strip():
         raise CredentialsError("R2 snapshot client and bucket are required before KV mutation")

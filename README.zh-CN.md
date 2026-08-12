@@ -431,15 +431,19 @@ python -m pip install -r requirements.cpu.txt
 
 | 工作流                                                                   | 触发                                        | 要点                                                                                                                                                   |
 | ------------------------------------------------------------------------ | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `[nightly_vote_refresh.yml](.github/workflows/nightly_vote_refresh.yml)` | 每日 20:00 UTC；可 `workflow_dispatch`      | `scripts/cron/nightly_vote_refresh.py` → `upload_galaxy_r2.py` → `npm run build -w frontend` → `wrangler pages deploy`（`workingDirectory: frontend`） |
-| `[monthly_refit.yml](.github/workflows/monthly_refit.yml)`               | 每月 1 日 20:00 UTC；可选手动 `anchor_mode` | 恢复/下载嵌入四件套 → `monthly_refit.py` → 同上 R2 + Pages 链路；超时 210 分钟                                                                         |
+| `[nightly_vote_refresh.yml](.github/workflows/nightly_vote_refresh.yml)` | Daily Data Release，每日 18:00 UTC；可 `workflow_dispatch` | Light Refresh → OG diff → R2 上传 → 将候选 manifest 合成到当前 site artifact → `wrangler pages deploy` → smoke |
+| `[monthly_refit.yml](.github/workflows/monthly_refit.yml)`               | Monthly Data Release，每月 1 日 20:00 UTC；可选手动 `anchor_mode` | Galaxy Refit → profile 激活 → 同上 R2 + 合成/Pages 链路；超时 210 分钟 |
+| `[site_release.yml](.github/workflows/site_release.yml)`                 | 合并进 `main`；可 `workflow_dispatch`         | 不含生产 manifest 地构建/校验 shell → 合成当前 Data Release → Pages 部署 → smoke → 标记 artifact active |
+| `[production_recovery.yml](.github/workflows/production_recovery.yml)`   | 仅手动                                      | 暂停/恢复 Daily/Monthly；审计回滚计划；危险覆盖 |
+| `[supabase_preflight.yml](.github/workflows/supabase_preflight.yml)`     | 手动；Daily/Monthly 开始时也会自动跑           | 只读 Supabase 就绪检查 |
 
 
 共同约束：
 
-- `galaxy_data.json.gz`、`galaxy_search_index.json.gz` 不提交 Git；大对象经 CI 上传 R2，Pages 包内保留小体积 `galaxy_assets_manifest.json`。
+- `galaxy_data.json.gz`、`galaxy_search_index.json.gz` 不提交 Git；大对象经 CI 上传 R2，Pages 包内保留小体积 `galaxy_assets_manifest.json`（合成到当前 site artifact）。
+- Daily / Monthly 不再安装 Node 或构建前端。Site Release 负责 `npm run build -w frontend`。
 - 不要依赖 Cloudflare 控制台「连接 Git 仓库」的 Pages 自动构建作为生产入口；须与本仓库 workspace 构建 + wrangler Direct Upload 一致。
-- CI 使用 Node 24；Linux runner 上常 `rm package-lock.json && npm install --include=optional` 以避免可选原生依赖缺失。
+- CI 使用 Node 24；Linux Site Release runner 上常 `rm package-lock.json && npm install --include=optional` 以避免可选原生依赖缺失。
 - GitHub Pages 灰度 / manual-smoke workflow 已退役；Cloudflare Pages 是唯一当前站点部署表面。
 - Planet Export 生产调用须显式传 `--manifest-url`（见 [`docs/system/planet-export-contract.md`](docs/system/planet-export-contract.md)）；`--data-file` 仅用于本地/测试。
 

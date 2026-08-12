@@ -1,8 +1,9 @@
 name: Production Recovery
 
-# Manual control plane for audited recovery primitives (#387).
-# Does not replace nightly/monthly publication. Live mutation stays refused
-# until an authorized follow-up wires apply adapters.
+# Manual control plane for audited recovery (#388).
+# Hold/resume writes the Daily/Monthly publication-hold flag.
+# Data/site/profile/OG rollback plans remain dry-run until an operator
+# applies them through compose/deploy or documented CLI fallbacks.
 # Direct Cloudflare/Supabase operations and local CLI remain emergency fallbacks.
 # The isolated read-only Supabase preflight workflow stays independent.
 on:
@@ -186,3 +187,26 @@ jobs:
             args+=(--profile-id "${RECOVERY_PROFILE_ID}")
           fi
           python scripts/cron/production_recovery.py "${args[@]}"
+
+      - name: Apply publication hold
+        if: ${{ inputs.action == 'hold_releases' || inputs.action == 'resume_releases' }}
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          RECOVERY_ACTION: ${{ inputs.action }}
+          RECOVERY_REASON: ${{ inputs.reason }}
+          RECOVERY_ACTOR: ${{ inputs.actor }}
+        run: |
+          set -euo pipefail
+          cmd=set
+          if [ "${RECOVERY_ACTION}" = "resume_releases" ]; then
+            cmd=clear
+          fi
+          python scripts/cron/publication_hold.py "${cmd}" \
+            --path /tmp/publication-hold.json \
+            --reason "${RECOVERY_REASON}" \
+            --actor "${RECOVERY_ACTOR}" \
+            --recorded-at "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)"
+          python scripts/cron/site_artifact_store.py put-hold --path /tmp/publication-hold.json

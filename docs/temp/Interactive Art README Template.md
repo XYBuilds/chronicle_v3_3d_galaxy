@@ -1,5 +1,8 @@
 # **🎨 \[项目名称 / Project Name\]**
 
+> **Disposition:** historical material at this path. Not current product authority.
+
+
 🌟 **\[项目核心 Slogan / 一句简短、具有张力且能体现作品世界观的口号\]**
 
 ## **📸 视觉呈现 (Visual Showcase)**

@@ -1,5 +1,7 @@
 # Supabase 操作教程（本仓库 / Phase 18）
 
+> **Disposition:** supporting reference only (safe operating material). Data publication truth: [`docs/data/refresh-and-publication.md`](../data/refresh-and-publication.md).
+
 面向在本项目中使用 **Supabase** 作为电影宇宙数据 **source of truth** 的操作说明：从注册项目、执行 DDL、到运行 `scripts/supabase/initial_import.py` 一次性导入。官方文档入口：<https://supabase.com/docs>
 
 ---

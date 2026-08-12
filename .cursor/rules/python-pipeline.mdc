@@ -1,39 +1,21 @@
 ---
-description: Conventions for Python data pipeline scripts
+description: Pointers for Python pipeline work — current topics, source, and tests
 globs: scripts/**/*.py
 alwaysApply: false
 ---
 
-# Python Pipeline Conventions
+# Python pipeline pointers
 
-## General
+Host safety only. Data-model and publication truth live elsewhere.
 
-- Use type hints on all function signatures
-- Active pipeline code: `scripts/feature_engineering/`, `scripts/export/`; legacy standalone filters live in `scripts/_archive/` (Phase 1.0)
-- Each script should be runnable standalone with `argparse` (CLI-friendly defaults)
-- Use `pathlib.Path` for file paths, not string concatenation
+| Need | Go to |
+| --- | --- |
+| Galaxy model / embeddings / UMAP | `docs/data/galaxy-model.md` |
+| Refresh / publication / R2 | `docs/data/refresh-and-publication.md` |
+| Contracts | `docs/system/planet-export-contract.md`, `docs/system/og-index-worker-contract.md` |
+| Navigation | `docs/system/decision-index.md` |
+| Source | `scripts/` (active: `feature_engineering/`, `export/`, `pipeline/`, `cron/`) |
+| Raw CSV | never open in chat — see `data-protection.mdc` |
+| Tests | `scripts/tests/` via `python -m pytest` |
 
-## Data Rules
-
-- Primary key: `id` (TMDB ID); secondary dedup key: `imdb_id`
-- Must-drop rows: null genres, zero/null vote_count, zero/null vote_average, null release_date, null overview (with title fallback — see Tech Spec §2)
-- Dynamic vote_count threshold: see `scripts/_archive/filter_dynamic_baseline_vote_count.py`
-- Temporal jitter for YYYY-01-01 placeholders: deterministic seed = TMDB `id`
-
-## Embedding
-
-- Model A (subsample/debug): `paraphrase-multilingual-MiniLM-L12-v2` (384d)
-- Model B (full/quality): `paraphrase-multilingual-mpnet-base-v2` (768d)
-- Input: `"Tagline: {tagline}\nOverview: {overview}"` (omit tagline line if empty)
-- Truncate to 3000 chars from tail; L2-normalize output
-
-## Feature Fusion (before UMAP)
-
-- Each group (text, genre, lang) independently L2-normalized, then scaled by `1/√d`
-- Configurable weights: `w_text`, `w_genre`, `w_lang` (default 1.0 each)
-
-## Dependencies
-
-- Pin major.minor versions in `requirements.cpu.txt` (included by `requirements.txt`); WSL GPU conda spec: `scripts/env/rapids_env.yml`; optional pip-only extras for that env: `requirements.gpu.txt`
-- PyTorch: for GPU embeddings, install CUDA wheels from PyTorch’s wheel index (`https://download.pytorch.org/whl/cu128` or the variant listed on pytorch.org for your OS/driver); PyPI-default `torch` is CPU (`+cpu`). See Tech Spec §2.1.1.
-- GPU-first for sentence-transformers encode; lower batch_size on OOM, never drop samples
+Do not treat this rule as a second Data Pipeline SSOT.

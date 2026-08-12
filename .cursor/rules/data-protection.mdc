@@ -1,18 +1,15 @@
 ---
-description: Prevent reading raw CSV data directly — use subsample or scripts instead
+description: Guard against loading the ~771 MB raw TMDB CSV into agent context
 alwaysApply: true
 ---
 
-# Raw Data Protection
+# Raw CSV context safety
 
-The raw dataset `data/raw/TMDB_all_movies.csv` is very large (~1M+ rows). **Never read it directly in conversation** — it consumes excessive tokens.
+`data/raw/TMDB_all_movies.csv` is approximately **771 MB** (~1M+ rows). **Never read it directly in conversation** — it exhausts context.
 
-## Instead
+## Route instead
 
-- Reference `data/subsample/` files for schema, column names, and sample values
-- Write Python scripts to analyze or process `data/raw/` programmatically
-- Consult `docs/reports/TMDB All Movies Dataset Report.md` for pre-computed statistics
-
-## Subsample Location
-
-- `data/subsample/TMDB_all_movies_random20.csv` — 20 random rows, same columns as full dataset
+- Schema / sample values: `data/subsample/TMDB_all_movies_random20.csv`
+- Analysis or transforms: Python scripts under `scripts/` that process `data/raw/` programmatically
+- Pre-computed stats: `docs/reports/TMDB All Movies Dataset Report.md`
+- Current data semantics: `docs/data/galaxy-model.md` via `docs/system/decision-index.md`

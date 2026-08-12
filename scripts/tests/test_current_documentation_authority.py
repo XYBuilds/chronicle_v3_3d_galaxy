@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Authority cutover contracts for the six bounded current topics (#379)."""
+"""Authority cutover contracts for current topics (#379) and entry-point cutover (#380)."""
 from __future__ import annotations
 
 import re
@@ -8,6 +8,28 @@ from pathlib import Path
 from urllib.parse import unquote
 
 _ROOT = Path(__file__).resolve().parents[2]
+
+_README = _ROOT / "README.md"
+_README_ZH = _ROOT / "README.zh-CN.md"
+_README_EN_COMPAT = _ROOT / "README.en.md"
+_AGENTS = _ROOT / "AGENTS.md"
+_DOMAIN = _ROOT / "docs/agents/domain.md"
+_FONTS_README = _ROOT / "assets/fonts/README.md"
+_NOTICE = _ROOT / "NOTICE"
+_CURSOR_RULES = _ROOT / ".cursor/rules"
+_DELETED_RULES = (
+    _CURSOR_RULES / "ai-workflow.mdc",
+    _CURSOR_RULES / "workflow-adapter.mdc",
+)
+_DELETED_TEMP_DRAFTS = (
+    _ROOT / "docs/temp/电影宇宙「每日星轨观测」系统 PRD.md",
+    _ROOT / "docs/temp/项目架构全景.md",
+)
+_INTER_ASSETS = (
+    _ROOT / "assets/fonts/Inter.ttf",
+    _ROOT / "assets/fonts/Inter-OFL.txt",
+)
+_CURSOR_TODO_GUIDE = _ROOT / "docs/guides/Cursor Agent TODO 工作流指南.md"
 
 _TOPICS = (
     _ROOT / "docs/product/supported-experience.md",
@@ -216,6 +238,12 @@ class TestCurrentDocumentationAuthority(unittest.TestCase):
             _CONTRACT_INDEX,
             *_TOPICS,
             *_LEGACY_POINTERS,
+            _README,
+            _README_ZH,
+            _README_EN_COMPAT,
+            _AGENTS,
+            _DOMAIN,
+            _FONTS_README,
         ]
         link_re = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
         for path in targets:
@@ -233,6 +261,83 @@ class TestCurrentDocumentationAuthority(unittest.TestCase):
                         resolved.is_file(),
                         f"broken link in {path.relative_to(_ROOT)}: {raw} -> {resolved}",
                     )
+
+    def test_readme_language_entry_roles_are_canonical(self) -> None:
+        readme = _README.read_text(encoding="utf-8")
+        zh = _README_ZH.read_text(encoding="utf-8")
+        en_compat = _README_EN_COMPAT.read_text(encoding="utf-8")
+
+        self.assertIn("README.zh-CN.md", readme)
+        self.assertIn("themoviecosmos.com", readme)
+        self.assertIn("docs/system/decision-index.md", readme)
+        self.assertNotIn("implementation SSOT", readme)
+        self.assertNotIn("Inter.ttf", readme)
+        self.assertNotIn("Inter-OFL.txt", readme)
+
+        self.assertIn("README.md", zh)
+        self.assertIn("docs/system/decision-index.md", zh)
+        self.assertNotIn("实现 SSOT", zh)
+        self.assertNotIn("Inter.ttf", zh)
+
+        self.assertLessEqual(len(en_compat.splitlines()), 40)
+        self.assertIn("README.md", en_compat)
+        self.assertIn("compatibility", en_compat.lower())
+        self.assertIn("removal", en_compat.lower())
+        self.assertNotIn("## Concept", en_compat)
+        self.assertNotIn("## 概念", en_compat)
+
+    def test_deleted_rules_and_temp_drafts_are_gone(self) -> None:
+        for path in (*_DELETED_RULES, *_DELETED_TEMP_DRAFTS, *_INTER_ASSETS):
+            with self.subTest(path=path.name):
+                self.assertFalse(path.exists(), f"expected deleted: {path}")
+
+    def test_agents_and_domain_are_tool_neutral_after_adapter_removal(self) -> None:
+        agents = _AGENTS.read_text(encoding="utf-8")
+        domain = _DOMAIN.read_text(encoding="utf-8")
+        self.assertNotIn("workflow-adapter.mdc", agents)
+        self.assertNotIn("planner", agents.lower())
+        self.assertNotIn("implementer host", agents.lower())
+        self.assertIn("human", agents.lower())
+        self.assertIn("decision-index.md", agents)
+        self.assertIn("Cursor rules", domain)
+        self.assertIn("not", domain.lower())
+        self.assertRegex(
+            domain,
+            r"(?i)product authority|cross-tool|not .*authorit",
+        )
+
+    def test_fonts_inventory_is_butler_only(self) -> None:
+        fonts = _FONTS_README.read_text(encoding="utf-8")
+        notice = _NOTICE.read_text(encoding="utf-8")
+        self.assertIn("Butler-Medium.ttf", fonts)
+        self.assertIn("Butler-Bold.ttf", fonts)
+        self.assertIn("frontend/public/fonts/butler", fonts)
+        # Inventory table must not claim Inter as a current bundled file.
+        inventory = fonts.split("## ")[0]
+        self.assertNotIn("Inter.ttf", inventory)
+        self.assertNotIn("Inter-OFL", inventory)
+        self.assertNotIn("Inter.ttf", notice)
+        self.assertNotIn("Inter-OFL", notice)
+        self.assertTrue((_ROOT / "assets/fonts/Butler-Medium.ttf").is_file())
+        self.assertTrue((_ROOT / "assets/fonts/Butler-Bold.ttf").is_file())
+
+    def test_finish_todo_script_is_retained(self) -> None:
+        self.assertTrue((_ROOT / "finish_todo.sh").is_file())
+
+    def test_cursor_todo_guide_is_historical_non_executable(self) -> None:
+        text = _CURSOR_TODO_GUIDE.read_text(encoding="utf-8")
+        lowered = text.lower()
+        self.assertTrue(
+            "historical" in lowered or "历史" in text,
+            "Cursor TODO guide must be marked historical",
+        )
+        self.assertTrue(
+            "non-executable" in lowered
+            or "不可按此执行" in text
+            or "do not follow" in lowered
+            or "tombstone" in lowered,
+            "Cursor TODO guide must be non-executable",
+        )
 
 
 if __name__ == "__main__":

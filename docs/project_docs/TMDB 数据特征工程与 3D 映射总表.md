@@ -1,30 +1,32 @@
 # **TMDB 数据特征工程与 3D 映射总表**
 
-> 本表是字段映射**supporting reference**，不是 SSOT。
-> 稳定语义见 [`docs/data/galaxy-model.md`](../data/galaxy-model.md) 与 [`docs/product/galaxy-exploration.md`](../product/galaxy-exploration.md)；精确映射与默认值以 schema / 源码为准。
+> **Disposition:** supporting reference (not authority).
+> Stable semantics → [`docs/data/galaxy-model.md`](../data/galaxy-model.md) and [`docs/product/galaxy-exploration.md`](../product/galaxy-exploration.md).
+> Exact mappings, defaults, and active profile → schema / source (`scripts/`, `frontend/src/`) and [`docs/system/planet-export-contract.md`](../system/planet-export-contract.md).
+> Navigate from [`docs/system/decision-index.md`](../system/decision-index.md).
 
 **架构黄金准则**：
 
-1. **降维克制**：送入 UMAP 的必须是描述电影“文化与内容本质”的绝对核心特征，严禁引入具有多重共线性（Multicollinearity）或高基数（High Cardinality）的噪音数据。  
+1. **降维克制**：送入 UMAP 的必须是描述电影“文化与内容本质”的绝对核心特征，严禁引入具有多重共线性（Multicollinearity）或高基数（High Cardinality）的噪音数据。
 2. **渲染分离**：描述物理状态（时间、大小、亮度）和具象档案（海报、人名）的数据绝对隔离于算法层，仅由 GPU 和前端 DOM 处理。
 
 ### **文本 Embedding 约定（overview + tagline）**
 
-* **目标**：将「剧情语义 + 宣传语调」压入同一条稠密向量，与 genres、original\_language 一并送入 UMAP；**保留所有语言的 overview**，故必须使用**多语言**句向量模型。  
-* **阶段 A（轻量化 / subsample 验证）**：`paraphrase-multilingual-MiniLM-L12-v2`，**384 维**；`sentence-transformers` \+ GPU 批编码。  
-* **阶段 B（全量 / 周期重构质量版）**：`paraphrase-multilingual-mpnet-base-v2`，**768 维**。  
-* **拼接与截断**：`Tagline:` / `Overview:` 前缀两行式拼接；无 tagline 则仅 `Overview:`；整段**从尾部截断**至默认 **3000 字符**；**L2 归一化**后进入后续特征融合与 UMAP。  
+* **目标**：将「剧情语义 + 宣传语调」压入同一条稠密向量，与 genres、original\_language 一并送入 UMAP；**保留所有语言的 overview**，故必须使用**多语言**句向量模型。
+* **阶段 A（轻量化 / subsample 验证）**：`paraphrase-multilingual-MiniLM-L12-v2`，**384 维**；`sentence-transformers` \+ GPU 批编码。
+* **阶段 B（全量 / 周期重构质量版）**：`paraphrase-multilingual-mpnet-base-v2`，**768 维**。
+* **拼接与截断**：`Tagline:` / `Overview:` 前缀两行式拼接；无 tagline 则仅 `Overview:`；整段**从尾部截断**至默认 **3000 字符**；**L2 归一化**后进入后续特征融合与 UMAP。
 * **完整条款**（批大小建议、**PyTorch CUDA / CPU 轮子安装**、`requirements` 锁定、版本语义）：见 [`docs/data/galaxy-model.md`](../data/galaxy-model.md) 与相关 `scripts/` 实现。
 
 ### **UMAP 主数据定稿（Phase 18 基线）**
 
-* **当前 shipped `galaxy_data`**：`embedding_model=paraphrase-multilingual-MiniLM-L12-v2`（384d），`n_neighbors=300`，`min_dist=0.4`，`metric=cosine`，`random_state=42`，**启用 DensMAP**（`densmap=true`）。实际参数以 `galaxy_data.meta` 与 Data Pipeline SSOT 为准。
+* **当前 shipped `galaxy_data`**：`embedding_model=paraphrase-multilingual-MiniLM-L12-v2`（384d），`n_neighbors=300`，`min_dist=0.4`，`metric=cosine`，`random_state=42`，**启用 DensMAP**（`densmap=true`）。实际参数以 `galaxy_data.meta` 与 [`docs/data/galaxy-model.md`](../data/galaxy-model.md) / 导出源码为准。
 
 ### **流派色相 H（Phase 8.1 · 数据资产）**
 
-* **目标**：L/C 由视觉层 uniform 调参，**H** 作为**每片**主流派索引的**可序列化**角度，避免 GPU 再解码 hex。  
-* **合同**：`meta.has_genre_hue === true` 时，每条 `movies[i]` 含 **`genre_hue` ∈ [0, 2π)（弧度）**；`genre_color`（RGB 或 palette hex）**并行保留**作 HUD 与回退。Phase 18 起 palette 生成规则由 Data Pipeline SSOT 的 frozen palette 约束。  
-* **与映射表列「3D 材质」**：宏观 `galaxyIdle` / `galaxyActive` 使用 hue + `uLMin`/`uLMax`/`uChroma` 的评分→OKLab Lightness 链；Focus `planet` 使用 genre hue + 固定 L/C（`0.55 / 0.15`），评分仅经版本化 power curve 驱动局部底色 Emission。两层不可合并为同一 Lightness 映射；详见《Tech Spec》§1.1、《Design Spec》§1.1 与《星球状态机 spec》§3.5.1。
+* **目标**：L/C 由视觉层 uniform 调参，**H** 作为**每片**主流派索引的**可序列化**角度，避免 GPU 再解码 hex。
+* **合同**：`meta.has_genre_hue === true` 时，每条 `movies[i]` 含 **`genre_hue` ∈ [0, 2π)（弧度）**；`genre_color`（RGB 或 palette hex）**并行保留**作 HUD 与回退。Phase 18 起 palette 生成规则由 galaxy-model / frozen palette 约束。
+* **与映射表列「3D 材质」**：宏观 `galaxyIdle` / `galaxyActive` 使用 hue + `uLMin`/`uLMax`/`uChroma` 的评分→OKLab Lightness 链；Focus `planet` 使用 genre hue + 固定 L/C（`0.55 / 0.15`），评分仅经版本化 power curve 驱动局部底色 Emission。两层不可合并为同一 Lightness 映射；详见 [`galaxy-exploration.md`](../product/galaxy-exploration.md)、[`galaxy-model.md`](../data/galaxy-model.md) 与源码。
 
 ### **核心映射矩阵规则表**
 
@@ -32,7 +34,7 @@
 | :------------------------ | :----------------------------------------------------------------------------------------------------------------- | :------------- | :------ | :------ | :----- | :-------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------- |
 | overview                  | 自由文本 (String) \-\> **稠密文本向量** (Dense Embeddings，**384 或 768 维**，见上文阶段 A/B)                      | ✅ **核心特征** | ✅       |         | ✅      |           | **决定底层 (X, Y) 坐标**（与 tagline 合并为单条文本后编码，规则见 §文本 Embedding 约定）。在详情抽屉中作为剧情简介文本全量展示。                                                                       | **语义锚点**：最核心的文本库，能精准捕获剧本内核，区分“太空歌剧”与“赛博朋克”。多语言保留，禁用纯英文主模型。                                   |
 | tagline                   | 自由文本 (String) \-\> **同上，与 overview 合并编码**                                                              | ✅ **核心特征** | ✅       |         | ✅      |           | **决定底层 (X, Y) 坐标**（合并规则见 §文本 Embedding 约定）。在详情抽屉中作为一句话高亮标语展示。                                                                                                      | **语调锚点**：合并入文本向量能补充影片的核心情绪与宣传定调。                                                                                   |
-| genres                    | 字符串数组 (Array of Strings) \-\> **递减权重数值向量**（**等比衰减**，默认 \(q=1/\varphi\)，见 Tech Spec §2.1.2） | ✅ **核心特征** | ✅       | ✅       | ✅      |           | **决定底层 (X, Y) 坐标**。**P8.1+**：管线为 `genres[0]` 同步写出 **`genre_hue`（弧度）** 与 `genre_color`，GPU 以 hue+OKLab 为主色源（见上节「流派色相 H」）。双重视觉含 Perlin 分带；HUD 显示流派名。 | **拓扑骨架**：摒弃扁平的 One-hot；顺位等比加权（黄金比例公比，可配置）保留主次张力，任意多个标签均有明确权重，防止星团生硬粘连与高阶标签抢权。 |
+| genres                    | 字符串数组 (Array of Strings) \-\> **递减权重数值向量**（**等比衰减**，默认 \(q=1/\varphi\)，见 galaxy-model / 源码） | ✅ **核心特征** | ✅       | ✅       | ✅      |           | **决定底层 (X, Y) 坐标**。**P8.1+**：管线为 `genres[0]` 同步写出 **`genre_hue`（弧度）** 与 `genre_color`，GPU 以 hue+OKLab 为主色源（见上节「流派色相 H」）。双重视觉含 Perlin 分带；HUD 显示流派名。 | **拓扑骨架**：摒弃扁平的 One-hot；顺位等比加权（黄金比例公比，可配置）保留主次张力，任意多个标签均有明确权重，防止星团生硬粘连与高阶标签抢权。 |
 | original\_language        | 离散单值字符串 (String) \-\> **独热稀疏向量** (One-hot)                                                            | ✅ **核心特征** | ✅       |         | ✅      |           | **决定底层 (X, Y) 坐标**。不在 3D 渲染表现，但在 HUD 档案抽屉中展示。                                                                                                                                  | **文化锚点**：干净的文化基底。能促使同流派星云内部自然分化出“好莱坞”与“香港”子星云。                                                           |
 | release\_date             | 日期字符串 (YYYY-MM-DD) \-\> **绝对小数年份** (Float)                                                              | ❌ **绝对排除** | ✅       |         | ✅      |           | **Z 轴 (时空深度)**：平滑映射为历史纵深坐标。同时在 HUD 档案中显示精确文本日期。                                                                                                                       | **维度隔离**：时间是独立物理维度，若混入 UMAP 会导致空间结构被强制拉扯成时间轴，破坏语义聚类。                                                 |
 | vote\_count               | 右偏长尾数值 (Integer) \-\> **对数缩放浮点数** (Log Scaled)                                                        | ❌ **绝对排除** |         | ✅       | ✅      |           | **天体体积首选映射**：映射 GPU 粒子半径；HUD 展示具体评价人数。                                                                                                                                        | **长尾映射**：影视数据呈极度右偏长尾分布。对数缩放可防止头部爆款无限制膨胀遮挡视线。                                                           |

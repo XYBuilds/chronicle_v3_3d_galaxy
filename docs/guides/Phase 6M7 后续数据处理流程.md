@@ -1,5 +1,7 @@
 # Phase 6M7 之后的数据处理流程
 
+> **Historical / non-executable.** Pre-Phase-18 data ops handbook. Do not follow for current production. See [docs/data/refresh-and-publication.md](../data/refresh-and-publication.md).
+
 ## 1. 目标与适用范围
 
 本文用于承接 M7（子样本冒烟）之后的实际数据推进，目标是把流程从“已验证可跑”推进到“可交付全量产物并可复现”。

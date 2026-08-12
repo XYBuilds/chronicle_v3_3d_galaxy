@@ -1,33 +1,12 @@
 ---
-description: Enforce product name casing by context
-alwaysApply: true
+description: Compatibility pointer only — brand casing lives in supported-experience
+alwaysApply: false
 ---
 
-# The Movie Cosmos Naming Convention
+# Branding convention (compatibility pointer)
 
-Use product naming based on context to keep UX and writing consistent.
+This rule does **not** apply brand rules and must not be treated as product authority.
 
-## Rules
+Archive Plans/Reports may still link here. Current brand truth:
 
-- UI identity surfaces must use `the movie cosmos` (all lowercase).
-- Narrative/product-description text must use `The Movie Cosmos`.
-- Do not introduce `TMDB Movie Cosmos` as the primary brand name.
-- Historical aliases (for migration context only) are allowed in notes/docs when explicitly marked as alias/history.
-
-## UI Identity Surfaces (lowercase)
-
-- Browser/page title
-- Cover title / splash / logo text
-- Other direct brand mark placements in HUD or UI chrome
-
-## Narrative Text (title case)
-
-- README and technical/product documentation body text
-- Intro/description paragraphs in locales
-- Marketing/descriptive sentences and metadata copy
-
-## Quick Examples
-
-- `cover.title` -> `the movie cosmos`
-- `<title>` -> `the movie cosmos`
-- `info.introBody` -> `The Movie Cosmos ...`
+[`docs/product/supported-experience.md`](../../docs/product/supported-experience.md)

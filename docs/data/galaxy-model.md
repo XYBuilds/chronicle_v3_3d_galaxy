@@ -9,7 +9,7 @@
 
 ### Sources and cleaning
 
-Primary input is the TMDB Movies Daily Updates corpus. Rows must survive cleaning before they enter the galaxy: primary key `id` (TMDB), secondary dedupe on `imdb_id`, drop empty genres, zero/null votes, missing release dates, and rows lacking both overview and title. Dynamic per-year vote-count thresholds gate membership; newly eligible titles wait in pending until a monthly refit admits them.
+Primary input is the TMDB Movies Daily Updates corpus. Rows must survive cleaning before they enter the galaxy: primary key `id` (TMDB), secondary dedupe on `imdb_id`, drop empty genres, zero/null votes, missing release dates, and rows lacking both overview and title. Dynamic per-year vote-count thresholds gate membership. The current rule, owned by [`scripts/pipeline/cleaning.py`](../../scripts/pipeline/cleaning.py), is: for each calendar year take the 0.95 quantile of `vote_count`, interpolate missing years, smooth with a 6-year rolling mean, then apply `threshold = max(1, 0.15 × smoothed baseline)`. Newly eligible titles wait in pending until a monthly refit admits them.
 
 Supabase tables (`movies`, `movies_pending`, `galaxy_v1_reference`, `threshold_versions`, optional vote snapshots) are the offline source of truth. The frontend never queries the database; it consumes exported static gzip assets.
 

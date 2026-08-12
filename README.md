@@ -335,8 +335,7 @@ Conceptual tree (omits `node_modules/`, `.venv/`, `data/raw/`, `data/output/`, e
 │   ├── feature_engineering/   # embeddings, UMAP, etc.
 │   ├── export/                # galaxy_data export
 │   ├── cron/                  # nightly refresh, monthly refit, R2 upload
-│   ├── tools/                 # monthly embedding bundle zip, etc.
-│   └── _archive/
+│   └── tools/                 # monthly embedding bundle zip, etc.
 ├── supabase/                  # database migrations (Phase 18+)
 ├── LICENSE                    # Apache-2.0
 ├── NOTICE                     # TMDB / IMDb / fonts attribution

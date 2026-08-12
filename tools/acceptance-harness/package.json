@@ -1,0 +1,28 @@
+{
+  "name": "acceptance-harness",
+  "private": true,
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test:journeys": "playwright test",
+    "test:owner-checks": "tsx scripts/run-owner-checks.ts",
+    "evidence:write": "tsx scripts/write-evidence.ts",
+    "contact-sheet": "tsx scripts/compose-contact-sheet.ts",
+    "capture:app-baseline": "tsx scripts/capture-app-baseline.ts",
+    "capture:storybook": "tsx scripts/capture-storybook.ts",
+    "test:storybook-a11y": "tsx scripts/storybook-a11y.ts",
+    "performance:protocol": "tsx scripts/performance-protocol.ts"
+  },
+  "dependencies": {
+    "playwright": "1.52.0",
+    "tsx": "4.19.0"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.10.2",
+    "@playwright/test": "1.52.0",
+    "@types/node": "^24.12.2",
+    "axe-core": "^4.13.0",
+    "typescript": "5.9.3",
+    "vitest": "^4.1.4"
+  }
+}

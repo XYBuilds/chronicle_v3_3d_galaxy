@@ -32,7 +32,8 @@ Repository delivery is **tool-neutral**. External discovery, specification, and 
 Required delivery checks, regardless of host:
 
 - Work from an Issue-owned branch off an up-to-date default base (`main` unless otherwise specified).
-- Run the verification that matches the changed scope (frontend Vitest/lint/build, `scripts/tests/` pytest, locale schema checks, documentation authority tests, `git diff --check`, and any Issue-named checks).
+- Run the verification that matches the changed scope (frontend Vitest/lint/build, `scripts/tests/` pytest, locale schema checks, documentation authority tests, `git diff --check`, acceptance harness checks from [`docs/system/acceptance-harness.md`](docs/system/acceptance-harness.md) when the Issue declares risk surfaces, and any Issue-named checks).
+- Delivery Issues/PRs must include an explicit human risk declaration (R0–R3 + protected surfaces). Do not invent a path classifier.
 - Keep Plans and Reports historical; do not rewrite accepted ADRs as silent edits.
 - **Human merge and Issue closure approval are mandatory.** Agents may prepare evidence and open a PR when authorized, but must not merge or close the Issue without explicit human approval.
 

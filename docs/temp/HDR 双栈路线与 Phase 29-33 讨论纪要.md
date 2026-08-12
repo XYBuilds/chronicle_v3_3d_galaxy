@@ -1,5 +1,8 @@
 # HDR 双栈路线与 Phase 29–33 讨论纪要
 
+> **Disposition:** historical material at this path. Not current product authority.
+
+
 > **文档性质**：临时说明稿（`docs/temp/`），汇总 2026-05 关于 HDR 发布门槛、最小 proof、WebGPU 迁移与后续路线的对话结论。  
 > **权威规格**仍以 [`docs/project_docs/Phase 29 发布门槛与技术判定 spec.md`](../project_docs/Phase%2029%20发布门槛与技术判定%20spec.md)、各 Phase 计划（`.cursor/plans/`）及实施报告（`docs/reports/`）为准。  
 > **最后整理**：2026-05-19

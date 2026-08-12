@@ -49,7 +49,7 @@ Not shipped: first-time onboarding, multi-dimensional filters/spotlight roadmap 
 - Frontend routes and HUD chrome under `frontend/src/`
 - Locale SSOT `frontend/src/lib/locales/en.json` via `frontend/src/lib/strings.ts`
 - OG / Today retirement: [`docs/system/og-index-worker-contract.md`](../system/og-index-worker-contract.md) and Worker/producer contract tests
-- Branding convention retained for archive compatibility in `.cursor/rules/branding-name-convention.mdc` until its follow-through Issue lands
+- Brand casing: UI identity surfaces use lowercase `the movie cosmos`; narrative copy uses `The Movie Cosmos` (this topic). `.cursor/rules/branding-name-convention.mdc` remains a non-applying compatibility pointer for archive links only.
 
 ## Related topics
 

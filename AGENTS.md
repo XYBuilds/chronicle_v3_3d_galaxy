@@ -6,7 +6,7 @@ Chronicle is the product-control repository for The Movie Cosmos. It owns the pr
 
 ### Issue tracker
 
-GitHub Issues are the public entry point for new work in this repository. Use `gh` for issue operations. Accepted specifications are published as Issues; implementation work stays in the repository that owns the code. See `docs/agents/issue-tracker.md`.
+GitHub Issues are the public entry point for new work in this repository. Use `gh` for Issue operations. Accepted specifications are published as Issues; implementation work stays in the repository that owns the code. See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 
@@ -27,4 +27,13 @@ Chronicle uses a single repository context plus a federated system map under `do
 
 ## Delivery workflow
 
-The existing `.cursor/rules/workflow-adapter.mdc` remains authoritative for branches, tests, human acceptance, reports, PRs, and merge delivery. Matt Skills add discovery, specification, and review; they do not replace this repository's delivery adapter.
+Repository delivery is **tool-neutral**. External discovery, specification, and review skills (including Matt skills) may help agents work, but they are not repository authority and must not be copied into Chronicle as product rules.
+
+Required delivery checks, regardless of host:
+
+- Work from an Issue-owned branch off an up-to-date default base (`main` unless otherwise specified).
+- Run the verification that matches the changed scope (frontend Vitest/lint/build, `scripts/tests/` pytest, locale schema checks, documentation authority tests, `git diff --check`, and any Issue-named checks).
+- Keep Plans and Reports historical; do not rewrite accepted ADRs as silent edits.
+- **Human merge and Issue closure approval are mandatory.** Agents may prepare evidence and open a PR when authorized, but must not merge or close the Issue without explicit human approval.
+
+Current documentation navigation starts at [`docs/system/decision-index.md`](docs/system/decision-index.md).

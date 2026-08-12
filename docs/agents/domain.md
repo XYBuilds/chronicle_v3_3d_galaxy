@@ -17,6 +17,10 @@ Before designing a change, read:
 - `.cursor/plans/` and `docs/reports/` are historical execution records.
 - `CONTEXT.md` and `docs/adr/` are intentionally created lazily when domain modeling resolves a real terminology or durable design question.
 
+## Host tooling vs product authority
+
+Cursor rules under `.cursor/rules/` are **host safety and routing pointers** for agents in this workspace. They are **not** cross-tool product authority and must not compete with the six current topics or system contracts. Brand, exploration, search/HUD, runtime, galaxy-model, and refresh truth live in `docs/product/`, `docs/frontend/`, `docs/data/`, and `docs/system/`.
+
 ## Cross-repository boundary
 
 Chronicle owns product-level identity and producer contracts. The OG Worker owns its Cloudflare consumer behavior. Daily Stargazing owns its editorial and publication domain. Do not copy another repository's glossary or ADRs into Chronicle; link to the owning repository instead.

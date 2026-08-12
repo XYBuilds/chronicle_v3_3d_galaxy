@@ -1,45 +1,21 @@
 ---
-description: Frontend conventions — Three.js, React, TypeScript
-globs: frontend/**/*.{ts,tsx,glsl}
+description: Pointers for frontend work — current topics, source, and tests
+globs: frontend/**/*.{ts,tsx,glsl,css,json}
 alwaysApply: false
 ---
 
-# Frontend Conventions
+# Frontend pointers
 
-## Stack
+Host safety only. Product and implementation truth live elsewhere.
 
-- **Build**: Vite + `vite-plugin-glsl` for GLSL imports
-- **3D**: Raw Three.js (no R3F / TresJS) — direct control of render loop, ShaderMaterial, BufferAttribute
-- **UI**: React DOM overlay (HUD layer) — Tooltip, Drawer, Loading, Timeline
-- **State bridge**: Zustand — Three.js writes selection/hover state, React reads; React writes navigation commands, Three.js executes
+| Need | Go to |
+| --- | --- |
+| Supported routes / chrome | `docs/product/supported-experience.md`, `docs/product/search-and-hud.md` |
+| Exploration / camera / focus | `docs/product/galaxy-exploration.md` |
+| Runtime load / idle | `docs/frontend/runtime.md` |
+| Navigation | `docs/system/decision-index.md` |
+| Source | `frontend/src/` (Three under `frontend/src/three/`, HUD under `frontend/src/hud/`) |
+| Locale SSOT | `frontend/src/lib/locales/en.json` via `frontend/src/lib/strings.ts` |
+| Tests | `frontend` Vitest / Storybook as scoped by the change |
 
-## TypeScript
-
-- Strict mode enabled
-- JSON schema types from Tech Spec §4 defined in `frontend/src/types/`
-
-## Rendering Architecture
-
-- **Macro layer**: `THREE.Points` + custom ShaderMaterial (1 draw call for ~60K particles)
-  - **P6.2.2**: Single opaque pass (`transparent: false`, `depthWrite: true`) — circular points with a one-line `smoothstep` edge only (no halo / Bloom in the default path).
-  - Vertex: position, size (log vote_count), `color` (genres[0] palette sRGB), `voteNorm` (`vote_average / 10`); Z-slab drives **size only** via `uActiveSizeMul` / `uBgSizeMul`. Color is recomputed in the vertex shader from palette hue in OKLab + lightness from `voteNorm` + fixed chroma (`uLMin` / `uLMax` / `uChroma`).
-  - Fragment: flat `vColor` + circle discard + minimal AA.
-- **Selected layer**: IcoSphere + Perlin Noise ShaderMaterial (on-demand per click); visibility toggles with selection fly-to (no macro opacity ramp).
-- **Post-processing**: `EffectComposer` + `UnrealBloomPass` are **constructed but not attached** by default; the render loop uses `renderer.render(scene, camera)` with `renderer.outputColorSpace = THREE.SRGBColorSpace`. Call `window.__bloom.enable()` to attach the pass and switch to `composer.render()` (revive / polish).
-
-## Camera
-
-- Axis always parallel to Z (no rotation/tilt)
-- Scroll: Z-axis travel (time depth)
-- Drag: truck (horizontal) + pedestal (vertical) only
-- Click-select: smooth fly-to (600–800ms easeOutCubic), axis stays parallel
-
-## Interaction (P6.3.1)
-
-- **Hover / click（Points 路径）**：**屏幕空间圆盘**与 `point.vert.glsl` 的 `gl_PointSize` **1:1** — `computePointScreenRadiusCss`；改点大小或 `uSizeScale` / `uActiveSizeMul` 须同步改 TS。
-- **Hover / click（P8.4 dual `InstancedMesh`）**：`interaction.ts` 用 **ray–world-sphere**（半径与 `galaxyActive.vert` 的 `sActive` 一致），不用 `Raycaster.intersectObject` 做主判定（引擎射线忽略顶点 `sActive` 缩放）。Click 仍带 `inFocus > 0.5` slab 门控。
-
-## Data Loading
-
-- Default: `galaxy_data.json.gz` fetched at startup (`import.meta.env.BASE_URL` + `data/...`); gzip magic vs HTTP-transparent gzip handled in `frontend/src/data/loadGalaxyGzip.ts`; full-screen loading + optional progress until parsed
-- Split into GPU BufferAttributes + DOM HUD data after parse
+Do not treat this rule as a second Tech Spec or Design Spec.

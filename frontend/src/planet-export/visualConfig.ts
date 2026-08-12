@@ -13,7 +13,7 @@ export type PlanetEmissionVisualProvenance = FocusEmissionProfileProvenance & {
 export type ResolvedPlanetVisualConfigInput = PlanetVisualStateInput
 export type ResolvedPlanetVisualConfig = PlanetVisualState
 
-/** Compatibility adapter for existing exporter and diagnostic callers during seam migration. */
+/** Compatibility adapter for existing exporter callers during seam migration. */
 export function resolvePlanetVisualConfig(
   input: ResolvedPlanetVisualConfigInput,
 ): ResolvedPlanetVisualConfig {
@@ -101,20 +101,7 @@ export function requireProductionPlanetVisualConfig(
   return config
 }
 
-/**
- * Compatibility overload preserves frozen P39 evidence call sites. New renderer paths pass the
- * resolved payload object, rather than composing strings at the caller.
- */
-export function planetExportVisualConfigInput(config: ResolvedPlanetVisualConfig): string
-export function planetExportVisualConfigInput(legacyVisualInput: string, exportSizeRoot: number): string
-export function planetExportVisualConfigInput(
-  config: ResolvedPlanetVisualConfig | string,
-  exportSizeRoot?: number,
-): string {
-  if (typeof config === 'string') {
-    void exportSizeRoot
-    return config
-  }
+export function planetExportVisualConfigInput(config: ResolvedPlanetVisualConfig): string {
   return config.hashInput
 }
 

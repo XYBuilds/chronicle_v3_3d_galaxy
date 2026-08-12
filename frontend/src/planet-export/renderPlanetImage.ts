@@ -1,7 +1,3 @@
-import {
-  P3911_LEGACY_FROZEN_PROFILE_FIXTURE,
-  requireP39CanonicalVisualHash,
-} from './p39LegacyVisualState'
 import { productionPlanetBloomParams } from '@/three/planetVisualDefaults'
 import {
   createPlanetVisualRendererHandle,
@@ -23,14 +19,10 @@ import {
   validatePerlinBloomParams,
   withCameraLayer,
 } from '@/three/perlinBloomContract'
-import type { RatingMidrankCdfLutProfile } from '@/three/focusEmission'
+import type { FocusEmissionProfile } from '@/three/focusEmission'
 import type { FocusEmissionProfileProvenance } from '@/types/galaxy'
 import { createSelectionPlanet, type SelectionPlanetHandle } from '@/three/planet'
 import { planetNoiseSeed } from '@/three/planetAppearance'
-import {
-  PHASE41_DIAGNOSTIC_MARKER,
-  type Phase41EmissionCurve,
-} from './phase41DiagnosticProfile'
 import { selectionPlanetRotationAxisForMovie } from '@/three/selectionPlanetRotation'
 import type { Meta, Movie } from '@/types/galaxy'
 import { computeExportWorldRadius, computeOrthographicHalfExtent } from './sizing'
@@ -51,24 +43,6 @@ type PlanetRenderBaseOptions = {
 /** Production boundary: renderer-owned visual config is mandatory and supplies the active curve. */
 export type PlanetRenderOptions = PlanetRenderBaseOptions & {
   visualConfig: ResolvedPlanetVisualConfig
-}
-
-/** Explicit historical P39 compatibility input. Never use for production/browser export. */
-export type P3911LegacyPlanetRenderOptions = PlanetRenderBaseOptions & {
-  visualConfig?: ResolvedPlanetVisualConfig
-  emissionProfile?: RatingMidrankCdfLutProfile
-  emissionProfileProvenance?: FocusEmissionProfileProvenance
-  emissionProfileSource?: 'active' | 'legacy-fallback' | 'diagnostic-override'
-}
-
-export type Phase41DiagnosticPlanetRenderOptions = PlanetRenderBaseOptions & {
-  visualConfig: ResolvedPlanetVisualConfig
-  diagnostic_only: typeof PHASE41_DIAGNOSTIC_MARKER
-  bloomParamsOverride: PerlinBloomParams
-}
-
-type OfflineDiagnosticPlanetRenderOptions = P3911LegacyPlanetRenderOptions & {
-  bloomParamsOverride?: PerlinBloomParams
 }
 
 export type PlanetRenderDiagnostics = {
@@ -183,7 +157,7 @@ function quaternionTuple(quaternion: THREE.Quaternion, label: string): [number, 
 }
 
 function diagnosticsEmissionCurve(
-  curve: Phase41EmissionCurve,
+  curve: FocusEmissionProfile,
   derivation?: PlanetVisualEmissionDerivation,
 ): PlanetRenderDiagnostics['emission_curve'] {
   if (derivation !== undefined) {
@@ -220,13 +194,12 @@ function positive(value: number, label: string): number {
   return result
 }
 
-type PlanetRenderDiagnosticOptions = Pick<
-  P3911LegacyPlanetRenderOptions,
-  'sizeRoot' | 'padding' | 'emissionProfileProvenance' | 'emissionProfileSource' | 'visualConfig'
-> & {
+type PlanetRenderCaptureOptions = {
+  sizeRoot: 2 | 3 | 4
+  padding: number
+  visualConfig?: ResolvedPlanetVisualConfig
   bloomParamsOverride?: PerlinBloomParams
   bloom?: boolean
-  emissionCurveOverride?: Phase41EmissionCurve
   appliedVisualState?: PlanetVisualRenderResult
 }
 
@@ -290,7 +263,7 @@ export function capturePlanetRenderDiagnostics(
   movie: Movie,
   planet: SelectionPlanetHandle,
   camera: THREE.OrthographicCamera,
-  options: PlanetRenderDiagnosticOptions,
+  options: PlanetRenderCaptureOptions,
 ): PlanetRenderDiagnostics {
   if (!Number.isSafeInteger(movie.id) || movie.id <= 0) {
     throw new Error('[PlanetExport] movie id must be a positive integer')
@@ -369,7 +342,7 @@ export function capturePlanetRenderDiagnostics(
     padding: serializableNumber(options.padding, 'padding'),
     emission: serializableNumber(uniforms.uEmissionIntensity.value as number, 'emission'),
     emission_curve: diagnosticsEmissionCurve(
-      options.emissionCurveOverride ?? resolvedVisualConfig?.curve ?? appearance.emissionCurve,
+      resolvedVisualConfig?.curve ?? appearance.emissionCurve,
       resolvedVisualConfig?.emissionDerivation,
     ),
     ...(resolvedVisualConfig === undefined ? {} : {
@@ -377,17 +350,9 @@ export function capturePlanetRenderDiagnostics(
       visual_config_hash_input: appliedSnapshot?.canonicalHashInput ?? resolvedVisualConfig.hashInput,
     }),
     ...(appliedSnapshot === undefined
-      ? ((resolvedVisualConfig ?? (options.emissionProfileProvenance === undefined || options.emissionProfileSource === undefined
-          ? undefined
-          : { emissionProvenance: options.emissionProfileProvenance, emissionSource: options.emissionProfileSource })) === undefined
+      ? (resolvedVisualConfig === undefined
         ? {}
-        : { profile_provenance: (() => {
-          const resolved = resolvedVisualConfig ?? {
-            emissionProvenance: options.emissionProfileProvenance!,
-            emissionSource: options.emissionProfileSource!,
-          }
-          return { ...resolved.emissionProvenance, source: resolved.emissionSource }
-        })() })
+        : { profile_provenance: { ...resolvedVisualConfig.emissionProvenance, source: resolvedVisualConfig.emissionSource } })
       : {
           profile_provenance: {
             ...appliedSnapshot.profileProvenance,
@@ -547,15 +512,9 @@ export function positionExportCamera(camera: THREE.OrthographicCamera, halfExten
   camera.updateMatrixWorld(true)
 }
 
-function renderPlanetImageInternal(
-  options: OfflineDiagnosticPlanetRenderOptions,
-  production = false,
-): PlanetRenderResult {
-  const { canvas, movie, meta, globalRadius, resolution, padding, bloom, renderMode, sizeRoot, bloomParamsOverride, visualConfig } = options
-  if (visualConfig === undefined) {
-    throw new Error('[PlanetExport] resolved canonical visual state is required at the rendering boundary')
-  }
-  let bloomParams = validatePerlinBloomParams(visualConfig.bloom ?? bloomParamsOverride ?? productionPlanetBloomParams(bloom))
+function renderPlanetImageInternal(options: PlanetRenderOptions): PlanetRenderResult {
+  const { canvas, movie, meta, globalRadius, resolution, padding, bloom, renderMode, sizeRoot, visualConfig } = options
+  let bloomParams = validatePerlinBloomParams(visualConfig.bloom)
   const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, preserveDrawingBuffer: true })
   renderer.setPixelRatio(1)
   renderer.setSize(resolution, resolution, false)
@@ -568,9 +527,7 @@ function renderPlanetImageInternal(
   const camera = new THREE.OrthographicCamera(-half, half, half, -half, 0.01, half * 4)
   positionExportCamera(camera, half)
 
-  const prepared = production
-    ? prepareProductionExportPlanet(movie, meta, renderMode, sizeRoot, visualConfig)
-    : prepareResolvedExportPlanet(movie, meta, renderMode, sizeRoot, visualConfig)
+  const prepared = prepareProductionExportPlanet(movie, meta, renderMode, sizeRoot, visualConfig)
   const planet = prepared.planet
   const appliedVisualState = prepared.visualState
   bloomParams = validatePerlinBloomParams(prepared.bloomHandle.params)
@@ -595,31 +552,5 @@ export function renderPlanetImage(options: PlanetRenderOptions): PlanetRenderRes
   if (visualConfig.bloom.enabled !== options.bloom) {
     throw new Error('[PlanetExport] canonical Bloom state must match the production render request')
   }
-  return renderPlanetImageInternal({ ...options, visualConfig }, true)
-}
-
-type P3911LegacyFrozenProfileRenderOptions = OfflineDiagnosticPlanetRenderOptions & {
-  visualConfig: ResolvedPlanetVisualConfig
-  /** Required proof that this call is historical/offline evidence, never a production export. */
-  legacyProfileCompatibility: typeof P3911_LEGACY_FROZEN_PROFILE_FIXTURE
-}
-
-/** Explicit historical P39 boundary; the adapter must supply a proven canonical legacy state. */
-export function renderP3911DiagnosticPlanetImage(options: P3911LegacyFrozenProfileRenderOptions): PlanetRenderResult {
-  if (options.legacyProfileCompatibility !== P3911_LEGACY_FROZEN_PROFILE_FIXTURE) {
-    throw new Error('[P39.11 diagnostics] legacy frozen profile compatibility marker is required')
-  }
-  requireP39CanonicalVisualHash(options.visualConfig)
-  return renderPlanetImageInternal(options)
-}
-
-/** Explicit offline boundary for the Phase 41 profile only. */
-export function renderPhase41DiagnosticPlanetImage(options: Phase41DiagnosticPlanetRenderOptions): PlanetRenderResult {
-  if (options.diagnostic_only !== PHASE41_DIAGNOSTIC_MARKER) {
-    throw new Error(`[Phase41 diagnostic] diagnostic_only must equal ${PHASE41_DIAGNOSTIC_MARKER}`)
-  }
-  if (options.visualConfig === undefined) {
-    throw new Error('[Phase41 diagnostic] canonical resolved visual config is required')
-  }
-  return renderPlanetImageInternal(options)
+  return renderPlanetImageInternal({ ...options, visualConfig })
 }

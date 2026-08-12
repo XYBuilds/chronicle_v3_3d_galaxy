@@ -1,3 +1,7 @@
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
 import { describe, expect, it } from 'vitest'
 
 import { LEGACY_FOCUS_EMISSION_FALLBACK_PROVENANCE } from '@/three/focusEmission'
@@ -6,6 +10,11 @@ import {
   resolveRuntimePlanetVisualState,
 } from '@/three/focusPlanetRuntimeVisual'
 import { PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE } from '@/three/productionFocusEmissionProfile'
+
+const sceneSource = readFileSync(
+  path.resolve(path.dirname(fileURLToPath(import.meta.url)), 'scene.ts'),
+  'utf8',
+)
 
 /**
  * Scene-directed contract: mountGalaxyScene consumes a pre-resolved canonical state and
@@ -39,5 +48,15 @@ describe('focus planet runtime scene contract', () => {
     expect(typeof createFocusPlanetRuntimeVisualAdapter).toBe('function')
     expect(identity.profileSource).toBe('active')
     expect(identity.hashInput.length).toBeGreaterThan(0)
+  })
+
+  it('does not install retired HDR window probes and keeps the SDR production color space', () => {
+    expect(sceneSource).not.toMatch(/window\.__hdrCapabilities/)
+    expect(sceneSource).not.toMatch(/window\.__hdrProbe/)
+    expect(sceneSource).not.toMatch(/createHdrCapabilitiesDebug/)
+    expect(sceneSource).not.toMatch(/logHdrCapabilitiesProbe/)
+    expect(sceneSource).not.toMatch(/from ['"]@\/lib\/hdrProof['"]/)
+    expect(sceneSource).toMatch(/SDR_FALLBACK_OUTPUT_COLOR_SPACE/)
+    expect(sceneSource).toMatch(/window\.__sdrFallback/)
   })
 })

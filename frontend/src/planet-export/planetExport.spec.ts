@@ -11,41 +11,11 @@ import {
   mapMovieSizeForExport,
 } from './sizing'
 import { findExportMovie, indexGalaxyMovies, parsePlanetExportRequest } from './request'
-import { parsePhase41DiagnosticRequest } from './phase41DiagnosticRequest'
-import { PHASE41_DIAGNOSTIC_MARKER } from './phase41DiagnosticProfile'
 import {
   capturePlanetRenderDiagnostics,
   positionExportCamera,
   prepareProductionExportPlanet,
 } from './renderPlanetImage'
-import { assertP3911CheckpointAKeyLightIntensity, parseP3911CheckpointARequest } from './p3911CheckpointADiagnostics'
-import {
-  P3911_CHECKPOINT_B,
-  p3911CheckpointBEmissionForRating,
-  p3911CheckpointBVisualConfigInput,
-  parseP3911CheckpointBRequest,
-} from './p3911CheckpointBDiagnostics'
-import {
-  P3911_CHECKPOINT_C_THRESHOLD,
-  assertP3911CheckpointCThresholdProductionContract,
-  p3911CheckpointCThresholdBloomParams,
-  p3911CheckpointCThresholdVisualConfigInput,
-  parseP3911CheckpointCThresholdRequest,
-} from './p3911CheckpointCThresholdDiagnostics'
-import {
-  P3911_CHECKPOINT_C_RADIUS,
-  assertP3911CheckpointCRadiusProductionContract,
-  p3911CheckpointCRadiusBloomParams,
-  p3911CheckpointCRadiusVisualConfigInput,
-  parseP3911CheckpointCRadiusRequest,
-} from './p3911CheckpointCRadiusDiagnostics'
-import {
-  P3911_CHECKPOINT_C_STRENGTH,
-  assertP3911CheckpointCStrengthProductionContract,
-  p3911CheckpointCStrengthBloomParams,
-  p3911CheckpointCStrengthVisualConfigInput,
-  parseP3911CheckpointCStrengthRequest,
-} from './p3911CheckpointCStrengthDiagnostics'
 import { planetNoiseSeed } from '@/three/planetAppearance'
 import {
   focusEmissionIntensityFromProfile,
@@ -90,87 +60,19 @@ const productionVisualConfig = (bloomEnabled = false) => resolvePlanetVisualConf
 })
 
 describe('planet export request and sizing', () => {
-  it('keeps Key overrides out of normal export requests and rejects invalid offline values', () => {
-    expect(() => parsePlanetExportRequest(request('&p3911KeyLightIntensity=0.5'))).toThrow(/unknown request parameter/)
-    expect(parseP3911CheckpointARequest(request('&p3911KeyLightIntensity=0.5').replace('movieId=7', 'movieId=157336'))).toMatchObject({ keyLightIntensity: 0.5, bloom: false, renderMode: 'shader' })
-    expect(() => parseP3911CheckpointARequest(request('&p3911KeyLightIntensity=0.6').replace('movieId=7', 'movieId=157336'))).toThrow(/not a Checkpoint A candidate/)
-    expect(() => assertP3911CheckpointAKeyLightIntensity(Number.NaN)).toThrow(/finite and non-negative/)
-    expect(() => assertP3911CheckpointAKeyLightIntensity(-0.01)).toThrow(/finite and non-negative/)
-  })
-
-  it('keeps B exponent overrides exclusively at the strict offline boundary', () => {
-    const bRequest = request('&p3911EmissionExponent=2.5').replace('movieId=7', 'movieId=157336')
-    expect(() => parsePlanetExportRequest(bRequest)).toThrow(/unknown request parameter/)
-    expect(parseP3911CheckpointBRequest(bRequest)).toMatchObject({ emissionExponent: 2.5, bloom: false, renderMode: 'shader' })
-    for (const invalid of ['', 'null', 'NaN', 'Infinity', '0', '-1', '2.6', '3.4']) {
-      expect(() => parseP3911CheckpointBRequest(request(`&p3911EmissionExponent=${invalid}`).replace('movieId=7', 'movieId=157336'))).toThrow(/p3911EmissionExponent|not a Checkpoint B candidate/)
+  it('rejects diagnostic and historical override parameters on the production request boundary', () => {
+    for (const extra of [
+      '&p3911KeyLightIntensity=0.5',
+      '&p3911EmissionExponent=2.5',
+      '&p3911BloomThreshold=0.05',
+      '&p3911BloomRadius=0.5',
+      '&p3911BloomStrength=0.005',
+      '&p3910BloomStrengthZero=1',
+      '&diagnostic_only=phase41-visual-diagnostic-v1',
+      '&allowLegacyProfile=1',
+    ]) {
+      expect(() => parsePlanetExportRequest(request(extra))).toThrow(/unknown request parameter/)
     }
-    expect(() => parseP3911CheckpointBRequest(request('&p3911EmissionExponent=2&p3911EmissionExponent=2.5').replace('movieId=7', 'movieId=157336'))).toThrow(/exactly once/)
-  })
-
-  it('models B candidates offline while retaining the selected production exponent', () => {
-    expect(P3911_CHECKPOINT_B.emissionExponentCandidates).toEqual([3, 2.5, 2])
-    expect(p3911CheckpointBEmissionForRating(0, 3)).toBe(0.06)
-    expect(p3911CheckpointBEmissionForRating(0, 2.5)).toBe(0.06)
-    expect(p3911CheckpointBEmissionForRating(0, 2)).toBe(0.06)
-    expect(p3911CheckpointBEmissionForRating(5, 3)).toBeCloseTo(0.1275, 12)
-    expect(p3911CheckpointBEmissionForRating(5, 2.5)).toBeCloseTo(0.15545941546, 10)
-    expect(p3911CheckpointBEmissionForRating(5, 2)).toBeCloseTo(0.195, 12)
-    const production = JSON.stringify(PLANET_VISUAL_DEFAULTS)
-    const hashes = P3911_CHECKPOINT_B.emissionExponentCandidates.map((exponent) => p3911CheckpointBVisualConfigInput(production, exponent))
-    expect(new Set(hashes).size).toBe(3)
-    expect(PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE.modelVersion).toBe('rating-midrank-cdf-lut-v1')
-  })
-
-  it('keeps C1 threshold overrides at a strict Bloom-ON-only offline boundary', () => {
-    const cRequest = request('&p3911BloomThreshold=0.05').replace('bloom=off', 'bloom=on').replace('movieId=7', 'movieId=157336')
-    expect(() => parsePlanetExportRequest(cRequest)).toThrow(/unknown request parameter/)
-    expect(parseP3911CheckpointCThresholdRequest(cRequest)).toMatchObject({ bloom: true, renderMode: 'shader', bloomThreshold: 0.05 })
-    for (const invalid of ['', 'null', 'NaN', 'Infinity', '-1', '0.01', '0.2']) {
-      expect(() => parseP3911CheckpointCThresholdRequest(request(`&p3911BloomThreshold=${invalid}`).replace('bloom=off', 'bloom=on').replace('movieId=7', 'movieId=157336'))).toThrow(/p3911BloomThreshold|not a Checkpoint C1 candidate/)
-    }
-    expect(() => parseP3911CheckpointCThresholdRequest(cRequest.replace('p3911BloomThreshold=0.05', 'p3911BloomThreshold=0&p3911BloomThreshold=0.05'))).toThrow(/exactly once/)
-    expect(P3911_CHECKPOINT_C_THRESHOLD.thresholdCandidates).toEqual([0, 0.05, 0.1])
-    expect(() => assertP3911CheckpointCThresholdProductionContract()).not.toThrow()
-    expect(p3911CheckpointCThresholdBloomParams(0.1)).toEqual({ enabled: true, strength: 0.005, radius: 1, threshold: 0.1 })
-    const production = JSON.stringify(PLANET_VISUAL_DEFAULTS)
-    const hashes = P3911_CHECKPOINT_C_THRESHOLD.thresholdCandidates.map((threshold) => p3911CheckpointCThresholdVisualConfigInput(production, threshold))
-    expect(new Set(hashes).size).toBe(3)
-  })
-
-  it('keeps C2 radius overrides at a strict Bloom-ON-only offline boundary', () => {
-    const cRequest = request('&p3911BloomRadius=0.5').replace('bloom=off', 'bloom=on').replace('movieId=7', 'movieId=157336')
-    expect(() => parsePlanetExportRequest(cRequest)).toThrow(/unknown request parameter/)
-    expect(parseP3911CheckpointCRadiusRequest(cRequest)).toMatchObject({ bloom: true, renderMode: 'shader', bloomRadius: 0.5 })
-    expect(parseP3911CheckpointCRadiusRequest(cRequest.replace('p3911BloomRadius=0.5', 'p3911BloomRadius=1'))).toMatchObject({ bloomRadius: 1 })
-    for (const invalid of ['', 'null', 'NaN', 'Infinity', '-1', '0.01', '0.2', '0.6', '2']) {
-      expect(() => parseP3911CheckpointCRadiusRequest(request(`&p3911BloomRadius=${invalid}`).replace('bloom=off', 'bloom=on').replace('movieId=7', 'movieId=157336'))).toThrow(/p3911BloomRadius|not a Checkpoint C2 candidate/)
-    }
-    expect(() => parseP3911CheckpointCRadiusRequest(cRequest.replace('p3911BloomRadius=0.5', 'p3911BloomRadius=0&p3911BloomRadius=0.5'))).toThrow(/exactly once/)
-    expect(P3911_CHECKPOINT_C_RADIUS.radiusCandidates).toEqual([0, 0.5, 1])
-    expect(() => assertP3911CheckpointCRadiusProductionContract()).not.toThrow()
-    expect(p3911CheckpointCRadiusBloomParams(0.5)).toEqual({ enabled: true, strength: 0.005, radius: 0.5, threshold: 0 })
-    const production = JSON.stringify(PLANET_VISUAL_DEFAULTS)
-    const hashes = P3911_CHECKPOINT_C_RADIUS.radiusCandidates.map((radius) => p3911CheckpointCRadiusVisualConfigInput(production, radius))
-    expect(new Set(hashes).size).toBe(3)
-  })
-
-  it('keeps C3 strength overrides at a strict Bloom-ON-only offline boundary', () => {
-    const cRequest = request('&p3911BloomStrength=0.005').replace('bloom=off', 'bloom=on').replace('movieId=7', 'movieId=157336')
-    expect(() => parsePlanetExportRequest(cRequest)).toThrow(/unknown request parameter/)
-    expect(parseP3911CheckpointCStrengthRequest(cRequest)).toMatchObject({ bloom: true, renderMode: 'shader', bloomStrength: 0.005 })
-    expect(parseP3911CheckpointCStrengthRequest(cRequest.replace('p3911BloomStrength=0.005', 'p3911BloomStrength=0.01'))).toMatchObject({ bloomStrength: 0.01 })
-    for (const invalid of ['', 'null', 'NaN', 'Infinity', '-1', '0', '0.001', '0.003', '0.02']) {
-      expect(() => parseP3911CheckpointCStrengthRequest(request(`&p3911BloomStrength=${invalid}`).replace('bloom=off', 'bloom=on').replace('movieId=7', 'movieId=157336'))).toThrow(/p3911BloomStrength|not a Checkpoint C3 candidate/)
-    }
-    expect(() => parseP3911CheckpointCStrengthRequest(cRequest.replace('p3911BloomStrength=0.005', 'p3911BloomStrength=0.0025&p3911BloomStrength=0.005'))).toThrow(/exactly once/)
-    expect(P3911_CHECKPOINT_C_STRENGTH.strengthCandidates).toEqual([0.0025, 0.005, 0.01])
-    expect(() => assertP3911CheckpointCStrengthProductionContract()).not.toThrow()
-    expect(p3911CheckpointCStrengthBloomParams(0.005)).toEqual({ enabled: true, strength: 0.005, radius: 1, threshold: 0 })
-    expect(p3911CheckpointCStrengthBloomParams(0.01)).toEqual({ enabled: true, strength: 0.01, radius: 1, threshold: 0 })
-    const production = JSON.stringify(PLANET_VISUAL_DEFAULTS)
-    const hashes = P3911_CHECKPOINT_C_STRENGTH.strengthCandidates.map((strength) => p3911CheckpointCStrengthVisualConfigInput(production, strength))
-    expect(new Set(hashes).size).toBe(3)
   })
 
   it('strictly validates the explicit shader and basic smoke requests', () => {
@@ -200,18 +102,12 @@ describe('planet export request and sizing', () => {
       `${request()}&allowLegacyProfile=1`,
       `${request()}&allowLegacyProfile=0`,
       `${request()}&allowLegacyProfile=1&allowLegacyProfile=1`,
+    ]) expect(() => parsePlanetExportRequest(invalid)).toThrow(/unknown request parameter allowLegacyProfile/)
+    for (const invalid of [
       `${request()}&profilePointer=${pointer}`,
       `${request()}&profileUrl=https%3A%2F%2Fexample.test%2Fdata%2Ffocus-emission-profiles%2Frating-emission-2026-07-a.json`,
       `${request()}&profilePointer=${pointer}&profileUrl=https%3A%2F%2Fuser%3Apass%40example.test%2Fdata%2Ffocus-emission-profiles%2Frating-emission-2026-07-a.json`,
-    ]) expect(() => parsePlanetExportRequest(invalid)).toThrow(/profile|Legacy/)
-  })
-
-  it('keeps legacy profile compatibility behind the explicit Phase 41 diagnostic parser', () => {
-    const diagnostic = `${request()}&diagnostic_only=${PHASE41_DIAGNOSTIC_MARKER}&allowLegacyProfile=1`
-
-    expect(() => parsePlanetExportRequest(diagnostic)).toThrow(/unknown request parameter/)
-    expect(parsePhase41DiagnosticRequest(diagnostic).allowLegacyProfile).toBe(true)
-    expect(() => parsePhase41DiagnosticRequest(`${request()}&diagnostic_only=${PHASE41_DIAGNOSTIC_MARKER}&allowLegacyProfile=0`)).toThrow(/allowLegacyProfile/)
+    ]) expect(() => parsePlanetExportRequest(invalid)).toThrow(/profile/)
   })
 
   it('indexes once and rejects duplicate or absent movie IDs', () => {
@@ -238,7 +134,32 @@ describe('planet export request and sizing', () => {
     basic.planet.dispose()
   })
 
-  it('captures renderer-owned P39 diagnostics while rating changes only emission', () => {
+  it('keeps the controlled same-profile rating sample monotonic on the production export seam', () => {
+    const ratings = [4, 4.5, 5.5, 6.5, 7.5, 8.2, 9.5]
+    const emissions = ratings.map((vote_average) => {
+      const target = { ...movie(157336, 2, ['Drama']), vote_average }
+      const prepared = prepareProductionExportPlanet(
+        target,
+        galaxy([target]).meta,
+        'shader',
+        3,
+        productionVisualConfig(false),
+      )
+      const emission = prepared.visualState.appliedSnapshot.emission
+      prepared.planet.dispose()
+      return emission
+    })
+    expect(emissions).toEqual(ratings.map((rating) =>
+      remapFocusEmissionIntensity(
+        focusEmissionIntensityFromProfile(rating, PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE),
+        PRODUCTION_FOCUS_EMISSION_CDF_LUT_PROFILE,
+        PLANET_VISUAL_DEFAULTS.focus.emissionTuning,
+      ),
+    ))
+    emissions.slice(1).forEach((value, index) => expect(value).toBeGreaterThan(emissions[index]!))
+  })
+
+  it('captures renderer-owned diagnostics while rating changes only emission', () => {
     const camera = new THREE.OrthographicCamera(-10, 10, 10, -10, 0.01, 40)
     positionExportCamera(camera, 10)
     const snapshots = [0, 4, 5, 10].map((vote_average) => {

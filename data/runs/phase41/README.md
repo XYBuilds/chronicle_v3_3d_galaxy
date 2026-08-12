@@ -18,7 +18,7 @@ git checkout 44acdba30b8ae468535712021a7e93b0f073ae1f -- \
 
 ## Environment and provenance
 
-Reproduce only with the same diagnostic generators, Playwright pin, and authoritative gzip. Local regeneration writes gitignored output under `data/runs/phase41/`.
+Reproduce only from the last commit that still contained the diagnostic generators, Playwright pin, and authoritative gzip. Local regeneration is not current product work; Issue #386 retired the generator scripts.
 
 | Input | Value |
 | --- | --- |
@@ -35,7 +35,7 @@ Reproduce only with the same diagnostic generators, Playwright pin, and authorit
 | Resolution / padding / sizeRoot | `1024` / `0.08` / `3` |
 | Hash convention | SHA-256 of the git blob at the last-raw-files commit (LF JSON, not a Windows working-tree checkout) |
 
-Package scripts remain: `npm run evidence:p41.4` and `npm run evidence:p41.5` in `tools/planet-exporter`. This Issue does not retire those generators.
+Package scripts `npm run evidence:p41.4` and `npm run evidence:p41.5` existed in `tools/planet-exporter` at the last-raw-files commit. Issue #386 retired those generators; do not run them from current HEAD.
 
 ## Runs
 

@@ -3,8 +3,8 @@ import * as THREE from 'three'
 import type { HdrCapabilitiesReport, HdrVerdictPre } from './hdrCapabilities'
 
 /**
- * Phase 29.4 — SDR production fallback policy (SSOT for galaxy render path).
- * HDR lab tools (`__hdrProbe`, WebGPU extended probe) must not change these invariants.
+ * SDR production fallback policy (SSOT for galaxy render path).
+ * Capability probing may inform this policy; it must not change the locked SDR output.
  */
 
 export const SDR_FALLBACK_OUTPUT_COLOR_SPACE = THREE.SRGBColorSpace
@@ -25,8 +25,6 @@ export interface SdrProductionPolicy {
   outputColorSpace: string
   /** Production default; Bloom is debug-only (`window.__bloom`). */
   bloomEnabled: false
-  /** `__hdrProbe` uses a separate overlay canvas; must stay hidden unless invoked. */
-  hdrProofOverlayIsolated: true
   fallbackReason: SdrFallbackReason
   verdictPre: HdrVerdictPre
   matrixRow: number | null
@@ -40,9 +38,8 @@ const LOG_PREFIX = '[sdrFallback]'
 export function buildSdrProductionPolicy(report: HdrCapabilitiesReport): SdrProductionPolicy {
   const fallbackReason = deriveFallbackReason(report)
   const notes = [
-    'Phase 29 locks galaxy output to WebGL2 + SRGBColorSpace (D2).',
-    'HDR capability / proof modules are diagnostic only until Phase 33 go.',
-    'SDR readability tuning belongs to Phase 32 — do not change galaxyMeshes here.',
+    'Galaxy output is locked to WebGL2 + SRGBColorSpace.',
+    'HDR remains unshipped; capability probing must not change production SDR output.',
   ]
 
   if (report.verdictPre === 'blocked') {
@@ -55,7 +52,6 @@ export function buildSdrProductionPolicy(report: HdrCapabilitiesReport): SdrProd
     galaxyRenderPath: 'webgl2-srgb-direct',
     outputColorSpace: SDR_FALLBACK_OUTPUT_COLOR_SPACE_LABEL,
     bloomEnabled: false,
-    hdrProofOverlayIsolated: true,
     fallbackReason,
     verdictPre: report.verdictPre,
     matrixRow: report.matrixRow,

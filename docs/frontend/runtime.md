@@ -40,6 +40,7 @@ Development skips the remote manifest and uses bundled gzip fixtures so local wo
 - Python and Vitest cover contracts, locales, and pure helpers.
 - Manual/browser checks cover WebGL presentation.
 - Storybook is a HUD catalog plus one Visual Gate for Three.js scene states (Storybook args/controls grouped by object; Leva is not part of the catalog). It is not a full 3D acceptance substitute.
+- Production remains WebGL2 SDR with Bloom off. Capability probing may inform the SDR fallback policy; `window.__hdrCapabilities` and `window.__hdrProbe` are not installed.
 
 ## Boundaries and invariants
 

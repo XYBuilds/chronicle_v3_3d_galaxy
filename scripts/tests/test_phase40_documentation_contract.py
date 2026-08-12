@@ -6,9 +6,10 @@ import unittest
 from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parents[2]
-_TECH = _ROOT / "docs/project_docs/TMDB 电影宇宙 Tech Spec.md"
-_DESIGN = _ROOT / "docs/project_docs/TMDB 电影宇宙 Design Spec.md"
-_DATA_PIPELINE = _ROOT / "docs/project_docs/TMDB 电影宇宙 Data Pipeline.md"
+_SUPPORTED = _ROOT / "docs/product/supported-experience.md"
+_RUNTIME = _ROOT / "docs/frontend/runtime.md"
+_SEARCH_HUD = _ROOT / "docs/product/search-and-hud.md"
+_REFRESH = _ROOT / "docs/data/refresh-and-publication.md"
 _OG_GUIDE = _ROOT / "docs/guides/P34.3 OG Index KV 上线操作指南.md"
 _CONTRACT = _ROOT / "docs/system/og-index-worker-contract.md"
 _R2_GUIDE = _ROOT / "docs/guides/P18.6b Cloudflare R2 上线操作手册.md"
@@ -23,33 +24,36 @@ _HISTORICAL_OG_GUIDES = (
 
 
 class TestPhase40DocumentationContracts(unittest.TestCase):
-    def test_tech_spec_current_startup_and_og_contract(self) -> None:
-        text = _TECH.read_text(encoding="utf-8")
-        self.assertIn("直接将 `/` 挂载为无选中状态的 **galaxy idle**", text)
-        self.assertIn("`/movie/:id` 在数据可用后进入对应电影 focus", text)
-        self.assertNotIn("**`cover-loading-today`**", text)
-        self.assertNotIn("**`uCoverMode`**", text)
-        self.assertNotIn("#### **1.4.9 The Movie Today", text)
+    def test_runtime_current_startup_and_og_contract(self) -> None:
+        text = _RUNTIME.read_text(encoding="utf-8")
+        self.assertIn("galaxy idle", text)
+        self.assertIn("/movie/:id", text)
+        self.assertNotIn("cover-loading-today", text)
+        self.assertNotIn("uCoverMode", text)
 
-    def test_design_spec_has_no_current_cover_or_today_hud(self) -> None:
-        text = _DESIGN.read_text(encoding="utf-8")
-        self.assertIn("### **3.5 首屏 Loading 与 galaxy idle（Phase 40）**", text)
-        self.assertIn("`/today`（含 query）和 `/og/today.png` 是不支持的 404", text)
+    def test_search_hud_has_no_current_cover_or_today_controls(self) -> None:
+        text = _SEARCH_HUD.read_text(encoding="utf-8")
         self.assertIn("Feedback → Support → Info → Lang → Fullscreen", text)
-        self.assertNotIn("### **3.5 首屏 Loading + Cover", text)
-        self.assertNotIn("Share today → Lang", text)
-        self.assertNotIn("`ShareMovieTodayButton` → `LanguageSwitch`", text)
-        self.assertNotIn("**`coverModeStore`** + `today.json`", text)
+        self.assertNotIn("Share today", text)
+        self.assertNotIn("ShareMovieTodayButton", text)
+        self.assertNotIn("coverModeStore", text)
+        self.assertNotIn("today.json", text)
 
-    def test_data_pipeline_current_deployment_only_lists_galaxy_assets(self) -> None:
-        text = _DATA_PIPELINE.read_text(encoding="utf-8")
-        current_deployment = text[text.index("### 12.1"):text.index("### 12.3")]
-        self.assertIn("galaxy_data.json.gz / galaxy_search_index.json.gz", current_deployment)
-        self.assertIn("`galaxy_data_gzip_url` / `galaxy_search_index_gzip_url` / `data_version`", current_deployment)
-        self.assertNotIn("/ today.json / og-today.png", current_deployment)
-        self.assertNotIn("`today_url`**（可选）**", current_deployment)
-        self.assertNotIn("data/today.json", current_deployment)
-        self.assertNotIn("data/og-today.png", current_deployment)
+    def test_supported_experience_keeps_retired_today_404(self) -> None:
+        text = _SUPPORTED.read_text(encoding="utf-8")
+        self.assertIn("/today", text)
+        self.assertIn("/og/today.png", text)
+        self.assertIn("404", text)
+        self.assertNotIn("ordinary invalid-path", text.lower())
+
+    def test_refresh_publication_lists_galaxy_assets_only(self) -> None:
+        text = _REFRESH.read_text(encoding="utf-8")
+        current = text.split("## Boundaries and invariants")[0]
+        self.assertIn("galaxy_data.json.gz", current)
+        self.assertIn("galaxy_search_index.json.gz", current)
+        self.assertNotIn("today.json", current)
+        self.assertNotIn("og-today.png", current)
+        self.assertNotIn("today_url", current)
 
     def test_og_guide_is_v2_movie_and_meta_g_only(self) -> None:
         text = _OG_GUIDE.read_text(encoding="utf-8")

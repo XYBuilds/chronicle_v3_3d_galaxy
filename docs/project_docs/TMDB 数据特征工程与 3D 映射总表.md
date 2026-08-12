@@ -1,7 +1,7 @@
 # **TMDB 数据特征工程与 3D 映射总表**
 
-> 本表是字段映射速查表，不再作为数据管线规则 SSOT。  
-> 清洗、embedding、UMAP、Z 轴、genre palette、自动化数据流与版本化规则，以 [`TMDB 电影宇宙 Data Pipeline.md`](./TMDB%20电影宇宙%20Data%20Pipeline.md) 为准。
+> 本表是字段映射**supporting reference**，不是 SSOT。
+> 稳定语义见 [`docs/data/galaxy-model.md`](../data/galaxy-model.md) 与 [`docs/product/galaxy-exploration.md`](../product/galaxy-exploration.md)；精确映射与默认值以 schema / 源码为准。
 
 **架构黄金准则**：
 
@@ -14,7 +14,7 @@
 * **阶段 A（轻量化 / subsample 验证）**：`paraphrase-multilingual-MiniLM-L12-v2`，**384 维**；`sentence-transformers` \+ GPU 批编码。  
 * **阶段 B（全量 / 周期重构质量版）**：`paraphrase-multilingual-mpnet-base-v2`，**768 维**。  
 * **拼接与截断**：`Tagline:` / `Overview:` 前缀两行式拼接；无 tagline 则仅 `Overview:`；整段**从尾部截断**至默认 **3000 字符**；**L2 归一化**后进入后续特征融合与 UMAP。  
-* **完整条款**（批大小建议、**PyTorch CUDA / CPU 轮子安装**、`requirements` 锁定、版本语义）：见 [`TMDB 电影宇宙 Data Pipeline.md`](./TMDB%20电影宇宙%20Data%20Pipeline.md)。
+* **完整条款**（批大小建议、**PyTorch CUDA / CPU 轮子安装**、`requirements` 锁定、版本语义）：见 [`docs/data/galaxy-model.md`](../data/galaxy-model.md) 与相关 `scripts/` 实现。
 
 ### **UMAP 主数据定稿（Phase 18 基线）**
 

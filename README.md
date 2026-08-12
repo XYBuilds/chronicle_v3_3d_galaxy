@@ -175,7 +175,7 @@ Top search works in macro roam and in focus; picking a film enters focus (see Fo
 
 After you focus on a film, use the icon row in the archive drawer header to copy a dedicated link or post to X, Reddit, Discord, email, Telegram, Facebook, and similar services. Anyone who opens the link lands on the same film in the cosmos with its archive panel.
 
-The root home route `/` is galaxy idle; share a specific film at `/movie/:id`, which retains its dynamic movie OG. The brand home OG also remains. `/today` and `/og/today.png` are retired and return 404.
+The root home route `/` is galaxy idle; share a specific film at `/movie/:id`, which retains its dynamic movie OG. The brand home OG also remains. `/today` and `/share/today` are retired and follow ordinary invalid-path handling; `/og/today.png` is an unknown `/og/*` path.
 
 ## Browser & environment
 

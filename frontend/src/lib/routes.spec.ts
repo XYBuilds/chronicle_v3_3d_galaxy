@@ -29,10 +29,11 @@ describe('parseMovieIdSegment', () => {
 })
 
 describe('parseLogicalPath', () => {
-  it('maps root and treats /today as unknown', () => {
+  it('maps root and treats retired Today paths as unknown', () => {
     expect(parseLogicalPath('/')).toEqual({ kind: 'home' })
     expect(parseLogicalPath('/today')).toEqual({ kind: 'unknown' })
     expect(parseLogicalPath('/today/')).toEqual({ kind: 'unknown' })
+    expect(parseLogicalPath('/share/today')).toEqual({ kind: 'unknown' })
   })
 
   it('maps valid /movie/:id', () => {

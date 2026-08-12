@@ -31,7 +31,7 @@ Support and community (third-party only; no self-hosted accounts or tickets):
 
 Locales currently ship EN, zh, zh-Hant, ja, es, fr, and ar for HUD chrome strings. TMDB title/overview fields stay in source language. Desktop/mouse is the primary interaction target; WebGL2 is required.
 
-Retired public surfaces: `/today` (including query), `/og/today.png`, and `/share/today` remain reserved historical routes and return a side-effect-free **404** at the service boundary. That reserved-404 contract is current; an ordinary SPA invalid-path remapping is accepted for later delivery and is **not** live yet.
+Retired public surfaces remain reserved from product reuse, with no Today share capability and no active `today` KV key. `/today` and `/share/today` (including query) have no Worker-specific binding and follow Chronicle ordinary invalid-path handling. `/og/today.png` is an unknown route inside the active `/og/*` Worker namespace.
 
 Not shipped: first-time onboarding, multi-dimensional filters/spotlight roadmap items, and HDR as a production render path.
 

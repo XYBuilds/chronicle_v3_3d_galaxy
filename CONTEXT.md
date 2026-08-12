@@ -21,8 +21,8 @@ The movie-focused metadata projection shared from Chronicle to the OG Worker thr
 _Avoid_: Today index, legacy `today` feed
 
 **Retired Today path**:
-The historical `/today`, `/og/today.png`, `/share/today`, and `today`-key behavior that is no longer an active product capability. These names are reserved: current routing returns a side-effect-free 404, and reuse requires a new product Initiative plus an explicit contract migration.
-_Avoid_: active Today contract, fallback data source
+The historical `/today`, `/og/today.png`, `/share/today`, and `today`-key behavior that is no longer an active product capability. These names remain reserved from product reuse. `/today` and `/share/today` follow Chronicle ordinary invalid-path handling; `/og/today.png` is an unknown route inside the active `/og/*` Worker namespace. There is no active `today` KV key. Reuse requires a new product Initiative plus an explicit contract migration.
+_Avoid_: active Today contract, specially bound Worker 404, fallback data source
 
 **Ordered completion marker**:
 The role of `meta:G` after Chronicle has written and verified the current movie delta. It orders publication but does not create a transactional snapshot across Cloudflare KV keys.

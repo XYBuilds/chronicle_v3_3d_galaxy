@@ -175,10 +175,11 @@ class TestCurrentDocumentationAuthority(unittest.TestCase):
                     f"{path.name} must hop to a current topic",
                 )
 
-    def test_phase40_current_claims_live_in_owning_topics(self) -> None:
+    def test_retired_today_current_claims_live_in_owning_topics(self) -> None:
         runtime = _RUNTIME.read_text(encoding="utf-8")
         self.assertIn("galaxy idle", runtime)
         self.assertIn("/movie/:id", runtime)
+        self.assertIn("ordinary invalid-path", runtime.lower())
 
         search = _SEARCH_HUD.read_text(encoding="utf-8")
         self.assertIn("Feedback", search)
@@ -186,9 +187,12 @@ class TestCurrentDocumentationAuthority(unittest.TestCase):
         self.assertIn("Info", search)
 
         supported = _SUPPORTED.read_text(encoding="utf-8")
-        self.assertIn("/today", supported)
-        self.assertIn("404", supported)
-        self.assertIn("/og/today.png", supported)
+        current_supported = supported.split("## Boundaries")[0]
+        self.assertIn("/today", current_supported)
+        self.assertIn("/share/today", current_supported)
+        self.assertIn("/og/today.png", current_supported)
+        self.assertIn("ordinary invalid-path", current_supported.lower())
+        self.assertNotIn("not live yet", current_supported.lower())
 
         refresh = _REFRESH.read_text(encoding="utf-8")
         self.assertIn("galaxy_data.json.gz", refresh)
@@ -219,6 +223,8 @@ class TestCurrentDocumentationAuthority(unittest.TestCase):
         self.assertNotIn("ordinary invalid-path", current)
         self.assertNotIn("ordinary-invalid-path", current)
         self.assertIn("Cloudflare Pages", current)
+        boundaries = text.split("## Boundaries and invariants")[1]
+        self.assertIn("ordinary invalid-path", boundaries.lower())
 
     def test_contract_index_evidence_does_not_treat_legacy_omnibus_as_ssot(self) -> None:
         text = _CONTRACT_INDEX.read_text(encoding="utf-8")

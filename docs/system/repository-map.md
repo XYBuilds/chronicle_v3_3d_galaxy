@@ -25,7 +25,7 @@ flowchart LR
   C -->|Movie identity, galaxy assets, route contract| D
 ```
 
-The `today` OG path is historical/retired and must not be treated as an active contract. GitHub Pages is retired as a site deploy / gray / manual-smoke surface; Cloudflare Pages is the only current site deployment unit. Active contract details live in `contract-index.md`.
+The `today` OG path is historical/retired and must not be treated as an active contract. `/today` and `/share/today` follow Chronicle ordinary invalid-path handling; `/og/today.png` is an unknown route inside the active `/og/*` Worker namespace. GitHub Pages is retired as a site deploy / gray / manual-smoke surface; Cloudflare Pages is the only current site deployment unit. Active contract details live in `contract-index.md`.
 
 ## Ownership rules
 

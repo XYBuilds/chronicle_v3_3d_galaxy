@@ -21,7 +21,7 @@ import {
 const execFileAsync = promisify(execFile)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const outDir = path.resolve(__dirname, '../artifacts/storybook')
-const hudViewports = [ACCEPTANCE_VIEWPORTS['hud-mobile'], ACCEPTANCE_VIEWPORTS['hud-desktop']]
+const hudViewports = [ACCEPTANCE_VIEWPORTS['hud-desktop']]
     // Storybook `lab-desktop` is fullscreen 100%; evidence still uses visual-gate 1920×1080.
     const labViewport = ACCEPTANCE_VIEWPORTS['visual-gate']
 

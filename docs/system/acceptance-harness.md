@@ -70,7 +70,6 @@ Pinned browser tooling: Playwright **1.52.0** Chromium (same pin as Planet Expor
 | --- | --- | --- | --- |
 | `app-desktop` / `visual-gate` | 1920×1080 | 1 | Main app / Visual Gate evidence captures |
 | Storybook `lab-desktop` | fullscreen `100%` | 1 | Visual Gate catalog in Storybook UI (not a 1920×1080 alias) |
-| `hud-mobile` | 390×844 | 1 | HUD Storybook (layout, not mobile WebGL support) |
 | `hud-desktop` | 1280×800 | 1 | HUD Storybook |
 
 Firefox or real macOS Safari only when the declared surface requires them.

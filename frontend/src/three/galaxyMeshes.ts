@@ -10,7 +10,7 @@ import galaxyIdleVertexShader from './shaders/galaxyIdle.vert.glsl'
 import { IDLE_NEAR_FADE_DEFAULTS } from './idleNearFade'
 import { IDLE_Z_FADE_DEFAULTS } from './idleZFade'
 import { computeSelectionMaskAtlasDimensions } from './selectionMask'
-import { DEFAULT_GALAXY_U_ACTIVE_SIZE_MUL, DEFAULT_GALAXY_U_SIZE_SCALE } from './galaxyUniformDefaults'
+import { DEFAULT_GALAXY_U_ACTIVE_SIZE_MUL, DEFAULT_GALAXY_U_BG_SIZE_MUL, DEFAULT_GALAXY_U_SIZE_SCALE } from './galaxyUniformDefaults'
 import { PLANET_VISUAL_DEFAULTS } from './planetVisualDefaults'
 export { DEFAULT_GALAXY_U_ACTIVE_SIZE_MUL, DEFAULT_GALAXY_U_SIZE_SCALE } from './galaxyUniformDefaults'
 export { IDLE_NEAR_FADE_DEFAULTS } from './idleNearFade'
@@ -99,7 +99,7 @@ function makeSharedUniforms(
       uZVisWindow: { value: 1 },
       uSizeScale: { value: DEFAULT_GALAXY_U_SIZE_SCALE },
       uActiveSizeMul: { value: DEFAULT_GALAXY_U_ACTIVE_SIZE_MUL },
-      uBgSizeMul: { value: 0.002 },
+      uBgSizeMul: { value: DEFAULT_GALAXY_U_BG_SIZE_MUL },
       uLMin: { value: PLANET_VISUAL_DEFAULTS.galaxyColor.lMin },
       uLMax: { value: PLANET_VISUAL_DEFAULTS.galaxyColor.lMax },
       uHighRatingT: { value: PLANET_VISUAL_DEFAULTS.galaxyColor.highRatingT },

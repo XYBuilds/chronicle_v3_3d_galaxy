@@ -15,14 +15,60 @@ const packageJson = JSON.parse(readFileSync(path.join(frontendRoot, 'package.jso
 const STORY_GROUPS = ['Boot', 'Chrome', 'Hover', 'Drawer', 'Timeline', 'Visual Gate'] as const
 
 const VISUAL_GATE_CONTROLS = [
+  'sessionKind',
+  'focusMovieId',
   'zCurrent',
   'zVisWindow',
+  'uZCamDistance',
+  'universeBgHex',
   'uSizeScale',
+  'uBgSizeMul',
+  'idleNearFadeEnabled',
+  'idleNearFadeStartDist',
+  'idleNearFadeWidth',
+  'idleNearFadeMinAlpha',
+  'idleZFadeMode',
+  'idleZFadeOutsideAlpha',
+  'uActiveSizeMul',
+  'uLMin',
+  'uLMax',
   'uChroma',
-  'focusMovieId',
+  'uHighRatingT',
+  'uHighTierTRangeScale',
+  'uLightnessRatingExponent',
+  'uDistanceLightnessFloor',
+  'uHuntGamma',
+  'uHuntApplyMask',
+  'uFocusDimChroma',
+  'uFocusDimL',
+  'uFocusDimMode',
+  'focusNonTargetActiveAlpha',
+  'focusHoveredActiveAlpha',
+  'focusNeighborRadius',
+  'planetUScale',
+  'planetOctaves',
+  'planetPersistence',
   'planetAreaRatio',
+  'planetStepHeight',
+  'planetStepSmoothness',
+  'planetLightness',
+  'planetChroma',
+  'lightingEnabled',
+  'lightDirX',
+  'lightDirY',
+  'lightDirZ',
+  'keyLightIntensity',
+  'flatShadingMix',
+  'perlinBloomEnabled',
+  'perlinBloomStrength',
+  'perlinBloomRadius',
+  'perlinBloomThreshold',
   'postProcessBloom',
   'bloomStrength',
+  'bloomRadius',
+  'bloomThreshold',
+  'constellationEnabled',
+  'constellationChainOpacity',
 ] as const
 
 /** Accepted Variant B inventory (#372 / #383). */
@@ -58,9 +104,11 @@ const EXPECTED_STORIES = [
   'Timeline/WideZSpan',
   'Timeline/Interactive',
   'Timeline/InteractiveVertical',
-  'Visual Gate/IdleParticles',
+  'Visual Gate/IdleField',
   'Visual Gate/FocusedPlanet',
-  'Visual Gate/FocusedBloomDebug',
+  'Visual Gate/PersonSelect',
+  'Visual Gate/GenreSelect',
+  'Visual Gate/FocusNeighborhood',
 ] as const
 
 const FORBIDDEN_FILES = [
@@ -113,10 +161,8 @@ describe('Storybook Variant B catalog', () => {
     expect(order).toEqual([...STORY_GROUPS])
   })
 
-  it('registers hud-mobile, hud-desktop, and fullscreen lab-desktop viewports', () => {
-    expect(previewSource).toMatch(/['"]hud-mobile['"]/)
-    expect(previewSource).toMatch(/390px/)
-    expect(previewSource).toMatch(/844px/)
+  it('registers hud-desktop and fullscreen lab-desktop viewports without a mobile HUD viewport', () => {
+    expect(previewSource).not.toMatch(/hud-mobile/)
     expect(previewSource).toMatch(/['"]hud-desktop['"]/)
     expect(previewSource).toMatch(/1280px/)
     expect(previewSource).toMatch(/800px/)
@@ -140,18 +186,25 @@ describe('Storybook Variant B catalog', () => {
     expect(existsSync(path.join(srcRoot, 'storybook/fixtures/subsampleMovies.ts'))).toBe(true)
   })
 
-  it('matches the accepted ~34-story inventory', () => {
+  it('matches the HUD + five-state Visual Gate inventory', () => {
     expect(collectCatalog()).toEqual([...EXPECTED_STORIES].sort())
-    expect(EXPECTED_STORIES).toHaveLength(34)
+    expect(EXPECTED_STORIES).toHaveLength(36)
   })
 
-  it('limits Visual Gate controls to the curated eight args', () => {
-    const visualGate = readFileSync(path.join(srcRoot, 'storybook/VisualGate.stories.tsx'), 'utf8')
-    const argTypesBlock = visualGate.match(/argTypes:\s*\{([\s\S]*?)\n {2}\},/)
+  it('groups Visual Gate controls by scene object and does not use Leva', () => {
+    const controls = readFileSync(path.join(srcRoot, 'storybook/visualGateControls.ts'), 'utf8')
+    const stories = readFileSync(path.join(srcRoot, 'storybook/VisualGate.stories.tsx'), 'utf8')
+    const argTypesBlock = controls.match(/export const visualGateArgTypes = \{([\s\S]*?)\n\} satisfies/)
     expect(argTypesBlock).not.toBeNull()
-    const keys = [...argTypesBlock![1]!.matchAll(/^\s{4}([A-Za-z][A-Za-z0-9]*)\s*:/gm)].map((m) => m[1])
+    const keys = [...argTypesBlock![1]!.matchAll(/^\s{2}([A-Za-z][A-Za-z0-9]*)\s*:/gm)].map((m) => m[1])
     expect(keys).toEqual([...VISUAL_GATE_CONTROLS])
-    expect(visualGate).not.toMatch(/from ['"]leva['"]/)
+    expect(controls).toMatch(/cat\('Session'\)/)
+    expect(controls).toMatch(/cat\('Camera \/ Z slab'\)/)
+    expect(controls).toMatch(/cat\('Perlin planet'\)/)
+    expect(controls).toMatch(/cat\('Bloom'\)/)
+    expect(stories).toMatch(/argTypes:\s*visualGateArgTypes/)
+    expect(stories).not.toMatch(/from ['"]leva['"]/)
+    expect(controls).not.toMatch(/from ['"]leva['"]/)
   })
 
   it('removes retired lab, scaffold, and primitive story surfaces', () => {

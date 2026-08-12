@@ -12,11 +12,6 @@ const preview: Preview = {
     },
     viewport: {
       options: {
-        'hud-mobile': {
-          name: 'hud-mobile',
-          styles: { width: '390px', height: '844px' },
-          type: 'mobile',
-        },
         'hud-desktop': {
           name: 'hud-desktop',
           styles: { width: '1280px', height: '800px' },

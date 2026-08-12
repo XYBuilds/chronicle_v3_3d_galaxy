@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { HUD_CAPTURE_STORY_IDS, VISUAL_GATE_CAPTURE_STORY_IDS } from './storybookStatic.js'
 
 describe('Storybook capture targets', () => {
-  it('covers HUD journey groups and three Visual Gate stories', () => {
+  it('covers HUD journey groups and five Visual Gate stories', () => {
     const hud = [...HUD_CAPTURE_STORY_IDS]
     expect(new Set(hud).size).toBe(hud.length)
     expect(hud.some((id) => id.startsWith('boot-'))).toBe(true)
@@ -12,10 +12,13 @@ describe('Storybook capture targets', () => {
     expect(hud.some((id) => id.startsWith('drawer-'))).toBe(true)
     expect(hud.some((id) => id.startsWith('timeline-'))).toBe(true)
     expect(hud).toContain('chrome-toptools--rtl')
+    expect(hud).toContain('timeline--horizontal')
     expect([...VISUAL_GATE_CAPTURE_STORY_IDS]).toEqual([
-      'visual-gate--idle-particles',
+      'visual-gate--idle-field',
       'visual-gate--focused-planet',
-      'visual-gate--focused-bloom-debug',
+      'visual-gate--person-select',
+      'visual-gate--genre-select',
+      'visual-gate--focus-neighborhood',
     ])
   })
 })

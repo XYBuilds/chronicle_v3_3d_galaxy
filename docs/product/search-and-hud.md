@@ -32,7 +32,7 @@ Esc stack (outermost first): blur search → close drawer → exit focus while k
 
 HUD-visible English copy is authored in `frontend/src/lib/locales/en.json` and exported through `frontend/src/lib/strings.ts` / `useStrings()`. Locale resolution uses `?lang=` → localStorage → navigator → `en`; `ar` sets `dir=rtl`.
 
-- Storybook is the HUD journey catalog (Boot → Chrome → Hover → Drawer → Timeline) plus one curated Visual Gate. It is not a substitute for production WebGL proof. Narrow `hud-mobile` captures are HUD layout evidence, not mobile WebGL support.
+- Storybook is the HUD journey catalog (Boot → Chrome → Hover → Drawer → Timeline) plus one Visual Gate for Three.js states. It is not a substitute for production WebGL proof. HUD stories use `hud-desktop` only.
 
 ## Boundaries and invariants
 

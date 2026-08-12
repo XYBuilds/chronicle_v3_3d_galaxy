@@ -28,9 +28,11 @@ export const HUD_CAPTURE_STORY_IDS = [
 ] as const
 
 export const VISUAL_GATE_CAPTURE_STORY_IDS = [
-  'visual-gate--idle-particles',
+  'visual-gate--idle-field',
   'visual-gate--focused-planet',
-  'visual-gate--focused-bloom-debug',
+  'visual-gate--person-select',
+  'visual-gate--genre-select',
+  'visual-gate--focus-neighborhood',
 ] as const
 
 type StorybookIndex = {

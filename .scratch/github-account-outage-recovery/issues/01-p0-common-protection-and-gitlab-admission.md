@@ -9,6 +9,7 @@
 **Blocked by:** None — can start immediately.
 
 **Status:** ready-for-agent
+**Assignee:** PEXY98
 
 - [ ] The maintainer records the Issue's R0–R3 tier and canonical protected surfaces after reviewing the exact execution scope; no automated path classifier supplies the declaration.
 - [ ] Bitwarden Free is configured as the secrets authority, and a synthetic password-protected export/import drill proves record equality without using live credentials.

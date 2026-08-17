@@ -1,0 +1,12 @@
+[
+  {
+    "name": "synthetic-cloudflare-token",
+    "value": "synthetic-value-1",
+    "purpose": "admission drill"
+  },
+  {
+    "name": "synthetic-restic-password",
+    "value": "synthetic-value-2",
+    "purpose": "admission drill"
+  }
+]

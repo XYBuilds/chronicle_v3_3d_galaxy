@@ -9,7 +9,7 @@ from publication.errors import PublicationError
 from publication.store import PublicationStore, receipt_key
 
 SCHEMA = "chronicle-publication-receipt-v1"
-ENTRY_POINTS = frozenset({"site-release", "daily-data-release"})
+ENTRY_POINTS = frozenset({"site-release", "daily-data-release", "monthly-data-release"})
 TRIGGERS = frozenset({"merge", "schedule", "manual", "replay", "windows-emergency", "fixture"})
 RESULTS = frozenset({"pending", "success", "failed", "rolled-back", "skipped-backlog", "stopped"})
 _SECRETISH = re.compile(r"(token|secret|password|key|session|authorization|credential)", re.I)

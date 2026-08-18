@@ -1,4 +1,4 @@
-"""Maintainer CLI for Chronicle P1 Site and Daily publication entry points."""
+"""Maintainer CLI for Chronicle Site, Daily, and suspended Monthly publication entry points."""
 from __future__ import annotations
 
 import argparse
@@ -15,10 +15,10 @@ _SCRIPTS_DIR = Path(__file__).resolve().parents[1]
 if str(_SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS_DIR))
 
-from publication.entrypoints import Command, CommandResult, run_daily_release, run_site_release
+from publication.entrypoints import Command, CommandResult, run_daily_release, run_monthly_release, run_site_release
 from publication.errors import PublicationError
-from publication.evidence import assemble_p1_evidence
-from publication.gitlab_ci import validate_p1_gitlab_ci
+from publication.evidence import assemble_p1_evidence, assemble_p2_evidence
+from publication.gitlab_ci import validate_p2_gitlab_ci
 from publication.inventory import evaluate_inventory
 from publication.sequence import bootstrap_sequence
 from publication.store import MemoryPublicationStore
@@ -73,6 +73,7 @@ def _request_from_args(args: argparse.Namespace) -> dict[str, object]:
             "job_id": args.job_id,
         },
         "covered_by_sequence": args.covered_by_sequence,
+        "bundle_sha256": getattr(args, "bundle_sha256", ""),
     }
 
 
@@ -100,6 +101,8 @@ def _run_entry(kind: str, args: argparse.Namespace) -> int:
     runner = _runner_for(args)
     if kind == "site":
         receipt = run_site_release(store=store, runner=runner, request=request, clock=_clock)
+    elif kind == "monthly":
+        receipt = run_monthly_release(store=store, runner=runner, request=request, clock=_clock)
     else:
         receipt = run_daily_release(store=store, runner=runner, request=request, clock=_clock)
     print(json.dumps(receipt, indent=2, sort_keys=True), flush=True)
@@ -136,6 +139,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     add_shared(site)
     daily = sub.add_parser("daily-release")
     add_shared(daily)
+    monthly = sub.add_parser("monthly-release")
+    add_shared(monthly)
+    monthly.add_argument("--bundle-sha256", default="", dest="bundle_sha256")
 
     bootstrap = sub.add_parser("bootstrap-sequence")
     bootstrap.add_argument("--identities", nargs="+", required=True)
@@ -152,12 +158,19 @@ def main(argv: Sequence[str] | None = None) -> int:
     evidence.add_argument("--approve-merge", action="store_true")
     evidence.add_argument("--approve-production", action="store_true")
 
+    p2_evidence = sub.add_parser("p2-evidence")
+    p2_evidence.add_argument("--gates", type=Path, required=True)
+    p2_evidence.add_argument("--risk", type=Path, required=True)
+    p2_evidence.add_argument("--approve-merge", action="store_true")
+
     args = parser.parse_args(list(argv) if argv is not None else None)
     try:
         if args.command == "site-release":
             return _run_entry("site", args)
         if args.command == "daily-release":
             return _run_entry("daily", args)
+        if args.command == "monthly-release":
+            return _run_entry("monthly", args)
         if args.command == "bootstrap-sequence":
             from publication.r2 import R2PublicationStore
 
@@ -172,7 +185,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(json.dumps(evaluate_inventory(observed), indent=2, sort_keys=True), flush=True)
             return 0
         if args.command == "validate-ci":
-            accepted = validate_p1_gitlab_ci(args.ci.read_text(encoding="utf-8"))
+            accepted = validate_p2_gitlab_ci(args.ci.read_text(encoding="utf-8"))
             print(json.dumps(accepted, indent=2, sort_keys=True), flush=True)
             return 0
         if args.command == "evidence":
@@ -188,8 +201,20 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
             print(json.dumps(bundle, indent=2, sort_keys=True), flush=True)
             return 0
+        if args.command == "p2-evidence":
+            gates = _load_json(args.gates)
+            risk = _load_json(args.risk)
+            if not isinstance(gates, Mapping) or not isinstance(risk, Mapping):
+                raise PublicationError("gates and risk declaration must be JSON objects")
+            bundle = assemble_p2_evidence(
+                gates=gates,
+                risk_declaration=risk,
+                merge_approved=args.approve_merge,
+            )
+            print(json.dumps(bundle, indent=2, sort_keys=True), flush=True)
+            return 0
     except PublicationError as exc:
-        print(f"[p1] error: {exc}", flush=True)
+        print(f"[publication] error: {exc}", flush=True)
         return 1
     parser.error(f"unknown command {args.command}")
     return 2

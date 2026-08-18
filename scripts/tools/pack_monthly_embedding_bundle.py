@@ -87,6 +87,8 @@ def main(argv: list[str] | None = None) -> int:
         default=_REPO_ROOT / "data" / "runs" / "monthly_refit_embedding_bundle.zip",
         help="Output zip path (default: data/runs/monthly_refit_embedding_bundle.zip)",
     )
+    p.add_argument("--validate-only", action="store_true", help="Validate the four files without writing a zip")
+    p.add_argument("--expected-sha256", default="", help="Optional whole-bundle SHA-256 to compare against an existing zip")
     args = p.parse_args(argv)
     root = args.cache_dir.expanduser().resolve()
     out = args.out.expanduser().resolve()
@@ -107,6 +109,22 @@ def main(argv: list[str] | None = None) -> int:
     _assert_matrix_contract(name="text", matrix=te, expected_rows=n, expected_width=384)
     _assert_matrix_contract(name="genre", matrix=ge, expected_rows=n)
     _assert_matrix_contract(name="language", matrix=le, expected_rows=n, expected_width=len(FROZEN_LANG_ORDER))
+
+    if args.validate_only:
+        expected = str(args.expected_sha256).strip().lower()
+        if expected:
+            if not out.is_file():
+                print(f"error: expected zip {out} is missing for SHA-256 check", file=sys.stderr)
+                return 1
+            digest = hashlib.sha256()
+            with out.open("rb") as handle:
+                for block in iter(lambda: handle.read(1024 * 1024), b""):
+                    digest.update(block)
+            if digest.hexdigest() != expected:
+                print("error: canonical embedding bundle hash mismatch", file=sys.stderr)
+                return 1
+        print("[pack] validated canonical embedding bundle", flush=True)
+        return 0
 
     out.parent.mkdir(parents=True, exist_ok=True)
     _write_deterministic_zip(paths, out)

@@ -624,7 +624,7 @@ def main(argv: list[str] | None = None) -> int:
             flush=True,
         )
 
-        run_num = os.environ.get("GITHUB_RUN_NUMBER", "0").strip() or "0"
+        run_num = (os.environ.get("GALAXY_EXPORT_SEQ") or os.environ.get("GITHUB_RUN_NUMBER", "0")).strip() or "0"
         utc_now = datetime.now(timezone.utc)
         if str(args.version_label).strip():
             ver_label = str(args.version_label).strip()

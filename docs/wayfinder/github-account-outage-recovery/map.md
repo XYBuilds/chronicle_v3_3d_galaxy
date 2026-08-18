@@ -1,4 +1,5 @@
 ---
+portable_id: tmc:chronicle:01M0WFG0000000000000000001
 title: Restore development and operations without a GitHub account single point of failure
 tracker: local-markdown
 type: wayfinder:map

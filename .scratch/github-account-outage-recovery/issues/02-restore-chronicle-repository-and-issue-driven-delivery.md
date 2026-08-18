@@ -9,6 +9,7 @@
 **Blocked by:** [01 — P0 Common Protection and GitLab Admission](./01-p0-common-protection-and-gitlab-admission.md)
 
 **Status:** ready-for-agent
+**Assignee:** PEXY98
 
 - [ ] A human-approved risk declaration identifies the P0 tier and canonical protected surfaces for the actual Chronicle restoration scope.
 - [ ] Chronicle is created as a private project in the admitted GitLab namespace and remains a non-authoritative candidate until every development-resume criterion passes.

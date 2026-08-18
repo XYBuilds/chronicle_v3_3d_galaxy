@@ -1,4 +1,5 @@
 ---
+portable_id: tmc:chronicle:01M0WFG0000000000000000003
 id: WFR-002
 parent: ../map.md
 type: wayfinder:research

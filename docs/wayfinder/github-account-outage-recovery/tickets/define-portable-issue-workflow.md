@@ -1,4 +1,5 @@
 ---
+portable_id: tmc:chronicle:01M0WFG0000000000000000008
 id: WFG-007
 parent: ../map.md
 type: wayfinder:grilling

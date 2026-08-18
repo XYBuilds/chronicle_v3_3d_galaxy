@@ -1,0 +1,42 @@
+# Chronicle P0 non-deploying development adapter.
+# Site Release, Data Release, Production Recovery, production secrets, and schedules stay disabled.
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH
+
+stages:
+  - verify
+
+default:
+  interruptible: true
+
+frontend_verify:
+  stage: verify
+  image: node:22-bookworm
+  cache:
+    key:
+      files:
+        - package-lock.json
+    paths:
+      - .npm/
+  script:
+    - npm ci --cache .npm --prefer-offline
+    - npm test
+    - npm run lint
+    - npm run build
+
+docs_verify:
+  stage: verify
+  image: python:3.12-bookworm
+  before_script:
+    - apt-get update && apt-get install -y git
+    - pip install pytest
+  script:
+    - python -m pytest scripts/tests/test_current_documentation_authority.py scripts/tests/test_chronicle_p0_restore.py scripts/tests/test_p0_common_protection.py
+    - git diff --check

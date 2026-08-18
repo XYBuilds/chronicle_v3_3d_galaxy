@@ -1,4 +1,4 @@
-"""Maintainer CLI for P0 common protection and GitLab admission."""
+"""Maintainer CLI for P0 common protection, GitLab admission, and Chronicle restore."""
 from __future__ import annotations
 
 import argparse
@@ -12,11 +12,21 @@ _SCRIPTS_DIR = Path(__file__).resolve().parents[1]
 if str(_SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS_DIR))
 
+from recovery.chronicle_restore import (
+    RestoreError,
+    assemble_resume_evidence,
+    validate_ci_adapter,
+    validate_protection,
+    validate_ref_plan,
+    validate_remotes,
+    validate_secret_scan,
+)
 from recovery.evidence import EvidenceError, assemble_evidence_bundle
 from recovery.gitlab_admission import AdmissionError, local_render_issue_export, validate_admission_plan
 from recovery.policy import EXCLUSION_POLICY_ID, RESTIC_PIN, SOURCE_ROOTS
 from recovery.secrets import SecretsError, credential_inventory, synthetic_export_import
 from recovery.snapshot import restic_argv
+from recovery.tracker import TrackerError, export_handoff, render_export
 
 
 def _load_json(path: Path) -> object:
@@ -96,6 +106,53 @@ def _evidence(
     return 0
 
 
+def _require_object(payload: object, label: str) -> dict:
+    if not isinstance(payload, dict):
+        raise RestoreError(f"{label} must be a JSON object")
+    return payload
+
+
+def _export_handoff(scratch: Path, wayfinder: Path, alias_map_path: Path) -> int:
+    alias_map = _load_json(alias_map_path)
+    if not isinstance(alias_map, dict):
+        print("[p0] error: alias map must be a JSON object", flush=True)
+        return 1
+    bundle = export_handoff(scratch, wayfinder, {str(key): str(value) for key, value in alias_map.items()})
+    print(json.dumps({"schema": bundle["schema"], "count": len(bundle["records"])}, indent=2, sort_keys=True), flush=True)
+    print(render_export(bundle), flush=True)
+    return 0
+
+
+def _restore_plan(path: Path, ci_path: Path) -> int:
+    plan = _require_object(_load_json(path), "restore plan")
+    refs = validate_ref_plan(_require_object(plan.get("refs"), "refs"))
+    planned = [item["src"] for item in refs["refs"]]
+    scan = validate_secret_scan(_require_object(plan.get("secret_scan"), "secret_scan"), planned_refs=planned)
+    remotes = validate_remotes(_require_object(plan.get("remotes"), "remotes"))
+    protection = validate_protection(_require_object(plan.get("protection"), "protection"))
+    ci = validate_ci_adapter(ci_path.read_text(encoding="utf-8"))
+    print(
+        json.dumps(
+            {"refs": refs, "secret_scan": scan, "remotes": remotes, "protection": protection, "ci_adapter": ci},
+            indent=2,
+            sort_keys=True,
+        ),
+        flush=True,
+    )
+    return 0
+
+
+def _resume_evidence(gates_path: Path, risk_path: Path, approve_merge: bool) -> int:
+    gates = _load_json(gates_path)
+    risk = _load_json(risk_path)
+    if not isinstance(gates, dict) or not isinstance(risk, dict):
+        print("[p0] error: gates and risk declaration must be JSON objects", flush=True)
+        return 1
+    bundle = assemble_resume_evidence(gates=gates, risk_declaration=risk, merge_approved=approve_merge)
+    print(json.dumps(bundle, indent=2, sort_keys=True), flush=True)
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -115,6 +172,17 @@ def main(argv: Sequence[str] | None = None) -> int:
     evidence.add_argument("--risk", type=Path, required=True)
     evidence.add_argument("--approve-gitlab", action="store_true")
     evidence.add_argument("--residual", action="append", default=None, dest="residual_uncertainty")
+    handoff = sub.add_parser("export-handoff", help="export and locally render the recovery tracker bundle")
+    handoff.add_argument("--scratch", type=Path, required=True)
+    handoff.add_argument("--wayfinder", type=Path, required=True)
+    handoff.add_argument("--alias-map", type=Path, required=True)
+    restore = sub.add_parser("restore-plan", help="fail-closed check for Chronicle restore refs, remotes, and CI")
+    restore.add_argument("--plan", type=Path, required=True)
+    restore.add_argument("--ci", type=Path, default=Path(".gitlab-ci.yml"))
+    resume = sub.add_parser("resume-evidence", help="assemble the Chronicle development-resume evidence bundle")
+    resume.add_argument("--gates", type=Path, required=True)
+    resume.add_argument("--risk", type=Path, required=True)
+    resume.add_argument("--approve-merge", action="store_true")
     args = parser.parse_args(list(argv) if argv is not None else None)
     try:
         if args.command == "prepare":
@@ -134,7 +202,13 @@ def main(argv: Sequence[str] | None = None) -> int:
                 args.approve_gitlab,
                 tuple(args.residual_uncertainty or ()),
             )
-    except (AdmissionError, EvidenceError, SecretsError) as exc:
+        if args.command == "export-handoff":
+            return _export_handoff(args.scratch, args.wayfinder, args.alias_map)
+        if args.command == "restore-plan":
+            return _restore_plan(args.plan, args.ci)
+        if args.command == "resume-evidence":
+            return _resume_evidence(args.gates, args.risk, args.approve_merge)
+    except (AdmissionError, EvidenceError, RestoreError, SecretsError, TrackerError) as exc:
         print(f"[p0] error: {exc}", flush=True)
         return 1
     parser.error(f"unknown command {args.command}")

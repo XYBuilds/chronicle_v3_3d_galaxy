@@ -32,7 +32,7 @@ class EvidenceError(ValueError):
     """The evidence bundle is incomplete or not human-authorized."""
 
 
-def _require_risk_declaration(declaration: Mapping[str, Any] | None) -> dict[str, Any]:
+def require_risk_declaration(declaration: Mapping[str, Any] | None) -> dict[str, Any]:
     if not declaration:
         raise EvidenceError("human risk declaration is required")
     if declaration.get("schema") != "chronicle-risk-declaration-v1":
@@ -105,7 +105,7 @@ def assemble_evidence_bundle(
     gitlab_human_approval: bool,
     residual_uncertainty: Sequence[str] = (),
 ) -> dict[str, Any]:
-    risk = _require_risk_declaration(risk_declaration)
+    risk = require_risk_declaration(risk_declaration)
     normalized = _normalize_gates(gates)
     if not gitlab_human_approval:
         raise EvidenceError("human approval is required to admit GitLab")

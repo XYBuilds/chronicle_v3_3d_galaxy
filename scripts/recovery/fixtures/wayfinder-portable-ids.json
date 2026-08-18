@@ -1,0 +1,15 @@
+{
+  "map.md": "tmc:chronicle:01M0WFG0000000000000000001",
+  "clarify-github-suspension-boundaries.md": "tmc:chronicle:01M0WFG0000000000000000002",
+  "compare-independent-development-hosts.md": "tmc:chronicle:01M0WFG0000000000000000003",
+  "compare-personal-secrets-stores.md": "tmc:chronicle:01M0WFG0000000000000000004",
+  "define-complete-recovery-snapshot.md": "tmc:chronicle:01M0WFG0000000000000000005",
+  "choose-independent-control-plane.md": "tmc:chronicle:01M0WFG0000000000000000006",
+  "choose-secrets-authority.md": "tmc:chronicle:01M0WFG0000000000000000007",
+  "define-portable-issue-workflow.md": "tmc:chronicle:01M0WFG0000000000000000008",
+  "define-p0-restoration.md": "tmc:chronicle:01M0WFG0000000000000000009",
+  "design-p1-publication-control-plane.md": "tmc:chronicle:01M0WFG000000000000000000A",
+  "design-p2-recovery-path.md": "tmc:chronicle:01M0WFG000000000000000000B",
+  "design-long-term-redundancy.md": "tmc:chronicle:01M0WFG000000000000000000C",
+  "accept-ordered-specification.md": "tmc:chronicle:01M0WFG000000000000000000D"
+}

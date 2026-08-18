@@ -1,1 +1,1 @@
-"""Chronicle-owned P0 common protection and GitLab admission tooling."""
+"""Chronicle-owned P0 protection, GitLab admission, and repository-restore tooling."""

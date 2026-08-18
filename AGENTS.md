@@ -6,7 +6,7 @@ Chronicle is the product-control repository for The Movie Cosmos. It owns the pr
 
 ### Issue tracker
 
-GitHub Issues are the public entry point for new work in this repository. Use `gh` for Issue operations. Accepted specifications are published as Issues; implementation work stays in the repository that owns the code. See `docs/agents/issue-tracker.md`.
+Issues live in the private Chronicle GitLab project. Use `glab` for Issue and merge-request operations. See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 
@@ -21,7 +21,7 @@ Chronicle uses a single repository context plus a federated system map under `do
 - Historical `.cursor/plans/` and `docs/reports/` are archival records. Index them; do not migrate or renumber them.
 - New cross-repository work starts as one parent Initiative and has one implementation Issue per affected repository.
 - The parent Initiative owns the product goal, contract, dependency order, compatibility window, rollback plan, and integration acceptance.
-- Each repository owns its branch, tests, PR, deployment, and implementation evidence.
+- Each repository owns its branch, tests, merge request, deployment, and implementation evidence.
 - Chronicle is the temporary coordination owner for product-level Initiatives. It does not own Worker or Daily runtime behavior.
 - Cross-repository contracts must be recorded in `docs/system/contract-index.md`.
 
@@ -33,8 +33,8 @@ Required delivery checks, regardless of host:
 
 - Work from an Issue-owned branch off an up-to-date default base (`main` unless otherwise specified).
 - Run the verification that matches the changed scope (frontend Vitest/lint/build, `scripts/tests/` pytest, locale schema checks, documentation authority tests, `git diff --check`, acceptance harness checks from [`docs/system/acceptance-harness.md`](docs/system/acceptance-harness.md) when the Issue declares risk surfaces, and any Issue-named checks).
-- Delivery Issues/PRs must include an explicit human risk declaration (R0–R3 + protected surfaces). Do not invent a path classifier.
+- Delivery Issues and merge requests must include an explicit human risk declaration (R0–R3 + protected surfaces). Do not invent a path classifier.
 - Keep Plans and Reports historical; do not rewrite accepted ADRs as silent edits.
-- **Human merge and Issue closure approval are mandatory.** Agents may prepare evidence and open a PR when authorized, but must not merge or close the Issue without explicit human approval.
+- **Human merge and Issue closure approval are mandatory.** Agents may prepare evidence and open a merge request when authorized, but must not merge or close the Issue without explicit human approval.
 
 Current documentation navigation starts at [`docs/system/decision-index.md`](docs/system/decision-index.md).

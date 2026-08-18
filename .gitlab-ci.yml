@@ -1,24 +1,36 @@
-# Chronicle P0 non-deploying development adapter.
-# Site Release, Data Release, Production Recovery, production secrets, and schedules stay disabled.
+# Chronicle verification plus P1 publication jobs with production triggers disabled.
+# Site Release, Daily Data Release, production secrets, and schedules stay human-gated.
+# GitLab remains the sole publication scheduler until an approved GitHub cutback.
 
 workflow:
   rules:
-    - if: $CI_PIPELINE_SOURCE == "schedule"
-      when: never
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
       when: never
     - if: $CI_COMMIT_BRANCH
+    - if: $CI_PIPELINE_SOURCE == "schedule"
 
 stages:
   - verify
+  - publish
 
 default:
   interruptible: true
 
+variables:
+  P1_SITE_TRIGGER_ENABLED: "false"
+  P1_DAILY_SCHEDULE_ENABLED: "false"
+  PRODUCTION_ORIGIN: "https://themoviecosmos.com"
+  GIT_STRATEGY: fetch
+
 frontend_verify:
   stage: verify
   image: node:24-bookworm
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH
   script:
     # Windows lockfile + Linux optional native bindings: same install as owner Linux CI.
     - rm -rf node_modules frontend/node_modules package-lock.json
@@ -30,9 +42,65 @@ frontend_verify:
 docs_verify:
   stage: verify
   image: python:3.12-bookworm
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH
   before_script:
     - apt-get update && apt-get install -y git
     - pip install pytest
   script:
-    - python -m pytest scripts/tests/test_current_documentation_authority.py scripts/tests/test_chronicle_p0_restore.py scripts/tests/test_p0_common_protection.py
+    - python -m pytest scripts/tests/test_current_documentation_authority.py scripts/tests/test_chronicle_p0_restore.py scripts/tests/test_p0_common_protection.py scripts/tests/test_p1_publication_control.py scripts/tests/test_release_primitives_contract.py scripts/tests/test_og_pipeline_phase34.py
     - git diff --check
+
+site_release:
+  stage: publish
+  image: node:24-bookworm
+  resource_group: galaxy-r2-pages-release
+  interruptible: false
+  timeout: 30 minutes
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_COMMIT_REF_PROTECTED == "true" && $CI_PIPELINE_SOURCE == "web"
+      when: manual
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_COMMIT_REF_PROTECTED == "true" && $CI_PIPELINE_SOURCE == "push" && $P1_SITE_TRIGGER_ENABLED == "true"
+    - when: never
+  variables:
+    SITE_RELEASE_SHELL: "1"
+    VITE_CF_BEACON_TOKEN: $CF_WEB_ANALYTICS_BEACON_TOKEN
+  before_script:
+    - apt-get update && apt-get install -y python3 python3-pip python3-venv
+    - python3 -m pip install --upgrade pip
+    - python3 -m pip install "boto3>=1.34,<2"
+  script:
+    # npm run build -w frontend is owned by the shared Site Release entry point.
+    - python3 scripts/publication/cli.py site-release --mode production --ref "$CI_COMMIT_BRANCH" --protected --pipeline-source "$CI_PIPELINE_SOURCE" --trigger manual --source-commit "$CI_COMMIT_SHA" --actor "$GITLAB_USER_LOGIN" --pages-project "$CLOUDFLARE_PAGES_PROJECT_NAME" --pipeline-id "$CI_PIPELINE_ID" --job-id "$CI_JOB_ID"
+
+daily_data_release:
+  stage: publish
+  image: python:3.12-bookworm
+  resource_group: galaxy-r2-pages-release
+  interruptible: false
+  timeout: 90 minutes
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_COMMIT_REF_PROTECTED == "true" && $CI_PIPELINE_SOURCE == "web"
+      when: manual
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_COMMIT_REF_PROTECTED == "true" && $CI_PIPELINE_SOURCE == "schedule" && $P1_DAILY_SCHEDULE_ENABLED == "true"
+    - when: never
+  variables:
+    OMP_NUM_THREADS: "4"
+    NUMBA_NUM_THREADS: "4"
+    OPENBLAS_NUM_THREADS: "1"
+    MKL_NUM_THREADS: "1"
+    GALAXY_EXPORT_FETCH_WORKERS: "2"
+  before_script:
+    - apt-get update && apt-get install -y curl ca-certificates git
+    - curl -fsSL https://deb.nodesource.com/setup_24.x | bash -
+    - apt-get install -y nodejs
+    - python -m pip install --upgrade pip
+    - python -m pip install -r requirements.cpu.txt
+  script:
+    - |
+      TRIGGER="manual"
+      if [ "$CI_PIPELINE_SOURCE" = "schedule" ]; then TRIGGER="schedule"; fi
+      python scripts/publication/cli.py daily-release --mode production --ref "$CI_COMMIT_BRANCH" --protected --pipeline-source "$CI_PIPELINE_SOURCE" --trigger "$TRIGGER" --source-commit "$CI_COMMIT_SHA" --actor "$GITLAB_USER_LOGIN" --pages-project "$CLOUDFLARE_PAGES_PROJECT_NAME" --pipeline-id "$CI_PIPELINE_ID" --job-id "$CI_JOB_ID"

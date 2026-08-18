@@ -1,9 +1,9 @@
 name: Daily Data Release
 
 on:
-  schedule:
-    - cron: "0 18 * * *" # 18:00 UTC daily
   workflow_dispatch:
+
+# GitLab is the sole publication scheduler until an approved GitHub cutback.
 
 permissions:
   contents: read
@@ -16,6 +16,7 @@ concurrency:
 
 jobs:
   refresh:
+    if: false
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     env:

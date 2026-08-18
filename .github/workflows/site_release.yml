@@ -1,9 +1,9 @@
 name: Site Release
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
+
+# GitLab is the sole publication scheduler until an approved GitHub cutback.
 
 permissions:
   contents: read
@@ -15,6 +15,7 @@ concurrency:
 
 jobs:
   site:
+    if: false
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:

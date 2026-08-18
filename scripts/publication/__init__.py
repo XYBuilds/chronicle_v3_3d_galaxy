@@ -1,1 +1,1 @@
-"""Chronicle-owned P1 publication control plane."""
+"""Chronicle-owned publication control plane."""

@@ -1,4 +1,4 @@
-"""Audited Production Recovery control plane (#387)."""
+"""Audited Production Recovery planner (#7)."""
 from __future__ import annotations
 
 import json
@@ -16,7 +16,6 @@ from cron.production_recovery import (  # noqa: E402
     execute_recovery,
     main as recovery_main,
 )
-from cron.release_state import continuation_point, record_stage  # noqa: E402
 
 NOW = "2026-08-13T04:00:00.000Z"
 ACTOR = "XYBuilds"
@@ -130,47 +129,12 @@ def test_profile_rollback_creates_a_new_data_release_instead_of_flipping_the_poi
     assert record["plan"]["flip_active_pointer_in_place"] is False
 
 
-def test_continue_candidate_uses_the_failed_stage_instead_of_recomputing() -> None:
-    store: dict[str, dict[str, object]] = {}
-    record_stage(
-        store,
-        concept="data_release",
-        candidate_id="cand-1",
-        record={
-            "stage": "candidate_validation",
-            "release_identity": "cand-1",
-            "inputs": {"data_version": "2026.08.13.1"},
-            "attempted_mutations": [],
-            "outputs": {"candidate": "cand-1"},
-            "artifact_hashes": {"galaxy": "a" * 64},
-            "result": "succeeded",
-            "recorded_at": NOW,
-            "manual": False,
-        },
-    )
-    record_stage(
-        store,
-        concept="data_release",
-        candidate_id="cand-1",
-        record={
-            "stage": "og_projection",
-            "release_identity": "cand-1",
-            "inputs": {"data_version": "2026.08.13.1"},
-            "attempted_mutations": [],
-            "outputs": {},
-            "artifact_hashes": {},
-            "result": "failed",
-            "recorded_at": NOW,
-            "manual": False,
-        },
-    )
-    record = execute_recovery(
-        "continue_candidate",
-        candidate_store=store,
-        **_audit_kwargs(target="cand-1", from_identity="cand-1", to_identity="cand-1"),
-    )
-    assert record["plan"]["continuation_stage"] == "og_projection"
-    assert continuation_point(store["cand-1"]) == "og_projection"
+def test_continue_candidate_is_not_a_supported_recovery_action() -> None:
+    with pytest.raises(RecoveryError, match="unknown recovery action"):
+        execute_recovery(
+            "continue_candidate",
+            **_audit_kwargs(target="cand-1", from_identity="cand-1", to_identity="cand-1"),
+        )
 
 
 def test_breaking_og_recovery_stops_producer_before_worker_and_retains_kv() -> None:
@@ -197,42 +161,18 @@ def test_dangerous_overrides_stay_off_the_normal_surface() -> None:
     assert record["dry_run"] is True
 
 
-def test_cli_continue_candidate_reads_a_persisted_store(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    from cron.release_state import write_store
-
-    store: dict[str, dict[str, object]] = {}
-    record_stage(
-        store,
-        concept="data_release",
-        candidate_id="cand-1",
-        record={
-            "stage": "candidate_validation",
-            "release_identity": "cand-1",
-            "inputs": {"data_version": "2026.08.13.1"},
-            "attempted_mutations": [],
-            "outputs": {"candidate": "cand-1"},
-            "artifact_hashes": {"galaxy": "a" * 64},
-            "result": "succeeded",
-            "recorded_at": NOW,
-            "manual": False,
-        },
-    )
-    path = tmp_path / "candidates.json"
-    write_store(path, store)
-    code = recovery_main([
-        "--action", "continue_candidate",
-        "--target", "cand-1",
-        "--from-identity", "cand-1",
-        "--to-identity", "cand-1",
-        "--reason", REASON,
-        "--actor", ACTOR,
-        "--recorded-at", NOW,
-        "--candidate-store", str(path),
-        "--dry-run",
-    ])
-    assert code == 0
-    record = json.loads(capsys.readouterr().out)
-    assert record["plan"]["continuation_stage"] == "og_projection"
+def test_cli_unknown_continue_candidate_fails_closed(capsys: pytest.CaptureFixture[str]) -> None:
+    with pytest.raises(SystemExit):
+        recovery_main([
+            "--action", "continue_candidate",
+            "--target", "cand-1",
+            "--from-identity", "cand-1",
+            "--to-identity", "cand-1",
+            "--reason", REASON,
+            "--actor", ACTOR,
+            "--recorded-at", NOW,
+            "--dry-run",
+        ])
 
 
 def test_cli_dry_run_prints_audit_record_and_refuses_live_mutation(capsys: pytest.CaptureFixture[str]) -> None:
@@ -251,14 +191,16 @@ def test_cli_dry_run_prints_audit_record_and_refuses_live_mutation(capsys: pytes
     assert record["action"] == "hold_releases"
     assert record["dry_run"] is True
     live = recovery_main([
-        "--action", "hold_releases",
-        "--target", "daily-monthly",
-        "--from-identity", "running",
-        "--to-identity", "held",
+        "--action", "data_rollback",
+        "--target", "rel-059",
+        "--from-identity", "rel-060",
+        "--to-identity", "rel-059",
         "--reason", REASON,
         "--actor", ACTOR,
         "--recorded-at", NOW,
+        "--retained-releases", "rel-059,rel-060",
+        "--active-site-artifact", "site-bbbb",
         "--no-dry-run",
     ])
     assert live == 1
-    assert "live recovery mutation is not enabled" in capsys.readouterr().out
+    assert "repository-owned" in capsys.readouterr().out

@@ -2,5 +2,5 @@
   "schema": "chronicle-risk-declaration-v1",
   "tier": "R3",
   "surfaces": ["publication", "planet_export", "og_worker", "daily"],
-  "notes": "GitLab production copies; values stay out of evidence. Concrete production resources remain Pages Direct Upload, R2 galaxy/site/receipt state, OG KV/checkpoint, Supabase, and Kaggle deployment copies. Bitwarden remains the secrets authority."
+  "notes": "GitLab production copies; values stay out of evidence. Concrete production resources remain Pages Direct Upload, R2 galaxy/site/receipt state, OG KV/checkpoint, Supabase, and Kaggle deployment copies. Bitwarden remains the secrets authority. P2 keeps Monthly disabled; production secrets stay in these notes."
 }

@@ -1,4 +1,4 @@
-"""Provider-neutral Site Release and Daily Data Release orchestration."""
+"""Provider-neutral Site, Daily, and suspended Monthly publication orchestration."""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -8,6 +8,7 @@ import json
 
 from publication.admission import admit_protected_ref, prove_local_takeover
 from publication.backlog import evaluate_schedule_backlog
+from publication.bundle import require_recorded_hash
 from publication.commands import (
     PAGES_BUNDLE,
     PRODUCTION_PAGES_BRANCH,
@@ -23,6 +24,7 @@ from publication.sequence import allocate_sequence, reject_publish_behind
 from publication.store import PublicationStore
 
 PRODUCTION_ORIGIN = "https://themoviecosmos.com"
+MONTHLY_PRODUCTION_ENABLED = False
 
 
 @dataclass
@@ -438,6 +440,168 @@ def run_daily_release(
         sequence=sequence,
         request=request,
         result="rolled-back" if rollback.get("ok") else "failed",
+        clock=clock,
+        started_at=started_at,
+        stages=stages,
+        mutations=mutations,
+        extras=extras,
+    )
+
+
+def run_monthly_release(
+    *,
+    store: PublicationStore,
+    runner: Runner,
+    request: Mapping[str, Any],
+    clock: Callable[[], str],
+) -> dict[str, Any]:
+    started_at = _now(clock)
+    mode = str(request.get("mode") or "production")
+    if mode != "fixture" and not MONTHLY_PRODUCTION_ENABLED:
+        raise PublicationError("Monthly Data Release remains suspended while GitLab is temporary primary")
+    admit_protected_ref(request)
+    digest = str(request.get("bundle_sha256") or "")
+    record = request.get("bundle_record")
+    if isinstance(record, Mapping):
+        digest = require_recorded_hash(record)
+    if len(digest) != 64 or any(char not in "0123456789abcdef" for char in digest):
+        raise PublicationError("canonical embedding bundle SHA-256 is missing")
+    sequence = allocate_sequence(store)
+    reject_publish_behind(attempt_sequence=sequence, latest_success_sequence=latest_success_sequence(store, head=sequence))
+    project = str(request.get("pages_project") or "themoviecosmos")
+    branch = _pages_branch(mode)
+    origin = str(request.get("production_origin") or PRODUCTION_ORIGIN)
+    paths = work_paths()
+    seq_env = {"GALAXY_EXPORT_SEQ": str(sequence), "GALAXY_EXPORT_VERSION_BRANCH": "monthly"}
+    identity = f"{started_at[:7].replace('-', '.')}.monthly.{sequence}"
+    payload = dict(request)
+    payload["inputs"] = {
+        **dict(request.get("inputs") or {}),
+        "production_monthly_restored": False,
+        "hosted_duration_viable": False,
+        "monthly_suspension": True,
+    }
+    stages: list[str] = []
+    mutations: list[str] = []
+    extras: dict[str, Any] = {
+        "pages_deployment": {"branch": branch, "mode": mode, "cwd": PAGES_BUNDLE},
+        "data_release_identity": identity,
+    }
+
+    planned = [
+        Command(
+            "validate-embedding-bundle",
+            python_script(
+                "scripts/tools/pack_monthly_embedding_bundle.py",
+                "--validate-only",
+                "--expected-sha256",
+                digest,
+            ),
+        ),
+        Command("fetch-hold", python_script("scripts/cron/site_artifact_store.py", "fetch-hold", "--path", paths["hold"])),
+        Command("publication-hold", python_script("scripts/cron/publication_hold.py", "check", "--path", paths["hold"])),
+        Command("supabase-preflight", python_script("scripts/cron/check_supabase_health.py")),
+        Command("galaxy-refit", python_script("scripts/cron/monthly_refit.py", "--dry-run"), env=seq_env),
+        Command("og-sync", python_script("scripts/cron/sync_og_index_kv.py", "--scope", "incremental"), mutates=True),
+        Command(
+            "immutable-r2",
+            python_script(
+                "scripts/cron/upload_galaxy_r2.py",
+                "--mode",
+                "monthly",
+                "--profile",
+                "data/output/monthly_profiles",
+                "--actor",
+                "chronicle:monthly",
+            ),
+            env=seq_env,
+            mutates=True,
+        ),
+        Command("fetch-active", python_script("scripts/cron/site_artifact_store.py", "fetch-active", "--output-dir", paths["pages_bundle"], "--registry-out", paths["site_registry"])),
+        Command("fetch-deployed-sidecar", python_script("scripts/cron/pages_compose.py", "fetch-origin", "--url", f"{origin}/data/site-artifact.json", "--output", paths["deployed_sidecar"])),
+        Command("fetch-previous-manifest", python_script("scripts/cron/pages_compose.py", "fetch-origin", "--url", f"{origin}/data/galaxy_assets_manifest.json", "--output", paths["previous_manifest"])),
+    ]
+
+    failed: Command | None = None
+    for command in planned:
+        result = runner(command)
+        stages.append(command.name)
+        if command.mutates:
+            mutations.append(command.name)
+        if not result.ok:
+            failed = command
+            break
+        extras.update(result.outputs)
+
+    if failed is None:
+        active = str(_json_field(paths["site_registry"], "active") or "active")
+        deployed = str(_json_field(paths["deployed_sidecar"], "artifact_id") or active)
+        compose = Command(
+            "compose-active-artifact",
+            python_script(
+                "scripts/cron/pages_compose.py",
+                "compose",
+                "--dist-dir",
+                f"{PAGES_BUNDLE}/dist",
+                "--manifest",
+                "frontend/public/data/galaxy_assets_manifest.json",
+                "--artifact-id",
+                active,
+                "--registry",
+                paths["site_registry"],
+                "--deployed-artifact-id",
+                deployed,
+            ),
+        )
+        deploy = Command(
+            "pages-deploy",
+            wrangler_pages_deploy(project_name=project, branch=branch),
+            mutates=True,
+            cwd=PAGES_BUNDLE,
+        )
+        for command in (compose, deploy):
+            result = runner(command)
+            stages.append(command.name)
+            if command.mutates:
+                mutations.append(command.name)
+            if not result.ok:
+                failed = command
+                break
+            extras.update(result.outputs)
+
+    if failed is None:
+        extras["data_release_identity"] = identity
+        smoke = Command(
+            "production-smoke",
+            python_script("scripts/cron/production_smoke.py", "--origin", origin, "--expected-data-version", identity),
+        )
+        smoke_result = runner(smoke)
+        stages.append(smoke.name)
+        if smoke_result.ok:
+            extras["smoke"] = {"ok": True}
+            extras.setdefault("og_evidence", {"scope": "incremental", "meta_g": "opaque"})
+            return _write(
+                store,
+                entry_point="monthly-data-release",
+                sequence=sequence,
+                request=payload,
+                result="success",
+                clock=clock,
+                started_at=started_at,
+                stages=stages,
+                mutations=mutations,
+                extras=extras,
+            )
+        failed = smoke
+
+    extras["smoke"] = {"ok": False}
+    extras.setdefault("data_release_identity", identity)
+    return _write(
+        store,
+        entry_point="monthly-data-release",
+        sequence=sequence,
+        request=payload,
+        result="failed",
         clock=clock,
         started_at=started_at,
         stages=stages,

@@ -1,4 +1,4 @@
-# Chronicle verification plus P1 publication jobs with production triggers disabled.
+# Chronicle verification plus publication jobs. Monthly production stays disabled.
 # Site Release, Daily Data Release, production secrets, and schedules stay human-gated.
 # GitLab remains the sole publication scheduler until an approved GitHub cutback.
 
@@ -20,6 +20,7 @@ default:
 variables:
   P1_SITE_TRIGGER_ENABLED: "false"
   P1_DAILY_SCHEDULE_ENABLED: "false"
+  P2_MONTHLY_ENABLED: "false"
   PRODUCTION_ORIGIN: "https://themoviecosmos.com"
   GIT_STRATEGY: fetch
 
@@ -51,7 +52,7 @@ docs_verify:
     - apt-get update && apt-get install -y git
     - pip install pytest
   script:
-    - python -m pytest scripts/tests/test_current_documentation_authority.py scripts/tests/test_chronicle_p0_restore.py scripts/tests/test_p0_common_protection.py scripts/tests/test_p1_publication_control.py scripts/tests/test_release_primitives_contract.py scripts/tests/test_og_pipeline_phase34.py
+    - python -m pytest scripts/tests/test_current_documentation_authority.py scripts/tests/test_chronicle_p0_restore.py scripts/tests/test_p0_common_protection.py scripts/tests/test_p1_publication_control.py scripts/tests/test_p2_monthly_recovery.py scripts/tests/test_production_recovery.py scripts/tests/test_publication_hold.py scripts/tests/test_release_primitives_contract.py scripts/tests/test_og_pipeline_phase34.py
     - git diff --check
 
 site_release:
@@ -104,3 +105,26 @@ daily_data_release:
       TRIGGER="manual"
       if [ "$CI_PIPELINE_SOURCE" = "schedule" ]; then TRIGGER="schedule"; fi
       python scripts/publication/cli.py daily-release --mode production --ref "$CI_COMMIT_BRANCH" --protected --pipeline-source "$CI_PIPELINE_SOURCE" --trigger "$TRIGGER" --source-commit "$CI_COMMIT_SHA" --actor "$GITLAB_USER_LOGIN" --pages-project "$CLOUDFLARE_PAGES_PROJECT_NAME" --pipeline-id "$CI_PIPELINE_ID" --job-id "$CI_JOB_ID"
+
+monthly_data_release:
+  stage: publish
+  image: python:3.12-bookworm
+  resource_group: galaxy-r2-pages-release
+  interruptible: false
+  timeout: 210 minutes
+  rules:
+    - when: never
+  variables:
+    OMP_NUM_THREADS: "4"
+    NUMBA_NUM_THREADS: "4"
+    OPENBLAS_NUM_THREADS: "1"
+    MKL_NUM_THREADS: "1"
+    GALAXY_EXPORT_VERSION_BRANCH: monthly
+  before_script:
+    - apt-get update && apt-get install -y curl ca-certificates git
+    - curl -fsSL https://deb.nodesource.com/setup_24.x | bash -
+    - apt-get install -y nodejs
+    - python -m pip install --upgrade pip
+    - python -m pip install -r requirements.cpu.txt
+  script:
+    - python scripts/publication/cli.py monthly-release --mode production --ref "$CI_COMMIT_BRANCH" --protected --pipeline-source "$CI_PIPELINE_SOURCE" --trigger manual --source-commit "$CI_COMMIT_SHA" --actor "$GITLAB_USER_LOGIN" --pages-project "$CLOUDFLARE_PAGES_PROJECT_NAME" --pipeline-id "$CI_PIPELINE_ID" --job-id "$CI_JOB_ID"

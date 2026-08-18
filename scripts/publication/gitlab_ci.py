@@ -1,4 +1,4 @@
-"""GitLab CI contract for Chronicle P1 publication jobs."""
+"""GitLab CI contract for Chronicle publication jobs."""
 from __future__ import annotations
 
 from publication.admission import RESOURCE_GROUP
@@ -57,4 +57,35 @@ def validate_p1_gitlab_ci(text: str) -> dict[str, object]:
         "resource_group": RESOURCE_GROUP,
         "triggers_enabled": False,
         "wrangler_action": False,
+    }
+
+
+def validate_p2_gitlab_ci(text: str) -> dict[str, object]:
+    accepted = validate_p1_gitlab_ci(text)
+    if "monthly_data_release:" not in text:
+        raise PublicationError("GitLab CI must define one intact Monthly Data Release job")
+    if "scripts/publication/cli.py monthly-release" not in text:
+        raise PublicationError("Monthly Data Release must call the shared Chronicle entry point")
+    if "P2_MONTHLY_ENABLED: \"false\"" not in text:
+        raise PublicationError("Monthly production must remain disabled")
+    monthly_start = text.index("monthly_data_release:")
+    monthly_block = text[monthly_start:]
+    if "when: never" not in monthly_block:
+        raise PublicationError("Monthly production triggers and manual runs must remain disabled")
+    if f"resource_group: {RESOURCE_GROUP}" not in monthly_block:
+        raise PublicationError("Monthly Data Release must share galaxy-r2-pages-release")
+    if "interruptible: false" not in monthly_block:
+        raise PublicationError("running publication jobs must be non-interruptible")
+    if "npm run build" in monthly_block or "npm install" in monthly_block:
+        raise PublicationError("Monthly Data Release must not build the frontend")
+    if "cloudflare/wrangler-action" in monthly_block:
+        raise PublicationError("publication jobs must use the cross-platform Wrangler CLI")
+    if "continue_candidate" in text or "continue-candidate" in text:
+        raise PublicationError("unsupported stage-level candidate continuation is not exposed")
+    if "allow_profile_bootstrap" in monthly_block or "--allow-bootstrap" in monthly_block or "--force-activation" in monthly_block:
+        raise PublicationError("dangerous recovery controls must stay off Monthly inputs")
+    return {
+        **accepted,
+        "monthly_data_release": True,
+        "monthly_enabled": False,
     }

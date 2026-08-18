@@ -8,8 +8,9 @@
 
 **Blocked by:** None — can start immediately.
 
-**Status:** ready-for-agent
+**Status:** closed
 **Assignee:** PEXY98
+**Closed:** 2026-08-18 by maintainer approval of local merge `3df9269` into `main`. GitHub was unavailable; no remote PR.
 
 **Risk declaration:** R0; protected surfaces none. Machine-readable copy: `scripts/recovery/fixtures/risk-declaration.template.json`.
 

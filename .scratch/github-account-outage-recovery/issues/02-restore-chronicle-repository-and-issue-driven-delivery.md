@@ -10,13 +10,25 @@
 
 **Status:** ready-for-agent
 **Assignee:** PEXY98
+**Tracker:** frozen local Markdown; GitLab is the destination writable tracker after import.
 
-- [ ] A human-approved risk declaration identifies the P0 tier and canonical protected surfaces for the actual Chronicle restoration scope.
-- [ ] Chronicle is created as a private project in the admitted GitLab namespace and remains a non-authoritative candidate until every development-resume criterion passes.
-- [ ] Reachable history intended for promotion is reviewed for secret evidence, and only approved `main`, formal tags, and Issue-owned active branches are pushed through explicit ref selections.
-- [ ] `main` is the declared default branch; direct push and force push are disabled; the effective protection settings are read back through the provider API.
-- [ ] The closed Wayfinder decisions, accepted Spec, six delivery Issues, comments/resolution context, portable identities, parent references, and blocker edges survive a normalized export, import, relationship check, and complete local render.
-- [ ] The local tracker is frozen before GitLab becomes writable, leaving exactly one active tracker; provider Issue numbers remain aliases rather than portable identities.
+**Risk declaration:** R0; protected surfaces none. Machine-readable copy stored with restore evidence.
+
+```json
+{
+  "schema": "chronicle-risk-declaration-v1",
+  "tier": "R0",
+  "surfaces": [],
+  "notes": "Issue 02 exact scope after review: private GitLab Chronicle candidate, approved-ref push, protected main, tracker freeze/import, and one non-deploying bootstrap merge request. No production mutation, no production secrets in CI, no Site Release, Data Release, Production Recovery, or schedules, and no change to visual output, browser journeys, publication, Planet Export, OG Worker runtime, or Daily editorial/publication behavior."
+}
+```
+
+- [x] A human-approved risk declaration identifies the P0 tier and canonical protected surfaces for the actual Chronicle restoration scope.
+- [x] Chronicle is created as a private project in the admitted GitLab namespace and remains a non-authoritative candidate until every development-resume criterion passes.
+- [x] Reachable history intended for promotion is reviewed for secret evidence, and only approved `main`, formal tags, and Issue-owned active branches are pushed through explicit ref selections.
+- [x] `main` is the declared default branch; direct push and force push are disabled; the effective protection settings are read back through the provider API.
+- [x] The closed Wayfinder decisions, accepted Spec, six delivery Issues, comments/resolution context, portable identities, parent references, and blocker edges survive a normalized export, import, relationship check, and complete local render.
+- [x] The local tracker is frozen before GitLab becomes writable, leaving exactly one active tracker; provider Issue numbers remain aliases rather than portable identities.
 - [ ] One Issue-owned bootstrap merge request installs current domain and tracker guidance plus a thin, non-deploying GitLab CI adapter without introducing production deployment copies or schedules.
 - [ ] The bootstrap change passes Chronicle's scope-matching frontend tests, lint, build, current documentation-authority checks, non-deploying GitLab pipeline, and diff validation.
 - [ ] The maintainer approves and merges through the protected branch without bypass, and the Issue remains open until the development-resume evidence is reviewed and human closure is explicitly approved.

@@ -3,7 +3,7 @@ id: tmc:chronicle:01M08QA80S7XA8P5ZVKM3EVD8Q
 title: Restore development and operations without a GitHub account single point of failure
 type: spec
 status: ready-for-agent
-tracker: local-markdown
+tracker: frozen
 labels:
   - ready-for-agent
 created: 2026-08-18

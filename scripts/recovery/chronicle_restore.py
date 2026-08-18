@@ -161,6 +161,7 @@ def validate_protection(observed: Mapping[str, Any]) -> dict[str, Any]:
 
 
 _OWNER_MARKERS = (
+    "npm install --include=optional",
     "npm test",
     "npm run lint",
     "npm run build",

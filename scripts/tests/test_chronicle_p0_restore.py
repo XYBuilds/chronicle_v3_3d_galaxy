@@ -335,7 +335,7 @@ workflow:
     - when: always
 frontend_verify:
   script:
-    - npm ci
+    - npm install --include=optional
     - npm test
     - npm run lint
     - npm run build
@@ -464,6 +464,8 @@ def test_bootstrap_files_name_gitlab_and_keep_ci_non_deploying() -> None:
     accepted = validate_ci_adapter(ci)
     assert accepted["deploy"] is False
     assert accepted["schedule"] is False
+    assert "npm install --include=optional" in ci
+    assert "npm ci" not in ci
 
 
 def test_cli_resume_evidence_and_export_handoff(

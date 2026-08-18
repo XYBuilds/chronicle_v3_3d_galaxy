@@ -11,6 +11,7 @@ _SCRIPTS_DIR = Path(__file__).resolve().parents[1]
 if str(_SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS_DIR))
 
+from publication.gitlab_ci import validate_p1_gitlab_ci  # noqa: E402
 from recovery.chronicle_restore import (  # noqa: E402
     RestoreError,
     assemble_resume_evidence,
@@ -450,7 +451,7 @@ def test_resume_evidence_requires_human_risk_merge_and_keeps_issue_open() -> Non
     assert "GitHub server-only state unknown" in bundle["residual_uncertainty"]
 
 
-def test_bootstrap_files_name_gitlab_and_keep_ci_non_deploying() -> None:
+def test_bootstrap_files_name_gitlab_and_keep_production_triggers_disabled() -> None:
     root = Path(__file__).resolve().parents[2]
     agents = (root / "AGENTS.md").read_text(encoding="utf-8")
     tracker = (root / "docs/agents/issue-tracker.md").read_text(encoding="utf-8")
@@ -461,9 +462,9 @@ def test_bootstrap_files_name_gitlab_and_keep_ci_non_deploying() -> None:
     assert "GitLab" in tracker
     assert "glab" in tracker
     assert "Blocked by" in tracker
-    accepted = validate_ci_adapter(ci)
-    assert accepted["deploy"] is False
-    assert accepted["schedule"] is False
+    accepted = validate_p1_gitlab_ci(ci)
+    assert accepted["triggers_enabled"] is False
+    assert accepted["resource_group"] == "galaxy-r2-pages-release"
     assert "npm install --include=optional" in ci
     assert "npm ci" not in ci
 

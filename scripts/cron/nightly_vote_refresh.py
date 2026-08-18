@@ -485,7 +485,7 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"[P18.4 nightly] vote_snapshots upsert [{i}, {i + len(part)}) month={snap_day}", flush=True)
 
         if not args.skip_export:
-            seq = os.environ.get("GITHUB_RUN_NUMBER", "0")
+            seq = os.environ.get("GALAXY_EXPORT_SEQ", "0")
             export_py = _SCRIPTS_DIR / "cron" / "export_from_supabase.py"
             ex = subprocess.run(
                 [sys.executable, str(export_py), "--export-seq", str(seq)],

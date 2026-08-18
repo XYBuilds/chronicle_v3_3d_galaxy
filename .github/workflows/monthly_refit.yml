@@ -1,9 +1,10 @@
 name: Monthly Data Release
 
 on:
-  schedule:
-    - cron: "0 20 1 * *" # 20:00 UTC on day 1; Daily at 18:00 UTC shares the production lock
   workflow_dispatch:
+
+# GitLab is the sole publication scheduler until an approved GitHub cutback.
+# Monthly production remains P2-owned and must stay disabled.
     inputs:
       anchor_mode:
         description: "P18.5b Procrustes anchor gate (see scripts/cron/monthly_refit.py)."
@@ -24,6 +25,7 @@ concurrency:
 
 jobs:
   refit:
+    if: false
     runs-on: ubuntu-24.04
     timeout-minutes: 210
     env:

@@ -468,7 +468,7 @@ def test_evidence_bundle_requires_human_risk_and_gitlab_approval() -> None:
         )
     bundle = assemble_evidence_bundle(
         gates=gates,
-        risk_declaration={"schema": "chronicle-risk-declaration-v1", "tier": "R2", "surfaces": ["publication"]},
+        risk_declaration={"schema": "chronicle-risk-declaration-v1", "tier": "R0", "surfaces": []},
         gitlab_human_approval=True,
         residual_uncertainty=("GitHub server-only state unknown",),
     )
@@ -489,6 +489,36 @@ def test_cli_prepare_prints_fixed_policy_without_secrets(capsys: pytest.CaptureF
     assert "password" not in output.lower()
     assert "value" not in payload["credential_names"]
     assert "SUPABASE_SERVICE_ROLE_KEY" in payload["credential_names"]
+
+
+def test_cli_evidence_records_residual_uncertainty_with_gitlab_approval(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from recovery.cli import main
+
+    gates_path = tmp_path / "gates.json"
+    risk_path = tmp_path / "risk.json"
+    gates_path.write_text(json.dumps(_passing_gates()), encoding="utf-8")
+    risk_path.write_text(
+        json.dumps({"schema": "chronicle-risk-declaration-v1", "tier": "R0", "surfaces": []}),
+        encoding="utf-8",
+    )
+    code = main(
+        [
+            "evidence",
+            "--gates",
+            str(gates_path),
+            "--risk",
+            str(risk_path),
+            "--approve-gitlab",
+            "--residual",
+            "GitHub server-only state unknown",
+        ]
+    )
+    assert code == 0
+    bundle = json.loads(capsys.readouterr().out)
+    assert bundle["gitlab_admitted"] is True
+    assert "GitHub server-only state unknown" in bundle["residual_uncertainty"]
 
 
 def test_disposable_gitlab_fixture_is_private_non_deploying() -> None:

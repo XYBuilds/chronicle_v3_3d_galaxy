@@ -8,7 +8,7 @@ python scripts/recovery/cli.py synthetic-vault --records scripts/recovery/fixtur
 python scripts/recovery/cli.py restic-argv backup --repository sftp:USER@MAC:recovery --path ROOT
 python scripts/recovery/cli.py admit-plan --plan path/to/plan.json
 python scripts/recovery/cli.py render-issue --issue path/to/export.json
-python scripts/recovery/cli.py evidence --gates path/to/gates.json --risk path/to/risk.json --approve-gitlab
+python scripts/recovery/cli.py evidence --gates path/to/gates.json --risk path/to/risk.json --approve-gitlab --residual "GitHub server-only state unknown"
 ```
 
 Copy `fixtures/risk-declaration.template.json` and fill the R0–R3 tier and protected surfaces by hand. Use `fixtures/disposable-gitlab-ci.yml` only in a private disposable project after the MacBook snapshot is accepted.

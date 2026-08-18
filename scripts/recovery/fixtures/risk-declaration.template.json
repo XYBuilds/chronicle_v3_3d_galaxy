@@ -1,1 +1,6 @@
-{"schema":"chronicle-risk-declaration-v1","tier":"REPLACE_WITH_R0_R1_R2_OR_R3","surfaces":[],"notes":"Maintainer fills this after reviewing the exact P0 execution scope. Agents must not invent a path classifier."}
+{
+  "schema": "chronicle-risk-declaration-v1",
+  "tier": "R0",
+  "surfaces": [],
+  "notes": "Issue 01 exact scope after review: Bitwarden Free as secrets authority, one verified MacBook restic snapshot of Chronicle / OG Worker / Daily including Daily's external Git store, then disposable private GitLab admission. No production mutation, no real repository push, no production secrets in CI, and no change to visual output, browser journeys, publication, Planet Export, OG Worker runtime, or Daily editorial/publication behavior. P1 and P2 remain separately declared R3 with publication, planet_export, og_worker, and daily."
+}

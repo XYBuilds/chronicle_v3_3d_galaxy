@@ -78,7 +78,9 @@ def _render_issue(path: Path) -> int:
     return 0
 
 
-def _evidence(gates_path: Path, risk_path: Path, approve_gitlab: bool) -> int:
+def _evidence(
+    gates_path: Path, risk_path: Path, approve_gitlab: bool, residual_uncertainty: Sequence[str]
+) -> int:
     gates = _load_json(gates_path)
     risk = _load_json(risk_path)
     if not isinstance(gates, dict) or not isinstance(risk, dict):
@@ -88,6 +90,7 @@ def _evidence(gates_path: Path, risk_path: Path, approve_gitlab: bool) -> int:
         gates=gates,
         risk_declaration=risk,
         gitlab_human_approval=approve_gitlab,
+        residual_uncertainty=residual_uncertainty,
     )
     print(json.dumps(bundle, indent=2, sort_keys=True), flush=True)
     return 0
@@ -111,6 +114,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     evidence.add_argument("--gates", type=Path, required=True)
     evidence.add_argument("--risk", type=Path, required=True)
     evidence.add_argument("--approve-gitlab", action="store_true")
+    evidence.add_argument("--residual", action="append", default=None, dest="residual_uncertainty")
     args = parser.parse_args(list(argv) if argv is not None else None)
     try:
         if args.command == "prepare":
@@ -124,7 +128,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.command == "render-issue":
             return _render_issue(args.issue)
         if args.command == "evidence":
-            return _evidence(args.gates, args.risk, args.approve_gitlab)
+            return _evidence(
+                args.gates,
+                args.risk,
+                args.approve_gitlab,
+                tuple(args.residual_uncertainty or ()),
+            )
     except (AdmissionError, EvidenceError, SecretsError) as exc:
         print(f"[p0] error: {exc}", flush=True)
         return 1

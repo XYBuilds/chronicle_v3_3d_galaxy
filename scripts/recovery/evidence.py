@@ -40,8 +40,6 @@ def _require_risk_declaration(declaration: Mapping[str, Any] | None) -> dict[str
     if declaration.get("tier") not in {"R0", "R1", "R2", "R3"}:
         raise EvidenceError("human risk declaration tier is required")
     surfaces = tuple(declaration.get("surfaces") or ())
-    if not surfaces:
-        raise EvidenceError("human risk declaration surfaces are required")
     unknown = set(surfaces) - _CANONICAL_SURFACES
     if unknown:
         raise EvidenceError(f"unknown protected surfaces: {sorted(unknown)}")

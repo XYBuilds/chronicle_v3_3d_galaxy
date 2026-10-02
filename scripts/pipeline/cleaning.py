@@ -106,7 +106,10 @@ def filter_drop_mask(df: pd.DataFrame, mask_drop: pd.Series, label: str) -> tupl
 def filter_genres_nonempty(df: pd.DataFrame) -> tuple[pd.DataFrame, FilterStepResult]:
     if "genres" not in df.columns:
         raise KeyError("Missing required column: genres")
-    bad = _is_null_like(df["genres"].astype(str).str.strip())
+    genres = df["genres"].astype(str).str.strip()
+    # The raw CSV preserves NA strings; Kaggle also uses N/A for absent genres.
+    # Keep this field-specific so a literal title or another field is unchanged.
+    bad = _is_null_like(genres) | genres.str.casefold().eq("n/a")
     return filter_drop_mask(df, bad, "genres_nonempty")
 
 

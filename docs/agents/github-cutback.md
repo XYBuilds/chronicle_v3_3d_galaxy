@@ -18,6 +18,10 @@ The default is no production execution: missing `PUBLICATION_AUTHORITY` or a val
 
 The first 2026-10-02 read-only inventory found the public manifest at `2026.08.02.daily.131` and an existing OG v2 checkpoint, but no R2 publication sequence, Site Artifact registry, or publication-hold object. Supabase was inactive and the maintainer requested its resume. These observations are admission gaps, not successful cutover evidence.
 
+Follow-up inventory confirmed Supabase `ACTIVE_HEALTHY` and a successful repository preflight. The validated OG checkpoint is newer than the public manifest: `2026.08.12.daily.141`, with 62,006 movies. The current Pages production deployment is `8910991e-daf3-4259-86cb-d98a89c2a1c1` (2026-08-02); its source metadata names `dfa54d25` with `commit_dirty=true`, so that commit alone must not be presented as an exact reproducible rollback artifact. Home, movie, ordinary invalid-path, manifest assets/profile, and OG movie/brand/missing-movie fallback returned successfully during read-only checks.
+
+Cloudflare's legacy Git integration had production builds disabled but automatic branch previews enabled with no build command. The first recovery PR triggered an invalid raw-repository upload that exceeded the 25 MiB asset limit. Automatic Git previews were then disabled; production builds stayed disabled and the live deployment ID remained unchanged. Wrangler remains the publication path. The failed preview is retained as historical evidence, not a successful deployment.
+
 Before enabling production:
 
 1. Confirm database readiness through the repository preflight, inspect current Pages/Worker deployment identities, and validate the live manifest, immutable data/profile objects, OG checkpoint and credentials.
@@ -31,3 +35,5 @@ Before enabling production:
 Site Release fetches the existing registry before building, records the verified new artifact identity after smoke, and uploads the tar plus updated registry. If deployment, smoke, or registry promotion fails, it fetches the previous artifact into a separate directory, composes the selected live manifest onto it, and redeploys only if composition succeeds. Daily retains its whole-entry replay and last-known-good behavior. Completed database/KV/R2 mutations are not a global transaction.
 
 Record test commands and candidate SHAs, provider run/deployment IDs, publication sequence and receipt, observed manifest/profile identities, consumer results, and verified rollback target in the owning Issues. Fixture success proves orchestration boundaries, not real credentials or production success. Merge, Issue closure and production acceptance retain their human gates.
+
+The recovery PRs are [Chronicle #404](https://github.com/XYBuilds/chronicle_v3_3d_galaxy/pull/404), [Worker #10](https://github.com/XYBuilds/themoviecosmos-og-worker/pull/10), and [Daily #169](https://github.com/XYBuilds/themoviecosmos-daily-stargazing/pull/169). Their non-deploying GitHub checks passed on the initial candidates. Local acceptance additionally passed all 14 Chromium journeys, the Planet Export integration, and Storybook capture/a11y. The maintainer's final visual and production acceptance remains separate from those automated results.

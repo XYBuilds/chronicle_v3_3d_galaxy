@@ -50,6 +50,8 @@ This index names the boundaries between Chronicle, the OG Worker, and Daily Star
 
 ## Lean release semantics
 
+The [GitHub cutback](../agents/github-cutback.md) preserves C-001 through C-004. Initiative [#401](https://github.com/XYBuilds/chronicle_v3_3d_galaxy/issues/401) owns the cross-repository acceptance and rollout order; Worker [#10](https://github.com/XYBuilds/themoviecosmos-og-worker/pull/10) and Daily [#169](https://github.com/XYBuilds/themoviecosmos-daily-stargazing/pull/169) retain consumer ownership. Code/fixture acceptance does not imply that production publication authority has transferred.
+
 - Do not add a global generation barrier across KV, R2, manifest, shell, and profile commits.
 - C-002 keeps its accepted coordinated-best-effort semantics.
 - Other consumers use their last successfully published compatible artifact.

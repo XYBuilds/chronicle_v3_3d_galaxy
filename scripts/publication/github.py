@@ -16,10 +16,12 @@ def verify_github_context(environment: Mapping[str, str], *, entry_point: str) -
     if environment.get("GITHUB_REF") != "refs/heads/main" or environment.get("GITHUB_REF_PROTECTED") != "true":
         raise PublicationError("GitHub publication requires protected main")
     event = environment.get("GITHUB_EVENT_NAME", "")
-    allowed = {"site": {"push", "workflow_dispatch"}, "daily": {"schedule", "workflow_dispatch"}}
+    allowed = {"site": {"push", "workflow_dispatch"}, "daily": {"schedule", "workflow_dispatch"}, "monthly": {"schedule", "workflow_dispatch"}}
     if event not in allowed.get(entry_point, set()):
         raise PublicationError("GitHub event cannot invoke this publication entry point")
-    gate = "P1_SITE_TRIGGER_ENABLED" if entry_point == "site" else "P1_DAILY_SCHEDULE_ENABLED"
+    if entry_point == "monthly" and environment.get("P2_MONTHLY_RELEASE_ENABLED") != "true":
+        raise PublicationError("Monthly production admission has not been enabled")
+    gate = {"site": "P1_SITE_TRIGGER_ENABLED", "daily": "P1_DAILY_SCHEDULE_ENABLED", "monthly": "P2_MONTHLY_SCHEDULE_ENABLED"}[entry_point]
     if event != "workflow_dispatch" and environment.get(gate) != "true":
         raise PublicationError("automatic GitHub publication is not enabled")
     return {"event": event, "run_id": environment.get("GITHUB_RUN_ID", ""), "attempt": environment.get("GITHUB_RUN_ATTEMPT", "")}

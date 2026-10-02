@@ -42,5 +42,5 @@ jobs:
           scripts/tests/test_p1_publication_control.py scripts/tests/test_p2_monthly_recovery.py
           scripts/tests/test_production_recovery.py scripts/tests/test_publication_hold.py
           scripts/tests/test_release_primitives_contract.py scripts/tests/test_og_pipeline_phase34.py
-          scripts/tests/test_github_cutback.py
+          scripts/tests/test_github_cutback.py scripts/tests/test_monthly_github_restore.py
       - run: git diff --check

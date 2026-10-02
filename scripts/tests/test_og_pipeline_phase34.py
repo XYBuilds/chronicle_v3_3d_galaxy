@@ -69,7 +69,7 @@ class TestOgPipelinePhase34(unittest.TestCase):
             self.assertIn("if: always()", text)
             self.assertNotIn("npm run build", text)
         self.assertIn("scripts/publication/cli.py daily-release", _NIGHTLY_WORKFLOW.read_text(encoding="utf-8"))
-        self.assertIn("if: false", _MONTHLY_WORKFLOW.read_text(encoding="utf-8"))
+        self.assertIn("scripts/publication/cli.py monthly-release", _MONTHLY_WORKFLOW.read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

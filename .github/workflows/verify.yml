@@ -21,9 +21,7 @@ jobs:
         with:
           node-version: '24'
       - name: Install Linux workspace dependencies
-        run: |
-          rm -rf node_modules frontend/node_modules package-lock.json
-          npm install --include=optional --no-audit --no-fund
+        run: npm ci --include=optional --no-audit --no-fund
       - run: npm test
       - run: npm run lint
       - run: npm run build

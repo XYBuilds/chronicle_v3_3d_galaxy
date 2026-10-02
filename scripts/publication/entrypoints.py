@@ -14,6 +14,7 @@ from publication.commands import (
     PRODUCTION_PAGES_BRANCH,
     WINDOWS_PREVIEW_BRANCH,
     assert_no_dangerous_tokens,
+    og_sync_command,
     python_script,
     work_paths,
     wrangler_pages_deploy,
@@ -305,6 +306,8 @@ def run_daily_release(
     clock: Callable[[], str],
 ) -> dict[str, Any]:
     started_at = _now(clock)
+    og_argv = og_sync_command(started_at=started_at)
+    request = {**request, "inputs": {**dict(request.get("inputs") or {}), "og_max_puts": int(og_argv[-1])}}
     mode = str(request.get("mode") or "production")
     admit_protected_ref(request)
     if mode == "windows-emergency":
@@ -340,7 +343,7 @@ def run_daily_release(
         Command("publication-hold", python_script("scripts/cron/publication_hold.py", "check", "--path", paths["hold"])),
         Command("supabase-preflight", python_script("scripts/cron/check_supabase_health.py")),
         Command("light-refresh", python_script("scripts/cron/nightly_vote_refresh.py"), env=seq_env, mutates=True),
-        Command("og-sync", python_script("scripts/cron/sync_og_index_kv.py", "--scope", "incremental"), mutates=True),
+        Command("og-sync", og_argv, mutates=True),
         Command("immutable-r2", python_script("scripts/cron/upload_galaxy_r2.py", "--mode", "nightly"), env=seq_env, mutates=True),
         Command("fetch-active", python_script("scripts/cron/site_artifact_store.py", "fetch-active", "--output-dir", paths["pages_bundle"], "--registry-out", paths["site_registry"])),
         Command("fetch-deployed-sidecar", python_script("scripts/cron/pages_compose.py", "fetch-origin", "--url", f"{origin}/data/site-artifact.json", "--output", paths["deployed_sidecar"])),
@@ -471,6 +474,7 @@ def run_monthly_release(
     clock: Callable[[], str],
 ) -> dict[str, Any]:
     started_at = _now(clock)
+    og_argv = og_sync_command(started_at=started_at)
     mode = str(request.get("mode") or "production")
     if mode != "fixture" and request.get("monthly_enabled") is not True:
         raise PublicationError("Monthly Data Release remains suspended until explicit production admission")
@@ -499,6 +503,7 @@ def run_monthly_release(
         "hosted_duration_viable": False,
         "monthly_suspension": mode == "fixture",
         "bundle_sha256": digest,
+        "og_max_puts": int(og_argv[-1]),
     }
     stages: list[str] = []
     mutations: list[str] = []
@@ -521,7 +526,7 @@ def run_monthly_release(
         Command("publication-hold", python_script("scripts/cron/publication_hold.py", "check", "--path", paths["hold"])),
         Command("supabase-preflight", python_script("scripts/cron/check_supabase_health.py")),
         Command("galaxy-refit", python_script("scripts/cron/monthly_refit.py", "--emission-profile-output-dir", profile_directory, *(("--dry-run",) if mode == "fixture" else ())), env=seq_env, mutates=mode != "fixture"),
-        Command("og-sync", python_script("scripts/cron/sync_og_index_kv.py", "--scope", "incremental"), mutates=True),
+        Command("og-sync", og_argv, mutates=True),
         Command(
             "immutable-r2",
             python_script(

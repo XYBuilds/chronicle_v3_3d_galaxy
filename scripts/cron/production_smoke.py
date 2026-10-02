@@ -33,7 +33,7 @@ def _assert(condition: bool, message: str) -> None:
 
 
 def _http_request(url: str, *, timeout: int = 30) -> HttpSnapshot:
-    request = urllib.request.Request(url, method="GET")
+    request = urllib.request.Request(url, method="GET", headers={"User-Agent": "ChroniclePublication/1.0"})
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:
             headers = {str(key).lower(): str(value) for key, value in response.headers.items()}

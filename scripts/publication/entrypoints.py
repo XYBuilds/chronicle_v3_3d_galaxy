@@ -1,4 +1,4 @@
-"""Provider-neutral Site, Daily, and suspended Monthly publication orchestration."""
+"""Provider-neutral Site, Daily, and gated Monthly publication orchestration."""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -24,7 +24,6 @@ from publication.sequence import allocate_sequence, reject_publish_behind
 from publication.store import PublicationStore
 
 PRODUCTION_ORIGIN = "https://themoviecosmos.com"
-MONTHLY_PRODUCTION_ENABLED = False
 
 
 @dataclass
@@ -433,7 +432,7 @@ def run_daily_release(
     if mode != "windows-preview" and failed.name in {"pages-deploy", "production-smoke"}:
         restore = Command(
             "recompose-last-known-good",
-            python_script("scripts/cron/pages_compose.py", "compose", "--dist-dir", f"{PAGES_BUNDLE}/dist", "--manifest", paths["previous_manifest"], "--artifact-id", "active", "--skip-active-match"),
+            python_script("scripts/cron/pages_compose.py", "compose", "--dist-dir", f"{PAGES_BUNDLE}/dist", "--manifest", paths["previous_manifest"], "--artifact-id", active, "--skip-active-match"),
             rollback=True,
         )
         redeploy = Command(
@@ -473,9 +472,11 @@ def run_monthly_release(
 ) -> dict[str, Any]:
     started_at = _now(clock)
     mode = str(request.get("mode") or "production")
-    if mode != "fixture" and not MONTHLY_PRODUCTION_ENABLED:
-        raise PublicationError("Monthly Data Release remains suspended while GitLab is temporary primary")
+    if mode != "fixture" and request.get("monthly_enabled") is not True:
+        raise PublicationError("Monthly Data Release remains suspended until explicit production admission")
     admit_protected_ref(request)
+    if mode == "windows-emergency":
+        prove_local_takeover(dict(request.get("hosted") or {}))
     digest = str(request.get("bundle_sha256") or "")
     record = request.get("bundle_record")
     if isinstance(record, Mapping):
@@ -489,13 +490,15 @@ def run_monthly_release(
     origin = str(request.get("production_origin") or PRODUCTION_ORIGIN)
     paths = work_paths()
     seq_env = {"GALAXY_EXPORT_SEQ": str(sequence), "GALAXY_EXPORT_VERSION_BRANCH": "monthly"}
-    identity = f"{started_at[:7].replace('-', '.')}.monthly.{sequence}"
+    identity = f"{started_at[:10].replace('-', '.')}.monthly.{sequence}"
+    profile_directory = f"data/output/monthly_profiles/{sequence}"
     payload = dict(request)
     payload["inputs"] = {
         **dict(request.get("inputs") or {}),
         "production_monthly_restored": False,
         "hosted_duration_viable": False,
-        "monthly_suspension": True,
+        "monthly_suspension": mode == "fixture",
+        "bundle_sha256": digest,
     }
     stages: list[str] = []
     mutations: list[str] = []
@@ -508,27 +511,28 @@ def run_monthly_release(
         Command(
             "validate-embedding-bundle",
             python_script(
-                "scripts/tools/pack_monthly_embedding_bundle.py",
-                "--validate-only",
-                "--expected-sha256",
+                "scripts/publication/monthly_assets.py",
+                "prepare",
+                "--sha256",
                 digest,
             ),
         ),
         Command("fetch-hold", python_script("scripts/cron/site_artifact_store.py", "fetch-hold", "--path", paths["hold"])),
         Command("publication-hold", python_script("scripts/cron/publication_hold.py", "check", "--path", paths["hold"])),
         Command("supabase-preflight", python_script("scripts/cron/check_supabase_health.py")),
-        Command("galaxy-refit", python_script("scripts/cron/monthly_refit.py", "--dry-run"), env=seq_env),
+        Command("galaxy-refit", python_script("scripts/cron/monthly_refit.py", "--emission-profile-output-dir", profile_directory, *(("--dry-run",) if mode == "fixture" else ())), env=seq_env, mutates=mode != "fixture"),
         Command("og-sync", python_script("scripts/cron/sync_og_index_kv.py", "--scope", "incremental"), mutates=True),
         Command(
             "immutable-r2",
             python_script(
-                "scripts/cron/upload_galaxy_r2.py",
+                "scripts/publication/monthly_assets.py",
+                "publish",
                 "--mode",
                 "monthly",
-                "--profile",
-                "data/output/monthly_profiles",
+                "--profile-dir",
+                profile_directory,
                 "--actor",
-                "chronicle:monthly",
+                str(request.get("actor") or "chronicle:monthly"),
             ),
             env=seq_env,
             mutates=True,
@@ -586,6 +590,8 @@ def run_monthly_release(
             extras.update(result.outputs)
 
     if failed is None:
+        if mode != "fixture":
+            identity = str(_json_field("frontend/public/data/galaxy_assets_manifest.json", "data_version") or identity)
         extras["data_release_identity"] = identity
         smoke = Command(
             "production-smoke",
@@ -595,6 +601,7 @@ def run_monthly_release(
         stages.append(smoke.name)
         if smoke_result.ok:
             extras["smoke"] = {"ok": True}
+            payload["inputs"]["production_monthly_restored"] = mode != "fixture"
             extras.setdefault("og_evidence", {"scope": "incremental", "meta_g": "opaque"})
             return _write(
                 store,
@@ -610,6 +617,24 @@ def run_monthly_release(
             )
         failed = smoke
 
+    rollback: dict[str, Any] = {"attempted": False}
+    if failed.name in {"pages-deploy", "production-smoke"}:
+        active = str(_json_field(paths["site_registry"], "active") or "active")
+        restore = Command("recompose-last-known-good", python_script("scripts/cron/pages_compose.py", "compose", "--dist-dir", f"{PAGES_BUNDLE}/dist", "--manifest", paths["previous_manifest"], "--artifact-id", active, "--skip-active-match"), rollback=True)
+        restore_ok = runner(restore).ok
+        stages.append(restore.name)
+        redeploy_ok = False
+        if restore_ok:
+            redeploy = Command("redeploy-last-known-good", wrangler_pages_deploy(project_name=project, branch=PRODUCTION_PAGES_BRANCH), mutates=True, rollback=True, cwd=PAGES_BUNDLE)
+            redeploy_ok = runner(redeploy).ok
+            stages.append(redeploy.name)
+        rollback = {"attempted": True, "ok": restore_ok and redeploy_ok}
+    if mode != "fixture" and mutations:
+        hold = Command("hold-followup-publication", python_script("scripts/publication/monthly_assets.py", "hold", "--actor", str(request.get("actor") or "chronicle:monthly")), mutates=True)
+        rollback["publication_hold"] = runner(hold).ok
+        stages.append(hold.name)
+        mutations.append(hold.name)
+    extras["rollback_attempt"] = rollback
     extras["smoke"] = {"ok": False}
     extras.setdefault("data_release_identity", identity)
     return _write(
@@ -617,7 +642,7 @@ def run_monthly_release(
         entry_point="monthly-data-release",
         sequence=sequence,
         request=payload,
-        result="failed",
+        result="rolled-back" if rollback.get("ok") else "failed",
         clock=clock,
         started_at=started_at,
         stages=stages,

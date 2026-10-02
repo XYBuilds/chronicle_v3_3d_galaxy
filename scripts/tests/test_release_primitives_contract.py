@@ -41,7 +41,7 @@ class TestReleaseCutoverWorkflows(unittest.TestCase):
         monthly = _MONTHLY.read_text(encoding="utf-8")
         self.assertIn("scripts/publication/cli.py daily-release", daily)
         self.assertIn("vars.P1_DAILY_SCHEDULE_ENABLED == 'true'", daily)
-        self.assertIn("if: false", monthly)
+        self.assertIn("vars.P2_MONTHLY_RELEASE_ENABLED == 'true'", monthly)
         for text in (daily, monthly):
             self.assertIn("workflow_dispatch:", text)
             self.assertIn("group: galaxy-r2-pages-release", text)

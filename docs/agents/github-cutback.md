@@ -1,6 +1,6 @@
 # GitHub cutback
 
-The maintainer authorized the return to XYBuilds and declared R3 with `publication`, `planet_export`, `og_worker`, and `daily` on 2026-10-02. The owning [Initiative #401](https://github.com/XYBuilds/chronicle_v3_3d_galaxy/issues/401) and repository Issues #402, Worker #9, and Daily #168 hold implementation and acceptance. GitLab shadow backup is deferred. Monthly refit and Daily editorial publication are outside this cutback.
+The maintainer authorized the return to XYBuilds and declared R3 with `publication`, `planet_export`, `og_worker`, and `daily` on 2026-10-02. The owning [Initiative #401](https://github.com/XYBuilds/chronicle_v3_3d_galaxy/issues/401) and repository Issues #402, Worker #9, and Daily #168 hold implementation and acceptance. GitLab shadow backup is deferred. The maintainer subsequently approved the three PR merges and expanded the goal to include Monthly restoration in Issue #405. Daily editorial publication remains outside this cutback.
 
 ## Development and tracker acceptance
 
@@ -12,7 +12,7 @@ Each delivery branch retains the GitLab main ancestor: Chronicle `6a27d3d`, Work
 
 ## Publication admission
 
-GitHub non-deploying verification runs on PRs and `main` without production secrets. Site and Daily call `scripts/publication/cli.py` and share `galaxy-r2-pages-release` with `cancel-in-progress: false`. GitLab's top-level workflow denies every pipeline. Monthly and hosted Recovery remain disabled; the independent Supabase preflight is read-only.
+GitHub non-deploying verification runs on PRs and `main` without production secrets. Site and Daily call `scripts/publication/cli.py` and share `galaxy-r2-pages-release` with `cancel-in-progress: false`. GitLab's top-level workflow denies every pipeline. Monthly has independent manual/schedule admission gates; hosted Recovery remains disabled; the independent Supabase preflight is read-only.
 
 The default is no production execution: missing `PUBLICATION_AUTHORITY` or a value other than `github` skips the Site/Daily jobs. Both the workflow and shared CLI require the XYBuilds repository, protected `main`, and an allowed event. After operational admission, `PUBLICATION_AUTHORITY=github` permits manual releases. Automatic Site push and Daily schedule remain off until `P1_SITE_TRIGGER_ENABLED=true` and `P1_DAILY_SCHEDULE_ENABLED=true`, respectively. Never configure GitLab and GitHub as simultaneous publishers.
 
@@ -28,7 +28,7 @@ Before enabling production:
 2. Preserve and verify the current live Site/Data rollback target. Establish missing sequence, hold and artifact state through a separately recorded recovery procedure using observed identities; ordinary Site/Daily jobs must not silently bootstrap these objects. Sequence must start above every verified production suffix, including OG state rather than only the older public manifest.
 3. Verify that GitLab schedules and running/queued publication jobs are absent, then record the authority transfer. Keep automatic trigger variables false.
 4. Run one manual Site and one manual Daily from protected `main`. Verify durable receipts, current manifest/profile/data, home/movie/invalid-path smoke, Planet Export-to-Daily compatibility and relevant OG movie/brand/fallback behavior.
-5. Only after those pass, enable the corresponding automatic trigger. The Daily cron is 18:00 UTC (02:00 Asia/Shanghai the following day). Monthly requires a separate explicit decision and remains blocked in the shared entry point.
+5. Only after those pass, enable the corresponding automatic trigger. The Daily cron is 18:00 UTC (02:00 Asia/Shanghai the following day). Monthly follows Site/Daily under the maintainer's expanded authorization: admit one manual run with a validated canonical bundle, then enable its schedule only after R3 checks pass.
 
 ## Recovery and evidence
 
@@ -37,3 +37,7 @@ Site Release fetches the existing registry before building, records the verified
 Record test commands and candidate SHAs, provider run/deployment IDs, publication sequence and receipt, observed manifest/profile identities, consumer results, and verified rollback target in the owning Issues. Fixture success proves orchestration boundaries, not real credentials or production success. Merge, Issue closure and production acceptance retain their human gates.
 
 The recovery PRs are [Chronicle #404](https://github.com/XYBuilds/chronicle_v3_3d_galaxy/pull/404), [Worker #10](https://github.com/XYBuilds/themoviecosmos-og-worker/pull/10), and [Daily #169](https://github.com/XYBuilds/themoviecosmos-daily-stargazing/pull/169). Their non-deploying GitHub checks passed on the initial candidates. Local acceptance additionally passed all 14 Chromium journeys, the Planet Export integration, and Storybook capture/a11y. The maintainer's final visual and production acceptance remains separate from those automated results.
+
+## Monthly follow-through (#405)
+
+`P2_MONTHLY_RELEASE_ENABLED` admits manual Monthly; `P2_MONTHLY_SCHEDULE_ENABLED` separately admits the monthly cron. The shared CLI verifies both GitHub context and Monthly admission. Real production refit writes are distinguished from fixture dry-runs; the receipt records the canonical bundle digest and the exported data identity. A failure after mutation holds follow-up Data Releases. A Pages promotion failure recomposes the previous manifest and attempts redeployment, while leaving completed DB/KV/profile changes visible for owner recovery.

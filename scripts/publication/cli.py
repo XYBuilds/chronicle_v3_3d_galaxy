@@ -1,4 +1,4 @@
-"""Maintainer CLI for Chronicle Site, Daily, and suspended Monthly publication entry points."""
+"""Maintainer CLI for Chronicle Site, Daily, and gated Monthly publication entry points."""
 from __future__ import annotations
 
 import argparse
@@ -74,6 +74,7 @@ def _request_from_args(args: argparse.Namespace) -> dict[str, object]:
         },
         "covered_by_sequence": args.covered_by_sequence,
         "bundle_sha256": getattr(args, "bundle_sha256", ""),
+        "monthly_enabled": os.environ.get("P2_MONTHLY_RELEASE_ENABLED") == "true",
     }
 
 

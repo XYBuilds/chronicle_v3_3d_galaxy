@@ -109,7 +109,7 @@ def test_gitlab_ci_defines_disabled_monthly_job_and_keeps_site_daily_lane() -> N
     assert "--force-activation" not in monthly
     github_monthly = (_ROOT / ".github/workflows/monthly_refit.yml").read_text(encoding="utf-8")
     github_recovery = (_ROOT / ".github/workflows/production_recovery.yml").read_text(encoding="utf-8")
-    assert "if: false" in github_monthly
+    assert "vars.P2_MONTHLY_RELEASE_ENABLED == 'true'" in github_monthly
     assert "if: false" in github_recovery
     assert "continue_candidate" not in github_recovery
 
@@ -143,7 +143,7 @@ def test_monthly_fixture_orders_bundle_refit_og_and_monthly_profile_upload() -> 
     assert "--force-activation" not in upload.argv
     assert receipt["entry_point"] == "monthly-data-release"
     assert receipt["sequence"] == 132
-    assert receipt["data_release_identity"] == "2026.08.monthly.132"
+    assert receipt["data_release_identity"] == "2026.08.18.monthly.132"
     assert "continue-candidate" not in joined
     deploy = next(command for command in runner.commands if command.name == "pages-deploy")
     assert WRANGLER_PACKAGE in deploy.argv

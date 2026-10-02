@@ -104,7 +104,7 @@ def compose_pages_dist(
 def fetch_origin_json(url: str) -> dict[str, Any]:
     """Download a JSON document from the live origin. Missing/invalid documents fail closed."""
     _assert(isinstance(url, str) and url.startswith("http"), "origin URL is required")
-    request = urllib.request.Request(url, method="GET")
+    request = urllib.request.Request(url, method="GET", headers={"User-Agent": "ChroniclePublication/1.0"})
     try:
         with urllib.request.urlopen(request, timeout=30) as response:
             body = response.read()

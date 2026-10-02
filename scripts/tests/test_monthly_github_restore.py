@@ -13,6 +13,7 @@ from publication.monthly_assets import unpack_verified_bundle, select_profile
 from publication.errors import PublicationError
 from publication.github import verify_github_context
 from publication.entrypoints import RecordingRunner, run_monthly_release
+from publication.entrypoints import run_daily_release
 from publication.store import MemoryPublicationStore
 from publication.sequence import bootstrap_sequence
 
@@ -101,3 +102,22 @@ def test_failed_rollback_composition_does_not_redeploy():
     runner = FailTwice()
     assert run(runner)["result"] == "failed"
     assert not any(c.name == "redeploy-last-known-good" for c in runner.commands)
+
+
+def test_daily_rollback_preserves_real_site_artifact_identity(monkeypatch, tmp_path):
+    import publication.entrypoints as entrypoints
+    monkeypatch.chdir(tmp_path)
+    registry = tmp_path / "registry.json"
+    registry.write_text('{"active":"verified-site-hash"}')
+    paths = entrypoints.work_paths()
+    paths["site_registry"] = str(registry)
+    monkeypatch.setattr(entrypoints, "work_paths", lambda: paths)
+    store = MemoryPublicationStore()
+    bootstrap_sequence(store, verified_identities=["2026.08.12.daily.141"])
+    runner = RecordingRunner(fail_on="production-smoke")
+    receipt = run_daily_release(store=store, runner=runner,
+        request=dict(mode="production", ref="main", protected=True, pipeline_source="workflow_dispatch"),
+        clock=lambda: "2026-10-02T00:00:00Z")
+    assert receipt["result"] == "rolled-back"
+    restore = next(c for c in runner.commands if c.name == "recompose-last-known-good")
+    assert restore.argv[restore.argv.index("--artifact-id") + 1] == "verified-site-hash"

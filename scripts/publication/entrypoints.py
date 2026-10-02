@@ -432,7 +432,7 @@ def run_daily_release(
     if mode != "windows-preview" and failed.name in {"pages-deploy", "production-smoke"}:
         restore = Command(
             "recompose-last-known-good",
-            python_script("scripts/cron/pages_compose.py", "compose", "--dist-dir", f"{PAGES_BUNDLE}/dist", "--manifest", paths["previous_manifest"], "--artifact-id", "active", "--skip-active-match"),
+            python_script("scripts/cron/pages_compose.py", "compose", "--dist-dir", f"{PAGES_BUNDLE}/dist", "--manifest", paths["previous_manifest"], "--artifact-id", active, "--skip-active-match"),
             rollback=True,
         )
         redeploy = Command(

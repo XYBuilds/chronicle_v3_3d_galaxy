@@ -18,7 +18,7 @@ def admit_protected_ref(request: Mapping[str, Any]) -> dict[str, Any]:
     if mode in PRODUCTION_MODES:
         if ref != "main" or not protected:
             raise PublicationError("production publication is restricted to protected main")
-        if pipeline_source in {"merge_request_event", "fork", "branch", "external_pull_request_event"}:
+        if pipeline_source not in {"web", "push", "schedule", "workflow_dispatch"}:
             raise PublicationError("merge-request, fork, and ordinary branch pipelines cannot enter production paths")
     return {"ref": ref, "protected": protected, "pipeline_source": pipeline_source, "mode": mode}
 

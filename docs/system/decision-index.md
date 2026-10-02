@@ -19,6 +19,7 @@ This index is the only documentation status and navigation layer for current Chr
 
 | Topic | Current source |
 | --- | --- |
+| GitHub restoration and publication admission | [`GitHub cutback`](../agents/github-cutback.md) |
 | Acceptance harness and evidence recipe | [`docs/system/acceptance-harness.md`](./acceptance-harness.md) |
 
 ## Contracts and durable decisions

@@ -157,6 +157,7 @@ def run_site_release(
 
     planned = [
         Command("fetch-live-manifest", python_script("scripts/cron/pages_compose.py", "fetch-origin", "--url", f"{origin}/data/galaxy_assets_manifest.json", "--output", paths["live_manifest"])),
+        Command("fetch-active-registry", python_script("scripts/cron/site_artifact_store.py", "fetch-registry", "--registry-out", paths["site_registry"])),
         Command("install-node", ("npm", "install", "--include=optional", "--no-audit", "--no-fund")),
         Command("build-shell", ("npm", "run", "build", "-w", "frontend"), env={"SITE_RELEASE_SHELL": "1"}),
         Command(
@@ -232,6 +233,15 @@ def run_site_release(
         else:
             failed = smoke
     if failed is None and mode not in {"windows-preview", "fixture"}:
+        record = Command(
+            "record-verified-artifact",
+            python_script("scripts/cron/site_artifact.py", "record", "--registry", paths["site_registry"], "--identity", paths["site_identity"], "--verified-at", _now(clock)),
+        )
+        record_result = runner(record)
+        stages.append(record.name)
+        if not record_result.ok:
+            failed = record
+    if failed is None and mode not in {"windows-preview", "fixture"}:
         mark = Command(
             "mark-active",
             python_script("scripts/cron/site_artifact_store.py", "put-active", "--tar", paths["site_tar"], "--registry", paths["site_registry"]),
@@ -249,10 +259,10 @@ def run_site_release(
         return _write(store, entry_point="site-release", sequence=sequence, request=request, result="success", clock=clock, started_at=started_at, stages=stages, mutations=mutations, extras=extras)
 
     rollback: dict[str, Any] = {"attempted": False}
-    if mode not in {"windows-preview"} and failed.name in {"pages-deploy", "production-smoke", "mark-active"}:
+    if mode not in {"windows-preview"} and failed.name in {"pages-deploy", "production-smoke", "record-verified-artifact", "mark-active"}:
         restore = Command(
             "restore-previous-artifact",
-            python_script("scripts/cron/site_artifact_store.py", "fetch-active", "--output-dir", PAGES_BUNDLE, "--registry-out", paths["site_registry"]),
+            python_script("scripts/cron/site_artifact_store.py", "fetch-active", "--output-dir", "pages-rollback", "--registry-out", paths["site_registry"]),
             rollback=True,
         )
         redeploy = Command(
@@ -260,11 +270,17 @@ def run_site_release(
             wrangler_pages_deploy(project_name=project, branch=PRODUCTION_PAGES_BRANCH),
             mutates=True,
             rollback=True,
-            cwd=PAGES_BUNDLE,
+            cwd="pages-rollback",
         )
         restore_ok = runner(restore).ok
-        redeploy_ok = runner(redeploy).ok if restore_ok else False
-        stages.extend([restore.name, redeploy.name])
+        recompose = Command(
+            "recompose-previous-artifact",
+            python_script("scripts/cron/pages_compose.py", "compose", "--dist-dir", "pages-rollback/dist", "--manifest", paths["live_manifest"], "--artifact-id", str(_json_field(paths["site_registry"], "active") or "active"), "--skip-active-match"),
+            rollback=True,
+        )
+        recompose_ok = runner(recompose).ok if restore_ok else False
+        redeploy_ok = runner(redeploy).ok if recompose_ok else False
+        stages.extend([restore.name, recompose.name, redeploy.name])
         rollback = {"attempted": True, "ok": restore_ok and redeploy_ok}
         extras["rollback_attempt"] = rollback
     extras["smoke"] = {"ok": False}

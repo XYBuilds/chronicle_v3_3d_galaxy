@@ -174,7 +174,7 @@ def test_site_entry_point_preserves_data_release_and_rolls_back_on_deploy_failur
     runner = RecordingRunner()
     receipt = run_site_release(store=store, runner=runner, request=_request(mode="production"), clock=_clock)
     names = [command.name for command in runner.commands]
-    assert names[:4] == ["fetch-live-manifest", "install-node", "build-shell", "identify-shell"]
+    assert names[:5] == ["fetch-live-manifest", "fetch-active-registry", "install-node", "build-shell", "identify-shell"]
     assert "unpack-shell" in names
     assert "compose" in names
     assert "pages-deploy" in names
@@ -238,7 +238,7 @@ def test_windows_preview_cannot_change_production_branch_or_active_registry() ->
     prove_local_takeover({"accessible": True, "triggers_paused": True, "running_or_queued": False, "authority_ambiguous": False})
 
 
-def test_gitlab_ci_keeps_production_jobs_manual_and_github_schedulers_disabled() -> None:
+def test_cutback_keeps_gitlab_off_and_github_publication_explicitly_gated() -> None:
     ci = (_ROOT / ".gitlab-ci.yml").read_text(encoding="utf-8")
     accepted = validate_p1_gitlab_ci(ci)
     assert accepted["triggers_enabled"] is False
@@ -246,10 +246,12 @@ def test_gitlab_ci_keeps_production_jobs_manual_and_github_schedulers_disabled()
     assert "BW_SESSION" not in ci
     github_daily = (_ROOT / ".github/workflows/nightly_vote_refresh.yml").read_text(encoding="utf-8")
     github_site = (_ROOT / ".github/workflows/site_release.yml").read_text(encoding="utf-8")
-    assert "schedule:" not in github_daily
-    assert "if: false" in github_daily
-    assert "if: false" in github_site
-    assert "branches: [main]" not in github_site
+    assert "workflow:\n  rules:\n    - when: never" in ci
+    for workflow in (github_daily, github_site):
+        assert "vars.PUBLICATION_AUTHORITY == 'github'" in workflow
+        assert "github.ref_protected" in workflow
+    assert "vars.P1_DAILY_SCHEDULE_ENABLED == 'true'" in github_daily
+    assert "vars.P1_SITE_TRIGGER_ENABLED == 'true'" in github_site
 
 
 def test_p1_evidence_requires_r3_surfaces_and_human_enablement() -> None:

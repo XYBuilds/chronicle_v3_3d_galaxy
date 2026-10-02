@@ -96,6 +96,10 @@ def _runner_for(args: argparse.Namespace):
 
 
 def _run_entry(kind: str, args: argparse.Namespace) -> int:
+    if os.environ.get("GITHUB_ACTIONS") == "true" and args.mode != "fixture":
+        from publication.github import verify_github_context
+
+        verify_github_context(os.environ, entry_point=kind)
     store = _store_for(args)
     request = _request_from_args(args)
     runner = _runner_for(args)

@@ -451,16 +451,16 @@ def test_resume_evidence_requires_human_risk_merge_and_keeps_issue_open() -> Non
     assert "GitHub server-only state unknown" in bundle["residual_uncertainty"]
 
 
-def test_bootstrap_files_name_gitlab_and_keep_production_triggers_disabled() -> None:
+def test_cutback_files_name_github_and_keep_gitlab_production_triggers_disabled() -> None:
     root = Path(__file__).resolve().parents[2]
     agents = (root / "AGENTS.md").read_text(encoding="utf-8")
     tracker = (root / "docs/agents/issue-tracker.md").read_text(encoding="utf-8")
     ci = (root / ".gitlab-ci.yml").read_text(encoding="utf-8")
-    assert "GitLab" in agents
-    assert "glab" in agents
+    assert "GitHub" in agents
+    assert "`gh`" in agents
     assert "docs/agents/issue-tracker.md" in agents
-    assert "GitLab" in tracker
-    assert "glab" in tracker
+    assert "GitHub" in tracker
+    assert "`gh`" in tracker
     assert "Blocked by" in tracker
     accepted = validate_p1_gitlab_ci(ci)
     assert accepted["triggers_enabled"] is False

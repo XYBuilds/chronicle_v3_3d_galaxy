@@ -1,169 +1,79 @@
 name: Daily Data Release
 
 on:
+  schedule:
+    - cron: "0 18 * * *"
   workflow_dispatch:
-
-# GitLab is the sole publication scheduler until an approved GitHub cutback.
 
 permissions:
   contents: read
-  deployments: write
 
 concurrency:
-  # Shared with Monthly and Site because both Data Releases fire on day 1 and all three promote Pages.
   group: galaxy-r2-pages-release
   cancel-in-progress: false
 
 jobs:
-  refresh:
-    if: false
+  daily:
+    if: >-
+      github.repository == 'XYBuilds/chronicle_v3_3d_galaxy' &&
+      github.ref == 'refs/heads/main' && github.ref_protected &&
+      vars.PUBLICATION_AUTHORITY == 'github' &&
+      (github.event_name == 'workflow_dispatch' || vars.P1_DAILY_SCHEDULE_ENABLED == 'true')
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     env:
-      PYTHONUNBUFFERED: "1"
-      OMP_NUM_THREADS: "4"
-      NUMBA_NUM_THREADS: "4"
-      OPENBLAS_NUM_THREADS: "1"
-      MKL_NUM_THREADS: "1"
-      GALAXY_EXPORT_SEQ: ${{ github.run_number }}
-      GALAXY_EXPORT_FETCH_WORKERS: "2"
-      PRODUCTION_ORIGIN: https://themoviecosmos.com
+      PYTHONUNBUFFERED: '1'
+      PUBLICATION_AUTHORITY: ${{ vars.PUBLICATION_AUTHORITY }}
+      P1_DAILY_SCHEDULE_ENABLED: ${{ vars.P1_DAILY_SCHEDULE_ENABLED }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_PAGES_PROJECT_NAME: ${{ secrets.CLOUDFLARE_PAGES_PROJECT_NAME }}
+      R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+      R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      R2_BUCKET: ${{ secrets.R2_BUCKET }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+      KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
+      OG_INDEX_KV_API_TOKEN: ${{ secrets.OG_INDEX_KV_API_TOKEN }}
+      OG_INDEX_KV_NAMESPACE_ID: ${{ secrets.OG_INDEX_KV_NAMESPACE_ID }}
+      R2_PUBLIC_BASE_URL: ${{ secrets.R2_PUBLIC_BASE_URL }}
+      OMP_NUM_THREADS: '4'
+      NUMBA_NUM_THREADS: '4'
+      OPENBLAS_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+      GALAXY_EXPORT_FETCH_WORKERS: '2'
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
-          cache: pip
-          cache-dependency-path: requirements.cpu.txt
-
-      - name: Install Python dependencies
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install publication dependencies
+        run: python -m pip install -r requirements.cpu.txt
+      - name: Run shared Daily Data Release entry point
+        shell: bash
         run: |
           set -euo pipefail
-          python -m pip install --upgrade pip
-          python -m pip install -r requirements.cpu.txt
-
-      - name: Check publication hold
-        env:
-          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
-          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          R2_BUCKET: ${{ secrets.R2_BUCKET }}
-        run: |
-          set -euo pipefail
-          python scripts/cron/site_artifact_store.py fetch-hold --path /tmp/publication-hold.json
-          python scripts/cron/publication_hold.py check --path /tmp/publication-hold.json
-
-      - name: Supabase read-only preflight
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        run: |
-          set -euo pipefail
-          python scripts/cron/check_supabase_health.py
-
-      - name: Run Light Refresh
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
-          KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
-        run: |
-          set -euo pipefail
-          python scripts/cron/nightly_vote_refresh.py
-
-      - name: Sync OG index KV incrementally
-        env:
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          OG_INDEX_KV_NAMESPACE_ID: ${{ secrets.OG_INDEX_KV_NAMESPACE_ID }}
-          OG_INDEX_KV_API_TOKEN: ${{ secrets.OG_INDEX_KV_API_TOKEN }}
-          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
-          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          R2_BUCKET: ${{ secrets.R2_BUCKET }}
-        run: |
-          set -euo pipefail
-          python scripts/cron/sync_og_index_kv.py --scope incremental
-
-      # P42.4: Daily validates and reuses the active profile; it never generates or activates one.
-      - name: Publish Daily galaxy with unchanged active emission profile
-        env:
-          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
-          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          R2_BUCKET: ${{ secrets.R2_BUCKET }}
-          R2_PUBLIC_BASE_URL: ${{ secrets.R2_PUBLIC_BASE_URL }}
-          R2_KEY_PREFIX: galaxy
-          R2_GALAXY_PRUNE_AFTER_UPLOAD: "1"
-        run: |
-          set -euo pipefail
-          python scripts/cron/upload_galaxy_r2.py --mode nightly
-
-      - uses: actions/upload-artifact@v4
+          trigger=manual
+          if [ "$GITHUB_EVENT_NAME" = schedule ]; then trigger=schedule; fi
+          python scripts/publication/cli.py daily-release \
+            --mode production --ref "$GITHUB_REF_NAME" --protected \
+            --pipeline-source "$GITHUB_EVENT_NAME" --trigger "$trigger" \
+            --source-commit "$GITHUB_SHA" --actor "$GITHUB_ACTOR" \
+            --pages-project "$CLOUDFLARE_PAGES_PROJECT_NAME" \
+            --pipeline-id "$GITHUB_RUN_ID" --job-id "$GITHUB_JOB/$GITHUB_RUN_ATTEMPT" \
+            2>&1 | tee publication.log
+      - name: Preserve publication evidence
         if: always()
+        uses: actions/upload-artifact@v4
         with:
-          name: galaxy-export-${{ github.run_id }}
-          if-no-files-found: warn
+          name: daily-publication-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
+            publication.log
             frontend/public/data/galaxy_assets_manifest.json
-            frontend/public/data/galaxy_data.json
-            frontend/public/data/galaxy_data.json.gz
-            frontend/public/data/galaxy_search_index.json.gz
-
-      - name: Compose Pages dist from the active site artifact
-        env:
-          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
-          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          R2_BUCKET: ${{ secrets.R2_BUCKET }}
-        run: |
-          set -euo pipefail
-          python scripts/cron/site_artifact_store.py fetch-active --output-dir pages-bundle --registry-out /tmp/site-registry.json
-          python scripts/cron/pages_compose.py fetch-origin --url "${PRODUCTION_ORIGIN}/data/site-artifact.json" --output /tmp/deployed-sidecar.json
-          python scripts/cron/pages_compose.py fetch-origin --url "${PRODUCTION_ORIGIN}/data/galaxy_assets_manifest.json" --output /tmp/previous-manifest.json
-          deployed="$(python -c "import json; print(json.load(open('/tmp/deployed-sidecar.json', encoding='utf-8'))['artifact_id'])")"
-          active="$(python -c "import json; print(json.load(open('/tmp/site-registry.json', encoding='utf-8'))['active'])")"
-          python scripts/cron/pages_compose.py compose \
-            --dist-dir pages-bundle/dist \
-            --manifest frontend/public/data/galaxy_assets_manifest.json \
-            --artifact-id "${active}" \
-            --registry /tmp/site-registry.json \
-            --deployed-artifact-id "${deployed}"
-
-      - name: Deploy composed Pages dist
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          workingDirectory: pages-bundle
-          command: pages deploy dist --project-name=${{ secrets.CLOUDFLARE_PAGES_PROJECT_NAME }} --branch=${{ github.ref_name }}
-          gitHubToken: ${{ github.token }}
-
-      - name: Production smoke
-        run: |
-          set -euo pipefail
-          data_version="$(python -c "import json; print(json.load(open('frontend/public/data/galaxy_assets_manifest.json', encoding='utf-8'))['data_version'])")"
-          python scripts/cron/production_smoke.py --origin "${PRODUCTION_ORIGIN}" --expected-data-version "${data_version}"
-
-      - name: Recompose last-known-good manifest
-        if: failure()
-        run: |
-          set -euo pipefail
-          test -f /tmp/previous-manifest.json
-          test -d pages-bundle/dist
-          active="$(python -c "import json; print(json.load(open('/tmp/site-registry.json', encoding='utf-8'))['active'])")"
-          python scripts/cron/pages_compose.py compose \
-            --dist-dir pages-bundle/dist \
-            --manifest /tmp/previous-manifest.json \
-            --artifact-id "${active}" \
-            --skip-active-match
-
-      - name: Redeploy last-known-good Pages dist
-        if: failure()
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          workingDirectory: pages-bundle
-          command: pages deploy dist --project-name=${{ secrets.CLOUDFLARE_PAGES_PROJECT_NAME }} --branch=${{ github.ref_name }}
-          gitHubToken: ${{ github.token }}
+          if-no-files-found: ignore
+          retention-days: 14

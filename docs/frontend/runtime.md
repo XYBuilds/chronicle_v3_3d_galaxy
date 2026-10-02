@@ -31,7 +31,7 @@ Development skips the remote manifest and uses bundled gzip fixtures so local wo
 
 ### Hosting and browser support
 
-- Site host is Cloudflare Pages via GitLab Direct Upload of a composed `dist` (verified site artifact plus the current production manifest); large galaxy/search gzip objects live on R2.
+- Site host is Cloudflare Pages via Wrangler Direct Upload of a composed `dist` (verified site artifact plus the current production manifest); large galaxy/search gzip objects live on R2.
 - GitHub Pages and Vercel are not current production hosts.
 - WebGL2 is required. Desktop/mouse is the supported interaction class.
 
@@ -53,7 +53,7 @@ Development skips the remote manifest and uses bundled gzip fixtures so local wo
 - `frontend/src/data/loadGalaxyGzip.ts`, `loadGalaxyData.ts`, `App.tsx`
 - `frontend/src/lib/galaxyAssetUrls.ts`, `frontend/src/lib/routes.ts`
 - `frontend/functions/_middleware.js` for Pages routing/SPA refresh needs
-- Workflow build/deploy steps in `.gitlab-ci.yml` Site and Daily jobs; disabled GitHub cutback artifacts remain under `.github/workflows/`
+- GitHub Site/Daily adapters under `.github/workflows/` call `scripts/publication/cli.py`; production authority remains gated until the cutback inventory and manual acceptance pass
 - Locale/schema Vitest suites
 
 ## Related topics

@@ -1,13 +1,12 @@
 name: Site Release
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
-
-# GitLab is the sole publication scheduler until an approved GitHub cutback.
 
 permissions:
   contents: read
-  deployments: write
 
 concurrency:
   group: galaxy-r2-pages-release
@@ -15,119 +14,56 @@ concurrency:
 
 jobs:
   site:
-    if: false
+    if: >-
+      github.repository == 'XYBuilds/chronicle_v3_3d_galaxy' &&
+      github.ref == 'refs/heads/main' && github.ref_protected &&
+      vars.PUBLICATION_AUTHORITY == 'github' &&
+      (github.event_name == 'workflow_dispatch' || vars.P1_SITE_TRIGGER_ENABLED == 'true')
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
-      PYTHONUNBUFFERED: "1"
-      PRODUCTION_ORIGIN: https://themoviecosmos.com
+      PYTHONUNBUFFERED: '1'
+      PUBLICATION_AUTHORITY: ${{ vars.PUBLICATION_AUTHORITY }}
+      P1_SITE_TRIGGER_ENABLED: ${{ vars.P1_SITE_TRIGGER_ENABLED }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_PAGES_PROJECT_NAME: ${{ secrets.CLOUDFLARE_PAGES_PROJECT_NAME }}
+      R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+      R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      R2_BUCKET: ${{ secrets.R2_BUCKET }}
+      SITE_RELEASE_SHELL: '1'
+      VITE_CF_BEACON_TOKEN: ${{ secrets.CF_WEB_ANALYTICS_BEACON_TOKEN }}
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
-
-      - name: Install compose dependencies
-        run: |
-          set -euo pipefail
-          python -m pip install --upgrade pip
-          python -m pip install "boto3>=1.34,<2"
-
+          python-version: '3.11'
       - uses: actions/setup-node@v4
         with:
-          node-version: "24"
-
-      - name: Fetch current production Data Release manifest
+          node-version: '24'
+      - name: Install publication dependencies
+        run: python -m pip install "boto3>=1.34,<2"
+      - name: Run shared Site Release entry point
+        shell: bash
         run: |
           set -euo pipefail
-          python scripts/cron/pages_compose.py fetch-origin \
-            --url "${PRODUCTION_ORIGIN}/data/galaxy_assets_manifest.json" \
-            --output /tmp/live-manifest.json
-
-      - name: Install and build application shell
-        env:
-          SITE_RELEASE_SHELL: "1"
-          VITE_CF_BEACON_TOKEN: ${{ secrets.CF_WEB_ANALYTICS_BEACON_TOKEN }}
-        run: |
-          set -euo pipefail
-          rm -rf node_modules frontend/node_modules package-lock.json
-          npm install --include=optional --no-audit --no-fund
-          npm run build -w frontend
-
-      - name: Verify and pack site artifact
-        run: |
-          set -euo pipefail
-          python scripts/cron/site_artifact.py identity \
-            --dist-dir frontend/dist \
-            --functions-dir frontend/functions \
-            --git-commit "${GITHUB_SHA}" > /tmp/site-identity.json
-          python scripts/cron/site_artifact.py pack \
-            --dist-dir frontend/dist \
-            --functions-dir frontend/functions \
-            --output /tmp/site-artifact.tar
-          mkdir -p pages-bundle
-          python scripts/cron/site_artifact.py unpack --tar /tmp/site-artifact.tar --output-dir pages-bundle
-          artifact_id="$(python -c "import json; print(json.load(open('/tmp/site-identity.json', encoding='utf-8'))['artifact_id'])")"
-          python scripts/cron/pages_compose.py compose \
-            --dist-dir pages-bundle/dist \
-            --manifest /tmp/live-manifest.json \
-            --artifact-id "${artifact_id}" \
-            --skip-active-match
-
-      - name: Deploy composed Pages dist
-        uses: cloudflare/wrangler-action@v3
+          trigger=manual
+          if [ "$GITHUB_EVENT_NAME" = schedule ]; then trigger=schedule; fi
+          python scripts/publication/cli.py site-release \
+            --mode production --ref "$GITHUB_REF_NAME" --protected \
+            --pipeline-source "$GITHUB_EVENT_NAME" --trigger "$trigger" \
+            --source-commit "$GITHUB_SHA" --actor "$GITHUB_ACTOR" \
+            --pages-project "$CLOUDFLARE_PAGES_PROJECT_NAME" \
+            --pipeline-id "$GITHUB_RUN_ID" --job-id "$GITHUB_JOB/$GITHUB_RUN_ATTEMPT" \
+            2>&1 | tee publication.log
+      - name: Preserve publication evidence
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          workingDirectory: pages-bundle
-          command: pages deploy dist --project-name=${{ secrets.CLOUDFLARE_PAGES_PROJECT_NAME }} --branch=${{ github.ref_name }}
-          gitHubToken: ${{ github.token }}
-
-      - name: Production smoke
-        run: |
-          set -euo pipefail
-          data_version="$(python -c "import json; print(json.load(open('/tmp/live-manifest.json', encoding='utf-8'))['data_version'])")"
-          python scripts/cron/production_smoke.py --origin "${PRODUCTION_ORIGIN}" --expected-data-version "${data_version}"
-
-      - name: Restore previous site artifact
-        if: failure()
-        env:
-          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
-          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          R2_BUCKET: ${{ secrets.R2_BUCKET }}
-        run: |
-          set -euo pipefail
-          python scripts/cron/site_artifact_store.py fetch-active --output-dir pages-bundle --registry-out /tmp/site-registry.json
-          active="$(python -c "import json; print(json.load(open('/tmp/site-registry.json', encoding='utf-8'))['active'])")"
-          python scripts/cron/pages_compose.py compose \
-            --dist-dir pages-bundle/dist \
-            --manifest /tmp/live-manifest.json \
-            --artifact-id "${active}" \
-            --skip-active-match
-
-      - name: Redeploy previous site artifact
-        if: failure()
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          workingDirectory: pages-bundle
-          command: pages deploy dist --project-name=${{ secrets.CLOUDFLARE_PAGES_PROJECT_NAME }} --branch=${{ github.ref_name }}
-          gitHubToken: ${{ github.token }}
-
-      - name: Mark site artifact active
-        env:
-          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
-          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          R2_BUCKET: ${{ secrets.R2_BUCKET }}
-        run: |
-          set -euo pipefail
-          python scripts/cron/site_artifact_store.py fetch-registry --registry-out /tmp/site-registry.json --allow-missing
-          python scripts/cron/site_artifact.py record \
-            --registry /tmp/site-registry.json \
-            --identity /tmp/site-identity.json \
-            --verified-at "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)"
-          python scripts/cron/site_artifact_store.py put-active --tar /tmp/site-artifact.tar --registry /tmp/site-registry.json
+          name: site-publication-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            publication.log
+            frontend/public/data/galaxy_assets_manifest.json
+          if-no-files-found: ignore
+          retention-days: 14

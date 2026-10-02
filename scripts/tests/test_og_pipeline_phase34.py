@@ -41,60 +41,35 @@ class TestOgPipelinePhase34(unittest.TestCase):
             with self.subTest(script=retired_script.name):
                 self.assertFalse(retired_script.exists())
 
-    def test_workflows_use_the_same_fail_closed_incremental_sync_before_r2_upload(self) -> None:
-        for workflow in (_NIGHTLY_WORKFLOW, _MONTHLY_WORKFLOW):
-            with self.subTest(workflow=workflow.name):
-                text = workflow.read_text(encoding="utf-8")
-                self.assertEqual(text.count(f"name: {_SYNC_STEP}"), 1)
-                sync_start = text.index(f"name: {_SYNC_STEP}")
-                sync_end = text.index("      # P42.4", sync_start)
-                sync_block = text[sync_start:sync_end]
-                compute_block = text[:sync_start]
-                self.assertNotIn("bootstrap_og_index:", text)
-                self.assertNotIn("bootstrap-remote-audit", text)
-                self.assertIn(_SYNC_COMMAND, sync_block)
-                self.assertNotIn("--migrate-v1", sync_block)
-                self.assertNotIn("--scope full", sync_block)
-                self.assertNotIn("--scope daily", sync_block)
-                self.assertNotIn("today.json", text)
-                self.assertNotIn("today_url", text)
-                self.assertIn("set -euo pipefail", sync_block)
-                self.assertNotIn("exit 0", sync_block)
-                self.assertNotIn("skip", sync_block.lower())
-                for name in _SYNC_ENV:
-                    self.assertIn(f"{name}:", sync_block)
-                self.assertNotIn("OG_INDEX_KV_", compute_block)
-                self.assertNotIn("CLOUDFLARE_ACCOUNT_ID", compute_block)
-                self.assertLess(sync_start, text.index("python scripts/cron/upload_galaxy_r2.py"))
-                self.assertLess(sync_start, text.index("R2_GALAXY_PRUNE_AFTER_UPLOAD"))
+    def test_shared_daily_entry_point_preserves_incremental_og_order(self) -> None:
+        import sys
+        sys.path.insert(0, str(_REPO_ROOT / "scripts"))
+        from publication.entrypoints import RecordingRunner, run_daily_release
+        from publication.sequence import bootstrap_sequence
+        from publication.store import MemoryPublicationStore
+        store = MemoryPublicationStore()
+        bootstrap_sequence(store, verified_identities=("2026.08.02.daily.131",))
+        runner = RecordingRunner()
+        run_daily_release(store=store, runner=runner, request={"mode": "fixture", "trigger": "manual"}, clock=lambda: "2026-10-02T00:00:00.000Z")
+        names = [c.name for c in runner.commands]
+        self.assertLess(names.index("light-refresh"), names.index("og-sync"))
+        self.assertLess(names.index("og-sync"), names.index("immutable-r2"))
+        self.assertLess(names.index("immutable-r2"), names.index("pages-deploy"))
+        sync = next(c for c in runner.commands if c.name == "og-sync")
+        self.assertEqual(sync.argv[-2:], ("--scope", "incremental"))
+        self.assertFalse(any("build-shell" == c.name for c in runner.commands))
 
     def test_scheduled_contract_cannot_grant_bootstrap_or_disaster_recovery(self) -> None:
         for workflow in (_NIGHTLY_WORKFLOW, _MONTHLY_WORKFLOW):
-            with self.subTest(workflow=workflow.name):
-                text = workflow.read_text(encoding="utf-8")
-                sync_start = text.index(f"name: {_SYNC_STEP}")
-                sync_end = text.index("      # P42.4", sync_start)
-                sync_block = text[sync_start:sync_end]
-                self.assertNotIn("workflow_dispatch", sync_block)
-                self.assertNotIn("--migrate-v1", sync_block)
-                self.assertNotIn("--allow-full-recovery", sync_block)
-                self.assertNotIn("--allow-over-quota", sync_block)
-                self.assertNotIn("--scope full", sync_block)
-
-    def test_p42_4_release_workflows_share_non_cancelling_lock_and_artifacts(self) -> None:
-        monthly = _MONTHLY_WORKFLOW.read_text(encoding="utf-8")
-        nightly = _NIGHTLY_WORKFLOW.read_text(encoding="utf-8")
-        for text in (monthly, nightly):
+            text = workflow.read_text(encoding="utf-8")
+            for dangerous in ("--migrate-v1", "--allow-full-recovery", "--allow-over-quota", "--scope full", "allow_profile_bootstrap:", "--allow-bootstrap"):
+                self.assertNotIn(dangerous, text)
             self.assertIn("group: galaxy-r2-pages-release", text)
             self.assertIn("cancel-in-progress: false", text)
             self.assertIn("if: always()", text)
-            self.assertIn("frontend/public/data/galaxy_assets_manifest.json", text)
-            self.assertIn("python scripts/cron/pages_compose.py compose", text)
             self.assertNotIn("npm run build", text)
-            self.assertNotIn("node frontend/scripts/prepare-pages-deploy.mjs", text)
-        self.assertNotIn("allow_profile_bootstrap:", monthly)
-        self.assertNotIn("--allow-bootstrap", monthly)
-        self.assertNotIn("--allow-bootstrap", nightly)
+        self.assertIn("scripts/publication/cli.py daily-release", _NIGHTLY_WORKFLOW.read_text(encoding="utf-8"))
+        self.assertIn("if: false", _MONTHLY_WORKFLOW.read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

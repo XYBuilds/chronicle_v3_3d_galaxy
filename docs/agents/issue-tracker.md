@@ -1,10 +1,10 @@
-# Issue tracker: GitLab
+# Issue tracker: GitHub
 
-Issues and specifications for Chronicle live in the private GitLab project. Use the `glab` CLI for Issue and merge-request operations. Provider Issue numbers and URLs are aliases; portable identities use `tmc:<repo-key>:<ULID>`.
+Issues and specifications for Chronicle live in the GitHub repository under XYBuilds. Use the `gh` CLI for Issue and pull-request operations. Provider Issue numbers and URLs are aliases; portable identities use `tmc:<repo-key>:<ULID>`.
 
 ## New work
 
-- Bug reports and feature requests enter through GitLab Issues.
+- Bug reports and feature requests enter through GitHub Issues.
 - Maintainer triage decides whether an Issue is a duplicate, needs more information, is accepted, or needs design work.
 - `to-spec` is used only after the direction is accepted and the problem boundary is clear.
 - A Spec Issue receives `ready-for-agent` only when its acceptance criteria and implementation seams are sufficiently clear.
@@ -22,9 +22,9 @@ Issues and specifications for Chronicle live in the private GitLab project. Use 
 
 Existing `.cursor/plans/` and `docs/reports/` remain historical records. New Issues do not receive a legacy Phase number.
 
-## Merge requests
+## Pull requests
 
-Merge requests are implementation and review surfaces, not substitutes for accepted product specifications. The repository does not currently treat external merge requests as an untriaged feature-request queue. Human merge approval is mandatory; do not bypass protected `main`.
+Pull requests are implementation and review surfaces, not substitutes for accepted product specifications. The repository does not currently treat external pull requests as an untriaged feature-request queue. Human merge approval is mandatory; do not bypass protected `main`.
 
 ## Current labels
 
@@ -34,17 +34,22 @@ Wayfinder maps use `wayfinder:map`. Their child tickets use exactly one of `wayf
 
 ## Wayfinding operations
 
-Wayfinder uses ordinary GitLab Issues plus portable identities. GitLab Free records parent and blocker meaning in the Issue body; a native relationship may mirror those lines where available. Do not maintain a second writable tracker.
+Wayfinder uses ordinary GitHub Issues plus portable identities. Portable records keep parent and blocker meaning in the Issue body; a native relationship may mirror those lines where available. Do not maintain a second writable tracker.
 
 - **Map:** create one Issue labelled `wayfinder:map`. Its body contains Destination, Notes, Decisions so far, Not yet specified, and Out of scope. Open tickets are discovered through titled child Issues rather than copied into the map body.
 - **Child ticket:** create an Issue with exactly one `wayfinder:<type>` label. The body includes `Part of: <map title> (\`<map portable id>\`)`.
-- **Blocking:** keep a `Blocked by: <title> (\`<portable id>\`)` line in the Issue body. GitLab Free does not treat native relationships as the only readable truth.
+- **Blocking:** keep a `Blocked by: <title> (\`<portable id>\`)` line in the Issue body. Portable recovery does not treat native relationships as the only readable truth.
 - **Frontier:** list the map's open child Issues in map order, then exclude any Issue with an assignee or a `Blocked by` line whose blockers are still open. The first remaining Issue is the default next ticket.
-- **Claim:** assign the ticket before any work with `glab issue update <iid> --assignee @me`.
+- **Claim:** assign the ticket before any work with `gh issue edit <number> --add-assignee @me`.
 - **Resolve:** post the answer as a resolution comment, close the ticket, and append one linked gist of the answer to the map's Decisions so far section.
 
 If the active tracker becomes unavailable, promote the newest verified normalized export as the sole writable local Markdown tracker and record the failover time. Never reconcile by writing two trackers at once.
 
 ## Tracker transition
 
-A tracker transition freezes the predecessor, exports and verifies a normalized Markdown bundle, imports and verifies the destination, and only then promotes the destination. Local Markdown, GitHub, and GitLab are never writable at the same time. GitHub Issue 370 remains an alias candidate for capture-first reconciliation if access returns.
+A tracker transition freezes the predecessor, exports and verifies a normalized Markdown bundle, imports and verifies the destination, and only then promotes the destination. Local Markdown, GitHub, and GitLab are never writable at the same time. Returned GitHub Issue #370 is a closed design ticket; #378 is the separate open simplification Initiative. Preserve both identities.
+
+
+## GitLab predecessor
+
+The [2026-10-02 export](../history/gitlab-2026-10-02/README.md) preserves Issue and merge-request bodies, state, authorship, timestamps, and comments. Treat it as read-only history. GitHub is the destination tracker; complete the parent cutback Initiative's import verification before freezing the predecessor. Historical GitLab decisions do not authorize shadow backup, which is deferred.

@@ -12,6 +12,7 @@ concurrency:
 
 jobs:
   preflight:
+    if: github.repository == 'XYBuilds/chronicle_v3_3d_galaxy' && github.ref == 'refs/heads/main' && github.ref_protected
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:

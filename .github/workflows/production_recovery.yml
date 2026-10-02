@@ -1,11 +1,8 @@
 name: Production Recovery
 
-# Manual control plane for audited recovery (#388).
-# Hold/resume writes the Daily/Monthly publication-hold flag.
-# Data/site/profile/OG rollback plans remain dry-run until an operator
-# applies them through compose/deploy or documented CLI fallbacks.
-# Direct Cloudflare/Supabase operations and local CLI remain emergency fallbacks.
-# The isolated read-only Supabase preflight workflow stays independent.
+# Manual control plane retained as a disabled GitHub cutback artifact.
+# Live Production Recovery is a local planner; hold/resume is the only direct mutation.
+# Candidate continuation is not a supported recovery surface.
 on:
   workflow_dispatch:
     inputs:
@@ -16,7 +13,6 @@ on:
         options:
           - hold_releases
           - resume_releases
-          - continue_candidate
           - data_rollback
           - site_rollback
           - profile_rollback
@@ -73,10 +69,6 @@ on:
         description: "Rebuild OG projection during data rollback"
         type: boolean
         default: false
-      candidate_store:
-        description: "Path to persisted candidate JSON store (continue_candidate)"
-        type: string
-        required: false
       run_id:
         description: "Deployment or workflow run id for evidence"
         type: string
@@ -103,6 +95,7 @@ concurrency:
 
 jobs:
   recover:
+    if: false
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -135,7 +128,6 @@ jobs:
           RECOVERY_PREVIOUS_SITE: ${{ inputs.previous_site_artifact }}
           RECOVERY_CONFIRM_DANGEROUS: ${{ inputs.confirm_dangerous }}
           RECOVERY_OG_DIFFERS: ${{ inputs.og_projection_differs }}
-          RECOVERY_CANDIDATE_STORE: ${{ inputs.candidate_store }}
           RECOVERY_RUN_ID: ${{ inputs.run_id }}
           RECOVERY_GIT_COMMIT: ${{ inputs.git_commit }}
           RECOVERY_DATA_VERSION: ${{ inputs.data_version }}
@@ -170,9 +162,6 @@ jobs:
           fi
           if [[ "${RECOVERY_OG_DIFFERS}" == "true" ]]; then
             args+=(--og-projection-differs)
-          fi
-          if [[ -n "${RECOVERY_CANDIDATE_STORE}" ]]; then
-            args+=(--candidate-store "${RECOVERY_CANDIDATE_STORE}")
           fi
           if [[ -n "${RECOVERY_RUN_ID}" ]]; then
             args+=(--run-id "${RECOVERY_RUN_ID}")

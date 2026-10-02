@@ -8,14 +8,27 @@ import { preparePagesDeployAssets, prepareSiteReleaseShellAssets } from './prepa
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url))
 const publicDirectory = path.resolve(scriptDirectory, '..', 'public')
-const viteEntry = path.resolve(scriptDirectory, '..', 'node_modules', 'vite', 'bin', 'vite.js')
+const frontendDirectory = path.resolve(scriptDirectory, '..')
+const workspaceDirectory = path.resolve(frontendDirectory, '..')
+
+function resolveViteEntry() {
+  const candidates = [
+    path.join(frontendDirectory, 'node_modules', 'vite', 'bin', 'vite.js'),
+    path.join(workspaceDirectory, 'node_modules', 'vite', 'bin', 'vite.js'),
+  ]
+  const found = candidates.find((candidate) => fs.existsSync(candidate))
+  if (!found) {
+    throw new Error('vite binary not found in workspace node_modules')
+  }
+  return found
+}
 
 function isCiBuild(environment) {
   return environment.CF_PAGES === '1' || environment.CI === 'true' || environment.GITHUB_ACTIONS === 'true'
 }
 
 function runVite(environment) {
-  const result = spawnSync(process.execPath, [viteEntry, 'build'], {
+  const result = spawnSync(process.execPath, [resolveViteEntry(), 'build'], {
     cwd: path.resolve(scriptDirectory, '..'),
     env: environment,
     stdio: 'inherit',

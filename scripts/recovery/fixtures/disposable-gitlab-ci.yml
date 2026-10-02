@@ -1,0 +1,22 @@
+# Disposable GitLab admission only. Do not attach this file to a real repository.
+# Set ADMISSION_DUMMY as a protected CI/CD variable on the disposable project.
+# Do not put live production credentials in this file or in GitLab CI.
+stages:
+  - test
+
+node_test:
+  stage: test
+  image: node:22-bookworm
+  script:
+    - node -e "if (!process.env.ADMISSION_DUMMY) process.exit(1)"
+    - echo admission-ok > admission.txt
+  artifacts:
+    paths:
+      - admission.txt
+    expire_in: 1 day
+
+python_test:
+  stage: test
+  image: python:3.12-bookworm
+  script:
+    - python -c "print('admission-ok')"

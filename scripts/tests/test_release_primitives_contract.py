@@ -36,45 +36,27 @@ class TestReleaseCutoverWorkflows(unittest.TestCase):
         self.assertNotIn("npm run build", text)
         self.assertNotIn("pages deploy", text)
 
-    def test_daily_and_monthly_are_data_releases_without_frontend_build(self) -> None:
+    def test_data_releases_preserve_the_shared_lane_and_no_frontend_build(self) -> None:
         daily = _DAILY.read_text(encoding="utf-8")
         monthly = _MONTHLY.read_text(encoding="utf-8")
-        self.assertIn("name: Daily Data Release", daily)
-        self.assertIn('cron: "0 18 * * *"', daily)
-        self.assertIn("name: Monthly Data Release", monthly)
-        self.assertIn('cron: "0 20 1 * *"', monthly)
+        self.assertIn("scripts/publication/cli.py daily-release", daily)
+        self.assertIn("vars.P1_DAILY_SCHEDULE_ENABLED == 'true'", daily)
+        self.assertIn("if: false", monthly)
         for text in (daily, monthly):
-            with self.subTest(name=text.splitlines()[0]):
-                self.assertIn("workflow_dispatch:", text)
-                self.assertIn("group: galaxy-r2-pages-release", text)
-                self.assertIn("cancel-in-progress: false", text)
-                self.assertIn("python scripts/cron/check_supabase_health.py", text)
-                self.assertIn("python scripts/cron/upload_galaxy_r2.py", text)
-                self.assertIn("python scripts/cron/pages_compose.py compose", text)
-                self.assertIn("python scripts/cron/production_smoke.py", text)
-                self.assertIn("last-known-good", text)
-                self.assertIn("pages deploy dist", text)
-                self.assertNotIn("npm run build", text)
-                self.assertNotIn("npm install", text)
-                self.assertNotIn("node frontend/scripts/prepare-pages-deploy.mjs", text)
-                for dangerous in _DANGEROUS:
-                    self.assertNotIn(dangerous, text)
+            self.assertIn("workflow_dispatch:", text)
+            self.assertIn("group: galaxy-r2-pages-release", text)
+            self.assertIn("cancel-in-progress: false", text)
+            self.assertNotIn("npm run build", text)
+            for dangerous in _DANGEROUS:
+                self.assertNotIn(dangerous, text)
 
-    def test_site_release_builds_the_shell_without_a_production_manifest(self) -> None:
+    def test_site_release_delegates_shell_build_to_shared_entry_point(self) -> None:
         text = _SITE.read_text(encoding="utf-8")
-        self.assertTrue(_SITE.is_file())
-        self.assertIn("name: Site Release", text)
-        self.assertIn("workflow_dispatch:", text)
-        self.assertIn("branches: [main]", text)
+        self.assertIn("scripts/publication/cli.py site-release", text)
+        self.assertIn("vars.P1_SITE_TRIGGER_ENABLED == 'true'", text)
         self.assertIn("group: galaxy-r2-pages-release", text)
         self.assertIn("SITE_RELEASE_SHELL", text)
-        self.assertIn("npm run build -w frontend", text)
-        self.assertIn("python scripts/cron/pages_compose.py compose", text)
-        self.assertIn("--skip-active-match", text)
-        self.assertIn("python scripts/cron/site_artifact.py pack", text)
-        self.assertIn("python scripts/cron/production_smoke.py", text)
-        self.assertNotIn("python scripts/cron/nightly_vote_refresh.py", text)
-        self.assertNotIn("python scripts/cron/monthly_refit.py", text)
+        self.assertNotIn("cloudflare/wrangler-action", text)
         for dangerous in _DANGEROUS:
             self.assertNotIn(dangerous, text)
 

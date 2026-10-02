@@ -21,9 +21,7 @@ jobs:
         with:
           node-version: '24'
       - name: Install Linux workspace dependencies
-        run: |
-          rm -rf node_modules frontend/node_modules package-lock.json
-          npm install --include=optional --no-audit --no-fund
+        run: npm ci --include=optional --no-audit --no-fund
       - run: npm test
       - run: npm run lint
       - run: npm run build
@@ -35,7 +33,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: python -m pip install pytest httpx boto3 python-dotenv pyyaml
+      - run: python -m pip install pytest httpx boto3 python-dotenv pyyaml numpy pandas
       - run: >-
           python -m pytest scripts/tests/test_current_documentation_authority.py
           scripts/tests/test_chronicle_p0_restore.py scripts/tests/test_p0_common_protection.py
@@ -44,4 +42,5 @@ jobs:
           scripts/tests/test_release_primitives_contract.py scripts/tests/test_og_pipeline_phase34.py
           scripts/tests/test_github_cutback.py scripts/tests/test_monthly_github_restore.py
           scripts/tests/test_publication_http.py
+          scripts/tests/test_missing_genre_cleaning.py
       - run: git diff --check

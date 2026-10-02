@@ -157,7 +157,7 @@ def run_site_release(
     planned = [
         Command("fetch-live-manifest", python_script("scripts/cron/pages_compose.py", "fetch-origin", "--url", f"{origin}/data/galaxy_assets_manifest.json", "--output", paths["live_manifest"])),
         Command("fetch-active-registry", python_script("scripts/cron/site_artifact_store.py", "fetch-registry", "--registry-out", paths["site_registry"])),
-        Command("install-node", ("npm", "install", "--include=optional", "--no-audit", "--no-fund")),
+        Command("install-node", ("npm", "ci", "--include=optional", "--no-audit", "--no-fund")),
         Command("build-shell", ("npm", "run", "build", "-w", "frontend"), env={"SITE_RELEASE_SHELL": "1"}),
         Command(
             "identify-shell",

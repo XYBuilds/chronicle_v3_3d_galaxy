@@ -56,7 +56,7 @@ class TestOgPipelinePhase34(unittest.TestCase):
         self.assertLess(names.index("og-sync"), names.index("immutable-r2"))
         self.assertLess(names.index("immutable-r2"), names.index("pages-deploy"))
         sync = next(c for c in runner.commands if c.name == "og-sync")
-        self.assertEqual(sync.argv[-2:], ("--scope", "incremental"))
+        self.assertEqual(sync.argv[-4:], ("--scope", "incremental", "--max-puts", "900"))
         self.assertFalse(any("build-shell" == c.name for c in runner.commands))
 
     def test_scheduled_contract_cannot_grant_bootstrap_or_disaster_recovery(self) -> None:

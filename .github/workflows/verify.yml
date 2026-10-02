@@ -43,4 +43,5 @@ jobs:
           scripts/tests/test_github_cutback.py scripts/tests/test_monthly_github_restore.py
           scripts/tests/test_publication_http.py
           scripts/tests/test_missing_genre_cleaning.py
+          scripts/tests/test_publication_og_budget.py
       - run: git diff --check

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import time
 import urllib.error
 import urllib.request
 from typing import Any
@@ -19,6 +20,8 @@ INVALID_PATH = "/this-path-does-not-exist-chronicle-smoke"
 TODAY_PATH = "/today"
 SHARE_TODAY_PATH = "/share/today"
 DEFAULT_ORIGIN = "https://themoviecosmos.com"
+MANIFEST_MAX_ATTEMPTS = 25
+MANIFEST_RETRY_DELAY_SECONDS = 5
 
 HttpSnapshot = tuple[int, dict[str, str], bytes]
 
@@ -57,6 +60,31 @@ def _assert_equivalent(left: HttpSnapshot, right: HttpSnapshot, *, label: str) -
     _assert(left_body == right_body, f"{label} body mismatch")
 
 
+def _wait_for_manifest(url: str, expected_data_version: str) -> dict[str, Any]:
+    """Allow Pages alias propagation, without accepting a different release."""
+    for attempt in range(1, MANIFEST_MAX_ATTEMPTS + 1):
+        status, _headers, body = _http_request(url)
+        _assert(status == 200, f"production manifest returned {status}")
+        try:
+            manifest = json.loads(body.decode("utf-8") if isinstance(body, (bytes, bytearray)) else str(body))
+        except (UnicodeDecodeError, json.JSONDecodeError, TypeError) as exc:
+            raise SmokeError("production manifest is unreadable") from exc
+        _assert(isinstance(manifest, dict), "production manifest is unreadable")
+        observed = manifest.get("data_version")
+        _assert(isinstance(observed, str) and bool(observed.strip()), "manifest data_version is required")
+        if observed == expected_data_version:
+            return manifest
+        if attempt == MANIFEST_MAX_ATTEMPTS:
+            raise SmokeError(f"manifest data_version {observed!r} != {expected_data_version!r} after {attempt} attempts")
+        print(
+            f"[production-smoke] waiting for manifest data_version {expected_data_version!r}; "
+            f"observed {observed!r} (attempt {attempt}/{MANIFEST_MAX_ATTEMPTS})",
+            flush=True,
+        )
+        time.sleep(MANIFEST_RETRY_DELAY_SECONDS)
+    raise AssertionError("manifest attempt limit must be positive")  # pragma: no cover
+
+
 def run_smoke(*, origin: str, expected_data_version: str, movie_id: str) -> dict[str, Any]:
     _assert(isinstance(origin, str) and origin.startswith("http"), "origin is required")
     _assert(isinstance(expected_data_version, str) and bool(expected_data_version.strip()), "expected data_version is required")
@@ -71,15 +99,8 @@ def run_smoke(*, origin: str, expected_data_version: str, movie_id: str) -> dict
     share_today = _http_request(urljoin(base, SHARE_TODAY_PATH))
     _assert_equivalent(today, invalid, label="/today")
     _assert_equivalent(share_today, invalid, label="/share/today")
-    manifest_status, _manifest_headers, manifest_body = _http_request(urljoin(base, "/data/galaxy_assets_manifest.json"))
-    _assert(manifest_status == 200, f"production manifest returned {manifest_status}")
-    try:
-        manifest = json.loads(manifest_body.decode("utf-8") if isinstance(manifest_body, (bytes, bytearray)) else str(manifest_body))
-    except (UnicodeDecodeError, json.JSONDecodeError, TypeError) as exc:
-        raise SmokeError("production manifest is unreadable") from exc
-    _assert(isinstance(manifest, dict), "production manifest is unreadable")
+    manifest = _wait_for_manifest(urljoin(base, "/data/galaxy_assets_manifest.json"), expected_data_version.strip())
     data_version = manifest.get("data_version")
-    _assert(data_version == expected_data_version.strip(), f"manifest data_version {data_version!r} != {expected_data_version.strip()!r}")
     for key in ("galaxy_data_gzip_url", "galaxy_search_index_gzip_url"):
         url = manifest.get(key)
         _assert(isinstance(url, str) and url.startswith("http"), f"manifest {key} is required")

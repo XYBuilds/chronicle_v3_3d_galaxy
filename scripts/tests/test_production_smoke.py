@@ -13,6 +13,8 @@ if str(_SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS_DIR))
 
 from cron.production_smoke import (  # noqa: E402
+    MANIFEST_MAX_ATTEMPTS,
+    MANIFEST_RETRY_DELAY_SECONDS,
     SmokeError,
     run_smoke,
 )
@@ -65,9 +67,13 @@ def test_smoke_fails_closed_when_manifest_data_version_differs() -> None:
             )
         }
     )
-    with patch("cron.production_smoke._http_request", side_effect=lambda url, **_kwargs: responses[url]):
-        with pytest.raises(SmokeError, match="data_version"):
+    with patch("cron.production_smoke._http_request", side_effect=lambda url, **_kwargs: responses[url]) as request, patch("time.sleep") as sleep:
+        with pytest.raises(SmokeError, match=f"after {MANIFEST_MAX_ATTEMPTS} attempts"):
             run_smoke(origin=ORIGIN, expected_data_version="2026.08.13.1", movie_id="550")
+    manifest_reads = [call for call in request.call_args_list if call.args[0].endswith("galaxy_assets_manifest.json")]
+    assert len(manifest_reads) == MANIFEST_MAX_ATTEMPTS
+    assert sleep.call_count == MANIFEST_MAX_ATTEMPTS - 1
+    assert all(call.args == (MANIFEST_RETRY_DELAY_SECONDS,) for call in sleep.call_args_list)
 
 
 def test_smoke_fails_closed_when_today_does_not_match_ordinary_invalid_path() -> None:
@@ -84,3 +90,38 @@ def test_smoke_fails_closed_when_share_today_does_not_match_ordinary_invalid_pat
     with patch("cron.production_smoke._http_request", side_effect=lambda url, **_kwargs: responses[url]):
         with pytest.raises(SmokeError, match="/share/today"):
             run_smoke(origin=ORIGIN, expected_data_version="2026.08.13.1", movie_id="550")
+
+
+def test_smoke_waits_for_production_alias_to_serve_new_manifest() -> None:
+    responses = _ok_responses()
+    manifest_url = f"{ORIGIN}/data/galaxy_assets_manifest.json"
+    old = (200, {}, json.dumps({**MANIFEST, "data_version": "previous"}).encode())
+    manifests = iter([old, old, responses[manifest_url]])
+
+    def request(url: str, **_kwargs: object) -> tuple:
+        return next(manifests) if url == manifest_url else responses[url]
+
+    with patch("cron.production_smoke._http_request", side_effect=request), patch("time.sleep") as sleep:
+        result = run_smoke(origin=ORIGIN, expected_data_version=MANIFEST["data_version"], movie_id="550")
+    assert result["ok"] is True
+    assert sleep.call_count == 2
+
+
+@pytest.mark.parametrize("status,body", [(503, b"unavailable"), (200, b"not-json"), (200, b"[]"), (200, b"{}"), (200, b'{"data_version": 150}')])
+def test_smoke_does_not_retry_broken_manifest(status: int, body: bytes) -> None:
+    url = f"{ORIGIN}/data/galaxy_assets_manifest.json"
+    responses = _ok_responses(**{url: (status, {}, body)})
+    with patch("cron.production_smoke._http_request", side_effect=lambda url, **_kwargs: responses[url]), patch("time.sleep") as sleep:
+        with pytest.raises(SmokeError):
+            run_smoke(origin=ORIGIN, expected_data_version=MANIFEST["data_version"], movie_id="550")
+    sleep.assert_not_called()
+
+
+def test_manifest_convergence_does_not_skip_immutable_asset_checks() -> None:
+    url = f"{ORIGIN}/data/galaxy_assets_manifest.json"
+    responses = _ok_responses(**{MANIFEST["galaxy_data_gzip_url"]: (404, {}, b"missing")})
+    manifests = iter([(200, {}, json.dumps({**MANIFEST, "data_version": "previous"}).encode()), responses[url]])
+    with patch("cron.production_smoke._http_request", side_effect=lambda requested, **_kwargs: next(manifests) if requested == url else responses[requested]), patch("time.sleep") as sleep:
+        with pytest.raises(SmokeError, match="galaxy_data_gzip_url returned 404"):
+            run_smoke(origin=ORIGIN, expected_data_version=MANIFEST["data_version"], movie_id="550")
+    sleep.assert_called_once_with(MANIFEST_RETRY_DELAY_SECONDS)
